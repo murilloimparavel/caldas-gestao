@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analisar Comportamento"
+  short_description: "Mapeia fluxos, regras, permissões e rede"
+  default_prompt: "Use $analyze-app-behavior para investigar os fluxos e contratos observáveis deste aplicativo."

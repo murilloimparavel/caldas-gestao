@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reconstruir Web App"
+  short_description: "Coordena análise clean-room de produtos web"
+  default_prompt: "Use $reconstruct-web-app para mapear este produto web e criar um dossiê de reconstrução."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analisar UX e UI"
+  short_description: "Documenta telas, estados e design system"
+  default_prompt: "Use $analyze-product-ux-ui para documentar a UX e a UI deste aplicativo."

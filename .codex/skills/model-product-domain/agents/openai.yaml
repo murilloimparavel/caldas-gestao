@@ -1,0 +1,4 @@
+interface:
+  display_name: "Modelar Domínio"
+  short_description: "Deriva domínio, estados, eventos e banco"
+  default_prompt: "Use $model-product-domain para converter as evidências do produto em um modelo de domínio e banco."
