@@ -11,3 +11,11 @@
 - Use `gpt-5.6-luna` por padrão.
 - Escale para `gpt-5.6-terra` quando houver erros repetidos, falta de progresso ou complexidade arquitetural; se necessário, escale depois para `gpt-5.5`.
 - Nunca use `gpt-5.6-sol` sem autorização explícita do usuário.
+
+## Política de revisão eficiente
+
+- Faça revisão de desenho antes da implementação somente em mudanças transversais, como schema, estados, concorrência ou permissões.
+- Faça uma revisão final independente, focada no diff e na checklist de aceite da fatia.
+- Correções P0/P1 retornam ao autor; a validação seguinte deve ser pontual e limitada às correções, sem repetir uma auditoria integral.
+- Tarefas mecânicas ou isoladas dispensam revisor dedicado: use validação automática e inspeção do agente raiz.
+- Quando o frontend depender do backend, finalize primeiro os contratos e o backend, gere o Wayfinder e só então implemente o frontend.
