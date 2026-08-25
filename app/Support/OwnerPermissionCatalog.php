@@ -26,6 +26,8 @@ final class OwnerPermissionCatalog
         'product.view', 'product.manage',
         'supplier.view', 'supplier.manage',
         'calendar.view', 'calendar.manage', 'calendar.configure',
+        'sale_category.view', 'sale_category.manage',
+        'sale.view', 'sale.manage', 'sale.discount', 'sale.close',
     ];
 
     /**

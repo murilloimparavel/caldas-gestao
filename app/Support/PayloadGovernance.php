@@ -21,6 +21,13 @@ final class PayloadGovernance
         'price_cents', 'duration_minutes', 'service_ids', 'professional_ids',
         'category_id', 'is_active', 'cost_price_cents', 'sale_price_cents',
         'current_stock', 'min_stock', 'unit_of_measure',
+        'type', 'uniqueness_scope', 'key', 'sale_category_id', 'customer_id',
+        'service_id', 'product_id', 'professional_id', 'reference_label',
+        'open_context_key', 'currency', 'total_amount_cents', 'discount_amount_cents',
+        'final_amount_cents', 'item_type', 'unit_price_cents', 'discount_cents',
+        'total_cents', 'closing_session_id', 'closing_subject', 'expected_total_cents',
+        'final_total_cents', 'receipt_number', 'closed_by_user_id', 'sale_ids',
+        'from_status', 'to_status', 'reason',
     ];
 
     /** @var list<string> */
@@ -30,6 +37,13 @@ final class PayloadGovernance
         'service_ids', 'professional_ids',
         'category_id', 'is_active', 'cost_price_cents', 'sale_price_cents',
         'current_stock', 'min_stock', 'unit_of_measure',
+        'type', 'uniqueness_scope', 'sale_category_id', 'customer_id',
+        'service_id', 'product_id', 'professional_id', 'reference_label',
+        'open_context_key', 'currency', 'total_amount_cents', 'discount_amount_cents',
+        'final_amount_cents', 'item_type', 'unit_price_cents', 'discount_cents',
+        'total_cents', 'closing_session_id', 'closing_subject', 'expected_total_cents',
+        'final_total_cents', 'receipt_number', 'closed_by_user_id', 'sale_ids',
+        'from_status', 'to_status', 'reason',
     ];
 
     /** @var list<string> */

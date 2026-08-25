@@ -1,0 +1,320 @@
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { ArrowLeft, Layers, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
+import { useState } from 'react';
+import {
+    createIdempotencyKey,
+    FormActions,
+    FormErrorSummary,
+    FormField,
+    PageCanvas,
+    ResourceHeader,
+    StatusBadge,
+} from '@/components/operational';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import saleCategories from '@/routes/sale-categories';
+import type { SharedPageProps } from '@/types';
+
+type SaleCategoryType = 'service' | 'product' | 'mixed';
+type UniquenessScope = 'customer' | 'appointment' | 'reference' | 'none';
+
+type SaleCategory = {
+    created_at?: string;
+    id: string;
+    is_active: boolean;
+    key: string;
+    lock_version: number;
+    name: string;
+    sales_count?: number;
+    type: SaleCategoryType;
+    uniqueness_scope: UniquenessScope;
+};
+
+type Props = {
+    category: SaleCategory;
+};
+
+const saleCategoryTypeLabels: Record<SaleCategoryType, string> = {
+    service: 'Apenas Serviços',
+    product: 'Apenas Produtos',
+    mixed: 'Misto (Serviços e Produtos)',
+};
+
+const uniquenessScopeLabels: Record<UniquenessScope, string> = {
+    customer: '1 comanda por cliente',
+    appointment: '1 comanda por agendamento',
+    reference: '1 comanda por referência (mesa/pedido)',
+    none: 'Sem limite de duplicidade',
+};
+
+const uniquenessScopeDescriptions: Record<UniquenessScope, string> = {
+    customer: 'Impede a abertura de mais de uma comanda aberta simultaneamente para o mesmo cliente nesta categoria (ex: Barbearia).',
+    appointment: 'Vincula a comanda estritamente a um agendamento específico, impedindo duplicata.',
+    reference: 'Impede mais de uma comanda aberta com a mesma referência ou mesa (ex: Restaurante mesa 4).',
+    none: 'Permite abrir qualquer quantidade de comandas nesta categoria sem restrição de duplicidade.',
+};
+
+export default function SaleCategoryShow({ category }: Props) {
+    const [updateKey] = useState(() => createIdempotencyKey('sale-category-update'));
+    const [destroyKey] = useState(() => createIdempotencyKey('sale-category-destroy'));
+    const [inactivateOpen, setInactivateOpen] = useState(false);
+    const { props } = usePage<SharedPageProps>();
+    const canManage = props.auth.permissions.includes('sale_category.manage');
+
+    return (
+        <>
+            <Head title={`Categoria: ${category.name}`} />
+            <PageCanvas>
+                <div>
+                    <Button asChild variant="ghost" className="mb-4 -ml-3">
+                        <Link href={saleCategories.index()}>
+                            <ArrowLeft aria-hidden="true" />
+                            Voltar para categorias de comanda
+                        </Link>
+                    </Button>
+                    <ResourceHeader
+                        eyebrow="Configuração de comanda"
+                        title={category.name}
+                        description="Atualize as regras operacionais, tipos permitidos e unicidade desta área de consumo."
+                        action={<StatusBadge status={category.is_active ? 'active' : 'inactive'} />}
+                    />
+                </div>
+
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+                    <section className="surface-panel p-5 sm:p-6">
+                        <div className="mb-6 space-y-1">
+                            <h2 className="text-base font-semibold">Regras da categoria</h2>
+                            <p className="text-sm text-muted-foreground">
+                                As configurações governam como o operador abre e manipula comandas nesta área.
+                            </p>
+                        </div>
+                        <Form
+                            {...saleCategories.update.form(category.id)}
+                            headers={{ 'X-Idempotency-Key': updateKey }}
+                            className="space-y-5"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <FormErrorSummary errors={errors} />
+                                    <input
+                                        type="hidden"
+                                        name="lock_version"
+                                        value={category.lock_version}
+                                    />
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="sm:col-span-2">
+                                            <FormField
+                                                label="Nome da categoria"
+                                                name="name"
+                                                error={errors.name}
+                                            >
+                                                <Input
+                                                    id="name"
+                                                    name="name"
+                                                    defaultValue={category.name}
+                                                    required
+                                                    disabled={!canManage}
+                                                />
+                                            </FormField>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <FormField
+                                                label="Chave estável"
+                                                name="key"
+                                                error={errors.key}
+                                            >
+                                                <Input
+                                                    id="key"
+                                                    name="key"
+                                                    defaultValue={category.key}
+                                                    required
+                                                    disabled={!canManage}
+                                                />
+                                            </FormField>
+                                        </div>
+                                        <div className="sm:col-span-1">
+                                            <FormField
+                                                label="Tipo de itens permitidos"
+                                                name="type"
+                                                error={errors.type}
+                                            >
+                                                <select
+                                                    id="type"
+                                                    name="type"
+                                                    defaultValue={category.type}
+                                                    disabled={!canManage}
+                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="service">Apenas Serviços</option>
+                                                    <option value="product">Apenas Produtos</option>
+                                                    <option value="mixed">Misto (Serviços e Produtos)</option>
+                                                </select>
+                                            </FormField>
+                                        </div>
+                                        <div className="sm:col-span-1">
+                                            <FormField
+                                                label="Escopo de unicidade"
+                                                name="uniqueness_scope"
+                                                error={errors.uniqueness_scope}
+                                            >
+                                                <select
+                                                    id="uniqueness_scope"
+                                                    name="uniqueness_scope"
+                                                    defaultValue={category.uniqueness_scope}
+                                                    disabled={!canManage}
+                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="none">Sem limite de duplicidade</option>
+                                                    <option value="customer">1 comanda ativa por cliente</option>
+                                                    <option value="appointment">1 comanda ativa por agendamento</option>
+                                                    <option value="reference">1 comanda ativa por referência (mesa/pedido)</option>
+                                                </select>
+                                            </FormField>
+                                        </div>
+                                    </div>
+                                    {canManage ? (
+                                        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                                            {category.is_active ? (
+                                                <Dialog
+                                                    open={inactivateOpen}
+                                                    onOpenChange={setInactivateOpen}
+                                                >
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            variant="destructive"
+                                                        >
+                                                            Inativar categoria
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>
+                                                                Inativar categoria de comanda?
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                Comandas abertas ou históricas permanecerão intactas, mas não será possível abrir novas comandas nesta categoria.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <Form
+                                                            {...saleCategories.destroy.form(category.id)}
+                                                            headers={{
+                                                                'X-Idempotency-Key': destroyKey,
+                                                            }}
+                                                            method="delete"
+                                                            onSuccess={() => setInactivateOpen(false)}
+                                                        >
+                                                            {({ processing: inactivating }) => (
+                                                                <>
+                                                                    <input
+                                                                        type="hidden"
+                                                                        name="lock_version"
+                                                                        value={category.lock_version}
+                                                                    />
+                                                                    <DialogFooter className="mt-4">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            onClick={() => setInactivateOpen(false)}
+                                                                        >
+                                                                            Cancelar
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="submit"
+                                                                            variant="destructive"
+                                                                            disabled={inactivating}
+                                                                        >
+                                                                            {inactivating ? 'Inativando...' : 'Confirmar inativação'}
+                                                                        </Button>
+                                                                    </DialogFooter>
+                                                                </>
+                                                            )}
+                                                        </Form>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground">
+                                                    Esta categoria está inativa.
+                                                </span>
+                                            )}
+                                            <FormActions
+                                                processing={processing}
+                                                label="Salvar alterações"
+                                            />
+                                        </div>
+                                    ) : null}
+                                </>
+                            )}
+                        </Form>
+                    </section>
+
+                    <aside className="space-y-5">
+                        <section className="surface-panel space-y-4 p-5">
+                            <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
+                                Informações operacionais
+                            </h2>
+                            <div className="space-y-3 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                                        <Tag className="size-4" />
+                                        Chave canônica
+                                    </span>
+                                    <span className="font-mono text-xs font-semibold text-foreground">
+                                        {category.key}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                                        <Sparkles className="size-4" />
+                                        Tipo de consumo
+                                    </span>
+                                    <span className="font-medium text-foreground">
+                                        {saleCategoryTypeLabels[category.type] ?? category.type}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                                        <ShieldAlert className="size-4" />
+                                        Escopo de unicidade
+                                    </span>
+                                    <span className="font-medium text-foreground">
+                                        {uniquenessScopeLabels[category.uniqueness_scope] ?? category.uniqueness_scope}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                                        <Receipt className="size-4" />
+                                        Comandas vinculadas
+                                    </span>
+                                    <span className="font-semibold text-foreground">
+                                        {category.sales_count ?? 0}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground border border-border/50">
+                                <p className="font-medium text-foreground mb-1">Regra de Unicidade:</p>
+                                <p>{uniquenessScopeDescriptions[category.uniqueness_scope]}</p>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
+            </PageCanvas>
+        </>
+    );
+}
+
+SaleCategoryShow.layout = {
+    breadcrumbs: [
+        { title: 'Categorias de Comanda', href: saleCategories.index() },
+        { title: 'Detalhes da categoria', href: '#' },
+    ],
+};

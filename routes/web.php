@@ -7,6 +7,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
+use App\Http\Controllers\SaleCategoryController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('services', ServiceController::class)
             ->except(['create', 'edit']);
         Route::resource('suppliers', SupplierController::class)
+            ->except(['create', 'edit']);
+        Route::resource('sale-categories', SaleCategoryController::class)
             ->except(['create', 'edit']);
     });
 });
