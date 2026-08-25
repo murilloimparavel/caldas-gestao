@@ -59,23 +59,33 @@ final class ResumeTenantOnboarding
                 throw new \InvalidArgumentException('Initial unit name and slug are required.');
             }
 
-            Unit::query()->insertOrIgnore([
-                'id' => (string) Str::uuid7(),
-                'tenant_id' => $lockedTenant->getKey(),
-                'slug' => $unitSlug,
-                'name' => $unitName,
-                'status' => 'active',
-                'timezone' => $unitData['timezone'] ?? null,
-                'address' => $unitData['address'] ?? null,
-                'lock_version' => 0,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
             $unit = Unit::query()
                 ->where('tenant_id', $lockedTenant->getKey())
                 ->where('slug', $unitSlug)
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->first();
+            $changed = false;
+
+            if ($unit === null) {
+                Unit::query()->insertOrIgnore([
+                    'id' => (string) Str::uuid7(),
+                    'tenant_id' => $lockedTenant->getKey(),
+                    'slug' => $unitSlug,
+                    'name' => $unitName,
+                    'status' => 'active',
+                    'timezone' => $unitData['timezone'] ?? null,
+                    'address' => $unitData['address'] ?? null,
+                    'lock_version' => 0,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+                $changed = true;
+                $unit = Unit::query()
+                    ->where('tenant_id', $lockedTenant->getKey())
+                    ->where('slug', $unitSlug)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+            }
 
             $ownerRole = Role::query()
                 ->where('tenant_id', $lockedTenant->getKey())
@@ -102,7 +112,7 @@ final class ResumeTenantOnboarding
                 throw new AuthorizationException('An active owner assignment is required for onboarding reconciliation.');
             }
 
-            $this->permissionCatalog->ensure($lockedTenant, $ownerRole, $now);
+            $changed = $this->permissionCatalog->ensure($lockedTenant, $ownerRole, $now) || $changed;
 
             $primaryMembershipUnit = MembershipUnit::query()
                 ->where('tenant_id', $lockedTenant->getKey())
@@ -112,20 +122,29 @@ final class ResumeTenantOnboarding
                 ->lockForUpdate()
                 ->first();
 
-            MembershipUnit::query()->insertOrIgnore([
-                'tenant_id' => $lockedTenant->getKey(),
-                'membership_id' => $membership->getKey(),
-                'unit_id' => $unit->getKey(),
-                'is_primary' => $primaryMembershipUnit === null,
-                'created_at' => $now,
-            ]);
-
             $membershipUnit = MembershipUnit::query()
                 ->where('tenant_id', $lockedTenant->getKey())
                 ->where('membership_id', $membership->getKey())
                 ->where('unit_id', $unit->getKey())
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->first();
+
+            if ($membershipUnit === null) {
+                MembershipUnit::query()->insertOrIgnore([
+                    'tenant_id' => $lockedTenant->getKey(),
+                    'membership_id' => $membership->getKey(),
+                    'unit_id' => $unit->getKey(),
+                    'is_primary' => $primaryMembershipUnit === null,
+                    'created_at' => $now,
+                ]);
+                $changed = true;
+                $membershipUnit = MembershipUnit::query()
+                    ->where('tenant_id', $lockedTenant->getKey())
+                    ->where('membership_id', $membership->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->lockForUpdate()
+                    ->firstOrFail();
+            }
 
             if ($primaryMembershipUnit === null && ! $membershipUnit->is_primary) {
                 MembershipUnit::query()
@@ -133,24 +152,14 @@ final class ResumeTenantOnboarding
                     ->where('membership_id', $membership->getKey())
                     ->where('unit_id', $unit->getKey())
                     ->update(['is_primary' => true]);
+                $changed = true;
             }
 
-            MembershipRole::query()->insertOrIgnore([
-                'id' => (string) Str::uuid7(),
-                'tenant_id' => $lockedTenant->getKey(),
-                'membership_id' => $membership->getKey(),
-                'role_id' => $ownerRole->getKey(),
-                'scope_kind' => MembershipRoleScope::Tenant->value,
-                'assignment_scope' => MembershipRoleScope::Tenant->value,
-                'unit_id' => null,
-                'lock_version' => 0,
-                'revoked_at' => null,
-                'created_at' => $now,
-            ]);
-
-            $this->events->record($actor, $context, 'tenant.onboarding.resumed', $lockedTenant, [
-                'unit_id' => $unit->getKey(),
-            ]);
+            if ($changed) {
+                $this->events->recordForTenant($actor, $lockedTenant, 'tenant.onboarding.resumed', $lockedTenant, [
+                    'unit_id' => $unit->getKey(),
+                ], $unit->getKey());
+            }
 
             return $lockedTenant->fresh();
         }, 5);
