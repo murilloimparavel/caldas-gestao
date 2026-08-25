@@ -5,10 +5,12 @@
 ## Convenções
 
 - prefixo `/v1`, JSON, IDs opacos e timestamps ISO 8601;
+- IDs de users e agregados são UUIDv7 expostos como `string`; IDs técnicos de jobs/outbox não formam contrato público;
 - tenant derivado da sessão; `unit_id` explícito quando necessário;
 - dinheiro como `{ amount_minor, currency }`;
 - paginação por cursor e filtros normalizados;
 - `Idempotency-Key` obrigatório em comandos financeiros e externos;
+- comandos F2 tenant-owned persistem `tenant_id` na idempotency key; operações de plataforma sem tenant ficam fora até ADR próprio;
 - `If-Match`/versão esperada em edição concorrente;
 - erros `{ code, message, field_errors, correlation_id }`;
 - autorização por capacidade e escopo validada no servidor;
@@ -16,21 +18,21 @@
 
 ## Recursos principais
 
-| Contexto | Operações propostas |
-|---|---|
-| Clientes | `GET/POST /customers`, `GET/PATCH /customers/{id}` |
-| Profissionais | `/professionals`, `/users`, `/roles`, `/permissions` |
-| Catálogo | `/services`, `/products`, `/categories`, `/packages` |
-| Agenda | `/availability:search`, `/appointments`, `/appointment-series`, `/schedule-blocks` |
-| Vendas | `/sales`, `/sales/{id}/items`, `/sales/{id}:finalize`, `/sales/{id}:cancel` |
-| Pagamentos | `/payment-intents`, `/payments`, `/payments/{id}:refund` |
-| Estoque | `/stock-movements`, `/inventory-balances`, `/lots` |
-| Financeiro | `/obligations`, `/account-movements`, `/cash-sessions`, `/reconciliations` |
-| Comissões | `/commission-accruals`, `/commission-batches` |
-| Fiscal | `/fiscal-documents`, `/fiscal-documents/{id}:retry`, `:cancel` |
-| Analytics | `/metrics:query`, `/report-runs`, `/export-jobs`, `/goals` |
-| Relacionamento | `/message-intents`, `/campaigns`, `/reviews`, `/consents` |
-| Plataforma | `/units`, `/settings`, `/entitlements`, `/api-credentials`, `/audit-events` |
+| Contexto       | Operações propostas                                                                |
+| -------------- | ---------------------------------------------------------------------------------- |
+| Clientes       | `GET/POST /customers`, `GET/PATCH /customers/{id}`                                 |
+| Profissionais  | `/professionals`, `/users`, `/roles`, `/permissions`                               |
+| Catálogo       | `/services`, `/products`, `/categories`, `/packages`                               |
+| Agenda         | `/availability:search`, `/appointments`, `/appointment-series`, `/schedule-blocks` |
+| Vendas         | `/sales`, `/sales/{id}/items`, `/sales/{id}:finalize`, `/sales/{id}:cancel`        |
+| Pagamentos     | `/payment-intents`, `/payments`, `/payments/{id}:refund`                           |
+| Estoque        | `/stock-movements`, `/inventory-balances`, `/lots`                                 |
+| Financeiro     | `/obligations`, `/account-movements`, `/cash-sessions`, `/reconciliations`         |
+| Comissões      | `/commission-accruals`, `/commission-batches`                                      |
+| Fiscal         | `/fiscal-documents`, `/fiscal-documents/{id}:retry`, `:cancel`                     |
+| Analytics      | `/metrics:query`, `/report-runs`, `/export-jobs`, `/goals`                         |
+| Relacionamento | `/message-intents`, `/campaigns`, `/reviews`, `/consents`                          |
+| Plataforma     | `/units`, `/settings`, `/entitlements`, `/api-credentials`, `/audit-events`        |
 
 ## Exemplo de comando original
 
@@ -54,6 +56,8 @@ Respostas propostas: `201` criado; `409 schedule_conflict`; `422 validation_fail
 - `event_id`, `event_type`, `occurred_at`, `tenant_id`, `resource_id`, `version`;
 - retries com backoff e dead-letter; consumidor idempotente;
 - webhook externo por assinatura, timestamp e proteção contra replay.
+
+O envelope de evento proposto inclui `event_id`, `event_type`, `event_version`, `tenant_id`, `unit_id` quando aplicável, `aggregate_id`, `aggregate_version`, `actor_user_id`, `correlation_id` e `causation_id`. A outbox usa estados `pending`, `available`, `publishing`, `retryable`, `dead` e `published`, e só publica após commit (`after_commit`/`dispatchAfterCommit`).
 
 ## Pendências de validação
 

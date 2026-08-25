@@ -50,11 +50,11 @@ O passe EV-008 observou boas adaptações de listagem, mas também agenda semana
 
 ### Breakpoints de referência
 
-| Faixa | Composição padrão | Navegação | Overlays |
-|---|---|---|---|
-| até 639 px | uma coluna, prioridade operacional | barra inferior com quatro destinos estáveis + ação contextual separada | bottom sheet ou tela cheia |
-| 640–1023 px | duas colunas ou master-detail quando útil | rail compacto ou barra inferior conforme orientação | drawer lateral preferencial |
-| a partir de 1024 px | shell lateral e superfícies densas | sidebar/rail expandido | dialog ou drawer contextual |
+| Faixa               | Composição padrão                         | Navegação                                                              | Overlays                    |
+| ------------------- | ----------------------------------------- | ---------------------------------------------------------------------- | --------------------------- |
+| até 639 px          | uma coluna, prioridade operacional        | barra inferior com quatro destinos estáveis + ação contextual separada | bottom sheet ou tela cheia  |
+| 640–1023 px         | duas colunas ou master-detail quando útil | rail compacto ou barra inferior conforme orientação                    | drawer lateral preferencial |
+| a partir de 1024 px | shell lateral e superfícies densas        | sidebar/rail expandido                                                 | dialog ou drawer contextual |
 
 Esses valores iniciam o desenvolvimento, mas componentes usarão container queries quando sua adaptação depender do espaço disponível, e não do viewport. O breakpoint final será validado por legibilidade e tarefa, não por modelo de aparelho.
 
@@ -73,16 +73,16 @@ Esses valores iniciam o desenvolvimento, mas componentes usarão container queri
 
 ### Estratégia por superfície
 
-| Superfície | Mobile | Tablet | Desktop |
-|---|---|---|---|
-| shell | Painel, Agenda, Clientes e Mais; FAB/ação contextual independente | rail compacto em landscape ou barra em portrait | sidebar hierárquica |
-| listas | cartões, ação primária e overflow | master-detail ou tabela compacta | tabela completa |
-| filtros | sheet com Aplicar/Limpar fixos e contagem | drawer lateral preservando contexto | popover/drawer conforme densidade |
-| formulários | uma coluna, etapas apenas quando reduzem carga cognitiva | duas colunas por seção | seções e painel de contexto |
-| agenda | dia/lista como padrão; alternância explícita | três dias em portrait; semana quando legível | dia/semana/mês |
-| dashboard | resumo de 3–5 KPIs, seções progressivas e drill-down | grade de duas colunas | visão analítica densa |
-| relatórios | filtros primeiro, resultado depois; tabela/cartões | filtros laterais e resultado principal | filtros e resultado simultâneos |
-| detalhe | página ou sheet com retorno previsível | master-detail | drawer/página conforme fluxo |
+| Superfície  | Mobile                                                            | Tablet                                          | Desktop                           |
+| ----------- | ----------------------------------------------------------------- | ----------------------------------------------- | --------------------------------- |
+| shell       | Painel, Agenda, Clientes e Mais; FAB/ação contextual independente | rail compacto em landscape ou barra em portrait | sidebar hierárquica               |
+| listas      | cartões, ação primária e overflow                                 | master-detail ou tabela compacta                | tabela completa                   |
+| filtros     | sheet com Aplicar/Limpar fixos e contagem                         | drawer lateral preservando contexto             | popover/drawer conforme densidade |
+| formulários | uma coluna, etapas apenas quando reduzem carga cognitiva          | duas colunas por seção                          | seções e painel de contexto       |
+| agenda      | dia/lista como padrão; alternância explícita                      | três dias em portrait; semana quando legível    | dia/semana/mês                    |
+| dashboard   | resumo de 3–5 KPIs, seções progressivas e drill-down              | grade de duas colunas                           | visão analítica densa             |
+| relatórios  | filtros primeiro, resultado depois; tabela/cartões                | filtros laterais e resultado principal          | filtros e resultado simultâneos   |
+| detalhe     | página ou sheet com retorno previsível                            | master-detail                                   | drawer/página conforme fluxo      |
 
 ## Arquitetura do frontend
 
@@ -161,46 +161,49 @@ Toda página autenticada recebe apenas o necessário:
 
 ```ts
 type SharedPageProps = {
-  auth: {
-    user: UserSummary;
-    permissions: string[];
-  };
-  workspace: {
-    tenant: TenantSummary;
-    activeUnit: UnitSummary;
-    availableUnits: UnitSummary[];
-  };
-  flash: {
-    success?: string;
-    error?: string;
-  };
-  requestId: string;
+    schemaVersion: 1;
+    auth: {
+        user: UserSummary;
+        permissions: string[];
+        entitlements: EntitlementSummary[];
+    };
+    workspace: {
+        tenant: TenantSummary;
+        activeUnit: UnitSummary;
+        availableUnits: UnitSummary[];
+    };
+    flash: {
+        success?: string;
+        error?: string;
+    };
+    requestId: string;
+    correlationId: string;
 };
 ```
 
-Cada tela estende esse contrato com uma estrutura própria. Dados grandes usam paginação; opções raramente alteradas usam lazy/deferred props quando houver benefício medido. Mutação usa formulário Inertia, idempotency key para operações críticas e erros de validação por campo.
+IDs trafegam como `string`; instantes como ISO 8601 UTC; dinheiro como unidade mínima + moeda; listagens extensas usam cursor opaco com tenant/filtros/ordenação vinculados. Cada tela estende esse contrato com uma estrutura própria. Dados grandes usam paginação; opções raramente alteradas usam lazy/deferred props quando houver benefício medido. Mutação usa formulário Inertia, idempotency key para operações críticas e erros de validação por campo. `permissions` controla affordance, `entitlements` controla capacidade contratada, e nenhum dos dois substitui Policy server-side.
 
 ## Matriz obrigatória de estados
 
 Antes de considerar qualquer tela pronta, verificar:
 
-| Estado | Resultado esperado |
-|---|---|
-| inicial/loading | skeleton coerente, sem salto estrutural severo |
-| vazio real | explicação e próxima ação autorizada |
-| populado | conteúdo principal e ações de linha |
-| vazio por filtro | filtros visíveis e ação de limpar |
-| validação | foco no primeiro erro e mensagens associadas aos campos |
-| erro recuperável | contexto preservado e tentativa novamente |
-| conflito/stale | não sobrescrever silenciosamente; oferecer recarregar/revisar |
-| sem permissão | ação ausente ou estado explicativo, conforme contexto |
-| sem entitlement | benefício e caminho legítimo de habilitação, sem falso erro |
-| responsivo | desktop, tablet e mobile com paridade funcional adequada |
-| teclado virtual | campo e ação final permanecem visíveis sem layout quebrado |
-| safe area | navegação e conteúdo não colidem com recortes/barras do sistema |
-| orientação | portrait/landscape preservam contexto e tarefa em andamento |
+| Estado              | Resultado esperado                                                         |
+| ------------------- | -------------------------------------------------------------------------- |
+| inicial/loading     | skeleton coerente, sem salto estrutural severo                             |
+| vazio real          | explicação e próxima ação autorizada                                       |
+| populado            | conteúdo principal e ações de linha                                        |
+| vazio por filtro    | filtros visíveis e ação de limpar                                          |
+| validação           | foco no primeiro erro e mensagens associadas aos campos                    |
+| erro recuperável    | contexto preservado e tentativa novamente                                  |
+| conflito/stale      | não sobrescrever silenciosamente; oferecer recarregar/revisar              |
+| sem permissão       | ação ausente ou estado explicativo, conforme contexto                      |
+| sem entitlement     | benefício e caminho legítimo de habilitação, sem falso erro                |
+| responsivo          | desktop, tablet e mobile com paridade funcional adequada                   |
+| teclado virtual     | campo e ação final permanecem visíveis sem layout quebrado                 |
+| safe area           | navegação e conteúdo não colidem com recortes/barras do sistema            |
+| orientação          | portrait/landscape preservam contexto e tarefa em andamento                |
 | overlay + navegação | overlay fecha ou restaura por regra explícita, sem reaparecer por acidente |
-| lista extensa | paginação/carregamento progressivo sem perder posição ou seleção |
+| lista extensa       | paginação/carregamento progressivo sem perder posição ou seleção           |
 
 ## Estratégia frontend-first
 
@@ -252,6 +255,8 @@ Fixtures nunca entram em produção. Identificadores, nomes, telefones e valores
 ### F2 — Identidade, tenant, unidade e autorização
 
 **Entrega:** usuário entra, escolhe contexto e só vê ações permitidas.
+
+F1 pode navegar com fixtures sintéticas, mas o gate de produção desta fase exige que o bootstrap PostgreSQL/schema `app`, baseline Laravel/Fortify UUID e migrations F2 tenham passado antes de substituir fixtures por dados persistentes. Nenhuma tela deve inferir tenant ou entitlement do cliente.
 
 - login, recuperação e confirmação de credenciais;
 - bootstrap de tenant/unidade e seletor de unidade ativa;
@@ -369,13 +374,17 @@ Clientes e serviços são pilotos adequados porque exercitam listagem, busca, pa
 
 ### PostgreSQL no Supabase
 
-- usar schema de aplicação dedicado e migrations versionadas pelo Laravel;
-- produção usa conexão persistente compatível com prepared statements; migrations e operações administrativas usam conexão direta quando disponível;
+- provisionar explicitamente o schema `app` antes do primeiro migrate remoto; usar `DB_SCHEMA=app`, `search_path=app,public`, TLS e DSN direto para migrations/administrativo;
+- produção usa Session Pooler compatível com prepared statements; migrations e operações administrativas usam conexão direta;
+- `migrations`, `sessions`, `cache`, `jobs` e `failed_jobs` podem ficar em `app`; Data API do Supabase não expõe `app`;
+- baseline Laravel/Fortify deve coordenar users UUIDv7, `email`/`password`, `email_normalized`, `HasUuids`, passkeys/sessions/reset/2FA antes do primeiro migrate;
 - exigir TLS, backups, PITR conforme plano contratado e teste periódico de restauração;
 - habilitar extensões apenas com ADR e necessidade real;
 - índices, constraints, tenant boundaries e auditoria são definidos em `domain/database-proposal.md`.
 
 RLS pode ser defesa adicional, mas não substitui Policies e escopo por tenant no Laravel. Se adotado, precisa funcionar corretamente com pooling e contexto transacional antes de ser obrigatório.
+
+SQLite é fast loop local, não gate de constraints/locks/JSONB/timestamptz. CI PostgreSQL é obrigatório antes de aceitar uma fatia.
 
 ### Redis
 
@@ -398,14 +407,14 @@ RLS pode ser defesa adicional, mas não substitui Policies e escopo por tenant n
 
 ### Matriz mínima de viewport/dispositivo
 
-| Execução | Cobertura |
-|---|---|
-| Chromium 390 × 844 | smoke de todas as rotas; fluxos críticos completos |
-| Chromium 768 × 1024 | composição tablet portrait e master-detail |
-| Chromium 1024 × 768 | tablet landscape/borda do shell desktop |
-| Chromium 1440 × 900 | densidade completa e regressão principal |
-| Safari/iOS real ou device farm | safe area, viewport dinâmica, teclado e scroll |
-| Chrome/Android real ou device farm | teclado, back, scroll e performance |
+| Execução                           | Cobertura                                          |
+| ---------------------------------- | -------------------------------------------------- |
+| Chromium 390 × 844                 | smoke de todas as rotas; fluxos críticos completos |
+| Chromium 768 × 1024                | composição tablet portrait e master-detail         |
+| Chromium 1024 × 768                | tablet landscape/borda do shell desktop            |
+| Chromium 1440 × 900                | densidade completa e regressão principal           |
+| Safari/iOS real ou device farm     | safe area, viewport dinâmica, teclado e scroll     |
+| Chrome/Android real ou device farm | teclado, back, scroll e performance                |
 
 Testes automatizados de viewport não substituem aparelho real. Antes do beta, login, cliente, agenda, comanda e relatório devem passar em pelo menos um iPhone/Safari e um Android/Chrome representativos.
 
