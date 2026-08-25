@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 it('evaluates entitlement vigency with an inclusive start and exclusive end', function () {
     $tenant = Tenant::factory()->create();
@@ -67,7 +68,7 @@ it('executes an idempotent command once and replays its sanitized result', funct
         ->and($second->value)->toBe($first->value['value']);
 
     expect(fn () => $service->execute($tenant, $actor, 'command-1', ['name' => 'different'], fn (): array => ['value' => []]))
-        ->toThrow(LogicException::class);
+        ->toThrow(ConflictHttpException::class);
 });
 
 it('rolls back partial idempotent effects and records a failed attempt', function () {

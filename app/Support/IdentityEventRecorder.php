@@ -16,13 +16,13 @@ final class IdentityEventRecorder
         private readonly OutboxEventStore $outbox,
     ) {}
 
-    /** @param array<string, scalar|null> $metadata */
+    /** @param array<string, mixed> $metadata */
     public function record(User $actor, TenantContext $context, string $action, Model $resource, array $metadata = []): void
     {
         $this->recordForTenant($actor, $context->tenant, $action, $resource, $metadata, $context->unit?->getKey());
     }
 
-    /** @param array<string, scalar|null> $metadata */
+    /** @param array<string, mixed> $metadata */
     public function recordForTenant(User $actor, Tenant $tenant, string $action, Model $resource, array $metadata = [], ?string $unitId = null): void
     {
         if (DB::transactionLevel() < 1) {
@@ -63,6 +63,7 @@ final class IdentityEventRecorder
             'payload' => [
                 'resource_type' => $resourceType,
                 'resource_id' => (string) $resourceId,
+                ...array_intersect_key($metadata, array_flip(['service_ids', 'professional_ids'])),
             ],
         ]);
     }

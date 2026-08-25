@@ -1,16 +1,21 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { CalendarDays, LayoutDashboard, Menu, Users } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import customers from '@/routes/customers';
+import type { SharedPageProps } from '@/types';
 
 const itemClassName =
     'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring';
 
 export function MobileBottomNav() {
     const { isCurrentUrl } = useCurrentUrl();
+    const { props } = usePage<SharedPageProps>();
+    const canViewCustomers = props.auth.permissions.includes('customer.view');
     const dashboardIsActive = isCurrentUrl(dashboard());
+    const customersIsActive = isCurrentUrl(customers.index(), undefined, true);
 
     return (
         <nav
@@ -47,19 +52,36 @@ export function MobileBottomNav() {
                     <span>Agenda</span>
                 </button>
 
-                <button
-                    type="button"
-                    aria-disabled="true"
-                    aria-label="Clientes — Em breve"
-                    disabled
-                    className={cn(
-                        itemClassName,
-                        'cursor-not-allowed text-sidebar-foreground/45',
-                    )}
-                >
-                    <Users className="size-5" aria-hidden="true" />
-                    <span>Clientes</span>
-                </button>
+                {canViewCustomers ? (
+                    <Link
+                        href={customers.index()}
+                        prefetch
+                        aria-current={customersIsActive ? 'page' : undefined}
+                        className={cn(
+                            itemClassName,
+                            customersIsActive
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
+                        )}
+                    >
+                        <Users className="size-5" aria-hidden="true" />
+                        <span>Clientes</span>
+                    </Link>
+                ) : (
+                    <button
+                        type="button"
+                        aria-disabled="true"
+                        aria-label="Clientes — indisponível"
+                        disabled
+                        className={cn(
+                            itemClassName,
+                            'cursor-not-allowed text-sidebar-foreground/45',
+                        )}
+                    >
+                        <Users className="size-5" aria-hidden="true" />
+                        <span>Clientes</span>
+                    </button>
+                )}
 
                 <SidebarTrigger
                     size="default"

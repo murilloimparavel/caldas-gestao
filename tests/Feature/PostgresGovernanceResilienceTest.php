@@ -13,6 +13,7 @@ use App\Support\InboxEventStore;
 use App\Support\OutboxEventStore;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 function requirePostgresGovernanceGate(): void
 {
@@ -281,7 +282,7 @@ test('serializes idempotency keys across independent PostgreSQL processes for nu
     $count = $runtime->prepare('select count(*) from app.idempotency_keys where tenant_id = ?');
     $count->execute([$tenant['id']]);
 
-    expect(fn () => $service->execute($tenant['id'], null, 'concurrent-0', ['request' => 'different'], fn (): array => ['value' => []]))->toThrow(LogicException::class)
+    expect(fn () => $service->execute($tenant['id'], null, 'concurrent-0', ['request' => 'different'], fn (): array => ['value' => []]))->toThrow(ConflictHttpException::class)
         ->and((int) $count->fetchColumn())->toBe(2);
 });
 

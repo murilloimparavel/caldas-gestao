@@ -11,6 +11,7 @@ use DateTimeInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use JsonException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Throwable;
 
 final class IdempotencyService
@@ -36,12 +37,14 @@ final class IdempotencyService
         $expiresAt ??= now()->addDay();
 
         try {
-            return DB::transaction(function () use ($tenantId, $actorId, $key, $requestHash, $operation, $expiresAt): IdempotencyResult {
+            return DB::transaction(function () use ($tenantId, $actorId, $key, $requestHash, $request, $operation, $expiresAt): IdempotencyResult {
                 $record = $this->lockOrCreate($tenantId, $actorId, $key, $requestHash, $expiresAt);
 
                 if ($record->request_hash !== $requestHash) {
-                    throw new \LogicException('The idempotency key was already used with a different request payload.');
+                    throw new ConflictHttpException('The idempotency key was already used with a different request payload.');
                 }
+
+                $this->assertReplayScope($record, $request);
 
                 if ($record->status !== IdempotencyStatus::Started && ! $record->isExpired()) {
                     return new IdempotencyResult(
@@ -80,6 +83,8 @@ final class IdempotencyService
                     'status' => IdempotencyStatus::Succeeded,
                     'response_code' => $responseCode,
                     'response_ref' => $responseRef,
+                    'resource_type' => is_string($responseRef['resource_type'] ?? null) ? $responseRef['resource_type'] : null,
+                    'resource_id' => is_scalar($responseRef['resource_id'] ?? null) ? (string) $responseRef['resource_id'] : null,
                     'completed_at' => now(),
                 ])->save();
 
@@ -183,7 +188,7 @@ final class IdempotencyService
             $record = $this->lockOrCreate($tenantId, $actorId, $key, $requestHash, $expiresAt);
 
             if ($record->request_hash !== $requestHash) {
-                throw new \LogicException('The idempotency key was already used with a different request payload.');
+                throw new ConflictHttpException('The idempotency key was already used with a different request payload.');
             }
 
             if ($record->status === IdempotencyStatus::Succeeded) {
@@ -198,5 +203,24 @@ final class IdempotencyService
                 'completed_at' => now(),
             ])->save();
         }, 5);
+    }
+
+    private function assertReplayScope(IdempotencyKey $record, mixed $request): void
+    {
+        if (! is_array($request) || ! is_array($request['scope'] ?? null)) {
+            return;
+        }
+
+        $scope = $request['scope'];
+        $resourceType = $scope['resource_type'] ?? null;
+        $resourceId = $scope['resource_id'] ?? null;
+
+        if ($record->resource_type !== null && $record->resource_type !== $resourceType) {
+            throw new ConflictHttpException('The idempotency key cannot be replayed for a different resource type.');
+        }
+
+        if ($record->resource_id !== null && $resourceId !== null && $record->resource_id !== $resourceId) {
+            throw new ConflictHttpException('The idempotency key cannot be replayed for a different resource.');
+        }
     }
 }

@@ -77,6 +77,17 @@ O parâmetro `--resume` não transforma onboarding em ingresso implícito. Ele �
 uma escolha explícita de reconciliação e produz seu próprio evento auditável e
 outbox quando altera o tenant.
 
+Quando uma versão acrescentar permissões ao catálogo operacional, reconcilie
+os papéis owner de tenants já existentes com:
+
+```shell
+php artisan app:reconcile-owner-permissions --no-interaction
+```
+
+Para limitar a uma unidade de implantação, informe o UUID do tenant com
+`--tenant`. O comando somente reconcilia papéis owner de sistema existentes;
+não cria tenants, usuários ou novos papéis.
+
 ## Seed local
 
 `php artisan db:seed` chama o catálogo e cria uma fixture somente em

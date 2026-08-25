@@ -19,6 +19,9 @@ final class OwnerPermissionCatalog
         'role.view', 'role.update', 'role.delete', 'role.manage',
         'entitlement.view', 'entitlement.manage',
         'audit.view',
+        'customer.view', 'customer.manage',
+        'professional.view', 'professional.manage',
+        'service.view', 'service.manage',
     ];
 
     /**

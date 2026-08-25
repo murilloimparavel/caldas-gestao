@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     BarChart3,
     CalendarDays,
@@ -21,7 +21,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { SidebarNavGroup } from '@/types';
+import customers from '@/routes/customers';
+import professionals from '@/routes/professionals';
+import services from '@/routes/services';
+import type { SharedPageProps, SidebarNavGroup } from '@/types';
 
 const mainNavGroups: SidebarNavGroup[] = [
     {
@@ -39,13 +42,29 @@ const mainNavGroups: SidebarNavGroup[] = [
     {
         label: 'Relacionamento',
         items: [
-            { title: 'Clientes', icon: Users, disabled: true },
-            { title: 'Profissionais', icon: UserRound, disabled: true },
+            {
+                title: 'Clientes',
+                href: customers.index(),
+                icon: Users,
+                permission: 'customer.view',
+            },
+            {
+                title: 'Profissionais',
+                href: professionals.index(),
+                icon: UserRound,
+                permission: 'professional.view',
+            },
         ],
     },
     {
         label: 'Gestão',
         items: [
+            {
+                title: 'Serviços',
+                href: services.index(),
+                icon: Tags,
+                permission: 'service.view',
+            },
             { title: 'Catálogo', icon: Tags, disabled: true },
             { title: 'Financeiro', icon: WalletCards, disabled: true },
             { title: 'Relatórios', icon: BarChart3, disabled: true },
@@ -54,6 +73,17 @@ const mainNavGroups: SidebarNavGroup[] = [
 ];
 
 export function AppSidebar() {
+    const { props } = usePage<SharedPageProps>();
+    const permissions = new Set(props.auth.permissions);
+    const visibleGroups = mainNavGroups
+        .map((group) => ({
+            ...group,
+            items: group.items.filter(
+                (item) => !item.permission || permissions.has(item.permission),
+            ),
+        }))
+        .filter((group) => group.items.length > 0);
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -70,7 +100,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <nav aria-label="Navegação principal">
-                    <NavMain groups={mainNavGroups} />
+                    <NavMain groups={visibleGroups} />
                 </nav>
             </SidebarContent>
             <div className="mt-auto p-2">
