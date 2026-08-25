@@ -49,6 +49,35 @@ export type CalendarFilters = {
     view?: CalendarView;
 };
 
+export type ScheduleBlock = {
+    ends_at: string;
+    id: string;
+    lock_version: number;
+    professional?: CalendarOption | null;
+    professional_id?: string | null;
+    reason?: string | null;
+    starts_at: string;
+    status: 'active' | 'cancelled';
+    timezone: string;
+};
+
+export type AvailabilityRule = {
+    ends_at: string;
+    id: string;
+    lock_version: number;
+    professional?: CalendarOption | null;
+    professional_id: string;
+    starts_at: string;
+    status: 'active' | 'inactive';
+    timezone: string;
+    weekday: number;
+};
+
+export type CalendarSettings = {
+    availability_rules?: AvailabilityRule[];
+    schedule_blocks?: ScheduleBlock[];
+};
+
 export type CalendarRange = {
     end: string;
     label?: string;
@@ -61,8 +90,10 @@ export type CalendarProps = {
         appointments?: CalendarAppointment[];
         filters?: CalendarFilters;
         range?: CalendarRange;
+        schedule_blocks?: ScheduleBlock[];
         timezone?: string;
     };
+    calendarSettings?: CalendarSettings;
     customers?: CalendarOption[];
     error?: string;
     errors?: Record<string, string | string[]>;
@@ -78,5 +109,7 @@ export type CalendarProps = {
     };
     professionals?: CalendarOption[];
     range?: CalendarRange;
+    schedule_blocks?: ScheduleBlock[];
     services?: CalendarOption[];
 };
+

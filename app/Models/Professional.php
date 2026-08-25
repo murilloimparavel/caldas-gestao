@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /** @property int $lock_version */
@@ -49,5 +50,17 @@ class Professional extends Model
         return $this->belongsToMany(Service::class)
             ->withPivot(['tenant_id', 'unit_id'])
             ->withTimestamps();
+    }
+
+    /** @return HasMany<AvailabilityRule, $this> */
+    public function availabilityRules(): HasMany
+    {
+        return $this->hasMany(AvailabilityRule::class);
+    }
+
+    /** @return HasMany<ScheduleBlock, $this> */
+    public function scheduleBlocks(): HasMany
+    {
+        return $this->hasMany(ScheduleBlock::class);
     }
 }

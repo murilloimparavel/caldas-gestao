@@ -1,10 +1,12 @@
 import { Link } from '@inertiajs/react';
 import {
     CalendarDays,
+    CheckCircle2,
     ChevronLeft,
     ChevronRight,
     Clock3,
     Filter,
+    Lock,
     MoreHorizontal,
     UserRound,
 } from 'lucide-react';
@@ -20,7 +22,9 @@ import type {
     CalendarOption,
     CalendarRange,
     CalendarView,
+    ScheduleBlock,
 } from '@/types/calendar';
+
 
 export const statusLabels: Record<string, string> = {
     cancelled: 'Cancelado',
@@ -193,6 +197,7 @@ export function CalendarToolbar({
     date,
     filters,
     onCreate,
+    onCreateBlock,
     onFilter,
     range,
     timeZone,
@@ -202,6 +207,7 @@ export function CalendarToolbar({
     date: string;
     filters: CalendarFilters;
     onCreate: () => void;
+    onCreateBlock?: () => void;
     onFilter: () => void;
     range?: CalendarRange;
     timeZone?: string;
@@ -320,10 +326,18 @@ export function CalendarToolbar({
                     Filtrar
                 </Button>
                 {canManage ? (
-                    <Button onClick={onCreate}>
-                        <CalendarDays aria-hidden="true" />
-                        Novo agendamento
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {onCreateBlock ? (
+                            <Button variant="outline" onClick={onCreateBlock}>
+                                <Lock aria-hidden="true" />
+                                Novo bloqueio
+                            </Button>
+                        ) : null}
+                        <Button onClick={onCreate}>
+                            <CalendarDays aria-hidden="true" />
+                            Novo agendamento
+                        </Button>
+                    </div>
                 ) : null}
             </div>
         </div>
@@ -390,15 +404,73 @@ function dayDates(start: string, view: CalendarView): string[] {
     return Array.from({ length: count }, (_, index) => addDays(start, index));
 }
 
+export function ScheduleBlockCard({
+    block,
+    onOpen,
+    timeZone,
+}: {
+    block: ScheduleBlock;
+    onOpen?: (block: ScheduleBlock) => void;
+    timeZone?: string;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={() => onOpen?.(block)}
+            className="group flex w-full items-start justify-between rounded-lg border border-dashed border-amber-500/60 bg-amber-50/75 p-3 text-left shadow-2xs transition hover:border-amber-600 hover:bg-amber-100/90 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
+        >
+            <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-200/80 text-amber-900 dark:bg-amber-900 dark:text-amber-300">
+                    <Lock className="size-3.5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-amber-950 dark:text-amber-200">
+                            {formatTime(block.starts_at, timeZone)} –{' '}
+                            {formatTime(block.ends_at, timeZone)}
+                        </span>
+                        <Badge
+                            variant="outline"
+                            className="border-amber-400/60 bg-amber-100/80 text-[10px] text-amber-900 dark:border-amber-700 dark:bg-amber-900/60 dark:text-amber-300"
+                        >
+                            Bloqueio
+                        </Badge>
+                    </div>
+                    <p className="mt-1 truncate text-sm font-medium text-amber-950 dark:text-amber-100">
+                        {block.reason || 'Horário bloqueado / Pausa operacional'}
+                    </p>
+                    {block.professional?.name ? (
+                        <p className="mt-0.5 truncate text-xs text-amber-900/80 dark:text-amber-300/80">
+                            Profissional: {block.professional.name}
+                        </p>
+                    ) : (
+                        <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-300/80">
+                            Aplica-se a toda a unidade
+                        </p>
+                    )}
+                </div>
+            </div>
+            <MoreHorizontal
+                className="size-4 shrink-0 text-amber-800 opacity-60 transition group-hover:opacity-100 dark:text-amber-300"
+                aria-hidden="true"
+            />
+        </button>
+    );
+}
+
 export function WeekCalendar({
     appointments,
     onOpen,
+    onOpenBlock,
     range,
+    scheduleBlocks = [],
     timeZone,
 }: {
     appointments: CalendarAppointment[];
     onOpen: (appointment: CalendarAppointment) => void;
+    onOpenBlock?: (block: ScheduleBlock) => void;
     range: CalendarRange;
+    scheduleBlocks?: ScheduleBlock[];
     timeZone?: string;
 }) {
     const dates = dayDates(range.start, 'week');
@@ -460,6 +532,11 @@ export function WeekCalendar({
                                     dateKey(appointment.starts_at, timeZone) ===
                                     date,
                             );
+                            const dayBlocks = scheduleBlocks.filter(
+                                (block) =>
+                                    block.status !== 'cancelled' &&
+                                    dateKey(block.starts_at, timeZone) === date,
+                            );
 
                             return (
                                 <div
@@ -467,6 +544,67 @@ export function WeekCalendar({
                                     className="relative border-r border-border bg-[linear-gradient(to_bottom,transparent_43px,var(--border)_44px)] bg-size-[100%_44px] last:border-r-0"
                                     style={{ height: timelineHeight }}
                                 >
+                                    {dayBlocks.map((block) => {
+                                        const start = asInstant(block.starts_at);
+                                        const end = asInstant(block.ends_at);
+                                        const { hour, minute } = zonedTimeParts(
+                                            block.starts_at,
+                                            timeZone,
+                                        );
+                                        const startMinutes = hour * 60 + minute;
+                                        const duration = Math.max(
+                                            15,
+                                            Math.round(
+                                                (end.getTime() - start.getTime()) /
+                                                    60000,
+                                            ),
+                                        );
+                                        const style: CSSProperties = {
+                                            height: `${Math.max(28, (duration / 30) * slotHeight - 4)}px`,
+                                            top: `${((startMinutes - startHour * 60) / 30) * slotHeight + 2}px`,
+                                        };
+
+                                        return (
+                                            <button
+                                                key={block.id}
+                                                type="button"
+                                                onClick={() => onOpenBlock?.(block)}
+                                                className="group absolute inset-x-1 z-10 flex flex-col justify-between overflow-hidden rounded-md border border-dashed border-amber-500/60 bg-amber-100/85 p-1.5 text-left text-amber-950 shadow-2xs backdrop-blur-xs transition hover:border-amber-600 hover:bg-amber-200/90 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden dark:border-amber-600/70 dark:bg-amber-950/80 dark:text-amber-200 dark:hover:bg-amber-900/90"
+                                                style={style}
+                                                title={`Bloqueio: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
+                                            >
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-900 dark:text-amber-300">
+                                                        <Lock
+                                                            className="size-3 text-amber-700 dark:text-amber-400"
+                                                            aria-hidden="true"
+                                                        />
+                                                        {formatTime(
+                                                            block.starts_at,
+                                                            timeZone,
+                                                        )}
+                                                        –
+                                                        {formatTime(
+                                                            block.ends_at,
+                                                            timeZone,
+                                                        )}
+                                                    </span>
+                                                    <span className="rounded bg-amber-200/70 px-1 py-0.2 text-[9px] font-medium text-amber-950 dark:bg-amber-900/90 dark:text-amber-200">
+                                                        Bloqueio
+                                                    </span>
+                                                </div>
+                                                <p className="truncate text-[11px] font-medium text-amber-950 dark:text-amber-100">
+                                                    {block.reason ||
+                                                        'Horário bloqueado'}
+                                                </p>
+                                                {block.professional?.name ? (
+                                                    <p className="truncate text-[10px] text-amber-900/80 dark:text-amber-300/80">
+                                                        {block.professional.name}
+                                                    </p>
+                                                ) : null}
+                                            </button>
+                                        );
+                                    })}
                                     {dayAppointments.map((appointment) => {
                                         const start = asInstant(
                                             appointment.starts_at,
@@ -495,7 +633,7 @@ export function WeekCalendar({
                                         return (
                                             <div
                                                 key={appointment.id}
-                                                className="absolute inset-x-1"
+                                                className="absolute inset-x-1 z-0"
                                                 style={style}
                                             >
                                                 <AppointmentCard
@@ -521,16 +659,28 @@ export function DayAgenda({
     appointments,
     date,
     onOpen,
+    onOpenBlock,
+    scheduleBlocks = [],
     timeZone,
 }: {
     appointments: CalendarAppointment[];
     date: string;
     onOpen: (appointment: CalendarAppointment) => void;
+    onOpenBlock?: (block: ScheduleBlock) => void;
+    scheduleBlocks?: ScheduleBlock[];
     timeZone?: string;
 }) {
     const dayAppointments = appointments
         .filter(
             (appointment) => dateKey(appointment.starts_at, timeZone) === date,
+        )
+        .sort((left, right) => left.starts_at.localeCompare(right.starts_at));
+
+    const dayBlocks = scheduleBlocks
+        .filter(
+            (block) =>
+                block.status !== 'cancelled' &&
+                dateKey(block.starts_at, timeZone) === date,
         )
         .sort((left, right) => left.starts_at.localeCompare(right.starts_at));
 
@@ -548,7 +698,7 @@ export function DayAgenda({
                         {formatDay(date, timeZone)}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                        Atendimentos do dia
+                        Atendimentos e bloqueios do dia
                     </p>
                 </div>
                 <Clock3
@@ -556,18 +706,44 @@ export function DayAgenda({
                     aria-hidden="true"
                 />
             </div>
-            {dayAppointments.length > 0 ? (
-                <div className="grid gap-2">
-                    {dayAppointments.map((appointment) => (
-                        <AppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            onOpen={onOpen}
-                            timeZone={timeZone}
-                        />
-                    ))}
+
+            {dayBlocks.length > 0 ? (
+                <div className="mb-4 space-y-2">
+                    <p className="text-xs font-semibold tracking-wider text-amber-800 uppercase dark:text-amber-400">
+                        Bloqueios / Pausas programadas
+                    </p>
+                    <div className="grid gap-2">
+                        {dayBlocks.map((block) => (
+                            <ScheduleBlockCard
+                                key={block.id}
+                                block={block}
+                                onOpen={onOpenBlock}
+                                timeZone={timeZone}
+                            />
+                        ))}
+                    </div>
                 </div>
-            ) : (
+            ) : null}
+
+            {dayAppointments.length > 0 ? (
+                <div className="space-y-2">
+                    {dayBlocks.length > 0 ? (
+                        <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                            Agendamentos
+                        </p>
+                    ) : null}
+                    <div className="grid gap-2">
+                        {dayAppointments.map((appointment) => (
+                            <AppointmentCard
+                                key={appointment.id}
+                                appointment={appointment}
+                                onOpen={onOpen}
+                                timeZone={timeZone}
+                            />
+                        ))}
+                    </div>
+                </div>
+            ) : dayBlocks.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center">
                     <CalendarDays
                         className="mx-auto size-6 text-muted-foreground"
@@ -577,10 +753,10 @@ export function DayAgenda({
                         Dia livre por enquanto
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Nenhum agendamento combina com os filtros.
+                        Nenhum agendamento ou bloqueio combina com os filtros.
                     </p>
                 </div>
-            )}
+            ) : null}
         </section>
     );
 }
@@ -588,12 +764,16 @@ export function DayAgenda({
 export function MonthAgenda({
     appointments,
     onOpen,
+    onOpenBlock,
     range,
+    scheduleBlocks = [],
     timeZone,
 }: {
     appointments: CalendarAppointment[];
     onOpen: (appointment: CalendarAppointment) => void;
+    onOpenBlock?: (block: ScheduleBlock) => void;
     range: CalendarRange;
+    scheduleBlocks?: ScheduleBlock[];
     timeZone?: string;
 }) {
     const { month, year } = dateOnlyParts(range.start);
@@ -632,6 +812,11 @@ export function MonthAgenda({
                         (appointment) =>
                             dateKey(appointment.starts_at, timeZone) === date,
                     );
+                    const dayBlocks = scheduleBlocks.filter(
+                        (block) =>
+                            block.status !== 'cancelled' &&
+                            dateKey(block.starts_at, timeZone) === date,
+                    );
 
                     return (
                         <div
@@ -644,6 +829,22 @@ export function MonthAgenda({
                                 {dateOnlyParts(date).day}
                             </p>
                             <div className="mt-2 grid gap-1">
+                                {dayBlocks.slice(0, 2).map((block) => (
+                                    <button
+                                        key={block.id}
+                                        type="button"
+                                        onClick={() => onOpenBlock?.(block)}
+                                        className="flex w-full items-center gap-1 rounded border border-dashed border-amber-500/50 bg-amber-50/80 px-1.5 py-0.5 text-left text-[10px] font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200"
+                                    >
+                                        <Lock
+                                            className="size-2.5 shrink-0 text-amber-700 dark:text-amber-400"
+                                            aria-hidden="true"
+                                        />
+                                        <span className="truncate">
+                                            {block.reason || 'Bloqueio'}
+                                        </span>
+                                    </button>
+                                ))}
                                 {dayAppointments
                                     .slice(0, 3)
                                     .map((appointment) => (

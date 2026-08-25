@@ -2,6 +2,8 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     BriefcaseBusiness,
+    Clock,
+    Lock,
     Mail,
     Phone,
     UserRound,
@@ -29,15 +31,50 @@ type ServiceSummary = {
     name: string;
 };
 
+type AvailabilityRuleSummary = {
+    ends_at: string;
+    id: string;
+    lock_version: number;
+    starts_at: string;
+    status: string;
+    timezone: string;
+    weekday: number;
+};
+
+type ScheduleBlockSummary = {
+    ends_at: string;
+    id: string;
+    lock_version: number;
+    reason?: string | null;
+    starts_at: string;
+    status: string;
+    timezone: string;
+};
+
 type Professional = {
+    availability_rules?: AvailabilityRuleSummary[];
+    availabilityRules?: AvailabilityRuleSummary[];
     email: string | null;
     id: string;
     lock_version: number;
     name: string;
     phone: string | null;
+    schedule_blocks?: ScheduleBlockSummary[];
+    scheduleBlocks?: ScheduleBlockSummary[];
     services: ServiceSummary[];
     status: ResourceStatus;
 };
+
+const weekdays = [
+    { day: 0, name: 'Domingo', short: 'Dom' },
+    { day: 1, name: 'Segunda-feira', short: 'Seg' },
+    { day: 2, name: 'Terça-feira', short: 'Ter' },
+    { day: 3, name: 'Quarta-feira', short: 'Qua' },
+    { day: 4, name: 'Quinta-feira', short: 'Qui' },
+    { day: 5, name: 'Sexta-feira', short: 'Sex' },
+    { day: 6, name: 'Sábado', short: 'Sáb' },
+];
+
 
 type Props = {
     options?: {
@@ -85,7 +122,8 @@ export default function ProfessionalShow({
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-                    <section className="surface-panel p-5 sm:p-6">
+                    <div className="space-y-5">
+                        <section className="surface-panel p-5 sm:p-6">
                         <div className="mb-6 space-y-1">
                             <h2 className="text-base font-semibold">
                                 Dados principais
@@ -237,7 +275,160 @@ export default function ProfessionalShow({
                         </Form>
                     </section>
 
+                    <section className="surface-panel p-5 sm:p-6">
+                        <div className="mb-5 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-base font-semibold">
+                                    Jornada de trabalho e disponibilidade
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Horários semanais de atendimento
+                                    configurados para este profissional.
+                                </p>
+                            </div>
+                            <Clock
+                                className="size-5 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {weekdays.map(({ day, name, short }) => {
+                                const dayRules = (
+                                    professional.availability_rules ??
+                                    professional.availabilityRules ??
+                                    []
+                                ).filter(
+                                    (rule) =>
+                                        rule.weekday === day &&
+                                        rule.status === 'active',
+                                );
+
+                                return (
+                                    <div
+                                        key={day}
+                                        className={`rounded-lg border p-3 ${
+                                            dayRules.length > 0
+                                                ? 'border-border bg-card'
+                                                : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold">
+                                                {short} – {name}
+                                            </span>
+                                            {dayRules.length > 0 ? (
+                                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                    Ativo
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    Folga
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="mt-2 space-y-1">
+                                            {dayRules.length > 0 ? (
+                                                dayRules.map((rule) => (
+                                                    <div
+                                                        key={rule.id}
+                                                        className="text-xs font-medium text-foreground"
+                                                    >
+                                                        {rule.starts_at.slice(
+                                                            0,
+                                                            5,
+                                                        )}{' '}
+                                                        –{' '}
+                                                        {rule.ends_at.slice(
+                                                            0,
+                                                            5,
+                                                        )}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-xs italic text-muted-foreground">
+                                                    Sem atendimento
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section className="surface-panel p-5 sm:p-6">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-base font-semibold">
+                                    Bloqueios e pausas programadas
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Pausas operacionais, consultas e ausências
+                                    registradas na agenda.
+                                </p>
+                            </div>
+                            <Lock
+                                className="size-5 text-amber-600 dark:text-amber-400"
+                                aria-hidden="true"
+                            />
+                        </div>
+
+                        {(
+                            professional.schedule_blocks ??
+                            professional.scheduleBlocks ??
+                            []
+                        ).length > 0 ? (
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {(
+                                    professional.schedule_blocks ??
+                                    professional.scheduleBlocks ??
+                                    []
+                                ).map((block) => (
+                                    <div
+                                        key={block.id}
+                                        className="flex items-start gap-3 rounded-lg border border-amber-300/60 bg-amber-50/70 p-3 text-xs dark:border-amber-700/60 dark:bg-amber-950/40"
+                                    >
+                                        <Lock
+                                            className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-400"
+                                            aria-hidden="true"
+                                        />
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-amber-950 dark:text-amber-100">
+                                                {block.reason ||
+                                                    'Bloqueio de horário'}
+                                            </p>
+                                            <p className="mt-0.5 text-amber-900/80 dark:text-amber-300/80">
+                                                {new Date(
+                                                    block.starts_at,
+                                                ).toLocaleString('pt-BR', {
+                                                    dateStyle: 'short',
+                                                    timeStyle: 'short',
+                                                })}{' '}
+                                                –{' '}
+                                                {new Date(
+                                                    block.ends_at,
+                                                ).toLocaleTimeString('pt-BR', {
+                                                    timeStyle: 'short',
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                                <p className="text-xs text-muted-foreground">
+                                    Nenhum bloqueio ou ausência programada para
+                                    este profissional.
+                                </p>
+                            </div>
+                        )}
+                    </section>
+                    </div>
+
                     <aside className="space-y-5">
+
                         <section className="surface-panel p-5 sm:p-6">
                             <h2 className="text-base font-semibold">
                                 Serviços habilitados

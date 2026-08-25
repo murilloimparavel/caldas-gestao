@@ -1,5 +1,5 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { Plus, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Lock, Plus, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import {
     CalendarError,
@@ -14,6 +14,8 @@ import {
     addDays,
     dateKey,
     dateTimeValue,
+    formatDay,
+    formatTime,
     statusLabel,
 } from '@/components/calendar';
 import {
@@ -42,17 +44,24 @@ import {
 } from '@/components/ui/sheet';
 import {
     cancel as cancelAppointment,
+    check_in as checkInAppointment,
     store as storeAppointment,
     update as updateAppointment,
 } from '@/routes/appointments';
 import { index as calendarIndex } from '@/routes/calendar';
+import {
+    destroy as destroyScheduleBlock,
+    store as storeScheduleBlock,
+} from '@/routes/schedule_blocks';
 import type { SharedPageProps } from '@/types';
 import type {
     AppointmentStatus,
     CalendarAppointment,
     CalendarOption,
     CalendarProps,
+    ScheduleBlock,
 } from '@/types/calendar';
+
 
 const statusOptions: AppointmentStatus[] = [
     'draft',
@@ -415,17 +424,226 @@ function CancelAppointmentForm({
     );
 }
 
+function CheckInAppointmentForm({
+    appointment,
+    onClose,
+}: {
+    appointment: CalendarAppointment;
+    onClose: () => void;
+}) {
+    const [mutationKey] = useState(() =>
+        createIdempotencyKey(`appointment-checkin:${appointment.id}`),
+    );
+
+    return (
+        <Form
+            {...checkInAppointment.form(appointment.id)}
+            headers={{ 'X-Idempotency-Key': mutationKey }}
+            className="mt-3"
+            onSuccess={onClose}
+        >
+            {({ processing }) => (
+                <>
+                    <input
+                        type="hidden"
+                        name="lock_version"
+                        value={appointment.lock_version}
+                    />
+                    <Button
+                        type="submit"
+                        disabled={processing}
+                        className="w-full bg-emerald-600 font-medium text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                    >
+                        <CheckCircle2
+                            className="mr-2 size-4"
+                            aria-hidden="true"
+                        />
+                        {processing
+                            ? 'Registrando check-in…'
+                            : 'Registrar Check-in (Cliente presente)'}
+                    </Button>
+                </>
+            )}
+        </Form>
+    );
+}
+
+function ScheduleBlockForm({
+    defaultDate,
+    onClose,
+    professionals,
+    unitTimezone,
+}: {
+    defaultDate: string;
+    onClose: () => void;
+    professionals: CalendarOption[];
+    unitTimezone: string;
+}) {
+    const [mutationKey] = useState(() =>
+        createIdempotencyKey('schedule-block-create'),
+    );
+
+    const defaultStartsAt = `${defaultDate}T09:00`;
+    const defaultEndsAt = `${defaultDate}T10:00`;
+
+    return (
+        <Form
+            {...storeScheduleBlock.form()}
+            headers={{ 'X-Idempotency-Key': mutationKey }}
+            className="space-y-4"
+            onSuccess={onClose}
+        >
+            {({ errors, processing }) => (
+                <>
+                    <FormErrorSummary errors={errors} />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                            <FormField
+                                label="Profissional"
+                                name="professional_id"
+                                error={errors.professional_id}
+                            >
+                                <select
+                                    id="professional_id"
+                                    name="professional_id"
+                                    defaultValue=""
+                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                >
+                                    <option value="">
+                                        Toda a unidade (Bloqueio geral)
+                                    </option>
+                                    {professionals.map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
+                        </div>
+                        <FormField
+                            label="Início do bloqueio"
+                            name="starts_at"
+                            error={errors.starts_at}
+                        >
+                            <Input
+                                id="starts_at"
+                                name="starts_at"
+                                type="datetime-local"
+                                defaultValue={defaultStartsAt}
+                                required
+                            />
+                        </FormField>
+                        <FormField
+                            label="Fim do bloqueio"
+                            name="ends_at"
+                            error={errors.ends_at}
+                        >
+                            <Input
+                                id="ends_at"
+                                name="ends_at"
+                                type="datetime-local"
+                                defaultValue={defaultEndsAt}
+                                required
+                            />
+                        </FormField>
+                        <div className="sm:col-span-2">
+                            <FormField
+                                label="Motivo / Justificativa"
+                                name="reason"
+                                error={errors.reason}
+                            >
+                                <Input
+                                    id="reason"
+                                    name="reason"
+                                    placeholder="Ex.: Intervalo, Almoço, Consulta médica, Manutenção"
+                                    required
+                                />
+                            </FormField>
+                        </div>
+                        <input
+                            type="hidden"
+                            name="timezone"
+                            value={unitTimezone}
+                        />
+                    </div>
+                    <FormActions
+                        processing={processing}
+                        onCancel={onClose}
+                        label="Criar bloqueio"
+                    />
+                </>
+            )}
+        </Form>
+    );
+}
+
+function DeleteScheduleBlockForm({
+    block,
+    onClose,
+}: {
+    block: ScheduleBlock;
+    onClose: () => void;
+}) {
+    const [mutationKey] = useState(() =>
+        createIdempotencyKey(`schedule-block-delete:${block.id}`),
+    );
+
+    return (
+        <Form
+            {...destroyScheduleBlock.form(block.id)}
+            headers={{ 'X-Idempotency-Key': mutationKey }}
+            className="mt-4"
+            onSubmit={(event) => {
+                if (!window.confirm('Remover este bloqueio de horário?')) {
+                    event.preventDefault();
+                }
+            }}
+            onSuccess={onClose}
+        >
+            {({ errors, processing }) => (
+                <>
+                    <FormErrorSummary errors={errors} />
+                    <input
+                        type="hidden"
+                        name="lock_version"
+                        value={block.lock_version}
+                    />
+                    <Button
+                        type="submit"
+                        variant="destructive"
+                        disabled={processing}
+                        className="w-full"
+                    >
+                        {processing
+                            ? 'Removendo…'
+                            : 'Remover bloqueio de horário'}
+                    </Button>
+                </>
+            )}
+        </Form>
+    );
+}
+
 export default function CalendarIndex(props: CalendarProps) {
     const page = usePage<SharedPageProps & CalendarProps>();
     const [createOpen, setCreateOpen] = useState(false);
+    const [blockCreateOpen, setBlockCreateOpen] = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
     const [editing, setEditing] = useState<CalendarAppointment | null>(null);
+    const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(
+        null,
+    );
     const permissions = page.props.auth.permissions;
     const canManage = permissions.some((permission) =>
         ['appointment.manage', 'calendar.manage'].includes(permission),
     );
     const appointments =
         props.calendar?.appointments ?? props.appointments ?? [];
+    const scheduleBlocks =
+        props.calendar?.schedule_blocks ??
+        props.schedule_blocks ??
+        props.calendarSettings?.schedule_blocks ??
+        [];
     const filters = props.calendar?.filters ?? props.filters ?? {};
     const view = filters.view ?? 'week';
     const unitTimezone =
@@ -462,6 +680,20 @@ export default function CalendarIndex(props: CalendarProps) {
             selectedStatuses.includes(appointment.status);
 
         return matchesProfessional && matchesStatus;
+    });
+
+    const visibleScheduleBlocks = scheduleBlocks.filter((block) => {
+        if (block.status === 'cancelled') {
+            return false;
+        }
+        if (selectedProfessionalIds.length === 0) {
+            return true;
+        }
+
+        return (
+            !block.professional_id ||
+            selectedProfessionalIds.includes(block.professional_id)
+        );
     });
 
     return (
@@ -507,6 +739,7 @@ export default function CalendarIndex(props: CalendarProps) {
                     date={selectedDate}
                     filters={filters}
                     onCreate={() => setCreateOpen(true)}
+                    onCreateBlock={() => setBlockCreateOpen(true)}
                     onFilter={() => setFilterOpen(true)}
                     range={range}
                     timeZone={unitTimezone}
@@ -573,19 +806,30 @@ export default function CalendarIndex(props: CalendarProps) {
 
                 {props.loading ? (
                     <CalendarLoading />
-                ) : visibleAppointments.length === 0 ? (
+                ) : visibleAppointments.length === 0 &&
+                  visibleScheduleBlocks.length === 0 ? (
                     <EmptyCalendar
                         action={
                             canManage ? (
-                                <Button onClick={() => setCreateOpen(true)}>
-                                    <Plus aria-hidden="true" />
-                                    Novo agendamento
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setBlockCreateOpen(true)}
+                                    >
+                                        <Lock aria-hidden="true" />
+                                        Novo bloqueio
+                                    </Button>
+                                    <Button onClick={() => setCreateOpen(true)}>
+                                        <Plus aria-hidden="true" />
+                                        Novo agendamento
+                                    </Button>
+                                </div>
                             ) : undefined
                         }
                         description={
-                            appointments.length === 0
-                                ? 'Comece registrando o primeiro horário para acompanhar a operação do dia.'
+                            appointments.length === 0 &&
+                            scheduleBlocks.length === 0
+                                ? 'Comece registrando o primeiro horário ou bloqueio para acompanhar a operação do dia.'
                                 : 'Tente limpar os filtros ou escolher outro período.'
                         }
                     />
@@ -593,7 +837,9 @@ export default function CalendarIndex(props: CalendarProps) {
                     <MonthAgenda
                         appointments={visibleAppointments}
                         onOpen={setEditing}
+                        onOpenBlock={setSelectedBlock}
                         range={range}
+                        scheduleBlocks={visibleScheduleBlocks}
                         timeZone={unitTimezone}
                     />
                 ) : view === 'day' ? (
@@ -601,6 +847,8 @@ export default function CalendarIndex(props: CalendarProps) {
                         appointments={visibleAppointments}
                         date={selectedDate}
                         onOpen={setEditing}
+                        onOpenBlock={setSelectedBlock}
+                        scheduleBlocks={visibleScheduleBlocks}
                         timeZone={unitTimezone}
                     />
                 ) : (
@@ -610,6 +858,8 @@ export default function CalendarIndex(props: CalendarProps) {
                                 appointments={visibleAppointments}
                                 date={selectedDate}
                                 onOpen={setEditing}
+                                onOpenBlock={setSelectedBlock}
+                                scheduleBlocks={visibleScheduleBlocks}
                                 timeZone={unitTimezone}
                             />
                         </div>
@@ -617,7 +867,9 @@ export default function CalendarIndex(props: CalendarProps) {
                             <WeekCalendar
                                 appointments={visibleAppointments}
                                 onOpen={setEditing}
+                                onOpenBlock={setSelectedBlock}
                                 range={range}
+                                scheduleBlocks={visibleScheduleBlocks}
                                 timeZone={unitTimezone}
                             />
                         </div>
@@ -665,6 +917,22 @@ export default function CalendarIndex(props: CalendarProps) {
                         services={services}
                         unitTimezone={unitTimezone}
                     />
+                    {editing &&
+                    canManage &&
+                    ['scheduled', 'confirmed'].includes(editing.status) ? (
+                        <div className="border-t border-border pt-4">
+                            <p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                Ação rápida de presença
+                            </p>
+                            <CheckInAppointmentForm
+                                appointment={editing}
+                                onClose={() => {
+                                    setEditing(null);
+                                    setCreateOpen(false);
+                                }}
+                            />
+                        </div>
+                    ) : null}
                     {editing && canManage && editing.status !== 'cancelled' ? (
                         <CancelAppointmentForm
                             appointment={editing}
@@ -673,6 +941,91 @@ export default function CalendarIndex(props: CalendarProps) {
                                 setCreateOpen(false);
                             }}
                         />
+                    ) : null}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={blockCreateOpen} onOpenChange={setBlockCreateOpen}>
+                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Lock
+                                className="size-5 text-amber-600 dark:text-amber-400"
+                                aria-hidden="true"
+                            />
+                            Novo bloqueio de horário
+                        </DialogTitle>
+                        <DialogDescription>
+                            Bloqueie intervalos para pausas, almoço, consultas
+                            ou manutenções na agenda.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScheduleBlockForm
+                        defaultDate={selectedDate}
+                        onClose={() => setBlockCreateOpen(false)}
+                        professionals={professionals}
+                        unitTimezone={unitTimezone}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={selectedBlock !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedBlock(null);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Lock
+                                className="size-5 text-amber-600 dark:text-amber-400"
+                                aria-hidden="true"
+                            />
+                            Detalhes do bloqueio
+                        </DialogTitle>
+                        <DialogDescription>
+                            Informações sobre o intervalo bloqueado na agenda.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedBlock ? (
+                        <div className="space-y-4">
+                            <div className="rounded-lg border border-amber-300/60 bg-amber-50/70 p-3.5 text-sm dark:border-amber-700/60 dark:bg-amber-950/40">
+                                <p className="font-semibold text-amber-950 dark:text-amber-100">
+                                    {selectedBlock.reason ||
+                                        'Horário bloqueado / Pausa operacional'}
+                                </p>
+                                <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-300/80">
+                                    {formatDay(
+                                        selectedBlock.starts_at,
+                                        unitTimezone,
+                                    )}
+                                    ,{' '}
+                                    {formatTime(
+                                        selectedBlock.starts_at,
+                                        unitTimezone,
+                                    )}{' '}
+                                    às{' '}
+                                    {formatTime(
+                                        selectedBlock.ends_at,
+                                        unitTimezone,
+                                    )}
+                                </p>
+                                <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-300/80">
+                                    {selectedBlock.professional?.name
+                                        ? `Profissional: ${selectedBlock.professional.name}`
+                                        : 'Aplica-se a toda a unidade'}
+                                </p>
+                            </div>
+                            {canManage ? (
+                                <DeleteScheduleBlockForm
+                                    block={selectedBlock}
+                                    onClose={() => setSelectedBlock(null)}
+                                />
+                            ) : null}
+                        </div>
                     ) : null}
                 </DialogContent>
             </Dialog>
@@ -778,3 +1131,4 @@ export default function CalendarIndex(props: CalendarProps) {
 CalendarIndex.layout = {
     breadcrumbs: [{ title: 'Agenda', href: calendarIndex() }],
 };
+

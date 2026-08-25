@@ -32,7 +32,13 @@ final class ProfessionalController extends Controller
     {
         Gate::authorize('view', $professional);
 
-        return Inertia::render('professionals/show', ['professional' => $professional->load('services:id,name')]);
+        return Inertia::render('professionals/show', [
+            'professional' => $professional->load([
+                'services:id,name',
+                'availabilityRules' => fn ($query) => $query->orderBy('weekday')->orderBy('starts_at'),
+                'scheduleBlocks' => fn ($query) => $query->where('status', 'active')->orderBy('starts_at'),
+            ]),
+        ]);
     }
 
     public function store(ProfessionalRequest $request, TenantContext $context, CreateProfessional $createProfessional): RedirectResponse
