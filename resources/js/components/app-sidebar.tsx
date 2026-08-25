@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Banknote,
     BarChart3,
     CalendarDays,
     ClipboardList,
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import calendar from '@/routes/calendar';
+import cashShifts from '@/routes/cash_shifts';
 import categories from '@/routes/categories';
 import customers from '@/routes/customers';
 import products from '@/routes/products';
@@ -57,6 +59,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: sales.index(),
                 icon: ClipboardList,
                 permission: 'sale.view',
+            },
+            {
+                title: 'Caixa Operacional',
+                href: cashShifts.index(),
+                icon: Banknote,
+                permission: 'cash_shift.view',
             },
         ],
     },

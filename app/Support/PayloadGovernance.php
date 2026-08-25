@@ -28,6 +28,8 @@ final class PayloadGovernance
         'total_cents', 'closing_session_id', 'closing_subject', 'expected_total_cents',
         'final_total_cents', 'receipt_number', 'closed_by_user_id', 'sale_ids',
         'from_status', 'to_status', 'reason',
+        'cash_shift_id', 'cash_movement_id', 'opened_by_user_id', 'initial_amount_cents',
+        'expected_amount_cents', 'difference_cents', 'amount_cents', 'reference_type', 'reference_id',
     ];
 
     /** @var list<string> */
@@ -44,6 +46,8 @@ final class PayloadGovernance
         'total_cents', 'closing_session_id', 'closing_subject', 'expected_total_cents',
         'final_total_cents', 'receipt_number', 'closed_by_user_id', 'sale_ids',
         'from_status', 'to_status', 'reason',
+        'cash_shift_id', 'cash_movement_id', 'opened_by_user_id', 'initial_amount_cents',
+        'expected_amount_cents', 'difference_cents', 'amount_cents', 'reference_type', 'reference_id',
     ];
 
     /** @var list<string> */

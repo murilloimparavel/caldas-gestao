@@ -28,6 +28,7 @@ final class OwnerPermissionCatalog
         'calendar.view', 'calendar.manage', 'calendar.configure',
         'sale_category.view', 'sale_category.manage',
         'sale.view', 'sale.manage', 'sale.discount', 'sale.close',
+        'cash_shift.view', 'cash_shift.open', 'cash_shift.move', 'cash_shift.close',
     ];
 
     /**

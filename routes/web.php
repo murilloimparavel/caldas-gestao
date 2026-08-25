@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CashShiftController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClosingSessionController;
 use App\Http\Controllers\CustomerController;
@@ -56,6 +57,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('sales/{sale}/transition', [SaleController::class, 'transitionStatus'])->name('sales.transition');
         Route::post('sales/{sale}/items', [SaleItemController::class, 'store'])->name('sales.items.store');
         Route::delete('sales/{sale}/items/{item}', [SaleItemController::class, 'destroy'])->name('sales.items.destroy');
+        Route::get('finance/cash', [CashShiftController::class, 'index'])->name('cash_shifts.index');
+        Route::get('finance/cash/history', [CashShiftController::class, 'history'])->name('cash_shifts.history');
+        Route::post('finance/cash', [CashShiftController::class, 'store'])->name('cash_shifts.store');
+        Route::get('finance/cash/{cashShift}', [CashShiftController::class, 'show'])->name('cash_shifts.show');
+        Route::post('finance/cash/{cashShift}/move', [CashShiftController::class, 'move'])->name('cash_shifts.move');
+        Route::post('finance/cash/{cashShift}/close', [CashShiftController::class, 'close'])->name('cash_shifts.close');
     });
 });
 
