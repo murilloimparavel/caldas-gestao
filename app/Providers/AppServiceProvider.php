@@ -9,6 +9,8 @@ use App\Models\Customer;
 use App\Models\Membership;
 use App\Models\Professional;
 use App\Models\Role;
+use App\Models\Sale;
+use App\Models\SaleCategory;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -19,6 +21,8 @@ use App\Policies\CustomerPolicy;
 use App\Policies\MembershipPolicy;
 use App\Policies\ProfessionalPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\SaleCategoryPolicy;
+use App\Policies\SalePolicy;
 use App\Policies\ScheduleBlockPolicy;
 use App\Policies\ServicePolicy;
 use App\Policies\TenantPolicy;
@@ -69,6 +73,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Professional::class, ProfessionalPolicy::class);
         Gate::policy(Service::class, ServicePolicy::class);
         Gate::policy(ScheduleBlock::class, ScheduleBlockPolicy::class);
+        Gate::policy(SaleCategory::class, SaleCategoryPolicy::class);
+        Gate::policy(Sale::class, SalePolicy::class);
 
         $this->configureDefaults();
     }

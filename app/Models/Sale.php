@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Policies\SalePolicy;
 use Database\Factories\SaleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -48,6 +50,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'notes',
     'lock_version',
 ])]
+#[UsePolicy(SalePolicy::class)]
 class Sale extends Model
 {
     /** @use HasFactory<SaleFactory> */

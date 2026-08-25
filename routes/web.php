@@ -8,6 +8,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
 use App\Http\Controllers\SaleCategoryController;
+use App\Http\Controllers\SaleController;
+use App\Http\Controllers\SaleItemController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +47,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->except(['create', 'edit']);
         Route::resource('sale-categories', SaleCategoryController::class)
             ->except(['create', 'edit']);
+        Route::resource('sales', SaleController::class)
+            ->only(['index', 'show', 'store']);
+        Route::post('sales/{sale}/discount', [SaleController::class, 'applyDiscount'])->name('sales.discount');
+        Route::post('sales/{sale}/transition', [SaleController::class, 'transitionStatus'])->name('sales.transition');
+        Route::post('sales/{sale}/items', [SaleItemController::class, 'store'])->name('sales.items.store');
+        Route::delete('sales/{sale}/items/{item}', [SaleItemController::class, 'destroy'])->name('sales.items.destroy');
     });
 });
 
