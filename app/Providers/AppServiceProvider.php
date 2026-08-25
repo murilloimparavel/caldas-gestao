@@ -3,17 +3,23 @@
 namespace App\Providers;
 
 use App\Auth\NormalizedEmailUserProvider;
+use App\Models\Appointment;
+use App\Models\AvailabilityRule;
 use App\Models\Customer;
 use App\Models\Membership;
 use App\Models\Professional;
 use App\Models\Role;
+use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Policies\AppointmentPolicy;
+use App\Policies\AvailabilityRulePolicy;
 use App\Policies\CustomerPolicy;
 use App\Policies\MembershipPolicy;
 use App\Policies\ProfessionalPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\ScheduleBlockPolicy;
 use App\Policies\ServicePolicy;
 use App\Policies\TenantPolicy;
 use App\Policies\UnitPolicy;
@@ -58,8 +64,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Membership::class, MembershipPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);
+        Gate::policy(Appointment::class, AppointmentPolicy::class);
+        Gate::policy(AvailabilityRule::class, AvailabilityRulePolicy::class);
         Gate::policy(Professional::class, ProfessionalPolicy::class);
         Gate::policy(Service::class, ServicePolicy::class);
+        Gate::policy(ScheduleBlock::class, ScheduleBlockPolicy::class);
 
         $this->configureDefaults();
     }

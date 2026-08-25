@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfessionalController;
@@ -14,6 +15,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('dashboard');
 
     Route::middleware('tenant.context')->group(function (): void {
+        Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+        Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
+        Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');
+        Route::post('appointments/{appointment}/cancel', [CalendarController::class, 'cancel'])->name('appointments.cancel');
         Route::resource('customers', CustomerController::class)
             ->except(['create', 'edit']);
         Route::resource('professionals', ProfessionalController::class)

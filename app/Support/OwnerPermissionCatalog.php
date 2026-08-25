@@ -22,6 +22,7 @@ final class OwnerPermissionCatalog
         'customer.view', 'customer.manage',
         'professional.view', 'professional.manage',
         'service.view', 'service.manage',
+        'calendar.view', 'calendar.manage', 'calendar.configure',
     ];
 
     /**
