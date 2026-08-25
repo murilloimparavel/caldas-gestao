@@ -183,6 +183,8 @@ type SharedPageProps = {
 
 IDs trafegam como `string`; instantes como ISO 8601 UTC; dinheiro como unidade mínima + moeda; listagens extensas usam cursor opaco com tenant/filtros/ordenação vinculados. Cada tela estende esse contrato com uma estrutura própria. Dados grandes usam paginação; opções raramente alteradas usam lazy/deferred props quando houver benefício medido. Mutação usa formulário Inertia, idempotency key para operações críticas e erros de validação por campo. `permissions` controla affordance, `entitlements` controla capacidade contratada, e nenhum dos dois substitui Policy server-side.
 
+Na Wave F2, `workspace` é nulo durante o bootstrap de uma identidade sem membership ativa. Rotas de workspace usam `tenant.context`: a seleção explícita vem de sessão, `X-Tenant-Id`/`X-Unit-Id` ou parâmetro de rota seguro; sem seleção, somente uma membership ativa permite fallback determinístico. Membership revogada, tenant/unidade de outro tenant e unidade inativa são rejeitados no servidor. `requestId`/`correlationId` aceitam somente UUID/ULID válidos vindos do request; entradas inválidas são substituídas por UUIDv7. `auth.entitlements` permanece uma lista vazia até a fatia de entitlements; auditoria, outbox e inbox não fazem parte deste contrato.
+
 ## Matriz obrigatória de estados
 
 Antes de considerar qualquer tela pronta, verificar:

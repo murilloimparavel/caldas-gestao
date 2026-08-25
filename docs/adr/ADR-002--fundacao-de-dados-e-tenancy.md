@@ -41,6 +41,8 @@ A ativação só ocorre pela `ActivateMembership` Action transacional: bloqueia 
 
 Papéis são tenant-scoped e permissões formam catálogo estável. `membership_roles` pode ser tenant-wide ou unit-scoped. Entitlements de plano/capacidade são avaliados separadamente de RBAC.
 
+As Actions mutáveis adotam a ordem canônica de locks `tenant → membership → unit → role → pivôs`, em ordem crescente de UUID dentro de cada conjunto, e executam com retry transacional. Nesta fatia, a proteção de `roles.is_system` vale no caminho da aplicação (Policies, Actions e eventos Eloquent); escrita direta por `DB::table` ou SQL é deliberadamente fora dessa garantia. Antes de produção que exponha mutação de papéis, a próxima fatia de auditoria deve instalar um guard PostgreSQL/auditar esse bypass e restringir os grants da role runtime; não se deve alegar que uma proteção de modelo substitui essa barreira de banco.
+
 `membership_roles` persiste `scope_kind` (`tenant`/`unit`), `assignment_scope`, `unit_id`, `lock_version` e `revoked_at`. A unicidade vale somente para assignments ativos; revogar preserva histórico. RBAC responde capacidade, enquanto ABAC valida ownership, unidade, estado, entitlement e step-up.
 
 Entitlements persistem `trial`, `active`, `grace`, `suspended`, `expired` e `revoked`, com `starts_at` obrigatório, `ends_at > starts_at` quando presente e `quantity >= 0` quando presente. F2 permite uma concessão vigente por chave; agenda de versões futuras exige ADR posterior.
@@ -84,6 +86,14 @@ Nenhum deploy de produção é aprovado sem PII production gate: secrets fora do
 Mudanças de schema seguem expand → backfill idempotente → dual-read/write quando necessário → contract. Migrations avançam; correções de dados são comandos auditados, versionados e repetíveis, não rollback destrutivo. Índices/constraints grandes têm janela, timeout e observabilidade. Eventos carregam `event_version` e outbox é gravada na mesma transação do fato.
 
 **Consequências:** deploys podem ser compatíveis entre versões e rollback de código permanece possível durante a janela expand. A equipe mantém colunas legadas por mais tempo e precisa de métricas/checksums para concluir o contract com segurança.
+
+### Semântica estrutural de escopo por unidade
+
+Uma permissão concedida por assignment `tenant` é aplicável a qualquer unidade ativa do tenant, mesmo quando a membership não possui uma linha em `membership_units`; o contexto continua exigindo membership ativa e tenant ativo. Uma permissão concedida por assignment `unit` só é aplicável quando `unit_id` coincide com a unidade consultada e existe vínculo ativo em `membership_units` para a mesma membership/tenant. Unidade de outro tenant, inativa ou não vinculada para um assignment unit-scoped nunca é autorizada. Policies de unidade avaliam o objeto da unidade solicitado e não aceitam uma unidade selecionada pelo caller como prova de acesso.
+
+### Onboarding create versus resume
+
+`OnboardTenant` é uma operação create-only: slug existente produz conflito e nunca admite ingresso ou reconciliação implícita. `ResumeTenantOnboarding` é a operação explícita de reconciliação, exigindo `TenantContext` revalidado, membership ativa e permissionamento de owner; ambas as operações usam transações com retry e lock order determinística. O catálogo de permissões do owner é provisionado por serviço idempotente, separado das migrations/DDL.
 
 ## O que entra na F2
 
