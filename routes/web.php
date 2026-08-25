@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -19,6 +20,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
         Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');
         Route::post('appointments/{appointment}/cancel', [CalendarController::class, 'cancel'])->name('appointments.cancel');
+        Route::post('appointments/{appointment}/check-in', [CalendarController::class, 'checkIn'])->name('appointments.check_in');
+        Route::post('availability-rules', [CalendarAvailabilityController::class, 'storeAvailabilityRule'])->name('availability_rules.store');
+        Route::put('availability-rules/{availabilityRule}', [CalendarAvailabilityController::class, 'updateAvailabilityRule'])->name('availability_rules.update');
+        Route::delete('availability-rules/{availabilityRule}', [CalendarAvailabilityController::class, 'deleteAvailabilityRule'])->name('availability_rules.destroy');
+        Route::post('schedule-blocks', [CalendarAvailabilityController::class, 'storeScheduleBlock'])->name('schedule_blocks.store');
+        Route::put('schedule-blocks/{scheduleBlock}', [CalendarAvailabilityController::class, 'updateScheduleBlock'])->name('schedule_blocks.update');
+        Route::delete('schedule-blocks/{scheduleBlock}', [CalendarAvailabilityController::class, 'deleteScheduleBlock'])->name('schedule_blocks.destroy');
         Route::resource('customers', CustomerController::class)
             ->except(['create', 'edit']);
         Route::resource('professionals', ProfessionalController::class)
