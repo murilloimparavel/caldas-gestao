@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
@@ -38,6 +39,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('professionals', ProfessionalController::class)
             ->except(['create', 'edit']);
         Route::resource('services', ServiceController::class)
+            ->except(['create', 'edit']);
+        Route::resource('suppliers', SupplierController::class)
             ->except(['create', 'edit']);
     });
 });

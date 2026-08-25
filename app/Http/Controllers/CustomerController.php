@@ -32,6 +32,13 @@ final class CustomerController extends Controller
     {
         Gate::authorize('view', $customer);
 
+        $customer->load([
+            'appointments' => fn ($query) => $query
+                ->with('professional:id,name')
+                ->orderBy('starts_at', 'desc')
+                ->limit(20),
+        ]);
+
         return Inertia::render('customers/show', ['customer' => $customer]);
     }
 

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** @property int $lock_version */
 #[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'birth_date', 'notes', 'status'])]
@@ -42,5 +43,11 @@ class Customer extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** @return HasMany<Appointment, $this> */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
     }
 }

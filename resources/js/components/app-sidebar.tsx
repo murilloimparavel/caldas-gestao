@@ -8,6 +8,7 @@ import {
     Package,
     Scissors,
     Tags,
+    Truck,
     UserRound,
     Users,
     WalletCards,
@@ -29,6 +30,7 @@ import customers from '@/routes/customers';
 import products from '@/routes/products';
 import professionals from '@/routes/professionals';
 import services from '@/routes/services';
+import suppliers from '@/routes/suppliers';
 import type { SharedPageProps, SidebarNavGroup } from '@/types';
 
 const mainNavGroups: SidebarNavGroup[] = [
@@ -81,6 +83,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: categories.index(),
                 icon: FolderTree,
                 permission: 'category.view',
+            },
+            {
+                title: 'Fornecedores',
+                href: suppliers.index(),
+                icon: Truck,
+                permission: 'supplier.view',
             },
             { title: 'Catálogo', icon: Tags, disabled: true },
             { title: 'Financeiro', icon: WalletCards, disabled: true },
