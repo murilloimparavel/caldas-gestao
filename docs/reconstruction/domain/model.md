@@ -147,3 +147,11 @@ Venda, cobrança, fiscalidade, comissão e estoque são contextos relacionados p
 - `FiscalDocument`: intenção, estado, referências e artefatos protegidos.
 
 Saldo é projeção dos movimentos, nunca campo livremente editável. Fechamentos e reconciliações preservam histórico por ajustes compensatórios.
+
+## Categoria, comanda e checkout consolidado (Proposed — ADR-003)
+
+`SaleCategory` é configuração unit-scoped no MVP, ativa ou inativa, com `tenant_id`/`unit_id`, `uniqueness_scope`, tipos de item e políticas de cliente/agendamento. `Sale` é a raiz da comanda: sempre tenant/unit-scoped, com cliente opcional, ciclo `draft/open/ready_to_bill/finalized/cancelled/adjusted`, moeda, totais capturados, `open_context_key`, snapshots obrigatórios `category_key_snapshot`/`category_name_snapshot` e `lock_version`. `SaleItem` captura nome, preço, moeda, profissional e origem. `SaleStatusHistory` é append-only. `Appointment 0..N Sale`; cada `Sale` tem 0..1 `Appointment` no MVP, garantido exclusivamente por `AppointmentSaleLink` com unique parcial de link ativo por `sale_id`.
+
+`CheckoutSession` é o agregado de tentativa consolidada, com seleção, versões, `checkout_subject` e estados `draft/ready/processing/completed/cancelled/failed`. `PaymentIntent`/`Payment` representam intenção e liquidação; `PaymentAllocation` distribui um pagamento entre saldos da mesma unidade/moeda; `Refund` reverte sem apagar. Pagamento parcial é saldo derivado, não estado de Sale/PaymentIntent. Estados ativos (`draft`, `open`, `ready_to_bill`) usam unique parcial por `(tenant_id, unit_id, sale_category_id, open_context_key)` quando a chave não é nula; `none` permite duplicidade. Finalização/cancelamento libera o slot.
+
+O comando de checkout recebe seleção explícita, valida tenant/unidade/moeda/permissão/versão/saldo e o mesmo `checkout_subject` (mesmo cliente ou mesma referência), bloqueia em ordem determinística, grava pagamentos/alocações e finaliza apenas vendas sem saldo. Repetição é idempotente e vendas não selecionadas não são alteradas. As invariantes canônicas estão em [ADR-003](../../adr/ADR-003--categorias-de-comanda-e-checkout-consolidado.md).

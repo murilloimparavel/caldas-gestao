@@ -42,14 +42,14 @@ O schema de aplicação proposto é `app`; schemas gerenciados do Supabase ficam
 | Workforce | `professionals`, `professional_units`, `professional_services`, `availability_rules`                       |
 | Catálogo  | `services`, `products`, `categories`, `brands`, `price_versions`, `service_policies`                       |
 | Agenda    | `appointment_series`, `appointments`, `appointment_items`, `appointment_status_history`, `schedule_blocks` |
-| Vendas    | `sales`, `sale_items`, `sale_benefit_allocations`, `sale_status_history`                                   |
+| Vendas    | `sale_categories`, `sales`, `sale_items`, `sale_status_histories`, `appointment_sale_links`               |
 | Estoque   | `inventory_items`, `stock_movements`, `lots`, `stock_reservations`                                         |
 
 ## Financeiro e integrações
 
 | Contexto       | Tabelas propostas                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------- |
-| Pagamentos     | `payment_intents`, `payments`, `payment_allocations`, `refunds`                                            |
+| Pagamentos     | `checkout_sessions`, `payment_intents`, `payments`, `payment_allocations`, `refunds`                     |
 | Ledger         | `financial_obligations`, `settlements`, `financial_accounts`, `account_movements`, `reconciliations`       |
 | Caixa          | `cash_sessions`, `cash_counts`, `cash_session_events`                                                      |
 | Comissão       | `commission_policy_versions`, `commission_accruals`, `commission_batches`, `commission_adjustments`        |
@@ -84,3 +84,24 @@ Jobs Laravel de infraestrutura não ganham `tenant_id` nesta fase: quando um job
 Validar dois tenants com unidades homônimas, FK cross-tenant, papéis unit/tenant-wide, membership revogada, corrida de idempotency/outbox, prepared statements no Session Pooler, DDL pela conexão direta, restore e backfill expand-contract.
 
 Estratégia de RLS, particionamento de ledgers/eventos, busca de PII, isolamento por schema versus coluna, warehouse analítico e retenção fiscal precisam de decisão formal após volume e requisitos legais.
+
+## Comandas por categoria e checkout (Proposed — ADR-003)
+
+| Tabela | Ownership/finalidade | Regras principais |
+|---|---|---|
+| `sale_categories` | configuração unit-owned no MVP | `tenant_id` + `unit_id` obrigatórios, nome/chave, ativo/inativo, tipos permitidos, cliente/agendamento e `uniqueness_scope`; inativar em vez de apagar |
+| `sales` | fonte transacional | cliente/agendamento nullable, ciclo, moeda, totais em minor units, `open_context_key`, snapshots obrigatórios de `category_key`/`category_name`, versão |
+| `sale_items` | itens capturados | snapshots de nome/preço/moeda, tipo, quantidade, desconto e origem |
+| `sale_status_histories` | histórico append-only | transição, ator, motivo e correlação |
+| `appointment_sale_links` | única fonte de verdade Agenda/Vendas | várias comandas por agendamento; no máximo um link ativo por `sale_id` (unique parcial), mesmo tenant/unidade, vínculo auditável |
+| `payment_intents` | intenção de cobrança | valor, moeda, vencimento, status e idempotência |
+| `payments` | tentativa/liquidação | meio, provedor seguro, valor, estado, referência externa única |
+| `payment_allocations` | distribuição | payment × sale; não excede saldo nem atravessa unidade/moeda |
+| `refunds` | reversão | append-only, valor/motivo/ator/estado, sem apagar payment |
+| `checkout_sessions` | agregado de tentativa | seleção, `checkout_subject`, unidade/moeda, versões, idempotência e `draft/ready/processing/completed/cancelled/failed` |
+
+`open_context_key` é coluna materializada pelo backend: `customer:{uuid}`, `appointment:{uuid}` ou `reference:{normalized}`; para `none`, nulo. Unique parcial recomendado: `(tenant_id, unit_id, sale_category_id, open_context_key) WHERE status IN ('draft','open','ready_to_bill') AND open_context_key IS NOT NULL`. A transação e o índice decidem a corrida, não a UI. `Appointment 0..N Sale`; `Sale 0..1 Appointment` no MVP, garantido exclusivamente por unique parcial de link ativo em `appointment_sale_links.sale_id`; `sales` não possui coluna de vínculo direto.
+
+`CheckoutSession` fixa `checkout_subject`: o mesmo `customer_id` não nulo ou a mesma `reference_context` normalizada. Nunca mistura clientes/referências, unidade ou moeda. Pagamentos e alocações são efeitos da sessão; parcialidade é saldo derivado, não status de Sale/PaymentIntent. As invariantes canônicas estão no [ADR-003](../../adr/ADR-003--categorias-de-comanda-e-checkout-consolidado.md).
+
+FKs compostas ou validação equivalente impedem categoria, cliente, agendamento, unidade e sale cross-tenant. Índices de listagem começam por tenant/unidade/status; histórico, pagamentos, alocações e refunds não são apagados; categorias são inativadas. Validar entidade de mesa/referência, cliente anônimo, cardinalidade de links e retenção de observações.

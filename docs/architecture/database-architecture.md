@@ -566,3 +566,15 @@ RLS não é requisito F2. Se adotada, cada request/job deverá definir contexto 
 - [Governança de dados](../reconstruction/domain/data-governance.md)
 - [Proposta de API](../reconstruction/api-proposal.md)
 - [Plano de implementação frontend](../reconstruction/frontend-implementation-plan.md)
+
+## 13. Decisão de domínio: categorias de comanda e checkout (ADR-003)
+
+Esta seção é `Proposed` e complementa a fundação F2; não descreve o banco interno do produto observado. O contexto Vendas terá `sale_categories`, `sales`, `sale_items`, `sale_status_histories` e `appointment_sale_links`; Cobrança terá `checkout_sessions`, `payment_intents`, `payments`, `payment_allocations` e `refunds`.
+
+`Sale` é independente de agendamento e cliente. Ambos são opcionais conforme a categoria; `Appointment 0..N Sale` e `Sale 0..1 Appointment` no MVP. `sale_categories` é unit-scoped no MVP (`tenant_id` + `unit_id` obrigatórios), pode ser inativada sem apagar histórico e define `uniqueness_scope`: `customer`, `appointment`, `reference` ou `none`. Evolução tenant-wide exige nova decisão.
+
+O backend materializa `open_context_key` (`customer:{uuid}`, `appointment:{uuid}`, `reference:{normalized}` ou nulo). `sales` exige `category_key_snapshot` e `category_name_snapshot`. PostgreSQL deve garantir, em estados `draft`, `open` e `ready_to_bill`, uma única chave por `(tenant_id, unit_id, sale_category_id, open_context_key)` quando não nula. Finalizar/cancelar libera o slot; `none` permite duplicidade.
+
+`CheckoutSession` é o agregado da tentativa consolidada, com estados `draft → ready → processing → completed` ou `cancelled/failed`. A sessão exige mesma unidade/moeda e mesmo `checkout_subject`: mesmo cliente não nulo ou mesma referência, nunca mistura clientes/referências. Recebe várias vendas, bloqueia em ordem determinística, cria pagamentos e alocações e finaliza somente saldos zerados. Parcialidade é saldo derivado, não status. Não funde comandas nem apaga seus históricos. Idempotência, locks, auditoria, outbox pós-commit, FKs cross-tenant e Policies são obrigatórios. Mobile agrupa comandas abertas por cliente/mesa/referência e permite fechar todas ou uma seleção.
+
+Backlog: C1 categorias/policies/CRUD; C2 vendas/itens/abertura avulsa e agenda; C3 histórico/vínculos/status; C4 checkout/pagamentos/alocações; C5 refunds/ajustes/read model mobile; C6 concorrência, E2E, acessibilidade, PII/LGPD e produção. Dependências detalhadas estão no [PRD de comandas](../PRD--comandas-categorias-e-checkout.md).

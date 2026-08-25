@@ -25,3 +25,8 @@
 | Outbox/Inbox                 | Proposed            | registros transacionais de publicação e processamento idempotente de eventos                       | events.md; DB-007            |
 | UUIDv7                       | Proposed            | identificador público ordenável por tempo para usuários e agregados                                | api-proposal.md; DB-006      |
 | Unidade mínima monetária     | Proposed            | inteiro que representa centavos ou menor unidade, acompanhado de moeda ISO                         | api-proposal.md; DB-008      |
+| Categoria de comanda         | Proposed            | configuração tenant-owned que define tipos permitidos, políticas e escopo de unicidade de comandas | ADR-003; PRD de comandas     |
+| Comanda/Venda                | Observed → Proposed | agregado transacional de itens e totais; pode ser avulso ou vinculado a agendamento                  | EV-005; ADR-003              |
+| `open_context_key`           | Proposed            | chave derivada pelo backend para unique parcial de comandas abertas                               | ADR-003                       |
+| Checkout consolidado         | Proposed            | fechamento selecionável de várias comandas da mesma unidade/moeda, com alocações preservadas       | PRD de comandas               |
+| Alocação de pagamento        | Proposed            | parcela de um pagamento aplicada a uma comanda sem fundir seus históricos                           | PRD de comandas               |

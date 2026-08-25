@@ -64,3 +64,9 @@ Nenhum contexto grava diretamente na tabela de outro. Foreign keys permitem refe
 - testar se uma mesma identidade pode alternar tenants e se cache de autorização é invalidado na revogação;
 - ADR pendente para RLS, retenção/legal hold e papéis customizados;
 - ADR pendente para Storage de arquivos sensíveis e eventual API pública.
+
+## Vendas, categorias e checkout consolidado (Proposed — ADR-003)
+
+O contexto de Vendas é dono de `sale_categories`, `sales`, `sale_items`, `sale_status_histories`, `appointment_sale_links` e das operações de abertura/fechamento. Uma comanda é independente de agendamento e cliente; ambos são opcionais conforme a categoria. No MVP, `Appointment 0..N Sale` e `Sale 0..1 Appointment`. `PaymentIntent`, `Payment`, `PaymentAllocation` e `Refund` pertencem ao subdomínio de cobrança e não fundem as comandas no checkout.
+
+`SaleCategory` é unit-scoped no MVP (`tenant_id` + `unit_id`) e escolhe `uniqueness_scope` (`customer`, `appointment`, `reference`, `none`). O backend materializa `open_context_key` e PostgreSQL limita uma comanda ativa por categoria/contexto. O checkout consolidado seleciona várias comandas da mesma unidade/moeda e mesmo `checkout_subject`, cria pagamentos e alocações, e preserva identidade e histórico individual. Tenant-wide, entidade de mesa/referência e cliente anônimo ficam para decisões futuras.
