@@ -54,7 +54,7 @@ class HandleInertiaRequests extends Middleware
             ?? $request->header('X-Unit-Id')
             ?? $request->route('unit');
 
-        if ($context === null && $user !== null && ($request->routeIs('dashboard') || $explicitTenant !== null || $explicitUnit !== null)) {
+        if ($context === null && $user !== null) {
             try {
                 $context = TenantContext::fromRequest($request);
             } catch (AuthorizationException) {
