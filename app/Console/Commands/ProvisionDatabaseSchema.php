@@ -114,9 +114,25 @@ class ProvisionDatabaseSchema extends Command
 
         $connection->statement("GRANT USAGE ON SCHEMA {$quotedSchema} TO {$quotedRole}");
         $connection->statement("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {$quotedSchema} TO {$quotedRole}");
-        $connection->statement("GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA {$quotedSchema} TO {$quotedRole}");
+        $connection->statement("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {$quotedSchema} TO {$quotedRole}");
+        $connection->statement("REVOKE UPDATE ON ALL SEQUENCES IN SCHEMA {$quotedSchema} FROM {$quotedRole}");
         $connection->statement("ALTER DEFAULT PRIVILEGES IN SCHEMA {$quotedSchema} GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {$quotedRole}");
-        $connection->statement("ALTER DEFAULT PRIVILEGES IN SCHEMA {$quotedSchema} GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO {$quotedRole}");
+        $connection->statement("ALTER DEFAULT PRIVILEGES IN SCHEMA {$quotedSchema} GRANT USAGE, SELECT ON SEQUENCES TO {$quotedRole}");
+
+        // Migration history is owned and written only by the migration connection.
+        // Revoke it after the broad runtime grants so a future provisioning run
+        // also repairs privileges on an already-created migrations table.
+        $migrationsTableExists = $connection->selectOne('SELECT to_regclass(?) AS table_name', ["{$schema}.migrations"])?->table_name !== null;
+
+        if ($migrationsTableExists) {
+            $connection->statement("REVOKE ALL PRIVILEGES ON {$quotedSchema}.migrations FROM {$quotedRole}");
+        }
+
+        $migrationsSequenceExists = $connection->selectOne('SELECT to_regclass(?) AS sequence_name', ["{$schema}.migrations_id_seq"])?->sequence_name !== null;
+
+        if ($migrationsSequenceExists) {
+            $connection->statement("REVOKE ALL PRIVILEGES ON SEQUENCE {$quotedSchema}.migrations_id_seq FROM {$quotedRole}");
+        }
 
         $auditTableExists = $connection->selectOne('SELECT to_regclass(?) AS table_name', ["{$schema}.audit_events"])?->table_name !== null;
 

@@ -123,14 +123,22 @@ it('grants the configured runtime role access without schema ownership', functio
         select
             has_schema_privilege(?, ?, 'USAGE') as has_schema_usage,
             has_schema_privilege(?, ?, 'CREATE') as has_schema_create,
-            has_table_privilege(?, 'app.users', 'SELECT,INSERT,UPDATE,DELETE') as has_table_access
+            has_table_privilege(?, 'app.users', 'SELECT,INSERT,UPDATE,DELETE') as has_table_access,
+            has_table_privilege(?, 'app.migrations', 'SELECT') as has_migrations_table_access,
+            has_sequence_privilege(?, 'app.migrations_id_seq', 'USAGE') as has_migrations_sequence_access,
+            has_sequence_privilege(?, 'app.jobs_id_seq', 'SELECT') as has_sequence_select,
+            has_sequence_privilege(?, 'app.jobs_id_seq', 'UPDATE') as has_sequence_update
         SQL,
-        [$role, 'app', $role, 'app', $role],
+        [$role, 'app', $role, 'app', $role, $role, $role, $role, $role],
     );
 
     expect($privileges->has_schema_usage)->toBeTrue()
         ->and($privileges->has_schema_create)->toBeFalse()
-        ->and($privileges->has_table_access)->toBeTrue();
+        ->and($privileges->has_table_access)->toBeTrue()
+        ->and($privileges->has_migrations_table_access)->toBeFalse()
+        ->and($privileges->has_migrations_sequence_access)->toBeFalse()
+        ->and($privileges->has_sequence_select)->toBeTrue()
+        ->and($privileges->has_sequence_update)->toBeFalse();
 });
 
 it('allows runtime DML while denying runtime DDL', function () {
