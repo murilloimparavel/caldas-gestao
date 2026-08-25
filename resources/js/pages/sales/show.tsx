@@ -41,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { SaleStatusBadge } from '@/pages/sales/index';
 import calendar from '@/routes/calendar';
+import closingSessions from '@/routes/closing-sessions';
 import customers from '@/routes/customers';
 import sales from '@/routes/sales';
 import type {
@@ -119,11 +120,13 @@ export default function SalesShow({
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('sale.manage');
+    const canClosePermission = permissions.has('sale.close') || permissions.has('sale.manage');
     const canDiscount = permissions.has('sale.discount');
 
     const [addItemOpen, setAddItemOpen] = useState(false);
     const [discountOpen, setDiscountOpen] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
+    const [closeOpen, setCloseOpen] = useState(false);
 
     // Add item form state
     const [itemType, setItemType] = useState<'service' | 'product' | 'custom'>(
@@ -155,6 +158,9 @@ export default function SalesShow({
     );
     const [transitionKey] = useState(() =>
         createIdempotencyKey(`sale-transition:${sale.id}`),
+    );
+    const [closeKey] = useState(() =>
+        createIdempotencyKey(`sale-close:${sale.id}`),
     );
 
     const isSaleActive = sale.status === 'open' || sale.status === 'ready_to_bill';
@@ -295,6 +301,16 @@ export default function SalesShow({
                                     </Form>
                                 )}
 
+                                {canClosePermission ? (
+                                    <Button
+                                        onClick={() => setCloseOpen(true)}
+                                        className="gap-1.5 bg-emerald-600 font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                                    >
+                                        <Receipt className="size-4" />
+                                        Fechar Comanda
+                                    </Button>
+                                ) : null}
+
                                 <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" className="text-destructive hover:bg-destructive/10">
@@ -362,6 +378,93 @@ export default function SalesShow({
                                         </Form>
                                     </DialogContent>
                                 </Dialog>
+
+                                {/* Fechamento Consolidado Dialog */}
+                                <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
+                                    <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle>Fechar Comanda</DialogTitle>
+                                            <DialogDescription>
+                                                Confirme o encerramento desta comanda para emitir o recibo operacional interno.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <Form
+                                            {...closingSessions.store.form()}
+                                            headers={{
+                                                'X-Idempotency-Key': closeKey,
+                                            }}
+                                            onSuccess={() => setCloseOpen(false)}
+                                            className="space-y-4"
+                                        >
+                                            {({ errors, processing }) => (
+                                                <>
+                                                    <FormErrorSummary errors={errors} />
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="sale_ids[]"
+                                                        value={sale.id}
+                                                    />
+                                                    <input
+                                                        type="hidden"
+                                                        name="expected_total_cents"
+                                                        value={sale.final_amount_cents}
+                                                    />
+
+                                                    <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-4">
+                                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                                            <span>Subtotal da comanda:</span>
+                                                            <span>{formatMoney(sale.total_amount_cents)}</span>
+                                                        </div>
+                                                        {sale.discount_amount_cents > 0 ? (
+                                                            <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                                                                <span>Desconto aplicado:</span>
+                                                                <span>-{formatMoney(sale.discount_amount_cents)}</span>
+                                                            </div>
+                                                        ) : null}
+                                                        <div className="flex items-center justify-between border-t border-border pt-2">
+                                                            <span className="text-sm font-semibold text-foreground">
+                                                                Total a Fechar:
+                                                            </span>
+                                                            <span className="font-display text-xl font-bold text-foreground">
+                                                                {formatMoney(sale.final_amount_cents)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <FormField
+                                                        label="Observações do fechamento (opcional)"
+                                                        name="notes"
+                                                        error={errors.notes}
+                                                    >
+                                                        <textarea
+                                                            id="notes"
+                                                            name="notes"
+                                                            rows={2}
+                                                            className="min-h-16 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                            placeholder="Anotações para constar no recibo..."
+                                                        />
+                                                    </FormField>
+
+                                                    <FormActions
+                                                        submitLabel="Confirmar Fechamento e Emitir Recibo"
+                                                        processing={processing}
+                                                        onCancel={() => setCloseOpen(false)}
+                                                    />
+                                                </>
+                                            )}
+                                        </Form>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        ) : sale.status === 'finalized' && sale.closing_sessions && sale.closing_sessions.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                                <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 font-semibold text-white">
+                                    <Link href={closingSessions.show(sale.closing_sessions[0].id)}>
+                                        <Receipt className="size-4" />
+                                        Ver Recibo Interno
+                                    </Link>
+                                </Button>
                             </div>
                         ) : null}
                     </div>

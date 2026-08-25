@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Policies\ClosingSessionPolicy;
 use Database\Factories\ClosingSessionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -39,6 +41,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'closed_by_user_id',
     'lock_version',
 ])]
+#[UsePolicy(ClosingSessionPolicy::class)]
 class ClosingSession extends Model
 {
     /** @use HasFactory<ClosingSessionFactory> */

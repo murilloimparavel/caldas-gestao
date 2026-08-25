@@ -5,6 +5,7 @@ import {
     Clock,
     Layers,
     Plus,
+    Receipt,
     Search,
     User,
     WalletCards,
@@ -34,6 +35,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import closingSessions from '@/routes/closing-sessions';
 import sales from '@/routes/sales';
 import type {
     CustomerOption,
@@ -130,11 +132,15 @@ export default function SalesIndex({
     filters,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const [closeOpen, setCloseOpen] = useState(false);
     const [createKey] = useState(() => createIdempotencyKey('sale-open'));
+    const [closeKey, setCloseKey] = useState(() => createIdempotencyKey('closing-session'));
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale.manage');
+    const canClosePermission =
+        props.auth.permissions.includes('sale.close') || props.auth.permissions.includes('sale.manage');
 
     const selectedCategoryObj = categories.find((c) => c.id === selectedCategory);
 
@@ -156,6 +162,30 @@ export default function SalesIndex({
                 .filter((name): name is string => Boolean(name)),
         ),
     );
+
+    const isSameCustomer =
+        selectedSales.length > 0 &&
+        selectedSales.every((s) => s.customer_id && s.customer_id === selectedSales[0].customer_id);
+
+    const isSameReference =
+        selectedSales.length > 0 &&
+        selectedSales.every(
+            (s) =>
+                !s.customer_id &&
+                s.reference_label &&
+                s.reference_label.trim() === selectedSales[0].reference_label?.trim(),
+        );
+
+    const isSingleAnonymous =
+        selectedSales.length === 1 && !selectedSales[0].customer_id && !selectedSales[0].reference_label;
+
+    const canConsolidateSubject = isSameCustomer || isSameReference || isSingleAnonymous;
+    const allActive =
+        selectedSales.length > 0 &&
+        selectedSales.every(
+            (s) => s.status === 'open' || s.status === 'ready_to_bill' || s.status === 'draft',
+        );
+    const canClose = canClosePermission && allActive && canConsolidateSubject;
 
     return (
         <>
@@ -489,9 +519,134 @@ export default function SalesIndex({
                             >
                                 Desmarcar todas
                             </Button>
+
+                            {canClose ? (
+                                <Button
+                                    size="sm"
+                                    className="gap-1.5 bg-emerald-600 font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                                    onClick={() => {
+                                        setCloseKey(createIdempotencyKey('closing-session'));
+                                        setCloseOpen(true);
+                                    }}
+                                >
+                                    <Receipt className="size-4" />
+                                    Fechar selecionadas ({formatMoney(selectedTotal)})
+                                </Button>
+                            ) : selectedIds.length > 1 && !canConsolidateSubject ? (
+                                <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                    Clientes ou referências diferentes não podem ser consolidados juntos
+                                </span>
+                            ) : null}
                         </div>
                     </div>
                 ) : null}
+
+                {/* Dialog Fechamento Consolidado */}
+                <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
+                    <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>Fechamento Consolidado</DialogTitle>
+                            <DialogDescription>
+                                Revise as comandas selecionadas antes de encerrar o atendimento e emitir o recibo operacional interno.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form
+                            {...closingSessions.store.form()}
+                            headers={{
+                                'X-Idempotency-Key': closeKey,
+                            }}
+                            onSuccess={() => {
+                                setCloseOpen(false);
+                                setSelectedIds([]);
+                            }}
+                            className="space-y-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <FormErrorSummary errors={errors} />
+
+                                    {selectedSales.map((s) => (
+                                        <input
+                                            key={s.id}
+                                            type="hidden"
+                                            name="sale_ids[]"
+                                            value={s.id}
+                                        />
+                                    ))}
+                                    <input
+                                        type="hidden"
+                                        name="expected_total_cents"
+                                        value={selectedTotal}
+                                    />
+
+                                    {/* Breakdown list */}
+                                    <div className="max-h-56 divide-y divide-border/60 overflow-y-auto rounded-xl border border-border bg-muted/20 p-1">
+                                        {selectedSales.map((s) => (
+                                            <div
+                                                key={s.id}
+                                                className="flex items-center justify-between p-2.5 text-xs"
+                                            >
+                                                <div>
+                                                    <p className="font-semibold text-foreground">
+                                                        {s.reference_label ||
+                                                            s.customer?.name ||
+                                                            `Comanda #${s.id.slice(0, 6)}`}
+                                                    </p>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        {s.category_name_snapshot ||
+                                                            s.category?.name ||
+                                                            'Geral'} • {s.items?.length ?? 0} item(ns)
+                                                    </p>
+                                                </div>
+                                                <span className="font-semibold text-foreground">
+                                                    {formatMoney(s.final_amount_cents)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Totals Summary */}
+                                    <div className="space-y-2 rounded-xl border border-border bg-muted/40 p-4">
+                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                            <span>Quantidade de comandas:</span>
+                                            <span className="font-medium text-foreground">
+                                                {selectedSales.length}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between border-t border-border pt-2">
+                                            <span className="text-sm font-semibold text-foreground">
+                                                Total Consolidado:
+                                            </span>
+                                            <span className="font-display text-xl font-bold text-foreground">
+                                                {formatMoney(selectedTotal)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <FormField
+                                        label="Observações do fechamento (opcional)"
+                                        name="notes"
+                                        error={errors.notes}
+                                    >
+                                        <textarea
+                                            id="notes"
+                                            name="notes"
+                                            rows={2}
+                                            className="min-h-16 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                            placeholder="Anotações para constar no recibo interno..."
+                                        />
+                                    </FormField>
+
+                                    <FormActions
+                                        submitLabel="Confirmar Fechamento e Emitir Recibo"
+                                        processing={processing}
+                                        onCancel={() => setCloseOpen(false)}
+                                    />
+                                </>
+                            )}
+                        </Form>
+                    </DialogContent>
+                </Dialog>
 
                 {/* Sales List / Grid */}
                 {paginator.data.length === 0 ? (

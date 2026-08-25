@@ -121,6 +121,7 @@ final class SaleController extends Controller
             'category',
             'appointmentLink.appointment',
             'statusHistories.user',
+            'closingSessions',
         ]);
 
         $services = Service::query()

@@ -132,7 +132,27 @@ final class PayloadGovernance
     {
         $key = strtolower($key);
 
+        if (in_array($key, ['closing_session_id', 'closing_session', 'receipt_number', 'description', 'membership_id'], true)) {
+            return false;
+        }
+
         foreach (self::FORBIDDEN_KEY_FRAGMENTS as $fragment) {
+            if ($fragment === 'ip') {
+                if ($key === 'ip' || str_starts_with($key, 'ip_') || str_ends_with($key, '_ip') || str_contains($key, '_ip_')) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($fragment === 'session') {
+                if (str_contains($key, 'session') && ! str_contains($key, 'closing_session')) {
+                    return true;
+                }
+
+                continue;
+            }
+
             if (str_contains($key, $fragment)) {
                 return true;
             }

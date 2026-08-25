@@ -3,6 +3,7 @@
 use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ClosingSessionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -49,6 +50,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->except(['create', 'edit']);
         Route::resource('sales', SaleController::class)
             ->only(['index', 'show', 'store']);
+        Route::resource('closing-sessions', ClosingSessionController::class)
+            ->only(['show', 'store']);
         Route::post('sales/{sale}/discount', [SaleController::class, 'applyDiscount'])->name('sales.discount');
         Route::post('sales/{sale}/transition', [SaleController::class, 'transitionStatus'])->name('sales.transition');
         Route::post('sales/{sale}/items', [SaleItemController::class, 'store'])->name('sales.items.store');

@@ -70,16 +70,13 @@ Critério de saída: CRUD completo, busca, filtros, paginação e auditoria.
 
 Critério de saída: fluxo E2E cliente → agenda → confirmação sem dupla reserva.
 
-### Fase 4 — Atendimento e comanda
+### Fase 4 — Atendimento e comanda (Concluída ✅)
 
-- abrir comanda a partir do agendamento;
-- adicionar serviços/produtos;
-- descontos com permissão;
-- concluir atendimento;
-- fechamento consolidado das comandas;
-- recibo interno e histórico auditável.
-
-Critério de saída: invariantes de totais, fechamento e idempotência testadas. Pagamentos, recebimentos, gateways, Pix/cartão e estornos ficam fora desta wave.
+- [x] Categorias de comanda e modelos (`SaleCategory`, `Sale`, `SaleItem`, `SaleStatusHistory`, `AppointmentSaleLink`);
+- [x] Ações de ciclo de vida (`OpenSale`, `AddSaleItem`, `RemoveSaleItem`, `ApplySaleDiscount`, `TransitionSaleStatus`);
+- [x] Frontend operacional completo de comandas (`sales/index.tsx`, `sales/show.tsx`, `sale-categories/index.tsx`, `calendar/index.tsx`);
+- [x] Fechamento consolidado (`ClosingSession`, `FinalizeClosingSession`), recibo interno e histórico auditável;
+- [x] Invariantes de totais, fechamento uniforme, concorrência otimista (`lock_version`) e idempotência testadas com 100% de aprovação. Pagamentos, recebimentos, gateways, Pix/cartão e estornos ficam para a Fase 5.
 
 ### Fase 5 — Financeiro, comissões e estoque
 

@@ -108,10 +108,94 @@ export type Sale = {
     appointment_link?: AppointmentSaleLinkSummary | null;
     items?: SaleItem[];
     status_histories?: SaleStatusHistory[];
+    closing_sessions?: ClosingSession[];
 };
 
 export type SaleMetrics = {
     open_count: number;
     ready_count: number;
     today_total_cents: number;
+};
+
+export type ClosingSessionStatus =
+    | 'draft'
+    | 'ready'
+    | 'processing'
+    | 'completed'
+    | 'cancelled'
+    | 'failed';
+
+export type ReceiptPayload = {
+    receipt_number: string;
+    issued_at: string;
+    tenant: {
+        id: string;
+        name: string;
+        slug: string;
+    };
+    unit: {
+        id: string;
+        name: string;
+        timezone?: string;
+    };
+    closed_by: {
+        id: string;
+        name: string;
+        email?: string;
+    };
+    closing_subject: string;
+    customer?: {
+        id: string;
+        name: string;
+        phone?: string | null;
+        email?: string | null;
+    } | null;
+    currency: string;
+    totals: {
+        total_gross_cents: number;
+        total_discount_cents: number;
+        final_total_cents: number;
+        sales_count: number;
+    };
+    sales: Array<{
+        id: string;
+        category_name: string;
+        reference_label?: string | null;
+        total_amount_cents: number;
+        discount_amount_cents: number;
+        final_amount_cents: number;
+        items: Array<{
+            id: string;
+            item_type: 'service' | 'product' | 'custom';
+            name: string;
+            quantity: number;
+            unit_price_cents: number;
+            discount_cents: number;
+            total_cents: number;
+            professional_name?: string | null;
+        }>;
+    }>;
+    notes?: string | null;
+};
+
+export type ClosingSession = {
+    id: string;
+    tenant_id: string;
+    unit_id: string;
+    closing_subject: string;
+    currency: string;
+    expected_total_cents: number;
+    final_total_cents: number;
+    status: ClosingSessionStatus;
+    receipt_number: string | null;
+    receipt_payload: ReceiptPayload | null;
+    idempotency_key: string | null;
+    closed_by_user_id: string | null;
+    lock_version: number;
+    created_at: string;
+    updated_at: string;
+    closed_by?: { id: string; name: string; email?: string } | null;
+    sales?: Sale[];
+    unit?: { id: string; name: string; timezone?: string } | null;
+    tenant?: { id: string; name: string; slug?: string } | null;
 };
