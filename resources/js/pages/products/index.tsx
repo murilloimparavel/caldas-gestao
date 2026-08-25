@@ -5,9 +5,11 @@ import {
     FolderTree,
     Package,
     Plus,
+    SlidersHorizontal,
     Tag,
 } from 'lucide-react';
 import { useState } from 'react';
+import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
 import {
     createIdempotencyKey,
     EmptyState,
@@ -33,6 +35,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import inventory from '@/routes/inventory';
 import products from '@/routes/products';
 import type { SharedPageProps } from '@/types';
 
@@ -117,8 +120,14 @@ export default function ProductsIndex({
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [createKey] = useState(() => createIdempotencyKey('product-create'));
+    const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('product.manage');
+    const canAdjustStock =
+        props.auth.permissions.includes('inventory.manage') || canManage;
+    const canViewInventory =
+        props.auth.permissions.includes('inventory.view') ||
+        props.auth.permissions.includes('product.view');
 
     return (
         <>
@@ -129,17 +138,26 @@ export default function ProductsIndex({
                     title="Produtos"
                     description="Cadastre itens físicos de venda e consumo interno com controle de preço de custo, venda e estoque mínimo."
                     action={
-                        canManage ? (
-                            <Dialog
-                                open={createOpen}
-                                onOpenChange={setCreateOpen}
-                            >
-                                <DialogTrigger asChild>
-                                    <Button className="w-full sm:w-auto">
-                                        <Plus aria-hidden="true" />
-                                        Novo produto
-                                    </Button>
-                                </DialogTrigger>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {canViewInventory ? (
+                                <Button asChild variant="outline">
+                                    <Link href={inventory.index()}>
+                                        <Boxes aria-hidden="true" />
+                                        Extrato de estoque
+                                    </Link>
+                                </Button>
+                            ) : null}
+                            {canManage ? (
+                                <Dialog
+                                    open={createOpen}
+                                    onOpenChange={setCreateOpen}
+                                >
+                                    <DialogTrigger asChild>
+                                        <Button className="w-full sm:w-auto">
+                                            <Plus aria-hidden="true" />
+                                            Novo produto
+                                        </Button>
+                                    </DialogTrigger>
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
                                     <DialogHeader>
                                         <DialogTitle>Novo produto</DialogTitle>
@@ -307,8 +325,9 @@ export default function ProductsIndex({
                                     </Form>
                                 </DialogContent>
                             </Dialog>
-                        ) : null
-                    }
+                        ) : null}
+                    </div>
+                }
                 />
 
                 <SearchToolbar
@@ -378,7 +397,15 @@ export default function ProductsIndex({
                                                 </p>
                                             </div>
                                         </div>
-                                        <StatusBadge status={product.is_active ? 'active' : 'inactive'} />
+                                        <div className="flex flex-col items-end gap-1">
+                                            <StatusBadge status={product.is_active ? 'active' : 'inactive'} />
+                                            {isLowStock ? (
+                                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-500">
+                                                    <AlertTriangle className="size-3" />
+                                                    Estoque baixo
+                                                </span>
+                                            ) : null}
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3 border-y border-border py-3">
@@ -420,7 +447,18 @@ export default function ProductsIndex({
                                         </span>
                                     </div>
 
-                                    <div className="mt-auto flex justify-end">
+                                    <div className="mt-auto flex items-center justify-between gap-2">
+                                        {canAdjustStock ? (
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => setAdjustingProduct(product)}
+                                            >
+                                                <SlidersHorizontal className="size-3.5" />
+                                                Ajustar
+                                            </Button>
+                                        ) : <div />}
                                         <Button asChild variant="outline" size="sm">
                                             <Link href={products.show(product.id)}>
                                                 Ver cadastro
@@ -434,6 +472,18 @@ export default function ProductsIndex({
                 )}
 
                 <Pagination links={paginator.links} />
+
+                {adjustingProduct ? (
+                    <StockAdjustmentDialog
+                        product={adjustingProduct}
+                        open={adjustingProduct !== null}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setAdjustingProduct(null);
+                            }
+                        }}
+                    />
+                ) : null}
             </PageCanvas>
         </>
     );

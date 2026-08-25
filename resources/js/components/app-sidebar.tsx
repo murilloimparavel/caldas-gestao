@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
     BarChart3,
+    Boxes,
     CalendarDays,
     ClipboardList,
     FolderTree,
@@ -31,6 +32,7 @@ import calendar from '@/routes/calendar';
 import cashShifts from '@/routes/cash_shifts';
 import categories from '@/routes/categories';
 import customers from '@/routes/customers';
+import inventory from '@/routes/inventory';
 import products from '@/routes/products';
 import professionals from '@/routes/professionals';
 import saleCategories from '@/routes/sale-categories';
@@ -99,6 +101,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: products.index(),
                 icon: Package,
                 permission: 'product.view',
+            },
+            {
+                title: 'Estoque',
+                href: inventory.index(),
+                icon: Boxes,
+                permission: 'inventory.view',
             },
             {
                 title: 'Categorias',

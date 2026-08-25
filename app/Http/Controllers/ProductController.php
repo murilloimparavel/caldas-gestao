@@ -77,9 +77,16 @@ final class ProductController extends Controller
             ->values()
             ->all();
 
+        $movements = $product->inventoryMovements()
+            ->with('user:id,name')
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
         return Inertia::render('products/show', [
             'product' => $product->load('category:id,name'),
             'categoryOptions' => $categoryOptions,
+            'movements' => $movements,
         ]);
     }
 

@@ -4,6 +4,8 @@ namespace App\Actions\Closing;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\ClosingSession;
+use App\Models\InventoryMovement;
+use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SaleStatusHistory;
@@ -223,6 +225,69 @@ final class FinalizeClosingSession extends OperationalAction
                     'receipt_number' => $receiptNumber,
                     'lock_version' => $lockedSale->lock_version,
                 ]);
+            }
+
+            $productQuantities = [];
+            foreach ($sales as $sale) {
+                foreach ($sale->items as $item) {
+                    if ($item->item_type === 'product' && $item->product_id !== null) {
+                        $productQuantities[$item->product_id] = ($productQuantities[$item->product_id] ?? 0) + $item->quantity;
+                    }
+                }
+            }
+
+            if (! empty($productQuantities)) {
+                $productIds = array_keys($productQuantities);
+                sort($productIds);
+
+                $products = Product::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereIn('id', $productIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                foreach ($productQuantities as $productId => $qty) {
+                    /** @var Product|null $product */
+                    $product = $products->get($productId);
+                    if ($product !== null) {
+                        $previousStock = $product->current_stock;
+                        $resultingStock = $previousStock - $qty;
+
+                        $movement = InventoryMovement::query()->create([
+                            'id' => (string) Str::uuid7(),
+                            'tenant_id' => $tenantId,
+                            'unit_id' => $unitId,
+                            'product_id' => $product->getKey(),
+                            'type' => 'sale_outflow',
+                            'quantity' => $qty,
+                            'unit_cost_cents' => $product->cost_price_cents,
+                            'previous_stock' => $previousStock,
+                            'resulting_stock' => $resultingStock,
+                            'reason' => 'Baixa automática por venda no fechamento #'.$receiptNumber,
+                            'reference_type' => 'closing_session',
+                            'reference_id' => $session->getKey(),
+                            'user_id' => $actor->getKey(),
+                        ]);
+
+                        $product->forceFill([
+                            'current_stock' => $resultingStock,
+                            'lock_version' => $product->lock_version + 1,
+                        ])->save();
+
+                        $this->events->record($actor, $context, 'inventory.moved', $product, [
+                            'product_id' => $product->getKey(),
+                            'inventory_movement_id' => $movement->getKey(),
+                            'type' => 'sale_outflow',
+                            'quantity' => $qty,
+                            'previous_stock' => $previousStock,
+                            'resulting_stock' => $resultingStock,
+                            'lock_version' => $product->lock_version,
+                        ]);
+                    }
+                }
             }
 
             $this->events->record($actor, $context, 'closing_session.completed', $session, [

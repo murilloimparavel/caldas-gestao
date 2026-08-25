@@ -2,26 +2,39 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     AlertTriangle,
+    ArrowDownRight,
     ArrowLeft,
+    ArrowUpRight,
     Boxes,
+    Calendar,
     CheckCircle2,
+    Clock,
     DollarSign,
     FolderTree,
+    History,
     Package,
+    RotateCcw,
+    SlidersHorizontal,
     TrendingUp,
+    User,
 } from 'lucide-react';
 import { useState } from 'react';
+import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
 import {
     createIdempotencyKey,
+    EmptyState,
     FormActions,
     FormErrorSummary,
     FormField,
     formatMoney,
     PageCanvas,
+    Pagination,
     parseBrazilianCurrency,
     ResourceHeader,
     StatusBadge,
 } from '@/components/operational';
+import type { Paginated } from '@/components/operational';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -42,6 +55,25 @@ type CategoryOption = {
     name: string;
 };
 
+type InventoryMovementItem = {
+    created_at: string;
+    id: string;
+    previous_stock: number;
+    quantity: number;
+    reason: string;
+    reference_id: string | null;
+    reference_type: string | null;
+    resulting_stock: number;
+    type:
+        | 'sale_outflow'
+        | 'purchase_inflow'
+        | 'adjustment_loss'
+        | 'adjustment_gain'
+        | 'manual_count';
+    unit_cost_cents: number;
+    user?: { id: string; name: string } | null;
+};
+
 type Product = {
     barcode: string | null;
     category?: CategoryOption | null;
@@ -60,6 +92,7 @@ type Product = {
 
 type Props = {
     categoryOptions: CategoryOption[];
+    movements?: Paginated<InventoryMovementItem>;
     product: Product;
 };
 
@@ -113,12 +146,59 @@ function MoneyPriceField({
     );
 }
 
-export default function ProductShow({ product, categoryOptions = [] }: Props) {
+function MovementTypeBadge({ type }: { type: InventoryMovementItem['type'] }) {
+    switch (type) {
+        case 'purchase_inflow':
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <ArrowUpRight className="size-3" />
+                    Compra / Entrada
+                </span>
+            );
+        case 'adjustment_gain':
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <ArrowUpRight className="size-3" />
+                    Ajuste (Ganho)
+                </span>
+            );
+        case 'sale_outflow':
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    <ArrowDownRight className="size-3" />
+                    Venda / Saída
+                </span>
+            );
+        case 'adjustment_loss':
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-medium text-destructive">
+                    <ArrowDownRight className="size-3" />
+                    Ajuste (Perda)
+                </span>
+            );
+        case 'manual_count':
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2.5 py-0.5 text-xs font-medium text-purple-600 dark:text-purple-400">
+                    <RotateCcw className="size-3" />
+                    Contagem física
+                </span>
+            );
+    }
+}
+
+export default function ProductShow({
+    product,
+    categoryOptions = [],
+    movements,
+}: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('product-update'));
     const [destroyKey] = useState(() => createIdempotencyKey('product-destroy'));
     const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [adjustOpen, setAdjustOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('product.manage');
+    const canAdjustStock =
+        props.auth.permissions.includes('inventory.manage') || canManage;
 
     const profitCents = product.sale_price_cents - product.cost_price_cents;
     const profitMargin =
@@ -145,7 +225,23 @@ export default function ProductShow({ product, categoryOptions = [] }: Props) {
                         eyebrow="Cadastro de produto"
                         title={product.name}
                         description="Atualize preços, estoque mínimo e referências de código de barras ou SKU."
-                        action={<StatusBadge status={product.is_active ? 'active' : 'inactive'} />}
+                        action={
+                            <div className="flex flex-wrap items-center gap-2">
+                                {canAdjustStock ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setAdjustOpen(true)}
+                                    >
+                                        <SlidersHorizontal aria-hidden="true" />
+                                        Ajustar estoque
+                                    </Button>
+                                ) : null}
+                                <StatusBadge
+                                    status={product.is_active ? 'active' : 'inactive'}
+                                />
+                            </div>
+                        }
                     />
                 </div>
 
@@ -473,6 +569,134 @@ export default function ProductShow({ product, categoryOptions = [] }: Props) {
                         ) : null}
                     </aside>
                 </div>
+
+                <section className="surface-panel mt-6 p-5 sm:p-6 space-y-5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold flex items-center gap-2">
+                                <History className="size-5 text-primary" />
+                                Histórico de Movimentações de Estoque
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                Registro cronológico de vendas, compras, perdas e ajustes físicos deste item.
+                            </p>
+                        </div>
+                        {canAdjustStock ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setAdjustOpen(true)}
+                            >
+                                <SlidersHorizontal className="size-3.5" />
+                                Novo lançamento
+                            </Button>
+                        ) : null}
+                    </div>
+
+                    {!movements || movements.data.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                            <Boxes className="mx-auto size-8 text-muted-foreground/50 mb-2" />
+                            Nenhuma movimentação de estoque registrada para este produto ainda.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="border-b border-border text-xs text-muted-foreground uppercase">
+                                    <tr>
+                                        <th className="py-3 px-3">Data / Hora</th>
+                                        <th className="py-3 px-3">Tipo</th>
+                                        <th className="py-3 px-3">Quantidade</th>
+                                        <th className="py-3 px-3">Custo Unitário</th>
+                                        <th className="py-3 px-3">Saldo Anterior</th>
+                                        <th className="py-3 px-3">Saldo Resultante</th>
+                                        <th className="py-3 px-3">Motivo / Referência</th>
+                                        <th className="py-3 px-3">Operador</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/60">
+                                    {movements.data.map((m) => {
+                                        const isInflow =
+                                            m.type === 'purchase_inflow' ||
+                                            m.type === 'adjustment_gain';
+                                        const isOutflow =
+                                            m.type === 'sale_outflow' ||
+                                            m.type === 'adjustment_loss';
+
+                                        const date = new Date(m.created_at);
+                                        const formattedDate = date.toLocaleString('pt-BR', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        });
+
+                                        return (
+                                            <tr key={m.id} className="hover:bg-muted/30">
+                                                <td className="py-3 px-3 whitespace-nowrap text-xs text-muted-foreground">
+                                                    {formattedDate}
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap">
+                                                    <MovementTypeBadge type={m.type} />
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap font-semibold">
+                                                    <span
+                                                        className={
+                                                            isInflow
+                                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                                : isOutflow
+                                                                  ? 'text-destructive'
+                                                                  : 'text-foreground'
+                                                        }
+                                                    >
+                                                        {isInflow ? '+' : isOutflow ? '-' : ''}
+                                                        {m.quantity} {product.unit_of_measure}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap text-muted-foreground text-xs">
+                                                    {m.unit_cost_cents > 0
+                                                        ? formatMoney(m.unit_cost_cents)
+                                                        : '-'}
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap text-muted-foreground">
+                                                    {m.previous_stock} {product.unit_of_measure}
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap font-medium text-foreground">
+                                                    {m.resulting_stock} {product.unit_of_measure}
+                                                </td>
+                                                <td className="py-3 px-3 text-xs text-foreground max-w-xs truncate">
+                                                    {m.reason}
+                                                    {m.reference_type ? (
+                                                        <span className="block text-[11px] text-muted-foreground">
+                                                            Ref: {m.reference_type}
+                                                            {m.reference_id ? ` #${m.reference_id.slice(0, 8)}` : ''}
+                                                        </span>
+                                                    ) : null}
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap text-xs text-muted-foreground">
+                                                    {m.user?.name ?? 'Sistema'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+
+                            {movements.links && movements.links.length > 3 ? (
+                                <div className="pt-4">
+                                    <Pagination links={movements.links} />
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
+                </section>
+
+                <StockAdjustmentDialog
+                    product={product}
+                    open={adjustOpen}
+                    onOpenChange={setAdjustOpen}
+                />
             </PageCanvas>
         </>
     );

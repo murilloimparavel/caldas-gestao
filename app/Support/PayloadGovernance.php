@@ -30,6 +30,7 @@ final class PayloadGovernance
         'from_status', 'to_status', 'reason',
         'cash_shift_id', 'cash_movement_id', 'opened_by_user_id', 'initial_amount_cents',
         'expected_amount_cents', 'difference_cents', 'amount_cents', 'reference_type', 'reference_id',
+        'inventory_movement_id', 'unit_cost_cents', 'previous_stock', 'resulting_stock',
     ];
 
     /** @var list<string> */
@@ -48,6 +49,7 @@ final class PayloadGovernance
         'from_status', 'to_status', 'reason',
         'cash_shift_id', 'cash_movement_id', 'opened_by_user_id', 'initial_amount_cents',
         'expected_amount_cents', 'difference_cents', 'amount_cents', 'reference_type', 'reference_id',
+        'inventory_movement_id', 'unit_cost_cents', 'previous_stock', 'resulting_stock',
     ];
 
     /** @var list<string> */

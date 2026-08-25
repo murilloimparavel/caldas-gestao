@@ -7,6 +7,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClosingSessionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
 use App\Http\Controllers\SaleCategoryController;
@@ -63,6 +64,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('finance/cash/{cashShift}', [CashShiftController::class, 'show'])->name('cash_shifts.show');
         Route::post('finance/cash/{cashShift}/move', [CashShiftController::class, 'move'])->name('cash_shifts.move');
         Route::post('finance/cash/{cashShift}/close', [CashShiftController::class, 'close'])->name('cash_shifts.close');
+        Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.movements.store');
     });
 });
 
