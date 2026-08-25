@@ -8,7 +8,12 @@ use App\Actions\Sales\TransitionSaleStatus;
 use App\Http\Requests\OpenSaleRequest;
 use App\Http\Requests\SaleDiscountRequest;
 use App\Http\Requests\SaleStatusTransitionRequest;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\Professional;
 use App\Models\Sale;
+use App\Models\SaleCategory;
+use App\Models\Service;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +30,10 @@ final class SaleController extends Controller
     {
         Gate::authorize('viewAny', Sale::class);
 
+        $unitId = $context->unit?->getKey();
+        $tenantId = $context->tenant->getKey();
+        $unitTimezone = $context->unit === null ? config('app.timezone') : ($context->unit->timezone ?? config('app.timezone'));
+
         $search = trim((string) $request->string('search'));
         $status = trim((string) $request->string('status'));
         $customerId = trim((string) $request->string('customer_id'));
@@ -32,8 +41,8 @@ final class SaleController extends Controller
 
         $sales = Sale::query()
             ->with(['customer', 'category', 'appointmentLink.appointment'])
-            ->where('tenant_id', $context->tenant->getKey())
-            ->where('unit_id', $context->unit?->getKey())
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery->where('reference_label', 'like', "%{$search}%")
@@ -48,8 +57,46 @@ final class SaleController extends Controller
             ->paginate(25)
             ->withQueryString();
 
+        $categories = SaleCategory::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'uniqueness_scope']);
+
+        $customers = Customer::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone']);
+
+        $todayStart = now($unitTimezone)->startOfDay();
+
+        $metrics = [
+            'open_count' => Sale::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('status', 'open')
+                ->count(),
+            'ready_count' => Sale::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('status', 'ready_to_bill')
+                ->count(),
+            'today_total_cents' => (int) Sale::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->whereIn('status', ['open', 'ready_to_bill'])
+                ->where('created_at', '>=', $todayStart)
+                ->sum('final_amount_cents'),
+        ];
+
         return Inertia::render('sales/index', [
             'sales' => $sales,
+            'categories' => $categories,
+            'customers' => $customers,
+            'metrics' => $metrics,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -59,9 +106,12 @@ final class SaleController extends Controller
         ]);
     }
 
-    public function show(Sale $sale): Response
+    public function show(Sale $sale, TenantContext $context): Response
     {
         Gate::authorize('view', $sale);
+
+        $unitId = $context->unit?->getKey() ?? $sale->unit_id;
+        $tenantId = $context->tenant->getKey();
 
         $sale->load([
             'items.service',
@@ -73,8 +123,48 @@ final class SaleController extends Controller
             'statusHistories.user',
         ]);
 
+        $services = Service::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'price_cents', 'duration_minutes']);
+
+        $products = Product::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'sale_price_cents', 'current_stock'])
+            ->map(fn (Product $product): array => [
+                'id' => $product->getKey(),
+                'name' => $product->name,
+                'price_cents' => $product->sale_price_cents,
+                'sale_price_cents' => $product->sale_price_cents,
+                'current_stock' => $product->current_stock,
+            ])
+            ->values();
+
+        $professionals = Professional::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $categories = SaleCategory::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'uniqueness_scope']);
+
         return Inertia::render('sales/show', [
             'sale' => $sale,
+            'services' => $services,
+            'products' => $products,
+            'professionals' => $professionals,
+            'categories' => $categories,
         ]);
     }
 

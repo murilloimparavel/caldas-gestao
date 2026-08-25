@@ -4,6 +4,7 @@ import {
     CalendarDays,
     ClipboardList,
     FolderTree,
+    Layers,
     LayoutDashboard,
     Package,
     Scissors,
@@ -25,10 +26,13 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import calendar from '@/routes/calendar';
 import categories from '@/routes/categories';
 import customers from '@/routes/customers';
 import products from '@/routes/products';
 import professionals from '@/routes/professionals';
+import saleCategories from '@/routes/sale-categories';
+import sales from '@/routes/sales';
 import services from '@/routes/services';
 import suppliers from '@/routes/suppliers';
 import type { SharedPageProps, SidebarNavGroup } from '@/types';
@@ -42,8 +46,18 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: dashboard(),
                 icon: LayoutDashboard,
             },
-            { title: 'Agenda', icon: CalendarDays, disabled: true },
-            { title: 'Comandas', icon: ClipboardList, disabled: true },
+            {
+                title: 'Agenda',
+                href: calendar.index(),
+                icon: CalendarDays,
+                permission: 'appointment.view',
+            },
+            {
+                title: 'Comandas',
+                href: sales.index(),
+                icon: ClipboardList,
+                permission: 'sale.view',
+            },
         ],
     },
     {
@@ -83,6 +97,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: categories.index(),
                 icon: FolderTree,
                 permission: 'category.view',
+            },
+            {
+                title: 'Categorias de Comanda',
+                href: saleCategories.index(),
+                icon: Layers,
+                permission: 'sale_category.view',
             },
             {
                 title: 'Fornecedores',

@@ -607,3 +607,160 @@ it('replays an idempotent sale creation mutation with X-Idempotency-Key', functi
     expect(Sale::query()->where('tenant_id', $tenant->getKey())->count())->toBe(1)
         ->and(IdempotencyKey::query()->where('tenant_id', $tenant->getKey())->where('key', 'sale-open-key-1')->firstOrFail()->status->value)->toBe('succeeded');
 });
+
+it('renders sale index with enriched metrics, categories and customers', function () {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Barbearia',
+        'is_active' => true,
+    ]);
+
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
+
+    Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'open',
+        'final_amount_cents' => 5000,
+    ]);
+
+    Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'ready_to_bill',
+        'final_amount_cents' => 3000,
+    ]);
+
+    $expectedCustomerCount = Customer::query()
+        ->where('tenant_id', $tenant->getKey())
+        ->where('unit_id', $unit->getKey())
+        ->where('status', 'active')
+        ->count();
+
+    $response = $this->actingAs($owner)->get(route('sales.index'));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('sales/index')
+            ->has('sales.data', 2)
+            ->has('categories', 1)
+            ->has('customers', $expectedCustomerCount)
+            ->where('metrics.open_count', 1)
+            ->where('metrics.ready_count', 1)
+            ->where('metrics.today_total_cents', 8000)
+        );
+});
+
+it('renders sale show with auxiliary services, products, professionals and categories', function () {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Salão',
+        'is_active' => true,
+    ]);
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+
+    $serviceCategory = Category::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $serviceCategory->getKey(),
+        'status' => 'active',
+    ]);
+
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $serviceCategory->getKey(),
+        'is_active' => true,
+    ]);
+
+    Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
+
+    $response = $this->actingAs($owner)->get(route('sales.show', $sale));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('sales/show')
+            ->where('sale.id', $sale->getKey())
+            ->has('services', 1)
+            ->has('products', 1)
+            ->has('professionals', 1)
+            ->has('categories', 1)
+        );
+});
+
+it('includes sale links and sale categories in calendar index payload', function () {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Barbearia',
+        'is_active' => true,
+    ]);
+
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'active']);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'active']);
+
+    $appointment = Appointment::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => now()->addHour(),
+        'ends_at' => now()->addHours(2),
+    ]);
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'open',
+        'reference_label' => 'Cadeira 01',
+    ]);
+
+    AppointmentSaleLink::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'appointment_id' => $appointment->getKey(),
+        'sale_id' => $sale->getKey(),
+    ]);
+
+    expect($appointment->saleLinks()->count())->toBe(1)
+        ->and($appointment->saleLink)->not->toBeNull()
+        ->and($appointment->saleLink->sale_id)->toBe($sale->getKey());
+
+    $response = $this->actingAs($owner)->get(route('calendar.index'));
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('calendar/index')
+            ->has('options.sale_categories', 1)
+            ->has('appointments.0.sale_link')
+            ->where('appointments.0.sale_link.sale_id', $sale->getKey())
+        );
+});

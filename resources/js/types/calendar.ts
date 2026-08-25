@@ -22,6 +22,18 @@ export type CalendarAppointmentItem = {
     service_id?: string | null;
 };
 
+export type CalendarAppointmentSale = {
+    id: string;
+    reference_label?: string | null;
+    status: string;
+};
+
+export type CalendarAppointmentSaleLink = {
+    id: string;
+    sale?: CalendarAppointmentSale | null;
+    sale_id: string;
+};
+
 export type CalendarAppointment = {
     color?: string | null;
     customer?: CalendarOption | null;
@@ -36,6 +48,8 @@ export type CalendarAppointment = {
     professional?: CalendarOption | null;
     professional_id?: string | null;
     reminder_enabled?: boolean;
+    sale_link?: CalendarAppointmentSaleLink | null;
+    sale_links?: CalendarAppointmentSaleLink[];
     service?: CalendarOption | null;
     service_id?: string | null;
     starts_at: string;
@@ -84,6 +98,13 @@ export type CalendarRange = {
     start: string;
 };
 
+export type SaleCategoryOptionSummary = {
+    id: string;
+    name: string;
+    type: string;
+    uniqueness_scope: string;
+};
+
 export type CalendarProps = {
     appointments?: CalendarAppointment[];
     calendar?: {
@@ -105,6 +126,7 @@ export type CalendarProps = {
         customers?: CalendarOption[];
         professionals?: CalendarOption[];
         services?: CalendarOption[];
+        sale_categories?: SaleCategoryOptionSummary[];
         statuses?: AppointmentStatus[];
     };
     professionals?: CalendarOption[];
@@ -112,4 +134,5 @@ export type CalendarProps = {
     schedule_blocks?: ScheduleBlock[];
     services?: CalendarOption[];
 };
+
 

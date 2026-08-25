@@ -1,5 +1,11 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { CheckCircle2, Lock, Plus, SlidersHorizontal } from 'lucide-react';
+import {
+    CheckCircle2,
+    Lock,
+    Plus,
+    Receipt,
+    SlidersHorizontal,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
     CalendarError,
@@ -25,6 +31,7 @@ import {
     FormField,
     PageCanvas,
 } from '@/components/operational';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -53,14 +60,17 @@ import {
     destroy as destroyScheduleBlock,
     store as storeScheduleBlock,
 } from '@/routes/schedule_blocks';
+import sales from '@/routes/sales';
 import type { SharedPageProps } from '@/types';
 import type {
     AppointmentStatus,
     CalendarAppointment,
     CalendarOption,
     CalendarProps,
+    SaleCategoryOptionSummary,
     ScheduleBlock,
 } from '@/types/calendar';
+
 
 
 const statusOptions: AppointmentStatus[] = [
@@ -468,6 +478,87 @@ function CheckInAppointmentForm({
     );
 }
 
+function OpenAppointmentSaleForm({
+    appointment,
+    categories,
+    onClose,
+}: {
+    appointment: CalendarAppointment;
+    categories: SaleCategoryOptionSummary[];
+    onClose: () => void;
+}) {
+    const [mutationKey] = useState(() =>
+        createIdempotencyKey(`appointment-sale-open:${appointment.id}`),
+    );
+
+    return (
+        <Form
+            {...sales.store.form()}
+            headers={{ 'X-Idempotency-Key': mutationKey }}
+            className="space-y-4"
+            onSuccess={onClose}
+        >
+            {({ errors, processing }) => (
+                <>
+                    <FormErrorSummary errors={errors} />
+                    <input
+                        type="hidden"
+                        name="appointment_id"
+                        value={appointment.id}
+                    />
+                    <input
+                        type="hidden"
+                        name="customer_id"
+                        value={
+                            appointment.customer_id ??
+                            appointment.customer?.id ??
+                            ''
+                        }
+                    />
+                    <FormField
+                        label="Categoria da Comanda"
+                        name="sale_category_id"
+                        error={errors.sale_category_id}
+                    >
+                        <select
+                            id="appointment_sale_category_id"
+                            name="sale_category_id"
+                            required
+                            className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                        >
+                            <option value="">Selecione a categoria</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                </option>
+                            ))}
+                        </select>
+                    </FormField>
+
+                    <FormField
+                        label="Identificador / Mesa / Referência (opcional)"
+                        name="reference_label"
+                        error={errors.reference_label}
+                    >
+                        <Input
+                            id="appointment_reference_label"
+                            name="reference_label"
+                            placeholder="Ex.: Mesa 01, Cadeira 02, etc."
+                        />
+                    </FormField>
+
+                    <FormActions
+                        processing={processing}
+                        onCancel={onClose}
+                        label="Abrir Comanda e Ir ao Detalhe"
+                    />
+                </>
+            )}
+        </Form>
+    );
+}
+
+
 function ScheduleBlockForm({
     defaultDate,
     onClose,
@@ -630,6 +721,7 @@ export default function CalendarIndex(props: CalendarProps) {
     const [blockCreateOpen, setBlockCreateOpen] = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
     const [editing, setEditing] = useState<CalendarAppointment | null>(null);
+    const [openSaleDialogOpen, setOpenSaleDialogOpen] = useState(false);
     const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(
         null,
     );
@@ -637,8 +729,11 @@ export default function CalendarIndex(props: CalendarProps) {
     const canManage = permissions.some((permission) =>
         ['appointment.manage', 'calendar.manage'].includes(permission),
     );
+    const canManageSales = permissions.includes('sale.manage');
+    const saleCategories = props.options?.sale_categories ?? [];
     const appointments =
         props.calendar?.appointments ?? props.appointments ?? [];
+
     const scheduleBlocks =
         props.calendar?.schedule_blocks ??
         props.schedule_blocks ??
@@ -917,6 +1012,55 @@ export default function CalendarIndex(props: CalendarProps) {
                         services={services}
                         unitTimezone={unitTimezone}
                     />
+                    {editing ? (
+                        <div className="border-t border-border pt-4">
+                            <p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                Comanda & Faturamento
+                            </p>
+                            {editing.sale_link?.sale ? (
+                                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3.5 text-sm">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <Receipt className="size-4 text-primary shrink-0" />
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-foreground truncate">
+                                                    {editing.sale_link.sale.reference_label || 'Comanda Vinculada'}
+                                                </span>
+                                                <Badge variant="outline" className="text-[11px] capitalize shrink-0">
+                                                    {editing.sale_link.sale.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                Comanda já vinculada a este agendamento.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button asChild size="sm" variant="outline" className="shrink-0">
+                                        <Link href={sales.show(editing.sale_link.sale.id)}>
+                                            Ver Comanda →
+                                        </Link>
+                                    </Button>
+                                </div>
+                            ) : canManageSales && editing.status !== 'cancelled' ? (
+                                <div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full gap-2 border-dashed"
+                                        onClick={() => setOpenSaleDialogOpen(true)}
+                                    >
+                                        <Receipt className="size-4" />
+                                        Abrir Comanda para este Agendamento
+                                    </Button>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">
+                                    Nenhuma comanda vinculada a este agendamento.
+                                </p>
+                            )}
+                        </div>
+                    ) : null}
+
                     {editing &&
                     canManage &&
                     ['scheduled', 'confirmed'].includes(editing.status) ? (
@@ -944,6 +1088,38 @@ export default function CalendarIndex(props: CalendarProps) {
                     ) : null}
                 </DialogContent>
             </Dialog>
+
+            <Dialog
+                open={openSaleDialogOpen}
+                onOpenChange={setOpenSaleDialogOpen}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Receipt className="size-5 text-primary" />
+                            Abrir comanda para agendamento
+                        </DialogTitle>
+                        <DialogDescription>
+                            Selecione a categoria de comanda para iniciar o atendimento de{' '}
+                            <strong>
+                                {editing?.customer?.name ?? 'Cliente'}
+                            </strong>
+                            .
+                        </DialogDescription>
+                    </DialogHeader>
+                    {editing ? (
+                        <OpenAppointmentSaleForm
+                            appointment={editing}
+                            categories={saleCategories}
+                            onClose={() => {
+                                setOpenSaleDialogOpen(false);
+                                setEditing(null);
+                            }}
+                        />
+                    ) : null}
+                </DialogContent>
+            </Dialog>
+
 
             <Dialog open={blockCreateOpen} onOpenChange={setBlockCreateOpen}>
                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">

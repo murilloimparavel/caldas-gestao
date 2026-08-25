@@ -1,0 +1,1085 @@
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import {
+    AlertCircle,
+    ArrowLeft,
+    Calendar,
+    CheckCircle2,
+    Clock,
+    History,
+    Package,
+    Percent,
+    Plus,
+    Receipt,
+    RotateCcw,
+    Scissors,
+    Sparkles,
+    Trash2,
+    User,
+    XCircle,
+} from 'lucide-react';
+import { useState } from 'react';
+import {
+    createIdempotencyKey,
+    FormActions,
+    FormErrorSummary,
+    FormField,
+    formatMoney,
+    PageCanvas,
+    parseBrazilianCurrency,
+    ResourceHeader,
+} from '@/components/operational';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { SaleStatusBadge } from '@/pages/sales/index';
+import calendar from '@/routes/calendar';
+import customers from '@/routes/customers';
+import sales from '@/routes/sales';
+import type {
+    ProductOption,
+    ProfessionalOption,
+    Sale,
+    SaleCategoryOption,
+    SaleItem,
+    ServiceOption,
+    SharedPageProps,
+} from '@/types';
+
+type Props = {
+    sale: Sale;
+    services: ServiceOption[];
+    products: ProductOption[];
+    professionals: ProfessionalOption[];
+    categories: SaleCategoryOption[];
+};
+
+function formatDateTime(iso: string | null | undefined): string {
+    if (!iso) {
+        return '—';
+    }
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return iso;
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    }).format(date);
+}
+
+function ItemTypeBadge({ type }: { type: 'service' | 'product' | 'custom' }) {
+    switch (type) {
+        case 'service':
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                >
+                    <Scissors className="size-3" /> Serviço
+                </Badge>
+            );
+        case 'product':
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
+                >
+                    <Package className="size-3" /> Produto
+                </Badge>
+            );
+        case 'custom':
+        default:
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-300"
+                >
+                    <Sparkles className="size-3" /> Personalizado
+                </Badge>
+            );
+    }
+}
+
+export default function SalesShow({
+    sale,
+    services,
+    products,
+    professionals,
+    categories,
+}: Props) {
+    const { props } = usePage<SharedPageProps>();
+    const permissions = new Set(props.auth.permissions);
+    const canManage = permissions.has('sale.manage');
+    const canDiscount = permissions.has('sale.discount');
+
+    const [addItemOpen, setAddItemOpen] = useState(false);
+    const [discountOpen, setDiscountOpen] = useState(false);
+    const [cancelOpen, setCancelOpen] = useState(false);
+
+    // Add item form state
+    const [itemType, setItemType] = useState<'service' | 'product' | 'custom'>(
+        sale.category?.type === 'product' ? 'product' : 'service',
+    );
+    const [selectedServiceId, setSelectedServiceId] = useState('');
+    const [selectedProductId, setSelectedProductId] = useState('');
+    const [customName, setCustomName] = useState('');
+    const [customPriceStr, setCustomPriceStr] = useState('');
+    const [quantity, setQuantity] = useState(1);
+    const [itemDiscountStr, setItemDiscountStr] = useState('');
+
+    // General discount state
+    const [generalDiscountStr, setGeneralDiscountStr] = useState(
+        sale.discount_amount_cents > 0
+            ? (sale.discount_amount_cents / 100).toFixed(2).replace('.', ',')
+            : '',
+    );
+    const [discountNotes, setDiscountNotes] = useState(sale.notes ?? '');
+
+    // Cancel reason state
+    const [cancelReason, setCancelReason] = useState('');
+
+    const [itemAddKey] = useState(() =>
+        createIdempotencyKey(`sale-item-add:${sale.id}`),
+    );
+    const [discountKey] = useState(() =>
+        createIdempotencyKey(`sale-discount:${sale.id}`),
+    );
+    const [transitionKey] = useState(() =>
+        createIdempotencyKey(`sale-transition:${sale.id}`),
+    );
+
+    const isSaleActive = sale.status === 'open' || sale.status === 'ready_to_bill';
+    const isSaleOpen = sale.status === 'open';
+
+    const selectedService = services.find((s) => s.id === selectedServiceId);
+    const selectedProduct = products.find((p) => p.id === selectedProductId);
+
+    const calculatedUnitPriceCents =
+        itemType === 'service'
+            ? selectedService?.price_cents ?? 0
+            : itemType === 'product'
+              ? selectedProduct?.price_cents ?? 0
+              : parseBrazilianCurrency(customPriceStr);
+
+    const calculatedItemDiscountCents = parseBrazilianCurrency(itemDiscountStr);
+    const calculatedItemSubtotalCents = Math.max(
+        0,
+        calculatedUnitPriceCents * quantity - calculatedItemDiscountCents,
+    );
+
+    const handleServiceChange = (serviceId: string) => {
+        setSelectedServiceId(serviceId);
+    };
+
+    const handleProductChange = (productId: string) => {
+        setSelectedProductId(productId);
+    };
+
+    const resetItemForm = () => {
+        setSelectedServiceId('');
+        setSelectedProductId('');
+        setCustomName('');
+        setCustomPriceStr('');
+        setQuantity(1);
+        setItemDiscountStr('');
+    };
+
+    return (
+        <>
+            <Head
+                title={`Comanda #${sale.reference_label || sale.id.slice(0, 8)}`}
+            />
+            <PageCanvas>
+                {/* Back Link & Header */}
+                <div className="flex flex-col gap-4">
+                    <div>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="-ml-2 gap-1 text-muted-foreground hover:text-foreground"
+                        >
+                            <Link href={sales.index()}>
+                                <ArrowLeft className="size-4" />
+                                Voltar para Comandas
+                            </Link>
+                        </Button>
+                    </div>
+
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                                    {sale.reference_label
+                                        ? `${sale.reference_label} — ${sale.customer?.name ?? 'Cliente Avulso'}`
+                                        : sale.customer?.name ?? `Comanda #${sale.id.slice(0, 8)}`}
+                                </h1>
+                                <SaleStatusBadge status={sale.status} />
+                                <Badge variant="secondary" className="font-medium text-xs">
+                                    {sale.category_name_snapshot ||
+                                        sale.category?.name ||
+                                        'Geral'}
+                                </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground sm:text-sm">
+                                Aberta em {formatDateTime(sale.created_at)} • ID:{' '}
+                                <span className="font-mono text-xs">{sale.id}</span>
+                            </p>
+                        </div>
+
+                        {/* Status Transition Action Buttons */}
+                        {canManage && isSaleActive ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                                {isSaleOpen ? (
+                                    <Form
+                                        {...sales.transition.form(sale.id)}
+                                        headers={{
+                                            'X-Idempotency-Key': transitionKey,
+                                        }}
+                                        className="inline-block"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="status"
+                                            value="ready_to_bill"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="lock_version"
+                                            value={sale.lock_version}
+                                        />
+                                        <Button
+                                            type="submit"
+                                            className="bg-amber-600 font-medium text-white hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700"
+                                        >
+                                            <CheckCircle2 className="size-4" />
+                                            Pronto para Fechar
+                                        </Button>
+                                    </Form>
+                                ) : (
+                                    <Form
+                                        {...sales.transition.form(sale.id)}
+                                        headers={{
+                                            'X-Idempotency-Key': transitionKey,
+                                        }}
+                                        className="inline-block"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="status"
+                                            value="open"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="reason"
+                                            value="Reabertura de comanda para inclusão de itens"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="lock_version"
+                                            value={sale.lock_version}
+                                        />
+                                        <Button type="submit" variant="secondary">
+                                            <RotateCcw className="size-4" />
+                                            Reabrir Comanda
+                                        </Button>
+                                    </Form>
+                                )}
+
+                                <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="text-destructive hover:bg-destructive/10">
+                                            <XCircle className="size-4" />
+                                            Cancelar Comanda
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle>Cancelar comanda</DialogTitle>
+                                            <DialogDescription>
+                                                Informe a justificativa do cancelamento desta comanda.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <Form
+                                            {...sales.transition.form(sale.id)}
+                                            headers={{
+                                                'X-Idempotency-Key': createIdempotencyKey(
+                                                    `sale-cancel:${sale.id}`,
+                                                ),
+                                            }}
+                                            onSuccess={() => setCancelOpen(false)}
+                                            className="space-y-4"
+                                        >
+                                            {({ errors, processing }) => (
+                                                <>
+                                                    <FormErrorSummary errors={errors} />
+                                                    <input
+                                                        type="hidden"
+                                                        name="status"
+                                                        value="cancelled"
+                                                    />
+                                                    <input
+                                                        type="hidden"
+                                                        name="lock_version"
+                                                        value={sale.lock_version}
+                                                    />
+                                                    <FormField
+                                                        label="Motivo do cancelamento"
+                                                        name="reason"
+                                                        error={errors.reason}
+                                                    >
+                                                        <Input
+                                                            id="reason"
+                                                            name="reason"
+                                                            value={cancelReason}
+                                                            onChange={(e) =>
+                                                                setCancelReason(
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            placeholder="Ex.: Cliente desistiu, erro de lançamento, etc."
+                                                            required
+                                                        />
+                                                    </FormField>
+                                                    <FormActions
+                                                        processing={processing}
+                                                        onCancel={() =>
+                                                            setCancelOpen(false)
+                                                        }
+                                                        label="Confirmar cancelamento"
+                                                    />
+                                                </>
+                                            )}
+                                        </Form>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+
+                {/* 2-Column Grid: Main Items + Summary Sidebar */}
+                <div className="grid gap-6 lg:grid-cols-12">
+                    {/* Main Column: Items Table & Actions */}
+                    <div className="space-y-6 lg:col-span-8">
+                        <section className="surface-panel overflow-hidden p-0">
+                            <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                                <div>
+                                    <h2 className="font-semibold text-foreground text-lg">
+                                        Itens da Comanda
+                                    </h2>
+                                    <p className="text-xs text-muted-foreground">
+                                        Serviços, produtos consumidos e itens avulsos.
+                                    </p>
+                                </div>
+
+                                {canManage && isSaleOpen ? (
+                                    <Dialog
+                                        open={addItemOpen}
+                                        onOpenChange={(open) => {
+                                            setAddItemOpen(open);
+                                            if (!open) {
+                                                resetItemForm();
+                                            }
+                                        }}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button size="sm">
+                                                <Plus className="size-4" />
+                                                Adicionar Item
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+                                            <DialogHeader>
+                                                <DialogTitle>Adicionar item à comanda</DialogTitle>
+                                                <DialogDescription>
+                                                    Selecione o catálogo ou cadastre um item personalizado.
+                                                </DialogDescription>
+                                            </DialogHeader>
+
+                                            <Form
+                                                {...sales.items.store.form(sale.id)}
+                                                headers={{
+                                                    'X-Idempotency-Key': createIdempotencyKey(
+                                                        `sale-item-add:${sale.id}`,
+                                                    ),
+                                                }}
+                                                resetOnSuccess
+                                                onSuccess={() => {
+                                                    setAddItemOpen(false);
+                                                    resetItemForm();
+                                                }}
+                                                className="space-y-4"
+                                            >
+                                                {({ errors, processing }) => (
+                                                    <>
+                                                        <FormErrorSummary errors={errors} />
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={sale.lock_version}
+                                                        />
+
+                                                        {/* Type Selector */}
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-sm font-medium text-foreground">
+                                                                Tipo de Item
+                                                            </label>
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                {(['service', 'product', 'custom'] as const).map(
+                                                                    (t) => (
+                                                                        <button
+                                                                            key={t}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setItemType(t);
+                                                                                resetItemForm();
+                                                                            }}
+                                                                            className={`flex flex-col items-center justify-center gap-1 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
+                                                                                itemType === t
+                                                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                                                    : 'border-border bg-card text-muted-foreground hover:border-border/80'
+                                                                            }`}
+                                                                        >
+                                                                            {t === 'service' && (
+                                                                                <Scissors className="size-4" />
+                                                                            )}
+                                                                            {t === 'product' && (
+                                                                                <Package className="size-4" />
+                                                                            )}
+                                                                            {t === 'custom' && (
+                                                                                <Sparkles className="size-4" />
+                                                                            )}
+                                                                            <span>
+                                                                                {t === 'service'
+                                                                                    ? 'Serviço'
+                                                                                    : t === 'product'
+                                                                                      ? 'Produto'
+                                                                                      : 'Avulso'}
+                                                                            </span>
+                                                                        </button>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                            <input
+                                                                type="hidden"
+                                                                name="item_type"
+                                                                value={itemType}
+                                                            />
+                                                        </div>
+
+                                                        {/* Dynamic Fields based on Type */}
+                                                        {itemType === 'service' ? (
+                                                            <div className="space-y-3">
+                                                                <FormField
+                                                                    label="Serviço"
+                                                                    name="service_id"
+                                                                    error={errors.service_id}
+                                                                >
+                                                                    <select
+                                                                        id="service_id"
+                                                                        name="service_id"
+                                                                        required
+                                                                        value={selectedServiceId}
+                                                                        onChange={(e) =>
+                                                                            handleServiceChange(
+                                                                                e.target.value,
+                                                                            )
+                                                                        }
+                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                                    >
+                                                                        <option value="">
+                                                                            Selecione o serviço
+                                                                        </option>
+                                                                        {services.map((srv) => (
+                                                                            <option
+                                                                                key={srv.id}
+                                                                                value={srv.id}
+                                                                            >
+                                                                                {srv.name} — {formatMoney(srv.price_cents)} ({srv.duration_minutes} min)
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </FormField>
+
+                                                                <FormField
+                                                                    label="Profissional Executor (opcional)"
+                                                                    name="professional_id"
+                                                                    error={errors.professional_id}
+                                                                >
+                                                                    <select
+                                                                        id="professional_id"
+                                                                        name="professional_id"
+                                                                        defaultValue=""
+                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                                    >
+                                                                        <option value="">
+                                                                            Sem profissional atribuído
+                                                                        </option>
+                                                                        {professionals.map((p) => (
+                                                                            <option
+                                                                                key={p.id}
+                                                                                value={p.id}
+                                                                            >
+                                                                                {p.name}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </FormField>
+                                                            </div>
+                                                        ) : null}
+
+                                                        {itemType === 'product' ? (
+                                                            <div className="space-y-3">
+                                                                <FormField
+                                                                    label="Produto"
+                                                                    name="product_id"
+                                                                    error={errors.product_id}
+                                                                >
+                                                                    <select
+                                                                        id="product_id"
+                                                                        name="product_id"
+                                                                        required
+                                                                        value={selectedProductId}
+                                                                        onChange={(e) =>
+                                                                            handleProductChange(
+                                                                                e.target.value,
+                                                                            )
+                                                                        }
+                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                                    >
+                                                                        <option value="">
+                                                                            Selecione o produto
+                                                                        </option>
+                                                                        {products.map((prd) => (
+                                                                            <option
+                                                                                key={prd.id}
+                                                                                value={prd.id}
+                                                                            >
+                                                                                {prd.name} — {formatMoney(prd.price_cents)} (Estoque: {prd.current_stock})
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </FormField>
+                                                            </div>
+                                                        ) : null}
+
+                                                        {itemType === 'custom' ? (
+                                                            <div className="space-y-3">
+                                                                <FormField
+                                                                    label="Descrição do item"
+                                                                    name="name_snapshot"
+                                                                    error={errors.name_snapshot}
+                                                                >
+                                                                    <Input
+                                                                        id="name_snapshot"
+                                                                        name="name_snapshot"
+                                                                        required
+                                                                        value={customName}
+                                                                        onChange={(e) =>
+                                                                            setCustomName(
+                                                                                e.target.value,
+                                                                            )
+                                                                        }
+                                                                        placeholder="Ex.: Taxa de entrega, Bebida especial, Ajuste manual"
+                                                                    />
+                                                                </FormField>
+
+                                                                <FormField
+                                                                    label="Preço Unitário (R$)"
+                                                                    name="unit_price_cents"
+                                                                    error={errors.unit_price_cents}
+                                                                >
+                                                                    <Input
+                                                                        id="unit_price_display"
+                                                                        required
+                                                                        value={customPriceStr}
+                                                                        onChange={(e) =>
+                                                                            setCustomPriceStr(
+                                                                                e.target.value,
+                                                                            )
+                                                                        }
+                                                                        placeholder="0,00"
+                                                                    />
+                                                                    <input
+                                                                        type="hidden"
+                                                                        name="unit_price_cents"
+                                                                        value={parseBrazilianCurrency(
+                                                                            customPriceStr,
+                                                                        )}
+                                                                    />
+                                                                </FormField>
+
+                                                                <FormField
+                                                                    label="Profissional responsável (opcional)"
+                                                                    name="professional_id"
+                                                                    error={errors.professional_id}
+                                                                >
+                                                                    <select
+                                                                        id="professional_id"
+                                                                        name="professional_id"
+                                                                        defaultValue=""
+                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                                    >
+                                                                        <option value="">
+                                                                            Sem profissional atribuído
+                                                                        </option>
+                                                                        {professionals.map((p) => (
+                                                                            <option
+                                                                                key={p.id}
+                                                                                value={p.id}
+                                                                            >
+                                                                                {p.name}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </FormField>
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* Quantity & Item Discount */}
+                                                        <div className="grid grid-cols-2 gap-3 pt-1">
+                                                            <FormField
+                                                                label="Quantidade"
+                                                                name="quantity"
+                                                                error={errors.quantity}
+                                                            >
+                                                                <Input
+                                                                    id="quantity"
+                                                                    name="quantity"
+                                                                    type="number"
+                                                                    min={1}
+                                                                    value={quantity}
+                                                                    onChange={(e) =>
+                                                                        setQuantity(
+                                                                            Math.max(
+                                                                                1,
+                                                                                Number.parseInt(
+                                                                                    e.target
+                                                                                        .value,
+                                                                                ) || 1,
+                                                                            ),
+                                                                        )
+                                                                    }
+                                                                    required
+                                                                />
+                                                            </FormField>
+
+                                                            <FormField
+                                                                label="Desconto no item (R$)"
+                                                                name="discount_cents"
+                                                                error={errors.discount_cents}
+                                                            >
+                                                                <Input
+                                                                    id="discount_display"
+                                                                    value={itemDiscountStr}
+                                                                    onChange={(e) =>
+                                                                        setItemDiscountStr(
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="0,00"
+                                                                />
+                                                                <input
+                                                                    type="hidden"
+                                                                    name="discount_cents"
+                                                                    value={calculatedItemDiscountCents}
+                                                                />
+                                                            </FormField>
+                                                        </div>
+
+                                                        {/* Item Preview Total */}
+                                                        <div className="flex items-center justify-between rounded-xl bg-muted/40 p-3 text-sm">
+                                                            <span className="text-muted-foreground">
+                                                                Subtotal estimado:
+                                                            </span>
+                                                            <span className="font-semibold text-foreground">
+                                                                {formatMoney(calculatedItemSubtotalCents)}
+                                                            </span>
+                                                        </div>
+
+                                                        <FormActions
+                                                            processing={processing}
+                                                            onCancel={() => {
+                                                                setAddItemOpen(false);
+                                                                resetItemForm();
+                                                            }}
+                                                            label="Adicionar Item"
+                                                        />
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                ) : null}
+                            </div>
+
+                            {/* Items List / Table */}
+                            {(sale.items?.length ?? 0) === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                                    <Receipt className="mb-2 size-8 text-muted-foreground/50" />
+                                    <p className="font-medium text-foreground">
+                                        Nenhum item adicionado ainda
+                                    </p>
+                                    <p className="text-xs">
+                                        {isSaleOpen && canManage
+                                            ? 'Clique no botão "Adicionar Item" acima para lançar serviços ou produtos.'
+                                            : 'Esta comanda não possui itens lançados.'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="border-b border-border bg-muted/30 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            <tr>
+                                                <th className="px-4 py-3 sm:px-5">Item / Descrição</th>
+                                                <th className="px-3 py-3">Profissional</th>
+                                                <th className="px-3 py-3 text-center">Qtd</th>
+                                                <th className="px-3 py-3 text-right">Preço Unit.</th>
+                                                <th className="px-3 py-3 text-right">Desconto</th>
+                                                <th className="px-3 py-3 text-right">Subtotal</th>
+                                                {canManage && isSaleOpen ? (
+                                                    <th className="w-10 px-3 py-3 text-center">
+                                                        <span className="sr-only">Ações</span>
+                                                    </th>
+                                                ) : null}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {sale.items?.map((item: SaleItem) => (
+                                                <tr
+                                                    key={item.id}
+                                                    className="transition-colors hover:bg-muted/20"
+                                                >
+                                                    <td className="px-4 py-3.5 sm:px-5">
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <ItemTypeBadge type={item.item_type} />
+                                                                <span className="font-semibold text-foreground">
+                                                                    {item.name_snapshot}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-3.5 text-xs text-muted-foreground">
+                                                        {item.professional?.name ?? '—'}
+                                                    </td>
+                                                    <td className="px-3 py-3.5 text-center font-medium">
+                                                        {item.quantity}
+                                                    </td>
+                                                    <td className="px-3 py-3.5 text-right text-xs">
+                                                        {formatMoney(item.unit_price_cents)}
+                                                    </td>
+                                                    <td className="px-3 py-3.5 text-right text-xs text-muted-foreground">
+                                                        {item.discount_cents > 0
+                                                            ? `-${formatMoney(item.discount_cents)}`
+                                                            : '—'}
+                                                    </td>
+                                                    <td className="px-3 py-3.5 text-right font-semibold text-foreground">
+                                                        {formatMoney(item.total_cents)}
+                                                    </td>
+                                                    {canManage && isSaleOpen ? (
+                                                        <td className="px-3 py-3.5 text-center">
+                                                            <Form
+                                                                {...sales.items.destroy.form({
+                                                                    sale: sale.id,
+                                                                    item: item.id,
+                                                                })}
+                                                                onSubmit={(e) => {
+                                                                    if (
+                                                                        !window.confirm(
+                                                                            `Remover "${item.name_snapshot}" da comanda?`,
+                                                                        )
+                                                                    ) {
+                                                                        e.preventDefault();
+                                                                    }
+                                                                }}
+
+                                                            >
+                                                                <input
+                                                                    type="hidden"
+                                                                    name="lock_version"
+                                                                    value={sale.lock_version}
+                                                                />
+                                                                <button
+                                                                    type="submit"
+                                                                    title="Remover item"
+                                                                    aria-label={`Remover item ${item.name_snapshot}`}
+                                                                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                                                >
+                                                                    <Trash2 className="size-4" />
+                                                                </button>
+                                                            </Form>
+                                                        </td>
+                                                    ) : null}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </section>
+
+                        {/* Notes Card */}
+                        {sale.notes ? (
+                            <section className="surface-panel space-y-1.5 p-4 sm:p-5">
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Observações da Comanda
+                                </h3>
+                                <p className="text-sm text-foreground whitespace-pre-wrap">
+                                    {sale.notes}
+                                </p>
+                            </section>
+                        ) : null}
+                    </div>
+
+                    {/* Financial Summary Sidebar */}
+                    <div className="space-y-6 lg:col-span-4">
+                        {/* Totals Card */}
+                        <section className="surface-panel space-y-4 p-5">
+                            <h2 className="font-semibold text-foreground text-base">
+                                Resumo Financeiro
+                            </h2>
+
+                            <div className="space-y-2.5 text-sm">
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                    <span>Total Bruto:</span>
+                                    <span>{formatMoney(sale.total_amount_cents)}</span>
+                                </div>
+
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <Percent className="size-3.5" />
+                                        Desconto Geral:
+                                    </span>
+                                    <span className={sale.discount_amount_cents > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
+                                        {sale.discount_amount_cents > 0
+                                            ? `-${formatMoney(sale.discount_amount_cents)}`
+                                            : formatMoney(0)}
+                                    </span>
+                                </div>
+
+                                <div className="border-t border-border pt-3">
+                                    <div className="flex items-baseline justify-between">
+                                        <span className="font-bold text-foreground">
+                                            Total a Pagar:
+                                        </span>
+                                        <span className="font-display text-2xl font-extrabold text-foreground">
+                                            {formatMoney(sale.final_amount_cents)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Apply Discount Button & Dialog */}
+                            {canDiscount && isSaleActive ? (
+                                <div className="pt-2">
+                                    <Dialog open={discountOpen} onOpenChange={setDiscountOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm" className="w-full">
+                                                <Percent className="size-4" />
+                                                {sale.discount_amount_cents > 0
+                                                    ? 'Alterar Desconto Geral'
+                                                    : 'Aplicar Desconto Geral'}
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-md">
+                                            <DialogHeader>
+                                                <DialogTitle>Desconto Geral na Comanda</DialogTitle>
+                                                <DialogDescription>
+                                                    Defina o valor em reais do desconto sobre o valor total da comanda.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...sales.discount.form(sale.id)}
+                                                headers={{
+                                                    'X-Idempotency-Key': createIdempotencyKey(
+                                                        `sale-discount:${sale.id}`,
+                                                    ),
+                                                }}
+                                                onSuccess={() => setDiscountOpen(false)}
+                                                className="space-y-4"
+                                            >
+                                                {({ errors, processing }) => (
+                                                    <>
+                                                        <FormErrorSummary errors={errors} />
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={sale.lock_version}
+                                                        />
+
+                                                        <FormField
+                                                            label="Valor do desconto (R$)"
+                                                            name="discount_amount_cents"
+                                                            error={errors.discount_amount_cents}
+                                                        >
+                                                            <Input
+                                                                id="discount_amount_display"
+                                                                required
+                                                                autoFocus
+                                                                value={generalDiscountStr}
+                                                                onChange={(e) =>
+                                                                    setGeneralDiscountStr(
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                placeholder="0,00"
+                                                            />
+                                                            <input
+                                                                type="hidden"
+                                                                name="discount_amount_cents"
+                                                                value={parseBrazilianCurrency(
+                                                                    generalDiscountStr,
+                                                                )}
+                                                            />
+                                                        </FormField>
+
+                                                        <FormField
+                                                            label="Justificativa / Notas do desconto"
+                                                            name="notes"
+                                                            error={errors.notes}
+                                                        >
+                                                            <textarea
+                                                                id="discount_notes"
+                                                                name="notes"
+                                                                rows={2}
+                                                                value={discountNotes}
+                                                                onChange={(e) =>
+                                                                    setDiscountNotes(
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                placeholder="Ex.: Cortesia de gerência, fidelidade, etc."
+                                                                className="min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                            />
+                                                        </FormField>
+
+                                                        <FormActions
+                                                            processing={processing}
+                                                            onCancel={() => setDiscountOpen(false)}
+                                                            label="Salvar Desconto"
+                                                        />
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                            ) : null}
+                        </section>
+
+                        {/* Customer & Appointment Info Card */}
+                        <section className="surface-panel space-y-3.5 p-5">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                Vínculo & Atendimento
+                            </h3>
+
+                            <div className="space-y-3 text-sm">
+                                <div className="flex items-start gap-2.5">
+                                    <User className="size-4 shrink-0 text-muted-foreground mt-0.5" />
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-foreground">
+                                            {sale.customer?.name ?? 'Cliente Avulso'}
+                                        </p>
+                                        {sale.customer?.phone ? (
+                                            <p className="text-xs text-muted-foreground">
+                                                {sale.customer.phone}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                {sale.appointment_link?.appointment ? (
+                                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs space-y-1">
+                                        <div className="flex items-center gap-1.5 font-semibold text-primary">
+                                            <Calendar className="size-3.5" />
+                                            Agendamento Vinculado
+                                        </div>
+                                        <p className="text-muted-foreground">
+                                            Horário:{' '}
+                                            {formatDateTime(
+                                                sale.appointment_link.appointment.starts_at,
+                                            )}
+                                        </p>
+                                        <p className="text-muted-foreground capitalize">
+                                            Status: {sale.appointment_link.appointment.status}
+                                        </p>
+                                        <div className="pt-1">
+                                            <Button
+                                                asChild
+                                                variant="link"
+                                                size="sm"
+                                                className="h-auto p-0 text-xs text-primary font-medium"
+                                            >
+                                                <Link href={calendar.index()}>
+                                                    Ver na Agenda →
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </section>
+
+                        {/* Status History Timeline */}
+                        {(sale.status_histories?.length ?? 0) > 0 ? (
+                            <section className="surface-panel space-y-3.5 p-5">
+                                <div className="flex items-center gap-2">
+                                    <History className="size-4 text-muted-foreground" />
+                                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Histórico de Transições
+                                    </h3>
+                                </div>
+
+                                <div className="space-y-3 text-xs">
+                                    {sale.status_histories?.map((history) => (
+                                        <div
+                                            key={history.id}
+                                            className="relative border-l-2 border-border pl-3 pb-1"
+                                        >
+                                            <div className="flex items-center justify-between text-muted-foreground">
+                                                <span className="font-semibold text-foreground capitalize">
+                                                    {history.to_status.replace('_', ' ')}
+                                                </span>
+                                                <span>{formatDateTime(history.created_at)}</span>
+                                            </div>
+                                            {history.reason ? (
+                                                <p className="mt-0.5 text-muted-foreground">
+                                                    {history.reason}
+                                                </p>
+                                            ) : null}
+                                            {history.user?.name ? (
+                                                <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+                                                    Por {history.user.name}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        ) : null}
+                    </div>
+                </div>
+            </PageCanvas>
+        </>
+    );
+}
+
+SalesShow.layout = {
+    breadcrumbs: [
+        { title: 'Comandas', href: sales.index() },
+        { title: 'Detalhes da Comanda' },
+    ],
+};

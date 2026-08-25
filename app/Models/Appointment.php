@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** @property int $lock_version */
 #[Fillable(['tenant_id', 'unit_id', 'customer_id', 'professional_id', 'starts_at', 'ends_at', 'timezone', 'status', 'source', 'color', 'reminder_enabled', 'fit_in', 'notes', 'cancelled_at', 'cancel_reason'])]
@@ -68,5 +69,17 @@ class Appointment extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(AppointmentStatusHistory::class);
+    }
+
+    /** @return HasMany<AppointmentSaleLink, $this> */
+    public function saleLinks(): HasMany
+    {
+        return $this->hasMany(AppointmentSaleLink::class);
+    }
+
+    /** @return HasOne<AppointmentSaleLink, $this> */
+    public function saleLink(): HasOne
+    {
+        return $this->hasOne(AppointmentSaleLink::class);
     }
 }
