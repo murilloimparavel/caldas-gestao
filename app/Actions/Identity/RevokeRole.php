@@ -7,13 +7,19 @@ use App\Models\MembershipRole;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 final class RevokeRole
 {
-    public function __construct(private readonly AuthorizationService $authorization = new AuthorizationService) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization = new AuthorizationService,
+        private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+    ) {}
 
     public function handle(User $actor, TenantContext $context, MembershipRole $assignment): MembershipRole
     {
@@ -25,7 +31,7 @@ final class RevokeRole
             throw new \LogicException('System roles are managed only by the platform onboarding flow.');
         }
 
-        return DB::transaction(function () use ($assignment): MembershipRole {
+        return DB::transaction(function () use ($actor, $context, $assignment): MembershipRole {
             Tenant::query()->whereKey($assignment->tenant_id)->lockForUpdate()->firstOrFail();
             Membership::query()->whereKey($assignment->membership_id)->lockForUpdate()->firstOrFail();
             Role::query()->whereKey($assignment->role_id)->lockForUpdate()->firstOrFail();
@@ -36,6 +42,7 @@ final class RevokeRole
                     'revoked_at' => now(),
                     'lock_version' => $lockedAssignment->lock_version + 1,
                 ])->save();
+                $this->events->record($actor, $context, 'membership.role.revoked', $lockedAssignment);
             }
 
             return $lockedAssignment->fresh();

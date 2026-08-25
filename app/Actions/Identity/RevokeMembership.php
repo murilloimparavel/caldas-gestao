@@ -9,19 +9,25 @@ use App\Models\MembershipUnit;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 final class RevokeMembership
 {
-    public function __construct(private readonly AuthorizationService $authorization = new AuthorizationService) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization = new AuthorizationService,
+        private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+    ) {}
 
     public function handle(User $actor, TenantContext $context, Membership $membership): Membership
     {
         $this->authorization->assertMembershipManager($actor, $context, $membership);
 
-        return DB::transaction(function () use ($membership): Membership {
+        return DB::transaction(function () use ($actor, $context, $membership): Membership {
             Tenant::query()->whereKey($membership->tenant_id)->lockForUpdate()->firstOrFail();
             $lockedMembership = Membership::query()->whereKey($membership->getKey())->lockForUpdate()->firstOrFail();
 
@@ -66,6 +72,10 @@ final class RevokeMembership
                 'revoked_at' => now(),
                 'lock_version' => $lockedMembership->lock_version + 1,
             ])->save();
+
+            $this->events->record($actor, $context, 'membership.revoked', $lockedMembership, [
+                'lock_version' => $lockedMembership->lock_version,
+            ]);
 
             return $lockedMembership->fresh();
         }, 5);

@@ -8,12 +8,19 @@ use App\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ResolveTenantContext
 {
     public function handle(Request $request, Closure $next): Response
     {
+        $requestId = $this->identifier($request->header('X-Request-Id')) ?? (string) Str::uuid7();
+        $correlationId = $this->identifier($request->header('X-Correlation-Id')) ?? $requestId;
+        Context::add([
+            'request_id' => $requestId,
+            'correlation_id' => $correlationId,
+        ]);
         $user = $request->user();
 
         if ($user === null) {
@@ -48,5 +55,12 @@ final class ResolveTenantContext
         $request->attributes->set(TenantContext::class, $context);
 
         return $next($request);
+    }
+
+    private function identifier(?string $value): ?string
+    {
+        $value = is_string($value) ? trim($value) : '';
+
+        return $value !== '' && (Str::isUuid($value) || Str::isUlid($value)) ? $value : null;
     }
 }

@@ -10,7 +10,10 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\OwnerPermissionCatalog;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -22,6 +25,7 @@ final class ResumeTenantOnboarding
     public function __construct(
         private readonly AuthorizationService $authorization = new AuthorizationService,
         private readonly OwnerPermissionCatalog $permissionCatalog = new OwnerPermissionCatalog,
+        private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
     ) {}
 
     /**
@@ -142,6 +146,10 @@ final class ResumeTenantOnboarding
                 'lock_version' => 0,
                 'revoked_at' => null,
                 'created_at' => $now,
+            ]);
+
+            $this->events->record($actor, $context, 'tenant.onboarding.resumed', $lockedTenant, [
+                'unit_id' => $unit->getKey(),
             ]);
 
             return $lockedTenant->fresh();

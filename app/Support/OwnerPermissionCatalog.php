@@ -17,6 +17,7 @@ final class OwnerPermissionCatalog
         'unit.view', 'unit.update',
         'membership.view', 'membership.revoke', 'membership.assign_role', 'membership.manage',
         'role.view', 'role.update', 'role.delete', 'role.manage',
+        'entitlement.view', 'entitlement.manage',
     ];
 
     public function ensure(Tenant $tenant, Role $ownerRole, ?CarbonInterface $now = null): void

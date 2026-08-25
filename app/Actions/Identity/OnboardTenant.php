@@ -11,6 +11,9 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\OwnerPermissionCatalog;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +21,10 @@ use Illuminate\Support\Str;
 
 final class OnboardTenant
 {
-    public function __construct(private readonly OwnerPermissionCatalog $permissionCatalog = new OwnerPermissionCatalog) {}
+    public function __construct(
+        private readonly OwnerPermissionCatalog $permissionCatalog = new OwnerPermissionCatalog,
+        private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+    ) {}
 
     /**
      * Create a new tenant, its first unit, owner role and owner membership.
@@ -190,6 +196,10 @@ final class OnboardTenant
                         'lock_version' => $membership->lock_version + 1,
                     ])->save();
                 }
+
+                $this->events->recordForTenant($owner, $tenant, 'tenant.created', $tenant, [
+                    'unit_id' => $unit->getKey(),
+                ], $unit->getKey());
 
                 return $tenant->fresh();
             }, 5);

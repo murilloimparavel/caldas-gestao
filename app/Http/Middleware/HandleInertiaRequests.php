@@ -3,8 +3,11 @@
 namespace App\Http\Middleware;
 
 use App\Enums\UnitStatus;
+use App\Models\Entitlement;
 use App\Models\Unit;
 use App\Support\AuthorizationService;
+use App\Support\EntitlementService;
+use App\Support\PayloadGovernance;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
@@ -65,6 +68,18 @@ class HandleInertiaRequests extends Middleware
         $permissions = $user !== null && $context !== null
             ? app(AuthorizationService::class)->permissions($user, $context)
             : [];
+        $entitlements = $context === null
+            ? []
+            : app(EntitlementService::class)->activeFor($context->tenant)->map(fn (Entitlement $entitlement): array => [
+                'id' => (string) $entitlement->getKey(),
+                'key' => $entitlement->key,
+                'status' => $entitlement->status->value,
+                'quantity' => $entitlement->quantity,
+                'source' => $entitlement->source->value,
+                'starts_at' => $entitlement->starts_at->toISOString(),
+                'ends_at' => $entitlement->ends_at === null ? null : $entitlement->ends_at->toISOString(),
+                'metadata' => app(PayloadGovernance::class)->entitlementMetadata($entitlement->config),
+            ])->values()->all();
 
         $availableUnits = [];
 
@@ -103,7 +118,7 @@ class HandleInertiaRequests extends Middleware
                     'email_verified_at' => $user->email_verified_at?->toISOString(),
                 ],
                 'permissions' => $permissions,
-                'entitlements' => [],
+                'entitlements' => $entitlements,
             ],
             'workspace' => $workspace,
             'flash' => [

@@ -117,5 +117,22 @@ class ProvisionDatabaseSchema extends Command
         $connection->statement("GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA {$quotedSchema} TO {$quotedRole}");
         $connection->statement("ALTER DEFAULT PRIVILEGES IN SCHEMA {$quotedSchema} GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {$quotedRole}");
         $connection->statement("ALTER DEFAULT PRIVILEGES IN SCHEMA {$quotedSchema} GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO {$quotedRole}");
+
+        $auditTableExists = $connection->selectOne('SELECT to_regclass(?) AS table_name', ["{$schema}.audit_events"])?->table_name !== null;
+
+        if ($auditTableExists) {
+            $connection->statement("REVOKE UPDATE, DELETE ON {$quotedSchema}.audit_events FROM {$quotedRole}");
+            $connection->statement("GRANT SELECT, INSERT ON {$quotedSchema}.audit_events TO {$quotedRole}");
+            $connection->statement("REVOKE TRIGGER, TRUNCATE ON {$quotedSchema}.audit_events FROM {$quotedRole}");
+            $connection->statement("REVOKE TRIGGER, TRUNCATE ON {$quotedSchema}.audit_events FROM PUBLIC");
+        }
+
+        $rolesTable = $connection->selectOne('SELECT to_regclass(?) AS table_name', ["{$schema}.roles"]);
+        $rolesTableExists = $rolesTable !== null && $rolesTable->table_name !== null;
+
+        if ($rolesTableExists) {
+            $connection->statement("REVOKE TRIGGER, TRUNCATE ON {$quotedSchema}.roles FROM {$quotedRole}");
+            $connection->statement("REVOKE TRIGGER, TRUNCATE ON {$quotedSchema}.roles FROM PUBLIC");
+        }
     }
 }

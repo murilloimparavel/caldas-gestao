@@ -6,19 +6,25 @@ use App\Enums\MembershipStatus;
 use App\Models\Membership;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 final class InviteMembership
 {
-    public function __construct(private readonly AuthorizationService $authorization = new AuthorizationService) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization = new AuthorizationService,
+        private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+    ) {}
 
     public function handle(User $actor, TenantContext $context, Tenant $tenant, User $user): Membership
     {
         $this->authorization->assertTenantManager($actor, $context, $tenant);
 
-        return DB::transaction(function () use ($tenant, $user): Membership {
+        return DB::transaction(function () use ($actor, $context, $tenant, $user): Membership {
             $tenant = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->firstOrFail();
             $membership = Membership::query()
                 ->where('tenant_id', $tenant->getKey())
@@ -27,11 +33,15 @@ final class InviteMembership
                 ->first();
 
             if ($membership === null) {
-                return Membership::query()->create([
+                $membership = Membership::query()->create([
                     'tenant_id' => $tenant->getKey(),
                     'user_id' => $user->getKey(),
                     'status' => MembershipStatus::Invited,
                 ]);
+
+                $this->events->record($actor, $context, 'membership.invited', $membership);
+
+                return $membership;
             }
 
             if ($membership->status === MembershipStatus::Revoked) {
@@ -41,6 +51,7 @@ final class InviteMembership
                     'joined_at' => null,
                     'lock_version' => $membership->lock_version + 1,
                 ])->save();
+                $this->events->record($actor, $context, 'membership.reinvited', $membership);
             }
 
             return $membership->fresh();

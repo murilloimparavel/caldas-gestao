@@ -12,7 +12,16 @@ export type Auth = {
     entitlements: Entitlement[];
 };
 
-export type Entitlement = Record<string, unknown>;
+export type Entitlement = {
+    id: string;
+    key: string;
+    status: 'trial' | 'active' | 'grace' | 'suspended' | 'expired' | 'revoked';
+    quantity: number | null;
+    source: 'plan' | 'trial' | 'manual' | 'integration';
+    starts_at: string;
+    ends_at: string | null;
+    config: Record<string, unknown>;
+};
 
 export type Passkey = {
     id: number;

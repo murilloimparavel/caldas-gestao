@@ -9,13 +9,19 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 final class AssignRole
 {
-    public function __construct(private readonly AuthorizationService $authorization = new AuthorizationService) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization = new AuthorizationService,
+        private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+    ) {}
 
     public function handle(User $actor, TenantContext $context, Membership $membership, Role $role, MembershipRoleScope|string $scope = MembershipRoleScope::Tenant, ?Unit $unit = null): MembershipRole
     {
@@ -27,7 +33,7 @@ final class AssignRole
             throw new \LogicException('System roles are assigned only by the platform onboarding flow.');
         }
 
-        return DB::transaction(function () use ($membership, $role, $scope, $unit): MembershipRole {
+        return DB::transaction(function () use ($actor, $context, $membership, $role, $scope, $unit): MembershipRole {
             Tenant::query()->whereKey($membership->tenant_id)->lockForUpdate()->firstOrFail();
             $lockedMembership = Membership::query()->whereKey($membership->getKey())->lockForUpdate()->firstOrFail();
             $lockedUnit = null;
@@ -74,7 +80,7 @@ final class AssignRole
                 return $assignment;
             }
 
-            return MembershipRole::query()->create([
+            $assignment = MembershipRole::query()->create([
                 'tenant_id' => $lockedMembership->tenant_id,
                 'membership_id' => $lockedMembership->getKey(),
                 'role_id' => $lockedRole->getKey(),
@@ -85,6 +91,13 @@ final class AssignRole
                 'unit_id' => $lockedUnit?->getKey(),
                 'lock_version' => 0,
             ]);
+
+            $this->events->record($actor, $context, 'membership.role.assigned', $assignment, [
+                'scope_kind' => $scope->value,
+                'unit_id' => $lockedUnit?->getKey(),
+            ]);
+
+            return $assignment;
         }, 5);
     }
 }

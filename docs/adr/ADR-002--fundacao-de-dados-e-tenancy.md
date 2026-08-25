@@ -79,6 +79,8 @@ RLS é uma defesa adicional possível, mas não será requisito da F2. Adoção 
 
 `audit_events` permanece append-only e registra tenant/unidade, ator, ação, recurso, motivo e correlação, com payload mínimo. O mecanismo escolhido é o trigger PostgreSQL `audit_events_append_only_guard`, criado por migration/provisionamento e owned pela role de migration, com função que rejeita `UPDATE`/`DELETE`. A role de runtime recebe somente grants necessários, sem `UPDATE`/`DELETE` nem bypass; o provisionamento Supabase usa roles disponíveis no projeto e não presume superuser. Teste de grants e tentativa de alteração/apagamento é obrigatório.
 
+O owner de migration é um principal operacional confiável, auditado e separado do runtime. Ele é deliberadamente o único caminho de manutenção: por ser owner, pode alterar/remover guards e usar `TRUNCATE`, que não aciona um trigger de linha. Assim, o contrato append-only protege contra runtime, que não recebe `UPDATE`, `DELETE`, `TRUNCATE` ou `TRIGGER` sobre `audit_events`, e não contra owner hostil/comprometido. Toda operação owner requer change control, revisão, backup e forward-fix registrado; requests, jobs e workers jamais usam essa credencial.
+
 Nenhum deploy de produção é aprovado sem PII production gate: secrets fora do repositório, logs/tracing/Redis/outbox sem PII desnecessária, criptografia, retenção, backup/restore, acesso mínimo e revisão LGPD. O shell pode usar fixtures antes da F2; rotas persistentes reais aguardam o bootstrap de tenancy e identidade.
 
 ### 9. Expand-contract, backfill e forward-fix
