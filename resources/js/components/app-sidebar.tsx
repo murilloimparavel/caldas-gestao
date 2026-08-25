@@ -3,7 +3,10 @@ import {
     BarChart3,
     CalendarDays,
     ClipboardList,
+    FolderTree,
     LayoutDashboard,
+    Package,
+    Scissors,
     Tags,
     UserRound,
     Users,
@@ -21,7 +24,9 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import categories from '@/routes/categories';
 import customers from '@/routes/customers';
+import products from '@/routes/products';
 import professionals from '@/routes/professionals';
 import services from '@/routes/services';
 import type { SharedPageProps, SidebarNavGroup } from '@/types';
@@ -62,8 +67,20 @@ const mainNavGroups: SidebarNavGroup[] = [
             {
                 title: 'Serviços',
                 href: services.index(),
-                icon: Tags,
+                icon: Scissors,
                 permission: 'service.view',
+            },
+            {
+                title: 'Produtos',
+                href: products.index(),
+                icon: Package,
+                permission: 'product.view',
+            },
+            {
+                title: 'Categorias',
+                href: categories.index(),
+                icon: FolderTree,
+                permission: 'category.view',
             },
             { title: 'Catálogo', icon: Tags, disabled: true },
             { title: 'Financeiro', icon: WalletCards, disabled: true },

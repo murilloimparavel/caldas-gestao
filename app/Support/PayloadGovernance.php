@@ -19,6 +19,8 @@ final class PayloadGovernance
         'lock_version', 'scope_kind', 'unit_id', 'role_id', 'membership_id',
         'resource_id', 'resource_type', 'status', 'reason_code', 'quantity',
         'price_cents', 'duration_minutes', 'service_ids', 'professional_ids',
+        'category_id', 'is_active', 'cost_price_cents', 'sale_price_cents',
+        'current_stock', 'min_stock', 'unit_of_measure',
     ];
 
     /** @var list<string> */
@@ -26,6 +28,8 @@ final class PayloadGovernance
         'resource_id', 'resource_type', 'tenant_id', 'unit_id', 'membership_id',
         'role_id', 'status', 'scope_kind', 'lock_version', 'quantity', 'key',
         'service_ids', 'professional_ids',
+        'category_id', 'is_active', 'cost_price_cents', 'sale_price_cents',
+        'current_stock', 'min_stock', 'unit_of_measure',
     ];
 
     /** @var list<string> */

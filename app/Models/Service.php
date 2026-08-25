@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
-/** @property int $duration_minutes @property int $price_cents @property int $lock_version */
-#[Fillable(['tenant_id', 'unit_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status'])]
+/** @property int $duration_minutes @property int $price_cents @property int $lock_version @property string|null $category_id */
+#[Fillable(['tenant_id', 'unit_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status'])]
 #[UsePolicy(ServicePolicy::class)]
 class Service extends Model
 {
@@ -45,6 +45,12 @@ class Service extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** @return BelongsTo<Category, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     /** @return BelongsToMany<Professional, $this, Pivot, 'pivot'> */
