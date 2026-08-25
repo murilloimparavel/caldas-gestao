@@ -2,8 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
 use Laravel\Fortify\Features;
+use Tests\Concerns\RefreshDatabase;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -35,5 +36,38 @@ class RegistrationTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::query()->sole();
+
+        $this->assertSame('test@example.com', $user->email_normalized);
+    }
+
+    public function test_registration_rejects_an_email_that_only_differs_by_case_and_whitespace(): void
+    {
+        User::factory()->create(['email' => 'Owner@Example.com']);
+
+        $response = $this->post(route('register.store'), [
+            'name' => 'Duplicate User',
+            'email' => '  owner@example.COM  ',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+        $this->assertSame(1, User::query()->count());
+    }
+
+    public function test_registration_rejects_email_addresses_longer_than_320_characters(): void
+    {
+        $response = $this->post(route('register.store'), [
+            'name' => 'Long Email',
+            'email' => str_repeat('a', 309).'@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertSame(0, User::query()->count());
     }
 }

@@ -3,9 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
+use Laravel\Fortify\Fortify;
+use PragmaRX\Google2FA\Google2FA;
+use Tests\Concerns\RefreshDatabase;
 use Tests\TestCase;
 
 class TwoFactorChallengeTest extends TestCase
@@ -45,5 +47,39 @@ class TwoFactorChallengeTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/two-factor-challenge'),
             );
+    }
+
+    public function test_user_can_complete_the_two_factor_challenge_with_a_totp_code(): void
+    {
+        $user = User::factory()->withTwoFactor()->create();
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('two-factor.login'));
+
+        $secret = Fortify::currentEncrypter()->decrypt($user->two_factor_secret);
+        $code = (new Google2FA)->getCurrentOtp($secret);
+
+        $this->post(route('two-factor.login'), ['code' => $code])
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_user_can_complete_the_two_factor_challenge_once_with_a_recovery_code(): void
+    {
+        $user = User::factory()->withTwoFactor()->create();
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('two-factor.login'));
+
+        $this->post(route('two-factor.login'), ['recovery_code' => 'recovery-code-1'])
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotContains('recovery-code-1', $user->refresh()->recoveryCodes());
     }
 }

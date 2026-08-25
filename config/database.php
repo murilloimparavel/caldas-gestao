@@ -19,6 +19,12 @@ return [
 
     'default' => env('DB_CONNECTION', 'sqlite'),
 
+    'application_schema' => env('DB_SCHEMA', 'app'),
+
+    'runtime_role' => env('DB_RUNTIME_ROLE'),
+
+    'provisioning_strict' => env('DB_PROVISION_STRICT', false),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections
@@ -95,8 +101,28 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'app').',public'),
+            'sslmode' => env('DB_SSLMODE', 'require'),
+        ],
+
+        /*
+        | The migration connection uses Supabase's direct endpoint while the
+        | runtime connection may use the session pooler. It falls back to the
+        | runtime values so SQLite remains available for the local fast loop.
+        */
+        'migration' => [
+            'driver' => env('MIGRATION_DB_CONNECTION', env('DB_CONNECTION', 'sqlite')),
+            'url' => env('MIGRATION_DATABASE_URL'),
+            'host' => env('MIGRATION_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('MIGRATION_DB_PORT', env('DB_PORT', '5432')),
+            'database' => env('MIGRATION_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env('MIGRATION_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('MIGRATION_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'app').',public'),
+            'sslmode' => env('MIGRATION_DB_SSLMODE', env('DB_SSLMODE', 'require')),
         ],
 
         'sqlsrv' => [

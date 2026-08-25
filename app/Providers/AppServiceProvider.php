@@ -2,7 +2,12 @@
 
 namespace App\Providers;
 
+use App\Auth\NormalizedEmailUserProvider;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        Auth::provider('normalized_eloquent', function (Application $app, array $config): NormalizedEmailUserProvider {
+            /** @var class-string<Authenticatable&Model> $model */
+            $model = $config['model'];
+
+            return new NormalizedEmailUserProvider($app->make('hash'), $model);
+        });
     }
 
     /**

@@ -4,9 +4,9 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
+use Tests\Concerns\RefreshDatabase;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -34,6 +34,18 @@ class PasswordResetTest extends TestCase
         $user = User::factory()->create();
 
         $this->post(route('password.email'), ['email' => $user->email]);
+
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_reset_password_lookup_uses_the_canonical_email(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'Owner@Example.com']);
+
+        $this->post(route('password.email'), ['email' => '  OWNER@example.COM  '])
+            ->assertSessionHasNoErrors();
 
         Notification::assertSentTo($user, ResetPassword::class);
     }

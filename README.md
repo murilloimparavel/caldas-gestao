@@ -90,10 +90,11 @@ npm run build
 composer ci:check
 ```
 
-O workflow em `.github/workflows/tests.yml` usa SQLite, cache em memória,
-sessão em memória e fila síncrona. Assim, um checkout limpo executa setup,
-qualidade, build frontend, PHPStan e Pest sem depender de banco ou Redis
-externos.
+O workflow em `.github/workflows/tests.yml` sobe PostgreSQL efêmero, usa uma
+role runtime de privilégios mínimos e uma conexão administrativa separada para
+migrations. Cache em memória, sessão em memória e fila síncrona mantêm o gate
+reprodutível. Assim, um checkout limpo executa setup, qualidade, build
+frontend, PHPStan e Pest sem depender de serviços persistentes externos.
 
 ## Configuração de produção
 
@@ -112,15 +113,36 @@ DB_CONNECTION=pgsql
 DB_HOST=your-project.pooler.supabase.com
 DB_PORT=5432
 DB_DATABASE=postgres
-DB_USERNAME=postgres.your-project
-DB_PASSWORD=<secret-do-deployment>
+DB_USERNAME=caldas_runtime.your-project
+DB_PASSWORD=<runtime-secret-do-deployment>
+DB_SCHEMA=app
+DB_SEARCH_PATH=app,public
+DB_RUNTIME_ROLE=caldas_runtime
+DB_PROVISION_STRICT=true
 DB_SSLMODE=require
+
+MIGRATION_DB_CONNECTION=pgsql
+MIGRATION_DB_HOST=db.your-project.supabase.co
+MIGRATION_DB_PORT=5432
+MIGRATION_DB_DATABASE=postgres
+MIGRATION_DB_USERNAME=postgres
+MIGRATION_DB_PASSWORD=<migration-secret-do-deployment>
+MIGRATION_DB_SSLMODE=require
 ```
 
-O pooler e a região devem ser escolhidos conforme a infraestrutura do
-ambiente. Migrations continuam sendo executadas pelo Laravel; o frontend não
-acessa as tabelas operacionais diretamente pela Data API do Supabase. Consulte
-o [ADR-001](docs/adr/ADR-001--stack-inicial.md) para os limites dessa decisão.
+As variáveis `DB_*` são exclusivas do runtime e apontam para o Session Pooler.
+O username aceito pelo pooler pode incluir o sufixo do projeto, enquanto
+`DB_RUNTIME_ROLE` contém o nome PostgreSQL efetivo, sem esse sufixo. As
+variáveis `MIGRATION_DB_*` apontam para o endpoint direto e usam a identidade
+administrativa somente durante provisionamento e migrations.
+
+O pooler, o endpoint direto e a região devem ser escolhidos conforme a
+infraestrutura do ambiente. Migrations continuam sendo executadas pelo
+Laravel; o frontend não acessa as tabelas operacionais diretamente pela Data
+API do Supabase. Consulte o
+[ADR-001](docs/adr/ADR-001--stack-inicial.md) e o
+[runbook de bootstrap](docs/operations/database-bootstrap.md) para os limites
+e comandos dessa decisão.
 
 ### Redis
 

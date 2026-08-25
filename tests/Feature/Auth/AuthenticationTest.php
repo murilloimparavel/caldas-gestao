@@ -3,9 +3,9 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
+use Tests\Concerns\RefreshDatabase;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -30,6 +30,19 @@ class AuthenticationTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_users_can_authenticate_with_a_canonically_equivalent_email(): void
+    {
+        $user = User::factory()->create(['email' => 'Owner@Example.com']);
+
+        $response = $this->post(route('login.store'), [
+            'email' => '  OWNER@example.COM  ',
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge()
