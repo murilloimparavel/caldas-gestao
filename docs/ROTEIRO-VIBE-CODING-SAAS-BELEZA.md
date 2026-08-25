@@ -76,10 +76,10 @@ Critério de saída: fluxo E2E cliente → agenda → confirmação sem dupla re
 - adicionar serviços/produtos;
 - descontos com permissão;
 - concluir atendimento;
-- pagamentos divididos;
-- recibo e estorno controlado.
+- fechamento consolidado das comandas;
+- recibo interno e histórico auditável.
 
-Critério de saída: invariantes financeiras e idempotência testadas.
+Critério de saída: invariantes de totais, fechamento e idempotência testadas. Pagamentos, recebimentos, gateways, Pix/cartão e estornos ficam fora desta wave.
 
 ### Fase 5 — Financeiro, comissões e estoque
 
@@ -194,4 +194,4 @@ Não buscar 100% de paridade desde o início. Classificar cada capacidade observ
 - **Diferencial:** melhora aquisição/retenção;
 - **Posterior:** baixa frequência ou alta complexidade.
 
-O MVP recomendado termina após agenda + comanda + pagamento + comissão básica. Financeiro completo, assinatura, automações e relatórios avançados entram depois que o núcleo estiver validado.
+O MVP recomendado termina após agenda + comanda + fechamento + comissão básica. Registro de recebimentos, pagamentos, financeiro completo, assinatura, automações e relatórios avançados entram depois que o núcleo estiver validado.

@@ -475,9 +475,9 @@ Adicionar customers/contacts/consents, professionals/professional_units, service
 
 Adicionar appointment series/occurrences/items, availability e schedule blocks, com constraints/locks de conflito PostgreSQL. Separar status operacional de faturamento. Validar DST, timezone de unidade, concorrência e idempotência antes de índices sofisticados.
 
-### F5 — venda e checkout
+### F5 — venda e fechamento de comandas
 
-Adicionar sales/items, payment intents/payments/allocations/refunds e links com agenda. Capturar preço/moeda/regra vigente no item. Totais são recalculáveis e auditáveis; estorno é novo registro.
+Adicionar sales/items, `closing_sessions` e links com agenda. Capturar preço/moeda/regra vigente no item. Totais e fechamentos são recalculáveis e auditáveis. `payment_intents`, `payments`, `payment_allocations` e `refunds` ficam para evolução posterior, quando houver decisão de registrar recebimentos ou integrar gateways.
 
 ### F6 — financeiro, caixa, comissão e estoque
 
@@ -567,14 +567,14 @@ RLS não é requisito F2. Se adotada, cada request/job deverá definir contexto 
 - [Proposta de API](../reconstruction/api-proposal.md)
 - [Plano de implementação frontend](../reconstruction/frontend-implementation-plan.md)
 
-## 13. Decisão de domínio: categorias de comanda e checkout (ADR-003)
+## 13. Decisão de domínio: categorias de comanda e fechamento (ADR-003)
 
-Esta seção é `Proposed` e complementa a fundação F2; não descreve o banco interno do produto observado. O contexto Vendas terá `sale_categories`, `sales`, `sale_items`, `sale_status_histories` e `appointment_sale_links`; Cobrança terá `checkout_sessions`, `payment_intents`, `payments`, `payment_allocations` e `refunds`.
+Esta seção é `Proposed` e complementa a fundação F2; não descreve o banco interno do produto observado. O contexto Vendas terá `sale_categories`, `sales`, `sale_items`, `sale_status_histories`, `appointment_sale_links` e `closing_sessions`. Tabelas de Cobrança e recebimentos são evolução posterior, fora do MVP.
 
 `Sale` é independente de agendamento e cliente. Ambos são opcionais conforme a categoria; `Appointment 0..N Sale` e `Sale 0..1 Appointment` no MVP. `sale_categories` é unit-scoped no MVP (`tenant_id` + `unit_id` obrigatórios), pode ser inativada sem apagar histórico e define `uniqueness_scope`: `customer`, `appointment`, `reference` ou `none`. Evolução tenant-wide exige nova decisão.
 
 O backend materializa `open_context_key` (`customer:{uuid}`, `appointment:{uuid}`, `reference:{normalized}` ou nulo). `sales` exige `category_key_snapshot` e `category_name_snapshot`. PostgreSQL deve garantir, em estados `draft`, `open` e `ready_to_bill`, uma única chave por `(tenant_id, unit_id, sale_category_id, open_context_key)` quando não nula. Finalizar/cancelar libera o slot; `none` permite duplicidade.
 
-`CheckoutSession` é o agregado da tentativa consolidada, com estados `draft → ready → processing → completed` ou `cancelled/failed`. A sessão exige mesma unidade/moeda e mesmo `checkout_subject`: mesmo cliente não nulo ou mesma referência, nunca mistura clientes/referências. Recebe várias vendas, bloqueia em ordem determinística, cria pagamentos e alocações e finaliza somente saldos zerados. Parcialidade é saldo derivado, não status. Não funde comandas nem apaga seus históricos. Idempotência, locks, auditoria, outbox pós-commit, FKs cross-tenant e Policies são obrigatórios. Mobile agrupa comandas abertas por cliente/mesa/referência e permite fechar todas ou uma seleção.
+`ClosingSession` é o agregado do fechamento consolidado, com estados `draft → ready → completed` ou `cancelled/failed`. A sessão exige mesma unidade e mesmo contexto de cliente ou referência, nunca mistura clientes/referências. Recebe várias vendas, bloqueia em ordem determinística e finaliza as comandas sem fundi-las nem apagar seus históricos. O MVP não processa nem registra pagamentos, recebimentos, gateways, Pix, cartão, refunds ou conciliação. Idempotência, locks, auditoria, outbox pós-commit, FKs cross-tenant e Policies são obrigatórios. Mobile agrupa comandas abertas por cliente/mesa/referência e permite fechar todas ou uma seleção.
 
-Backlog: C1 categorias/policies/CRUD; C2 vendas/itens/abertura avulsa e agenda; C3 histórico/vínculos/status; C4 checkout/pagamentos/alocações; C5 refunds/ajustes/read model mobile; C6 concorrência, E2E, acessibilidade, PII/LGPD e produção. Dependências detalhadas estão no [PRD de comandas](../PRD--comandas-categorias-e-checkout.md).
+Backlog: C1 categorias/policies/CRUD; C2 vendas/itens/abertura avulsa e agenda; C3 histórico/vínculos/status; C4 fechamento consolidado; C5 read model mobile; C6 concorrência, E2E, acessibilidade, PII/LGPD e produção. Pagamentos, recebimentos, gateways, refunds e conciliação são um backlog posterior. Dependências detalhadas estão no [PRD de comandas](../PRD--comandas-categorias-e-checkout.md).

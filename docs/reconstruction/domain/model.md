@@ -118,22 +118,22 @@ Os cenários mínimos são: acesso cruzado entre tenants, membership revogada du
 
 Não derivar status operacional de status financeiro. Faturamento, conclusão, comparecimento e cancelamento são conceitos distintos.
 
-## Agregados de venda e cobrança propostos
+## Agregados de venda e fechamento propostos
 
 - `Sale`: cliente, unidade, moeda, estado e totais capturados;
 - `SaleItem`: tipo, item de catálogo, profissional, quantidade, preço, desconto e origem;
-- `SaleBenefitAllocation`: pacote, assinatura, crédito ou cashback consumido;
-- `PaymentIntent`: valor a cobrar e política de vencimento;
-- `Payment`: método, provedor, estado e identificador externo seguro;
-- `PaymentAllocation`: distribuição de um pagamento entre saldos/vendas;
-- `Refund`/`Adjustment`: correções sem apagar o original;
-- `FiscalDocumentIntent`: emissão fiscal desacoplada;
-- `CommissionAccrual`: competência por item/profissional;
+- `SaleBenefitAllocation`: pacote, assinatura, crédito ou cashback consumido (onda posterior, fora do MVP de fechamento de comandas);
+- `ClosingSession`: seleção versionada de comandas para fechamento consolidado;
+- `Adjustment`: correção auditada sem apagar o original, em wave posterior;
+- `FiscalDocumentIntent`: emissão fiscal desacoplada (onda posterior, fora do MVP de fechamento de comandas);
+- `CommissionAccrual`: competência por item/profissional (onda posterior, fora do MVP de fechamento de comandas);
 - `SaleAuditEvent`: trilha de alterações e transições.
 
-Venda, cobrança, fiscalidade, comissão e estoque são contextos relacionados por IDs e eventos; não devem compartilhar uma única transação longa ou um único status genérico.
+Venda, fechamento, fiscalidade, comissão e estoque são contextos relacionados por IDs e eventos; não devem compartilhar uma única transação longa ou um único status genérico. Recebimento externo não é processado nem registrado nesta wave.
 
-## Ledger financeiro proposto
+## Ledger financeiro proposto — evolução posterior
+
+Esta seção é uma proposta de arquitetura futura, fora do MVP de fechamento de comandas. O MVP não processa nem registra pagamento/recebimento, estorno ou conciliação; esses conceitos só devem ser implementados em uma wave financeira própria, com ADR e migrações específicas.
 
 - `FinancialObligation`: pagar/receber, competência, vencimento e titular;
 - `Settlement`: liquidação parcial/total por pagamento;
@@ -148,10 +148,10 @@ Venda, cobrança, fiscalidade, comissão e estoque são contextos relacionados p
 
 Saldo é projeção dos movimentos, nunca campo livremente editável. Fechamentos e reconciliações preservam histórico por ajustes compensatórios.
 
-## Categoria, comanda e checkout consolidado (Proposed — ADR-003)
+## Categoria, comanda e fechamento consolidado (Proposed — ADR-003)
 
 `SaleCategory` é configuração unit-scoped no MVP, ativa ou inativa, com `tenant_id`/`unit_id`, `uniqueness_scope`, tipos de item e políticas de cliente/agendamento. `Sale` é a raiz da comanda: sempre tenant/unit-scoped, com cliente opcional, ciclo `draft/open/ready_to_bill/finalized/cancelled/adjusted`, moeda, totais capturados, `open_context_key`, snapshots obrigatórios `category_key_snapshot`/`category_name_snapshot` e `lock_version`. `SaleItem` captura nome, preço, moeda, profissional e origem. `SaleStatusHistory` é append-only. `Appointment 0..N Sale`; cada `Sale` tem 0..1 `Appointment` no MVP, garantido exclusivamente por `AppointmentSaleLink` com unique parcial de link ativo por `sale_id`.
 
-`CheckoutSession` é o agregado de tentativa consolidada, com seleção, versões, `checkout_subject` e estados `draft/ready/processing/completed/cancelled/failed`. `PaymentIntent`/`Payment` representam intenção e liquidação; `PaymentAllocation` distribui um pagamento entre saldos da mesma unidade/moeda; `Refund` reverte sem apagar. Pagamento parcial é saldo derivado, não estado de Sale/PaymentIntent. Estados ativos (`draft`, `open`, `ready_to_bill`) usam unique parcial por `(tenant_id, unit_id, sale_category_id, open_context_key)` quando a chave não é nula; `none` permite duplicidade. Finalização/cancelamento libera o slot.
+`ClosingSession` é o agregado de tentativa consolidada, com seleção, versões, `closing_subject` e estados `draft/ready/processing/completed/cancelled/failed`. Não há PaymentIntent, Payment, PaymentAllocation, refund externo ou gateway nesta wave. Estados ativos (`draft`, `open`, `ready_to_bill`) usam unique parcial por `(tenant_id, unit_id, sale_category_id, open_context_key)` quando a chave não é nula; `none` permite duplicidade. Finalização/cancelamento libera o slot.
 
-O comando de checkout recebe seleção explícita, valida tenant/unidade/moeda/permissão/versão/saldo e o mesmo `checkout_subject` (mesmo cliente ou mesma referência), bloqueia em ordem determinística, grava pagamentos/alocações e finaliza apenas vendas sem saldo. Repetição é idempotente e vendas não selecionadas não são alteradas. As invariantes canônicas estão em [ADR-003](../../adr/ADR-003--categorias-de-comanda-e-checkout-consolidado.md).
+O comando de fechamento recebe seleção explícita, valida tenant/unidade/moeda/permissão/versão e o mesmo `closing_subject` (mesmo cliente ou mesma referência), bloqueia em ordem determinística, finaliza as vendas selecionadas e gera recibo interno. Repetição é idempotente e vendas não selecionadas não são alteradas. As invariantes canônicas estão em [ADR-003](../../adr/ADR-003--categorias-de-comanda-e-checkout-consolidado.md).

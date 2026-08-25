@@ -85,7 +85,7 @@ Validar dois tenants com unidades homônimas, FK cross-tenant, papéis unit/tena
 
 Estratégia de RLS, particionamento de ledgers/eventos, busca de PII, isolamento por schema versus coluna, warehouse analítico e retenção fiscal precisam de decisão formal após volume e requisitos legais.
 
-## Comandas por categoria e checkout (Proposed — ADR-003)
+## Comandas por categoria e fechamento (Proposed — ADR-003)
 
 | Tabela | Ownership/finalidade | Regras principais |
 |---|---|---|
@@ -94,14 +94,10 @@ Estratégia de RLS, particionamento de ledgers/eventos, busca de PII, isolamento
 | `sale_items` | itens capturados | snapshots de nome/preço/moeda, tipo, quantidade, desconto e origem |
 | `sale_status_histories` | histórico append-only | transição, ator, motivo e correlação |
 | `appointment_sale_links` | única fonte de verdade Agenda/Vendas | várias comandas por agendamento; no máximo um link ativo por `sale_id` (unique parcial), mesmo tenant/unidade, vínculo auditável |
-| `payment_intents` | intenção de cobrança | valor, moeda, vencimento, status e idempotência |
-| `payments` | tentativa/liquidação | meio, provedor seguro, valor, estado, referência externa única |
-| `payment_allocations` | distribuição | payment × sale; não excede saldo nem atravessa unidade/moeda |
-| `refunds` | reversão | append-only, valor/motivo/ator/estado, sem apagar payment |
-| `checkout_sessions` | agregado de tentativa | seleção, `checkout_subject`, unidade/moeda, versões, idempotência e `draft/ready/processing/completed/cancelled/failed` |
+| `closing_sessions` | agregado de tentativa de fechamento | seleção, `closing_subject`, unidade/moeda, versões, totais esperados, idempotência e `draft/ready/processing/completed/cancelled/failed` |
 
 `open_context_key` é coluna materializada pelo backend: `customer:{uuid}`, `appointment:{uuid}` ou `reference:{normalized}`; para `none`, nulo. Unique parcial recomendado: `(tenant_id, unit_id, sale_category_id, open_context_key) WHERE status IN ('draft','open','ready_to_bill') AND open_context_key IS NOT NULL`. A transação e o índice decidem a corrida, não a UI. `Appointment 0..N Sale`; `Sale 0..1 Appointment` no MVP, garantido exclusivamente por unique parcial de link ativo em `appointment_sale_links.sale_id`; `sales` não possui coluna de vínculo direto.
 
-`CheckoutSession` fixa `checkout_subject`: o mesmo `customer_id` não nulo ou a mesma `reference_context` normalizada. Nunca mistura clientes/referências, unidade ou moeda. Pagamentos e alocações são efeitos da sessão; parcialidade é saldo derivado, não status de Sale/PaymentIntent. As invariantes canônicas estão no [ADR-003](../../adr/ADR-003--categorias-de-comanda-e-checkout-consolidado.md).
+`ClosingSession` fixa `closing_subject`: o mesmo `customer_id` não nulo ou a mesma `reference_context` normalizada. Nunca mistura clientes/referências, unidade ou moeda. A sessão finaliza comandas e gera recibo interno; não processa ou registra pagamento externo nesta wave. As invariantes canônicas estão no [ADR-003](../../adr/ADR-003--categorias-de-comanda-e-checkout-consolidado.md).
 
-FKs compostas ou validação equivalente impedem categoria, cliente, agendamento, unidade e sale cross-tenant. Índices de listagem começam por tenant/unidade/status; histórico, pagamentos, alocações e refunds não são apagados; categorias são inativadas. Validar entidade de mesa/referência, cliente anônimo, cardinalidade de links e retenção de observações.
+FKs compostas ou validação equivalente impedem categoria, cliente, agendamento, unidade e sale cross-tenant. Índices de listagem começam por tenant/unidade/status; histórico e fechamentos não são apagados; categorias são inativadas. Validar entidade de mesa/referência, cliente anônimo, futura decisão de Caixa e retenção de observações.

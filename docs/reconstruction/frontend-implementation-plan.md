@@ -299,7 +299,7 @@ F1 pode navegar com fixtures sintéticas, mas o gate de produção desta fase ex
 
 **Gate:** agendamento completo, conflito concorrente, timezone e cancelamento testados E2E em mobile, tablet e desktop; nenhum cartão ou ação crítica abaixo do alvo mínimo.
 
-### F5 — Comanda e checkout
+### F5 — Comanda e fechamento consolidado
 
 **Entrega:** atendimento evolui para venda auditável.
 
@@ -309,14 +309,14 @@ F1 pode navegar com fixtures sintéticas, mas o gate de produção desta fase ex
 - adicionar serviços, produtos, desconto autorizado e profissional;
 - múltiplas comandas por cliente/agendamento, uma ativa por categoria/contexto quando configurado;
 - tela mobile `Comandas abertas`, agrupamento por cliente/mesa/referência, seleção parcial e ação `Fechar tudo`;
-- checkout consolidado com `CheckoutSession`, resumo por categoria, pagamentos parciais/divididos e alocações sem fundir comandas; seleção exige mesma unidade/moeda e mesmo cliente ou referência;
+- fechamento consolidado com `ClosingSession`, resumo por categoria e seleção de comandas sem fundi-las; a seleção exige mesma unidade e mesmo cliente ou referência;
 - totais, histórico, auditoria e estados de fechamento;
 - recibo interno e timeline de alterações;
-- checkout mobile com resumo de totais e ação final sticky acima da safe area, sem ocultar campos;
+- fechamento mobile com resumo de totais e ação final sticky acima da safe area, sem ocultar campos;
 - tablet com itens e resumo lado a lado quando houver largura;
-- fiscal, gateway real e estorno externo permanecem atrás de interfaces/adapters.
+- registro de fechamento sem processar ou registrar pagamento/recebimento no MVP; gateway, fiscal e estorno externo permanecem como evolução posterior atrás de interfaces/adapters.
 
-**Gate:** categorias inativadas não abrem novas comandas; unique concorrente por contexto, cálculos invariantes, idempotência, seleção multi-comanda, unidade/moeda, pagamento parcial e dupla submissão testados; teclado virtual não cobre pagamento, totais ou confirmação.
+**Gate:** categorias inativadas não abrem novas comandas; unique concorrente por contexto, cálculos invariantes, idempotência, seleção multi-comanda, unidade e dupla submissão testados; teclado virtual não cobre totais ou confirmação.
 
 ### F6 — Financeiro e comissões
 
@@ -374,7 +374,7 @@ Cada módulo exige threat/privacy review, estados de entitlement e fluxo sintét
 9. Clientes e serviços como fatias piloto responsivas.
 10. Agenda com dia/lista mobile, três dias tablet e semana desktop.
 11. Categorias de comanda e abertura rápida mobile.
-12. Comandas abertas agrupadas e checkout consolidado.
+12. Comandas abertas agrupadas e fechamento consolidado.
 13. Dashboard mobile progressivo antes do catálogo completo de relatórios.
 
 Clientes e serviços são pilotos adequados porque exercitam listagem, busca, paginação, formulário, detalhe, autorização e relacionamentos antes da complexidade temporal e concorrente da agenda.

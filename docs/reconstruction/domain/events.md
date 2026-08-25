@@ -12,26 +12,26 @@
 | `SaleItemRemoved`          | Vendas            | auditoria, projeções                             | interno/audit-only no MVP |
 | `SaleStatusChanged`        | Vendas            | timeline, auditoria                              | público interno |
 | `AppointmentSaleLinked`    | Vendas/Agenda     | detalhe do agendamento, analytics                 | público interno |
-| `CheckoutSessionCreated`   | Cobrança          | auditoria, pagamentos                            | público interno |
-| `CheckoutSessionCompleted` | Cobrança          | financeiro, analytics                            | público interno |
-| `CheckoutSessionFailed`    | Cobrança          | fila operacional, auditoria                      | público interno |
-| `PaymentIntentCreated`     | Cobrança          | pagamentos                                       | público interno |
-| `PaymentRecorded`          | Pagamentos        | financeiro, venda                                | público interno |
-| `PaymentAllocated`         | Pagamentos        | saldo da venda, financeiro, analytics             | público interno |
-| `RefundRecorded`           | Pagamentos        | financeiro, venda, estoque, comissão              | público interno |
+| `ClosingSessionCreated`    | Vendas            | auditoria, timeline                              | público interno no MVP |
+| `ClosingSessionCompleted`  | Vendas            | auditoria, analytics                             | público interno no MVP |
+| `ClosingSessionFailed`     | Vendas            | fila operacional, auditoria                      | público interno no MVP |
+| `PaymentIntentCreated`     | Cobrança futura   | pagamentos                                       | evolução posterior |
+| `PaymentRecorded`          | Pagamentos futuro | financeiro, venda                                | evolução posterior |
+| `PaymentAllocated`         | Pagamentos futuro | saldo da venda, financeiro, analytics             | evolução posterior |
+| `RefundRecorded`           | Pagamentos futuro | financeiro, venda, estoque, comissão              | evolução posterior |
 | `SaleFinalized`            | Vendas            | financeiro, estoque, comissão, fiscal, analytics | público interno |
 | `SaleCancelled`            | Vendas            | auditoria, analytics                             | público interno |
 | `SaleAdjusted`             | Vendas            | financeiro, analytics                            | público interno |
-| `ReceivableCreated`        | Financeiro        | cobrança, caixa, analytics                       | público interno |
-| `PaymentSettled`           | Pagamentos        | financeiro, venda, comissão, fiscal              | público interno |
-| `PaymentReversed`          | Pagamentos        | financeiro, venda, comissão, fiscal              | público interno |
-| `AccountMovementPosted`    | Ledger            | saldos, caixa, relatórios                        |
-| `CashSessionOpened`        | Caixa             | auditoria                                        |
-| `CashSessionClosed`        | Caixa             | reconciliação, auditoria                         |
-| `CommissionAccrued`        | Comissão          | aprovação, relatórios                            |
-| `CommissionPaid`           | Comissão          | financeiro, relatórios                           |
-| `FiscalDocumentAuthorized` | Fiscal            | venda, cliente, relatórios                       |
-| `FiscalDocumentRejected`   | Fiscal            | fila operacional/alertas                         |
+| `ReceivableCreated`        | Financeiro futuro | cobrança, caixa, analytics                       | evolução posterior |
+| `PaymentSettled`           | Pagamentos futuro | financeiro, venda, comissão, fiscal              | evolução posterior |
+| `PaymentReversed`          | Pagamentos futuro | financeiro, venda, comissão, fiscal              | evolução posterior |
+| `AccountMovementPosted`    | Ledger futuro     | saldos, caixa, relatórios                        | evolução posterior |
+| `CashSessionOpened`        | Caixa futuro      | auditoria                                        | evolução posterior |
+| `CashSessionClosed`        | Caixa futuro      | reconciliação, auditoria                         | evolução posterior |
+| `CommissionAccrued`        | Comissão futura   | aprovação, relatórios                            | evolução posterior |
+| `CommissionPaid`           | Comissão futura   | financeiro, relatórios                           | evolução posterior |
+| `FiscalDocumentAuthorized` | Fiscal futuro     | venda, cliente, relatórios                       | evolução posterior |
+| `FiscalDocumentRejected`   | Fiscal futuro     | fila operacional/alertas                         | evolução posterior |
 | `MembershipGranted`        | Identidade/acesso | auditoria, cache de autorização, notificações    |
 | `MembershipActivated`      | Identidade/acesso | auditoria, cache de autorização, sessões         |
 | `MembershipRevoked`        | Identidade/acesso | sessões, cache, auditoria                        |
@@ -41,7 +41,7 @@
 
 Todos carregam IDs opacos, tenant/unidade, versão, timestamps e correlação; não carregam PII, tokens ou payload fiscal bruto. Consumidores usam inbox/outbox e idempotência.
 
-“Público interno” significa contrato versionado entre módulos do próprio produto, não endpoint público. Eventos `SaleItemAdded` e `SaleItemRemoved` são `internal/audit-only` no MVP: servem à timeline, auditoria e projeções internas e não devem disparar baixa de estoque/comissão antes de esses contextos possuírem contrato próprio. `SaleCategoryUpdated` registra alteração de nome/política e nunca reescreve `category_key_snapshot`/`category_name_snapshot` de sales existentes. `SaleFinalized`, `PaymentAllocated`, `RefundRecorded` e `CheckoutSessionCompleted` são eventos internos versionados para consumidores de domínio.
+“Público interno” significa contrato versionado entre módulos do próprio produto, não endpoint público. Eventos `SaleItemAdded` e `SaleItemRemoved` são `internal/audit-only` no MVP: servem à timeline, auditoria e projeções internas e não devem disparar baixa de estoque/comissão antes de esses contextos possuírem contrato próprio. `SaleCategoryUpdated` registra alteração de nome/política e nunca reescreve `category_key_snapshot`/`category_name_snapshot` de sales existentes. `SaleFinalized` e `ClosingSessionCompleted` são eventos internos versionados do MVP. Eventos de pagamento, recebimento, alocação, refund e cobrança permanecem catálogo de evolução posterior.
 
 ## Envelope e persistência
 
@@ -54,8 +54,8 @@ Cada envelope proposto contém `event_id` UUIDv7, `event_type`, `event_version`,
 - alteração de schema exige `event_version` compatível durante expand-contract;
 - falha do consumidor deve permitir retry e forward-fix sem reabrir transação de origem.
 
-- checkout repetido com a mesma chave não duplica pagamento ou alocação;
+- fechamento repetido com a mesma chave não duplica a finalização;
 - eventos preservam `sale_id`, categoria e unidade para reconciliação, sem PII desnecessária;
-- `SaleFinalized` pode ser consumido por estoque/comissão/fiscal sem acoplar suas transações ao checkout.
+- `SaleFinalized` pode ser consumido por estoque/comissão/fiscal sem acoplar suas transações ao fechamento; consumidores financeiros de pagamentos pertencem a evolução posterior.
 
 ADRs pendentes: RLS/contexto em workers, retenção de outbox/inbox/auditoria e particionamento por volume.

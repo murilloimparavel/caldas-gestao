@@ -75,7 +75,7 @@ Estados operacionais diferentes jamais devem ser representados por um único boo
 - avaliar vigência com `as_of` nas bordas `starts_at`/`ends_at`, sem depender de índice parcial com `now()`;
 - ADR pendente para RLS, retenção de estados terminais e particionamento de eventos.
 
-## Categoria, comanda e cobrança (ADR-003)
+## Categoria, comanda e fechamento (ADR-003)
 
 ```text
 SaleCategory: active → inactive
@@ -84,26 +84,23 @@ Sale: draft → open → ready_to_bill → finalized
                 └────────────────→ cancelled
 finalized → adjusted
 
-PaymentIntent: created → available → processing → paid
-                    └────→ blocked/failed/overdue
-
-Refund: requested → processing → refunded
-                    └────→ rejected
+ClosingSession: draft → ready → processing → completed
+                         └────→ cancelled/failed
 ```
 
-`active → inactive` impede novas aberturas, mas não altera histórico. A guarda de categoria/contexto é reforçada pelo unique parcial PostgreSQL; estados terminais liberam a chave. `finalized` não significa emissão fiscal. Pagamento parcial é saldo derivado de alocações e mantém a Sale aberta; não é estado de Sale ou PaymentIntent.
+`active → inactive` impede novas aberturas, mas não altera histórico. A guarda de categoria/contexto é reforçada pelo unique parcial PostgreSQL; estados terminais liberam a chave. `finalized` não significa pagamento processado ou emissão fiscal. Recebimento externo não possui estado nesta wave.
 
 ```text
-CheckoutSession: draft → ready → processing → completed
-                              └────→ cancelled/failed
+ClosingSession: draft → ready → processing → completed
+                         └────→ cancelled/failed
 ```
 
-`CheckoutSession` fixa a seleção, versões, unidade, moeda e `checkout_subject`; este deve ser o mesmo cliente ou a mesma referência em todas as comandas.
+`ClosingSession` fixa a seleção, versões, unidade, moeda e `closing_subject`; este deve ser o mesmo cliente ou a mesma referência em todas as comandas.
 
 | From | Command | Guard/role | To | Efeitos síncronos | Evento |
 |---|---|---|---|---|---|
 | — | OpenSale | categoria ativa, contexto válido, permissão | `draft`/`open` | materializa chave e aplica unique | `SaleOpened` |
 | `open` | AddSaleItem | item permitido e preço vigente | `open` | recalcula totais | `SaleItemAdded` |
-| `open` | StartConsolidatedCheckout | mesma unidade/moeda e `checkout_subject` | `ready_to_bill` | trava seleção e cria sessão | `CheckoutSessionCreated` |
-| `ready_to_bill` | AllocatePayment | saldo e meio válidos | `open`/`finalized` | cria alocação; libera slot se zerado | `PaymentAllocated`, `SaleFinalized` |
+| `open` | StartConsolidatedClosing | mesma unidade/moeda e `closing_subject` | `ready_to_bill` | trava seleção e cria sessão | `ClosingSessionCreated` |
+| `ready_to_bill` | FinalizeConsolidatedClosing | versão e seleção válidas | `finalized` | finaliza seleção e gera recibo interno | `ClosingSessionCompleted`, `SaleFinalized` |
 | ativa | DeactivateCategory | gestor/owner | `inactive` | bloqueia novas aberturas | `SaleCategoryDeactivated` |
