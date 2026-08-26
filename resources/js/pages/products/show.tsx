@@ -39,6 +39,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import categories from '@/routes/categories';
 import products from '@/routes/products';
@@ -75,10 +76,12 @@ type Product = {
     cost_price_cents: number;
     current_stock: number;
     id: string;
+    image_url?: string | null;
     is_active: boolean;
     lock_version: number;
     min_stock: number;
     name: string;
+    photo_url?: string | null;
     sale_price_cents: number;
     sku: string | null;
     unit_of_measure: string;
@@ -191,6 +194,9 @@ export default function ProductShow({
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [adjustOpen, setAdjustOpen] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState<File | string | null>(
+        product.photo_url || product.image_url || null,
+    );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('product.manage');
     const canAdjustStock =
@@ -283,6 +289,22 @@ export default function ProductShow({
                                         value={product.lock_version}
                                     />
                                     <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="sm:col-span-2">
+                                            <FormField
+                                                label="Foto do produto"
+                                                name="photo"
+                                                error={errors.photo}
+                                            >
+                                                <ImageUploader
+                                                    value={selectedPhoto}
+                                                    onChange={setSelectedPhoto}
+                                                    disabled={!canManage}
+                                                    error={errors.photo}
+                                                    aspectRatio="auto"
+                                                    previewHeight="140px"
+                                                />
+                                            </FormField>
+                                        </div>
                                         <div className="sm:col-span-2">
                                             <FormField
                                                 label="Nome do produto"
@@ -557,6 +579,16 @@ export default function ProductShow({
                             <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
                                 Análise financeira e estoque
                             </h2>
+
+                            {product.photo_url || product.image_url ? (
+                                <div className="overflow-hidden rounded-xl border border-border">
+                                    <img
+                                        src={product.photo_url || product.image_url || undefined}
+                                        alt={product.name}
+                                        className="h-40 w-full object-cover"
+                                    />
+                                </div>
+                            ) : null}
 
                             <div className="space-y-3 text-sm">
                                 <div className="flex items-center justify-between">

@@ -48,6 +48,7 @@ final class ProductRequest extends FormRequest
             'min_stock' => ['required', 'integer', 'min:0'],
             'current_stock' => ['required', 'integer'],
             'is_active' => ['sometimes', 'boolean'],
+            'image' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'lock_version' => [$this->isMethod('post') ? 'sometimes' : 'required', 'integer', 'min:0'],
         ];
     }

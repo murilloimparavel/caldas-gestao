@@ -33,6 +33,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import inventory from '@/routes/inventory';
 import products from '@/routes/products';
@@ -50,10 +51,12 @@ type Product = {
     cost_price_cents: number;
     current_stock: number;
     id: string;
+    image_url?: string | null;
     is_active: boolean;
     lock_version: number;
     min_stock: number;
     name: string;
+    photo_url?: string | null;
     sale_price_cents: number;
     sku: string | null;
     unit_of_measure: string;
@@ -118,6 +121,7 @@ export default function ProductsIndex({
     categoryOptions = [],
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
     const [createKey] = useState(() => createIdempotencyKey('product-create'));
     const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
     const { props } = usePage<SharedPageProps>();
@@ -157,7 +161,13 @@ export default function ProductsIndex({
                             {canManage ? (
                                 <Dialog
                                     open={createOpen}
-                                    onOpenChange={setCreateOpen}
+                                    onOpenChange={(open) => {
+                                        setCreateOpen(open);
+
+                                        if (!open) {
+                                            setSelectedPhoto(null);
+                                        }
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button className="w-full sm:w-auto">
@@ -165,6 +175,7 @@ export default function ProductsIndex({
                                             Novo produto
                                         </Button>
                                     </DialogTrigger>
+
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
                                     <DialogHeader>
                                         <DialogTitle>Novo produto</DialogTitle>
@@ -178,13 +189,31 @@ export default function ProductsIndex({
                                             'X-Idempotency-Key': createKey,
                                         }}
                                         resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
+                                        onSuccess={() => {
+                                            setCreateOpen(false);
+                                            setSelectedPhoto(null);
+                                        }}
                                         className="space-y-5"
                                     >
                                         {({ errors, processing }) => (
                                             <>
                                                 <FormErrorSummary errors={errors} />
                                                 <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="sm:col-span-2">
+                                                        <FormField
+                                                            label="Foto do produto"
+                                                            name="photo"
+                                                            error={errors.photo}
+                                                        >
+                                                            <ImageUploader
+                                                                value={selectedPhoto}
+                                                                onChange={setSelectedPhoto}
+                                                                error={errors.photo}
+                                                                aspectRatio="auto"
+                                                                previewHeight="120px"
+                                                            />
+                                                        </FormField>
+                                                    </div>
                                                     <div className="sm:col-span-2">
                                                         <FormField
                                                             label="Nome do produto"
@@ -385,12 +414,20 @@ export default function ProductsIndex({
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex min-w-0 items-center gap-3">
-                                            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-                                                <Package
-                                                    aria-hidden="true"
-                                                    className="size-5"
+                                            {product.photo_url || product.image_url ? (
+                                                <img
+                                                    src={product.photo_url || product.image_url || undefined}
+                                                    alt={product.name}
+                                                    className="size-11 shrink-0 rounded-2xl object-cover border border-border"
                                                 />
-                                            </div>
+                                            ) : (
+                                                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                                                    <Package
+                                                        aria-hidden="true"
+                                                        className="size-5"
+                                                    />
+                                                </div>
+                                            )}
                                             <div className="min-w-0">
                                                 <h2 className="truncate font-semibold text-foreground">
                                                     {product.name}

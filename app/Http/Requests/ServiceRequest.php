@@ -45,6 +45,7 @@ final class ServiceRequest extends FormRequest
             'status' => ['sometimes', Rule::in(['active', 'inactive'])],
             'professional_ids' => ['sometimes', 'array', 'max:100'],
             'professional_ids.*' => ['uuid', 'distinct', $professionalExists],
+            'image' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'lock_version' => [$this->isMethod('post') ? 'sometimes' : 'required', 'integer', 'min:0'],
         ];
     }

@@ -25,6 +25,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
@@ -40,6 +41,7 @@ type Service = {
     id: string;
     lock_version: number;
     name: string;
+    photo_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: ResourceStatus;
@@ -98,6 +100,9 @@ export default function ServiceShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState<File | string | null>(
+        service.photo_url ?? null,
+    );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
     const availableProfessionals =
@@ -145,6 +150,22 @@ export default function ServiceShow({
                                 <>
                                     <FormErrorSummary errors={errors} />
                                     <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="sm:col-span-2">
+                                            <FormField
+                                                label="Foto do serviço"
+                                                name="photo"
+                                                error={errors.photo}
+                                            >
+                                                <ImageUploader
+                                                    value={selectedPhoto}
+                                                    onChange={setSelectedPhoto}
+                                                    disabled={!canManage}
+                                                    error={errors.photo}
+                                                    aspectRatio="auto"
+                                                    previewHeight="140px"
+                                                />
+                                            </FormField>
+                                        </div>
                                         <div className="sm:col-span-2">
                                             <FormField
                                                 label="Nome do serviço"
@@ -297,6 +318,15 @@ export default function ServiceShow({
                             <h2 className="text-base font-semibold">
                                 Resumo operacional
                             </h2>
+                            {service.photo_url ? (
+                                <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                                    <img
+                                        src={service.photo_url}
+                                        alt={service.name}
+                                        className="h-40 w-full object-cover"
+                                    />
+                                </div>
+                            ) : null}
                             <div className="mt-5 grid gap-4">
                                 <div className="flex items-start gap-3">
                                     <Clock3

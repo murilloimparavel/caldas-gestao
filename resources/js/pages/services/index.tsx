@@ -31,6 +31,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
@@ -45,6 +46,7 @@ type Service = {
     duration_minutes: number;
     id: string;
     name: string;
+    photo_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: 'active' | 'inactive';
@@ -97,6 +99,7 @@ export default function ServicesIndex({
     professionalOptions,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
     const [createKey] = useState(() => createIdempotencyKey('service-create'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
@@ -123,7 +126,13 @@ export default function ServicesIndex({
                         canManage ? (
                             <Dialog
                                 open={createOpen}
-                                onOpenChange={setCreateOpen}
+                                onOpenChange={(open) => {
+                                    setCreateOpen(open);
+
+                                    if (!open) {
+                                        setSelectedPhoto(null);
+                                    }
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full sm:w-auto">
@@ -131,6 +140,7 @@ export default function ServicesIndex({
                                         Novo serviço
                                     </Button>
                                 </DialogTrigger>
+
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
                                     <DialogHeader>
                                         <DialogTitle>Novo serviço</DialogTitle>
@@ -145,7 +155,10 @@ export default function ServicesIndex({
                                             'X-Idempotency-Key': createKey,
                                         }}
                                         resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
+                                        onSuccess={() => {
+                                            setCreateOpen(false);
+                                            setSelectedPhoto(null);
+                                        }}
                                         className="space-y-5"
                                     >
                                         {({ errors, processing }) => (
@@ -154,6 +167,21 @@ export default function ServicesIndex({
                                                     errors={errors}
                                                 />
                                                 <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="sm:col-span-2">
+                                                        <FormField
+                                                            label="Foto do serviço"
+                                                            name="photo"
+                                                            error={errors.photo}
+                                                        >
+                                                            <ImageUploader
+                                                                value={selectedPhoto}
+                                                                onChange={setSelectedPhoto}
+                                                                error={errors.photo}
+                                                                aspectRatio="auto"
+                                                                previewHeight="120px"
+                                                            />
+                                                        </FormField>
+                                                    </div>
                                                     <div className="sm:col-span-2">
                                                         <FormField
                                                             label="Nome do serviço"
@@ -237,9 +265,10 @@ export default function ServicesIndex({
                                                 />
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() =>
-                                                        setCreateOpen(false)
-                                                    }
+                                                    onCancel={() => {
+                                                        setCreateOpen(false);
+                                                        setSelectedPhoto(null);
+                                                    }}
                                                     label="Cadastrar serviço"
                                                 />
                                             </>
@@ -295,12 +324,20 @@ export default function ServicesIndex({
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-                                            <Scissors
-                                                aria-hidden="true"
-                                                className="size-5"
+                                        {service.photo_url ? (
+                                            <img
+                                                src={service.photo_url}
+                                                alt={service.name}
+                                                className="size-11 shrink-0 rounded-2xl object-cover border border-border"
                                             />
-                                        </div>
+                                        ) : (
+                                            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                                                <Scissors
+                                                    aria-hidden="true"
+                                                    className="size-5"
+                                                />
+                                            </div>
+                                        )}
                                         <div className="min-w-0">
                                             <h2 className="truncate font-semibold text-foreground">
                                                 {service.name}

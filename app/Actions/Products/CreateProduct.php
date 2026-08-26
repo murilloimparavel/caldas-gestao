@@ -7,7 +7,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use App\Support\TenantContext;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 final class CreateProduct extends OperationalAction
@@ -30,13 +32,32 @@ final class CreateProduct extends OperationalAction
                 }
             }
 
-            $product = Product::query()->create([
-                ...$data,
-                'id' => (string) Str::uuid7(),
-                'tenant_id' => $context->tenant->getKey(),
-                'unit_id' => $unit->getKey(),
-                'lock_version' => 1,
-            ]);
+            /** @var UploadedFile|null $imageFile */
+            $imageFile = $data['image'] ?? $data['image_file'] ?? null;
+            unset($data['image'], $data['image_file']);
+
+            $productId = (string) Str::uuid7();
+            $imagePath = null;
+            if ($imageFile instanceof UploadedFile) {
+                $hash = Str::random(40);
+                $ext = $imageFile->guessExtension() ?: $imageFile->getClientOriginalExtension();
+                $diskName = 'public';
+                $storedPath = Storage::disk($diskName)->putFileAs(
+                    "{$context->tenant->getKey()}/products/{$productId}",
+                    $imageFile,
+                    "{$hash}.{$ext}"
+                );
+                $imagePath = $storedPath !== false ? $storedPath : null;
+            }
+
+            $product = new Product;
+            $product->id = $productId;
+            $product->tenant_id = $context->tenant->getKey();
+            $product->unit_id = $unit->getKey();
+            $product->image_path = $imagePath;
+            $product->lock_version = 1;
+            $product->fill($data);
+            $product->save();
 
             $this->events->record($actor, $context, 'product.created', $product, [
                 'sale_price_cents' => $product->sale_price_cents,

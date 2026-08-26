@@ -8,7 +8,10 @@ use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class UpdateService extends OperationalAction
@@ -29,10 +32,39 @@ final class UpdateService extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $service, $data, $expectedVersion): Service {
             $professionalIds = $data['professional_ids'] ?? null;
             unset($data['professional_ids']);
+
+            $hasImageKey = array_key_exists('image', $data) || array_key_exists('image_file', $data);
+            /** @var UploadedFile|null $imageFile */
+            $imageFile = $data['image'] ?? $data['image_file'] ?? null;
+            unset($data['image'], $data['image_file']);
+
             $locked = Service::query()->whereKey($service->getKey())->lockForUpdate()->firstOrFail();
             if ($locked->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('The service was modified concurrently.');
             }
+
+            if ($hasImageKey) {
+                $diskName = 'public';
+                if ($imageFile instanceof UploadedFile) {
+                    if ($locked->image_path) {
+                        Storage::disk($diskName)->delete($locked->image_path);
+                    }
+                    $hash = Str::random(40);
+                    $ext = $imageFile->guessExtension() ?: $imageFile->getClientOriginalExtension();
+                    $storedPath = Storage::disk($diskName)->putFileAs(
+                        "{$context->tenant->getKey()}/services/{$locked->getKey()}",
+                        $imageFile,
+                        "{$hash}.{$ext}"
+                    );
+                    $data['image_path'] = $storedPath !== false ? $storedPath : null;
+                } elseif ($imageFile === null) {
+                    if ($locked->image_path) {
+                        Storage::disk($diskName)->delete($locked->image_path);
+                    }
+                    $data['image_path'] = null;
+                }
+            }
+
             $locked->forceFill([...$data, 'lock_version' => $locked->lock_version + 1])->save();
             if ($professionalIds !== null) {
                 $professionalIds = array_values(array_unique($professionalIds));

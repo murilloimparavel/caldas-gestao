@@ -6,12 +6,14 @@ use App\Policies\ProductPolicy;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property string $id
@@ -28,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $current_stock
  * @property bool $is_active
  * @property int $lock_version
+ * @property string|null $image_path
+ * @property-read string|null $image_url
  */
 #[Fillable([
     'tenant_id',
@@ -43,12 +47,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'current_stock',
     'is_active',
     'lock_version',
+    'image_path',
 ])]
 #[UsePolicy(ProductPolicy::class)]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    /** @var list<string> */
+    protected $appends = ['image_url'];
 
     protected $attributes = [
         'cost_price_cents' => 0,
@@ -59,6 +67,14 @@ class Product extends Model
         'is_active' => true,
         'lock_version' => 1,
     ];
+
+    /** @return Attribute<string|null, void> */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?string => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+        );
+    }
 
     protected function casts(): array
     {

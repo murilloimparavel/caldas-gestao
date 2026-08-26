@@ -29,6 +29,8 @@ type Service = {
     name: string;
     description: string | null;
     duration_minutes: number;
+    image_url?: string | null;
+    photo_url?: string | null;
     price_cents: number;
     professionals: Professional[];
 };
@@ -261,9 +263,18 @@ return;
                                         className={`rounded-2xl border p-4 text-left transition focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 dark:focus-visible:ring-white ${serviceId === service.id ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950' : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500'}`}
                                     >
                                         <span className="flex items-start justify-between gap-4">
-                                            <span>
-                                                <span className="block font-semibold">{service.name}</span>
-                                                {service.description && <span className={`mt-1 block text-sm leading-5 ${serviceId === service.id ? 'text-slate-300 dark:text-slate-600' : 'text-slate-600 dark:text-slate-300'}`}>{service.description}</span>}
+                                            <span className="flex items-start gap-3">
+                                                {service.photo_url || service.image_url ? (
+                                                    <img
+                                                        src={service.photo_url || service.image_url || undefined}
+                                                        alt={service.name}
+                                                        className="size-12 shrink-0 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                                                    />
+                                                ) : null}
+                                                <span>
+                                                    <span className="block font-semibold">{service.name}</span>
+                                                    {service.description && <span className={`mt-1 block text-sm leading-5 ${serviceId === service.id ? 'text-slate-300 dark:text-slate-600' : 'text-slate-600 dark:text-slate-300'}`}>{service.description}</span>}
+                                                </span>
                                             </span>
                                             <span className="shrink-0 text-sm font-semibold">{formatPrice(service.price_cents)}</span>
                                         </span>
