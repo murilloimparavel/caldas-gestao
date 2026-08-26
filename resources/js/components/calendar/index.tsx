@@ -15,6 +15,7 @@ import type {
     KeyboardEvent as ReactKeyboardEvent,
     ReactNode,
 } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -28,7 +29,6 @@ import type {
     CalendarView,
     ScheduleBlock,
 } from '@/types/calendar';
-
 
 export const statusLabels: Record<string, string> = {
     cancelled: 'Cancelado',
@@ -66,6 +66,20 @@ type ZonedParts = {
     month: number;
     year: number;
 };
+
+function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+
+    if (parts.length === 0 || !parts[0]) {
+        return '?';
+    }
+
+    if (parts.length === 1) {
+        return parts[0].substring(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
 
 function asInstant(value: string): Date {
     const parsed = new Date(value.includes('T') ? value : `${value}T12:00:00Z`);
@@ -193,6 +207,37 @@ export function StatusChip({ status }: { status: AppointmentStatus }) {
         >
             {statusLabel(status)}
         </Badge>
+    );
+}
+
+export function ProfessionalAvatarHeader({
+    professional,
+    subtitle,
+}: {
+    professional: CalendarOption;
+    subtitle?: string;
+}) {
+    return (
+        <div className="flex items-center gap-2 px-2 py-2">
+            <Avatar className="size-8 shrink-0 border border-border">
+                {professional.avatar_url ? (
+                    <AvatarImage src={professional.avatar_url} alt={professional.name} />
+                ) : null}
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                    {getInitials(professional.name)}
+                </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-foreground">
+                    {professional.name}
+                </p>
+                {subtitle ? (
+                    <p className="truncate text-[10px] text-muted-foreground">
+                        {subtitle}
+                    </p>
+                ) : null}
+            </div>
+        </div>
     );
 }
 
@@ -368,33 +413,36 @@ export function AppointmentCard({
     return (
         <button
             type="button"
-            onClick={() => onOpen(appointment)}
+            onClick={(e) => {
+                e.stopPropagation();
+                onOpen(appointment);
+            }}
             className={cn(
                 'group w-full rounded-lg border p-2 text-left shadow-xs transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden',
                 statusClasses[appointment.status] ??
                     'border-border bg-card text-card-foreground',
-                compact ? 'min-h-20' : 'min-h-24',
+                compact ? 'h-full min-h-16' : 'min-h-24',
             )}
             aria-label={`${formatTime(appointment.starts_at, timeZone)}, ${customerName}, ${serviceName}, ${statusLabel(appointment.status)}`}
         >
-            <div className="flex items-start justify-between gap-2">
-                <span className="text-[11px] font-semibold">
+            <div className="flex items-start justify-between gap-1">
+                <span className="text-[11px] font-semibold leading-none">
                     {formatTime(appointment.starts_at, timeZone)}
                     {appointment.ends_at
                         ? `–${formatTime(appointment.ends_at, timeZone)}`
                         : null}
                 </span>
                 <MoreHorizontal
-                    className="size-3.5 opacity-60 transition group-hover:opacity-100"
+                    className="size-3.5 opacity-60 transition group-hover:opacity-100 shrink-0"
                     aria-hidden="true"
                 />
             </div>
-            <p className="mt-1 truncate text-xs font-semibold">
+            <p className="mt-1 truncate text-xs font-bold leading-snug">
                 {customerName}
             </p>
-            <p className="truncate text-[11px] opacity-80">{serviceName}</p>
+            <p className="truncate text-[11px] opacity-90">{serviceName}</p>
             {!compact && appointment.professional?.name ? (
-                <p className="mt-1 truncate text-[10px] opacity-70">
+                <p className="mt-1 truncate text-[10px] opacity-75">
                     {appointment.professional.name}
                 </p>
             ) : null}
@@ -420,42 +468,45 @@ export function ScheduleBlockCard({
     return (
         <button
             type="button"
-            onClick={() => onOpen?.(block)}
-            className="group flex w-full items-start justify-between rounded-lg border border-dashed border-amber-500/60 bg-amber-50/75 p-3 text-left shadow-2xs transition hover:border-amber-600 hover:bg-amber-100/90 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
+            onClick={(e) => {
+                e.stopPropagation();
+                onOpen?.(block);
+            }}
+            className="group flex w-full items-start justify-between rounded-lg border border-slate-300 bg-slate-100/90 p-3 text-left text-slate-800 shadow-2xs transition hover:border-slate-400 hover:bg-slate-200/90 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
         >
             <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-200/80 text-amber-900 dark:bg-amber-900 dark:text-amber-300">
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     <Lock className="size-3.5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-amber-950 dark:text-amber-200">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                             {formatTime(block.starts_at, timeZone)} –{' '}
                             {formatTime(block.ends_at, timeZone)}
                         </span>
                         <Badge
                             variant="outline"
-                            className="border-amber-400/60 bg-amber-100/80 text-[10px] text-amber-900 dark:border-amber-700 dark:bg-amber-900/60 dark:text-amber-300"
+                            className="border-slate-300 bg-slate-200/70 text-[10px] text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         >
-                            Bloqueio
+                            Ocupado
                         </Badge>
                     </div>
-                    <p className="mt-1 truncate text-sm font-medium text-amber-950 dark:text-amber-100">
-                        {block.reason || 'Horário bloqueado / Pausa operacional'}
+                    <p className="mt-1 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                        {block.reason || 'Ocupado / Horário bloqueado'}
                     </p>
                     {block.professional?.name ? (
-                        <p className="mt-0.5 truncate text-xs text-amber-900/80 dark:text-amber-300/80">
+                        <p className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-400">
                             Profissional: {block.professional.name}
                         </p>
                     ) : (
-                        <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-300/80">
+                        <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
                             Aplica-se a toda a unidade
                         </p>
                     )}
                 </div>
             </div>
             <MoreHorizontal
-                className="size-4 shrink-0 text-amber-800 opacity-60 transition group-hover:opacity-100 dark:text-amber-300"
+                className="size-4 shrink-0 text-slate-500 opacity-60 transition group-hover:opacity-100 dark:text-slate-400"
                 aria-hidden="true"
             />
         </button>
@@ -466,6 +517,8 @@ export function WeekCalendar({
     appointments,
     onOpen,
     onOpenBlock,
+    onSlotClick,
+    professionals = [],
     range,
     scheduleBlocks = [],
     timeZone,
@@ -473,6 +526,8 @@ export function WeekCalendar({
     appointments: CalendarAppointment[];
     onOpen: (appointment: CalendarAppointment) => void;
     onOpenBlock?: (block: ScheduleBlock) => void;
+    onSlotClick?: (params: { date: string; time: string; professionalId?: string }) => void;
+    professionals?: CalendarOption[];
     range: CalendarRange;
     scheduleBlocks?: ScheduleBlock[];
     timeZone?: string;
@@ -487,27 +542,52 @@ export function WeekCalendar({
         (_, index) => startHour * 60 + index * 30,
     );
 
+    // Se houver profissionais selecionados/disponíveis e for visualização por profissionais (ou exibição na semana)
+    const showProfessionalColumns = professionals.length > 0 && dates.length === 1;
+    const columns = showProfessionalColumns
+        ? professionals.map((p) => ({ id: p.id, title: p.name, professional: p, date: dates[0] }))
+        : dates.map((d) => ({ id: d, title: formatDay(d, timeZone), professional: null, date: d }));
+
     return (
         <div className="surface-panel overflow-hidden">
             <div className="overflow-x-auto">
-                <div className="min-w-[920px]">
-                    <div className="grid grid-cols-[4.5rem_repeat(7,minmax(8rem,1fr))] border-b border-border bg-muted/25">
+                <div style={{ minWidth: `${Math.max(920, columns.length * 140 + 80)}px` }}>
+                    <div
+                        className="grid border-b border-border bg-muted/25"
+                        style={{
+                            gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(8rem, 1fr))`,
+                        }}
+                    >
                         <div
                             aria-hidden="true"
                             className="border-r border-border"
                         />
-                        {dates.map((date) => (
+                        {columns.map((col) => (
                             <div
-                                key={date}
-                                className="border-r border-border px-3 py-3 last:border-r-0"
+                                key={col.id}
+                                className="border-r border-border px-2 py-2 last:border-r-0"
                             >
-                                <p className="text-xs font-semibold text-muted-foreground capitalize">
-                                    {formatDay(date, timeZone)}
-                                </p>
+                                {col.professional ? (
+                                    <ProfessionalAvatarHeader
+                                        professional={col.professional}
+                                        subtitle={formatDay(col.date, timeZone)}
+                                    />
+                                ) : (
+                                    <div className="px-1 py-1">
+                                        <p className="text-xs font-semibold text-muted-foreground capitalize">
+                                            {col.title}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
-                    <div className="grid grid-cols-[4.5rem_repeat(7,minmax(8rem,1fr))]">
+                    <div
+                        className="grid"
+                        style={{
+                            gridTemplateColumns: `4.5rem repeat(${columns.length}, minmax(8rem, 1fr))`,
+                        }}
+                    >
                         <div
                             className="relative border-r border-border"
                             style={{ height: timelineHeight }}
@@ -515,7 +595,7 @@ export function WeekCalendar({
                             {timeSlots.map((minutes) => (
                                 <span
                                     key={minutes}
-                                    className="absolute right-2 -translate-y-1/2 text-[10px] text-muted-foreground"
+                                    className="absolute right-2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground"
                                     style={{
                                         top:
                                             ((minutes - startHour * 60) / 30) *
@@ -530,23 +610,64 @@ export function WeekCalendar({
                                 </span>
                             ))}
                         </div>
-                        {dates.map((date) => {
-                            const dayAppointments = appointments.filter(
-                                (appointment) =>
-                                    dateKey(appointment.starts_at, timeZone) ===
-                                    date,
-                            );
-                            const dayBlocks = scheduleBlocks.filter(
-                                (block) =>
-                                    block.status !== 'cancelled' &&
-                                    dateKey(block.starts_at, timeZone) === date,
-                            );
+                        {columns.map((col) => {
+                            const dayAppointments = appointments.filter((appointment) => {
+                                const matchDate = dateKey(appointment.starts_at, timeZone) === col.date;
+
+                                if (!matchDate) {
+                                    return false;
+                                }
+
+                                if (col.professional) {
+                                    const profId = appointment.professional_id ?? appointment.professional?.id;
+
+                                    return profId === col.professional.id;
+                                }
+
+                                return true;
+                            });
+
+                            const dayBlocks = scheduleBlocks.filter((block) => {
+                                if (block.status === 'cancelled') {
+                                    return false;
+                                }
+
+                                const matchDate = dateKey(block.starts_at, timeZone) === col.date;
+
+                                if (!matchDate) {
+                                    return false;
+                                }
+
+                                if (col.professional) {
+                                    return !block.professional_id || block.professional_id === col.professional.id;
+                                }
+
+                                return true;
+                            });
 
                             return (
                                 <div
-                                    key={date}
-                                    className="relative border-r border-border bg-[linear-gradient(to_bottom,transparent_43px,var(--border)_44px)] bg-size-[100%_44px] last:border-r-0"
+                                    key={col.id}
+                                    className="relative cursor-pointer border-r border-border bg-[linear-gradient(to_bottom,transparent_43px,var(--border)_44px)] bg-size-[100%_44px] last:border-r-0"
                                     style={{ height: timelineHeight }}
+                                    onClick={(e) => {
+                                        if (!onSlotClick) {
+                                            return;
+                                        }
+
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const clickY = e.clientY - rect.top;
+                                        const totalMinutes = Math.floor(clickY / slotHeight) * 30 + startHour * 60;
+                                        const hours = Math.floor(totalMinutes / 60);
+                                        const mins = totalMinutes % 60;
+                                        const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+
+                                        onSlotClick({
+                                            date: col.date,
+                                            professionalId: col.professional?.id,
+                                            time: timeStr,
+                                        });
+                                    }}
                                 >
                                     {dayBlocks.map((block) => {
                                         const start = asInstant(block.starts_at);
@@ -572,15 +693,18 @@ export function WeekCalendar({
                                             <button
                                                 key={block.id}
                                                 type="button"
-                                                onClick={() => onOpenBlock?.(block)}
-                                                className="group absolute inset-x-1 z-10 flex flex-col justify-between overflow-hidden rounded-md border border-dashed border-amber-500/60 bg-amber-100/85 p-1.5 text-left text-amber-950 shadow-2xs backdrop-blur-xs transition hover:border-amber-600 hover:bg-amber-200/90 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden dark:border-amber-600/70 dark:bg-amber-950/80 dark:text-amber-200 dark:hover:bg-amber-900/90"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onOpenBlock?.(block);
+                                                }}
+                                                className="group absolute inset-x-1 z-10 flex flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
                                                 style={style}
-                                                title={`Bloqueio: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
+                                                title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
                                             >
                                                 <div className="flex items-center justify-between gap-1">
-                                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-900 dark:text-amber-300">
+                                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
                                                         <Lock
-                                                            className="size-3 text-amber-700 dark:text-amber-400"
+                                                            className="size-3 text-slate-500 dark:text-slate-400"
                                                             aria-hidden="true"
                                                         />
                                                         {formatTime(
@@ -593,16 +717,16 @@ export function WeekCalendar({
                                                             timeZone,
                                                         )}
                                                     </span>
-                                                    <span className="rounded bg-amber-200/70 px-1 py-0.2 text-[9px] font-medium text-amber-950 dark:bg-amber-900/90 dark:text-amber-200">
-                                                        Bloqueio
+                                                    <span className="rounded bg-slate-200 px-1 py-0.2 text-[9px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                        Ocupado
                                                     </span>
                                                 </div>
-                                                <p className="truncate text-[11px] font-medium text-amber-950 dark:text-amber-100">
+                                                <p className="truncate text-[11px] font-medium text-slate-900 dark:text-slate-100">
                                                     {block.reason ||
-                                                        'Horário bloqueado'}
+                                                        'Ocupado'}
                                                 </p>
-                                                {block.professional?.name ? (
-                                                    <p className="truncate text-[10px] text-amber-900/80 dark:text-amber-300/80">
+                                                {block.professional?.name && !col.professional ? (
+                                                    <p className="truncate text-[10px] text-slate-600 dark:text-slate-400">
                                                         {block.professional.name}
                                                     </p>
                                                 ) : null}

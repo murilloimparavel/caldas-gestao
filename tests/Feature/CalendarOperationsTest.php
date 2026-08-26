@@ -73,6 +73,8 @@ it('serializes active-unit calendar settings for the calendar page', function ()
         ->actingAs($owner)->get(route('calendar.index', ['date' => '2030-02-10']))
         ->assertInertia(fn (Assert $page) => $page
             ->component('calendar/index')
+            ->where('options.professionals.0.id', $professional->getKey())
+            ->where('options.professionals.0.avatar_url', $professional->avatar_url)
             ->where('calendarSettings.availability_rules.0.id', $rule->getKey())
             ->where('calendarSettings.schedule_blocks.0.id', $block->getKey()));
 });

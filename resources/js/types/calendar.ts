@@ -11,6 +11,7 @@ export type AppointmentStatus =
     | 'cancelled';
 
 export type CalendarOption = {
+    avatar_url?: string | null;
     id: string;
     name: string;
     phone?: string | null;

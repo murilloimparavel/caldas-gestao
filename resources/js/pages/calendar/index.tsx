@@ -95,6 +95,8 @@ function optionList(
 function AppointmentForm({
     appointment,
     customers,
+    defaultProfessionalId = '',
+    defaultStartsAt = '',
     existingAppointments = [],
     existingScheduleBlocks = [],
     onClose,
@@ -104,6 +106,8 @@ function AppointmentForm({
 }: {
     appointment: CalendarAppointment | null;
     customers: CalendarOption[];
+    defaultProfessionalId?: string;
+    defaultStartsAt?: string;
     existingAppointments?: CalendarAppointment[];
     existingScheduleBlocks?: ScheduleBlock[];
     onClose: () => void;
@@ -119,10 +123,12 @@ function AppointmentForm({
         ),
     );
     const [selectedProfessional, setSelectedProfessional] = useState(
-        appointment?.professional_id ?? appointment?.professional?.id ?? '',
+        appointment?.professional_id ?? appointment?.professional?.id ?? defaultProfessionalId,
     );
     const [selectedStartsAt, setSelectedStartsAt] = useState(
-        appointment ? dateTimeValue(appointment.starts_at, unitTimezone) : '',
+        appointment
+            ? dateTimeValue(appointment.starts_at, unitTimezone)
+            : defaultStartsAt,
     );
     const [selectedDuration, setSelectedDuration] = useState<number>(
         appointment?.duration_minutes ?? 30,
@@ -817,6 +823,12 @@ export default function CalendarIndex(props: CalendarProps) {
     const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(
         null,
     );
+    const [prefilledSlot, setPrefilledSlot] = useState<{
+        date: string;
+        time: string;
+        professionalId?: string;
+    } | null>(null);
+
     const permissions = page.props.auth.permissions;
     const canManage = permissions.some((permission) =>
         ['appointment.manage', 'calendar.manage'].includes(permission),
@@ -884,6 +896,31 @@ export default function CalendarIndex(props: CalendarProps) {
         );
     });
 
+    const handleSlotClick = ({
+        date,
+        time,
+        professionalId,
+    }: {
+        date: string;
+        time: string;
+        professionalId?: string;
+    }) => {
+        if (!canManage) {
+            return;
+        }
+
+        setPrefilledSlot({ date, professionalId, time });
+        setCreateOpen(true);
+    };
+
+    const activeProfessionalsForHeader = useMemo(() => {
+        if (filters.professional_ids && filters.professional_ids.length > 0) {
+            return professionals.filter((p) => filters.professional_ids?.includes(p.id));
+        }
+
+        return professionals;
+    }, [professionals, filters.professional_ids]);
+
     return (
         <>
             <Head title="Agenda" />
@@ -926,7 +963,10 @@ export default function CalendarIndex(props: CalendarProps) {
                     canManage={canManage}
                     date={selectedDate}
                     filters={filters}
-                    onCreate={() => setCreateOpen(true)}
+                    onCreate={() => {
+                        setPrefilledSlot(null);
+                        setCreateOpen(true);
+                    }}
                     onCreateBlock={() => setBlockCreateOpen(true)}
                     onFilter={() => setFilterOpen(true)}
                     range={range}
@@ -994,42 +1034,41 @@ export default function CalendarIndex(props: CalendarProps) {
 
                 {props.loading ? (
                     <CalendarLoading />
-                ) : visibleAppointments.length === 0 &&
-                  visibleScheduleBlocks.length === 0 ? (
-                    <EmptyCalendar
-                        action={
-                            canManage ? (
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setBlockCreateOpen(true)}
-                                    >
-                                        <Lock aria-hidden="true" />
-                                        Novo bloqueio
-                                    </Button>
-                                    <Button onClick={() => setCreateOpen(true)}>
-                                        <Plus aria-hidden="true" />
-                                        Novo agendamento
-                                    </Button>
-                                </div>
-                            ) : undefined
-                        }
-                        description={
-                            appointments.length === 0 &&
-                            scheduleBlocks.length === 0
-                                ? 'Comece registrando o primeiro horário ou bloqueio para acompanhar a operação do dia.'
-                                : 'Tente limpar os filtros ou escolher outro período.'
-                        }
-                    />
                 ) : view === 'month' ? (
-                    <MonthAgenda
-                        appointments={visibleAppointments}
-                        onOpen={setEditing}
-                        onOpenBlock={setSelectedBlock}
-                        range={range}
-                        scheduleBlocks={visibleScheduleBlocks}
-                        timeZone={unitTimezone}
-                    />
+                    visibleAppointments.length === 0 && visibleScheduleBlocks.length === 0 ? (
+                        <EmptyCalendar
+                            action={
+                                canManage ? (
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setBlockCreateOpen(true)}
+                                        >
+                                            <Lock aria-hidden="true" />
+                                            Novo bloqueio
+                                        </Button>
+                                        <Button onClick={() => {
+                                            setPrefilledSlot(null);
+                                            setCreateOpen(true);
+                                        }}>
+                                            <Plus aria-hidden="true" />
+                                            Novo agendamento
+                                        </Button>
+                                    </div>
+                                ) : undefined
+                            }
+                            description="Nenhum agendamento ou bloqueio encontrado neste mês."
+                        />
+                    ) : (
+                        <MonthAgenda
+                            appointments={visibleAppointments}
+                            onOpen={setEditing}
+                            onOpenBlock={setSelectedBlock}
+                            range={range}
+                            scheduleBlocks={visibleScheduleBlocks}
+                            timeZone={unitTimezone}
+                        />
+                    )
                 ) : view === 'day' ? (
                     <DayAgenda
                         appointments={visibleAppointments}
@@ -1056,6 +1095,8 @@ export default function CalendarIndex(props: CalendarProps) {
                                 appointments={visibleAppointments}
                                 onOpen={setEditing}
                                 onOpenBlock={setSelectedBlock}
+                                onSlotClick={handleSlotClick}
+                                professionals={activeProfessionalsForHeader}
                                 range={range}
                                 scheduleBlocks={visibleScheduleBlocks}
                                 timeZone={unitTimezone}
@@ -1078,6 +1119,7 @@ export default function CalendarIndex(props: CalendarProps) {
                     if (!open) {
                         setCreateOpen(false);
                         setEditing(null);
+                        setPrefilledSlot(null);
                     }
                 }}
             >
@@ -1097,11 +1139,18 @@ export default function CalendarIndex(props: CalendarProps) {
                     <AppointmentForm
                         appointment={editing}
                         customers={customers}
+                        defaultProfessionalId={prefilledSlot?.professionalId}
+                        defaultStartsAt={
+                            prefilledSlot
+                                ? `${prefilledSlot.date}T${prefilledSlot.time}`
+                                : ''
+                        }
                         existingAppointments={appointments}
                         existingScheduleBlocks={scheduleBlocks}
                         onClose={() => {
                             setCreateOpen(false);
                             setEditing(null);
+                            setPrefilledSlot(null);
                         }}
                         professionals={professionals}
                         services={services}

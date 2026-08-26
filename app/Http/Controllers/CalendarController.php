@@ -76,7 +76,12 @@ final class CalendarController extends Controller
 
         $options = [
             'customers' => Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone']),
-            'professionals' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name']),
+            'professionals' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'avatar_path'])->map(fn (Professional $p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'avatar_path' => $p->avatar_path,
+                'avatar_url' => $p->avatar_url,
+            ]),
             'services' => Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'duration_minutes', 'price_cents']),
             'sale_categories' => SaleCategory::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('is_active', true)->orderBy('name')->get(['id', 'name', 'type', 'uniqueness_scope']),
             'timezone' => $context->unit === null ? config('app.timezone') : ($context->unit->timezone ?? config('app.timezone')),
