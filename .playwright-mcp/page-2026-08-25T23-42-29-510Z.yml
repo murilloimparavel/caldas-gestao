@@ -1,0 +1,90 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e3]:
+    - generic [ref=f2e7]:
+      - list [ref=f2e9]:
+        - listitem [ref=f2e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f2e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f2e13]
+            - generic [ref=f2e17]:
+              - generic [ref=f2e18]: Caldas Gestão
+              - generic [ref=f2e19]: Operação diária
+      - navigation "Navegação principal" [ref=f2e21]:
+        - button "Operação — expandir ou recolher seção" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: Operação
+        - button "Relacionamento — expandir ou recolher seção" [ref=f2e45] [cursor=pointer]:
+          - generic [ref=f2e46]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f2e50] [cursor=pointer]:
+          - generic [ref=f2e51]: Gestão
+      - list [ref=f2e55]:
+        - listitem [ref=f2e56]:
+          - button "UT Usuário Teste" [ref=f2e57]:
+            - generic [ref=f2e58]: UT
+            - generic [ref=f2e60]: Usuário Teste
+    - main [ref=f2e65]:
+      - generic [ref=f2e67]:
+        - button "Toggle sidebar" [ref=f2e68]
+        - navigation "breadcrumb" [ref=f2e70]:
+          - list [ref=f2e71]:
+            - listitem [ref=f2e72]:
+              - link "Comandas" [ref=f2e158] [cursor=pointer]:
+                - /url: /sales
+            - listitem [ref=f2e159]
+            - listitem [ref=f2e162]:
+              - link "Recibo Interno" [disabled] [ref=f2e332]
+      - generic [ref=f2e334]:
+        - generic [ref=f2e335]:
+          - link "Voltar para Comandas" [ref=f2e336] [cursor=pointer]:
+            - /url: /sales
+          - button "Imprimir Recibo" [ref=f2e338]
+        - generic [ref=f2e339]:
+          - generic [ref=f2e344]:
+            - heading "Fechamento Consolidado Concluído" [level=2] [ref=f2e345]
+            - paragraph [ref=f2e346]: Todas as comandas vinculadas foram finalizadas com sucesso e o recibo operacional foi gerado.
+          - generic [ref=f2e347]: REC-20260825-PYOQZK
+        - generic [ref=f2e348]:
+          - generic [ref=f2e349]:
+            - generic [ref=f2e350]:
+              - generic [ref=f2e351]:
+                - generic [ref=f2e352]: Recibo Interno Operacional
+                - heading "Caldas Gestão Teste" [level=1] [ref=f2e356]
+                - paragraph [ref=f2e357]: Matriz
+              - generic [ref=f2e361]:
+                - text: REC-20260825-PYOQZK
+                - paragraph [ref=f2e362]: "Emitido em: 25/08/2026, 20:42"
+                - paragraph [ref=f2e363]: "Operador: Usuário Teste"
+            - generic [ref=f2e364]:
+              - generic [ref=f2e365]:
+                - text: Cliente / Identificador
+                - paragraph [ref=f2e366]: Carlos Silva
+                - paragraph [ref=f2e367]: "Tel: 11999998888"
+              - generic [ref=f2e368]:
+                - text: Assunto de Fechamento
+                - paragraph [ref=f2e369]: customer:01a03b4c-0eb9-73d0-a965-524995701b84
+                - paragraph [ref=f2e370]: 1 comanda(s) consolidada(s)
+          - generic [ref=f2e371]:
+            - heading "Detalhamento por Comanda" [level=3] [ref=f2e372]
+            - generic [ref=f2e373]:
+              - generic [ref=f2e374]:
+                - generic [ref=f2e375]:
+                  - generic [ref=f2e376]: "Comanda #01a03b4c"
+                  - generic [ref=f2e377]:
+                    - generic [ref=f2e378]: Atendimento Barbearia & Salão
+                    - generic [ref=f2e379]: "Ref: Mesa 02"
+                - generic [ref=f2e380]: R$ 50,00
+              - generic [ref=f2e382]:
+                - generic [ref=f2e383]:
+                  - paragraph [ref=f2e384]: 1x Corte Masculino Degradê
+                  - paragraph [ref=f2e385]: "Profissional: Lucas Barbeiro"
+                - paragraph [ref=f2e387]: R$ 50,00
+            - generic [ref=f2e388]:
+              - generic [ref=f2e389]:
+                - generic [ref=f2e390]: Total Bruto Consolidado
+                - generic [ref=f2e391]: R$ 50,00
+              - generic [ref=f2e392]:
+                - generic [ref=f2e393]:
+                  - text: Total Geral Fechado
+                  - paragraph [ref=f2e394]: Valor consolidado de encerramento da visita
+                - generic [ref=f2e395]: R$ 50,00
+            - paragraph [ref=f2e396]: Documento interno de conferência e encerramento operacional. Caldas Gestão SaaS.
+  - region "Notifications alt+T"

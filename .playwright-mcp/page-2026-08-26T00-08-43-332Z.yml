@@ -1,0 +1,106 @@
+- generic [ref=f46e2]:
+  - generic [ref=f46e3]:
+    - generic [ref=f46e7]:
+      - list [ref=f46e9]:
+        - listitem [ref=f46e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f46e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f46e13]
+            - generic [ref=f46e17]:
+              - generic [ref=f46e18]: Caldas Gestão
+              - generic [ref=f46e19]: Operação diária
+      - navigation "Navegação principal" [ref=f46e21]:
+        - button "Operação — expandir ou recolher seção" [ref=f46e23] [cursor=pointer]:
+          - generic [ref=f46e24]: Operação
+        - button "Relacionamento — expandir ou recolher seção" [ref=f46e28] [cursor=pointer]:
+          - generic [ref=f46e29]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f46e33] [cursor=pointer]:
+          - generic [ref=f46e34]: Gestão
+        - generic [ref=f46e37]:
+          - button "Financeiro — expandir ou recolher seção" [expanded] [ref=f46e38] [cursor=pointer]:
+            - generic [ref=f46e39]: Financeiro
+          - list [ref=f46e44]:
+            - listitem [ref=f46e45]:
+              - link "Painel Financeiro" [ref=f46e46] [cursor=pointer]:
+                - /url: /finance/dashboard
+            - listitem [ref=f46e51]:
+              - link "Contas a Pagar/Receber" [ref=f46e52] [cursor=pointer]:
+                - /url: /finance/transactions
+            - listitem [ref=f46e57]:
+              - link "Comissões" [ref=f46e58] [cursor=pointer]:
+                - /url: /finance/commissions
+      - list [ref=f46e65]:
+        - listitem [ref=f46e66]:
+          - button "UT Usuário Teste" [ref=f46e67]:
+            - generic [ref=f46e68]: UT
+            - generic [ref=f46e70]: Usuário Teste
+    - main [ref=f46e75]:
+      - button "Toggle sidebar" [ref=f46e78]
+      - generic [ref=f46e80]:
+        - generic [ref=f46e81]:
+          - generic [ref=f46e82]:
+            - paragraph [ref=f46e83]: Financeiro
+            - generic [ref=f46e84]:
+              - heading "Painel Financeiro" [level=1] [ref=f46e85]
+              - paragraph [ref=f46e86]: Indicadores consolidados de saúde financeira, fluxo de caixa, pagamentos e recebimentos.
+          - generic [ref=f46e87]:
+            - link "Caixa Operacional" [ref=f46e88] [cursor=pointer]:
+              - /url: /finance/cash
+            - link "Comissões" [ref=f46e89] [cursor=pointer]:
+              - /url: /finance/commissions
+            - link "Lançamentos" [ref=f46e90] [cursor=pointer]:
+              - /url: /finance/transactions
+        - generic [ref=f46e91]:
+          - generic [ref=f46e92]:
+            - generic [ref=f46e93]: Saldo em Caixa Físico
+            - generic [ref=f46e98]:
+              - generic [ref=f46e99]: R$ 0,00
+              - paragraph [ref=f46e100]: Turnos de caixa abertos atualmente
+          - generic [ref=f46e101]:
+            - generic [ref=f46e102]: Saldo Projetado do Mês
+            - generic [ref=f46e107]:
+              - generic [ref=f46e108]: R$ 0,00
+              - paragraph [ref=f46e109]: Caixa + Receitas Previstas - Despesas Previstas
+          - generic [ref=f46e110]:
+            - generic [ref=f46e111]: A Receber Hoje
+            - generic [ref=f46e116]:
+              - generic [ref=f46e117]: R$ 0,00
+              - paragraph [ref=f46e118]: "Previsto no mês: R$ 0,00"
+          - generic [ref=f46e119]:
+            - generic [ref=f46e120]: A Pagar Hoje
+            - generic [ref=f46e125]:
+              - generic [ref=f46e126]: R$ 0,00
+              - paragraph [ref=f46e127]: "Previsto no mês: R$ 0,00"
+        - generic [ref=f46e128]:
+          - generic [ref=f46e129]:
+            - generic [ref=f46e130]:
+              - generic [ref=f46e131]: Realizado no Mês (Recebimentos)
+              - generic [ref=f46e135]: Total de receitas efetivamente liquidadas no mês corrente.
+            - generic [ref=f46e137]:
+              - generic [ref=f46e138]: Receitas Liquidadas
+              - generic [ref=f46e139]: R$ 0,00
+          - generic [ref=f46e140]:
+            - generic [ref=f46e141]:
+              - generic [ref=f46e142]: Realizado no Mês (Pagamentos)
+              - generic [ref=f46e146]: Total de despesas e contas operacionais pagas no mês corrente.
+            - generic [ref=f46e148]:
+              - generic [ref=f46e149]: Despesas Pagas
+              - generic [ref=f46e150]: R$ 0,00
+        - generic [ref=f46e151]:
+          - generic [ref=f46e152]:
+            - generic [ref=f46e153]:
+              - generic [ref=f46e154]:
+                - generic [ref=f46e155]: Próximos Vencimentos
+                - generic [ref=f46e159]: Contas pendentes a vencer nos próximos dias.
+              - link "Ver todas" [ref=f46e160] [cursor=pointer]:
+                - /url: /finance/transactions?status=pending
+            - paragraph [ref=f46e162]: Nenhum vencimento pendente agendado.
+          - generic [ref=f46e163]:
+            - generic [ref=f46e164]:
+              - generic [ref=f46e165]:
+                - generic [ref=f46e166]: Últimas Liquidações
+                - generic [ref=f46e170]: Histórico das contas liquidadas mais recentemente.
+              - link "Ver histórico" [ref=f46e171] [cursor=pointer]:
+                - /url: /finance/transactions?status=paid
+            - paragraph [ref=f46e173]: Nenhuma liquidação registrada recentemente.
+  - region "Notifications alt+T"

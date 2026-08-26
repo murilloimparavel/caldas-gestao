@@ -34,6 +34,7 @@ final class PayloadGovernance
         'commission_rule_id', 'commission_settlement_id', 'commission_accrual_id', 'rate_type', 'rate_value', 'value_rate',
         'commission_amount_cents', 'gross_amount_cents', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
         'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
+        'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at',
     ];
 
     /** @var list<string> */
@@ -56,6 +57,7 @@ final class PayloadGovernance
         'commission_rule_id', 'commission_settlement_id', 'commission_accrual_id', 'rate_type', 'rate_value', 'value_rate',
         'commission_amount_cents', 'gross_amount_cents', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
         'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
+        'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at',
     ];
 
     /** @var list<string> */
@@ -144,7 +146,7 @@ final class PayloadGovernance
     {
         $key = strtolower($key);
 
-        if (in_array($key, ['closing_session_id', 'closing_session', 'receipt_number', 'description', 'membership_id'], true)) {
+        if (in_array($key, ['closing_session_id', 'closing_session', 'receipt_number', 'description', 'membership_id', 'total_sessions', 'remaining_sessions', 'sessions_consumed'], true)) {
             return false;
         }
 
@@ -158,7 +160,7 @@ final class PayloadGovernance
             }
 
             if ($fragment === 'session') {
-                if (str_contains($key, 'session') && ! str_contains($key, 'closing_session')) {
+                if (str_contains($key, 'session') && ! str_contains($key, 'closing_session') && ! in_array($key, ['total_sessions', 'remaining_sessions', 'sessions_consumed'], true)) {
                     return true;
                 }
 

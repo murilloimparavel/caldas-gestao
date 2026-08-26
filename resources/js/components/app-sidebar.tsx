@@ -7,6 +7,7 @@ import {
     CalendarDays,
     ClipboardList,
     FolderTree,
+    Gift,
     Layers,
     LayoutDashboard,
     Package,
@@ -35,6 +36,7 @@ import cashShifts from '@/routes/cash_shifts';
 import categories from '@/routes/categories';
 import customers from '@/routes/customers';
 import inventory from '@/routes/inventory';
+import packagesRoutes from '@/routes/packages';
 import products from '@/routes/products';
 import professionals from '@/routes/professionals';
 import saleCategories from '@/routes/sale-categories';
@@ -97,6 +99,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: services.index(),
                 icon: Scissors,
                 permission: 'service.view',
+            },
+            {
+                title: 'Pacotes de Serviços',
+                href: packagesRoutes.index(),
+                icon: Gift,
+                permission: 'package.view',
             },
             {
                 title: 'Produtos',

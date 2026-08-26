@@ -128,4 +128,16 @@ class Sale extends Model
     {
         return $this->belongsToMany(ClosingSession::class, 'closing_session_sales', 'sale_id', 'closing_session_id');
     }
+
+    /** @return HasMany<CustomerPackage, $this> */
+    public function customerPackages(): HasMany
+    {
+        return $this->hasMany(CustomerPackage::class);
+    }
+
+    /** @return HasMany<PackageUsage, $this> */
+    public function packageUsages(): HasMany
+    {
+        return $this->hasMany(PackageUsage::class);
+    }
 }

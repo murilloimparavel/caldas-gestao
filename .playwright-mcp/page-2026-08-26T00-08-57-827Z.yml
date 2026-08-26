@@ -1,0 +1,57 @@
+- generic [ref=f47e2]:
+  - generic [ref=f47e3]:
+    - generic [ref=f47e7]:
+      - list [ref=f47e9]:
+        - listitem [ref=f47e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f47e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f47e13]
+            - generic [ref=f47e17]:
+              - generic [ref=f47e18]: Caldas Gestão
+              - generic [ref=f47e19]: Operação diária
+      - navigation "Navegação principal" [ref=f47e21]:
+        - generic [ref=f47e22]:
+          - button "Operação — expandir ou recolher seção" [expanded] [ref=f47e23] [cursor=pointer]:
+            - generic [ref=f47e24]: Operação
+          - list [ref=f47e29]:
+            - listitem [ref=f47e30]:
+              - link "Visão de hoje" [ref=f47e31] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=f47e38]:
+              - link "Comandas" [ref=f47e39] [cursor=pointer]:
+                - /url: /sales
+            - listitem [ref=f47e44]:
+              - link "Caixa Operacional" [ref=f47e45] [cursor=pointer]:
+                - /url: /finance/cash
+        - button "Relacionamento — expandir ou recolher seção" [ref=f47e51] [cursor=pointer]:
+          - generic [ref=f47e52]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f47e56] [cursor=pointer]:
+          - generic [ref=f47e57]: Gestão
+        - button "Financeiro — expandir ou recolher seção" [ref=f47e61] [cursor=pointer]:
+          - generic [ref=f47e62]: Financeiro
+      - list [ref=f47e66]:
+        - listitem [ref=f47e67]:
+          - button "UT Usuário Teste" [ref=f47e68]:
+            - generic [ref=f47e69]: UT
+            - generic [ref=f47e71]: Usuário Teste
+    - main [ref=f47e76]:
+      - button "Toggle sidebar" [ref=f47e79]
+      - generic [ref=f47e81]:
+        - generic [ref=f47e83]:
+          - paragraph
+          - generic [ref=f47e84]:
+            - heading "Caixa Operacional" [level=1] [ref=f47e85]
+            - paragraph [ref=f47e86]: Gestão de abertura de turno, suprimentos, sangrias e fechamento com conferência física.
+        - generic [ref=f47e87]:
+          - generic [ref=f47e89]:
+            - heading "Nenhum turno de caixa aberto no momento" [level=3] [ref=f47e94]
+            - paragraph [ref=f47e95]: Para registrar vendas em dinheiro, sangrias e suprimentos, é necessário abrir um turno operacional com o valor inicial do fundo de troco.
+            - button "Abrir Turno de Caixa Agora" [ref=f47e96]
+          - generic [ref=f47e97]:
+            - generic [ref=f47e98]:
+              - text: Turnos Abertos na Unidade
+              - paragraph [ref=f47e99]: "0"
+            - generic [ref=f47e100]:
+              - text: Turnos Encerrados Hoje
+              - paragraph [ref=f47e101]: "0"
+  - region "Notifications alt+T"

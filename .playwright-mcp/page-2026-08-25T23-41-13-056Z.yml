@@ -1,0 +1,87 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e3]:
+    - generic [ref=f2e7]:
+      - list [ref=f2e9]:
+        - listitem [ref=f2e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f2e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f2e13]
+            - generic [ref=f2e17]:
+              - generic [ref=f2e18]: Caldas Gestão
+              - generic [ref=f2e19]: Operação diária
+      - navigation "Navegação principal" [ref=f2e21]:
+        - button "Operação — expandir ou recolher seção" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: Operação
+        - button "Relacionamento — expandir ou recolher seção" [ref=f2e45] [cursor=pointer]:
+          - generic [ref=f2e46]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f2e50] [cursor=pointer]:
+          - generic [ref=f2e51]: Gestão
+      - list [ref=f2e55]:
+        - listitem [ref=f2e56]:
+          - button "UT Usuário Teste" [ref=f2e57]:
+            - generic [ref=f2e58]: UT
+            - generic [ref=f2e60]: Usuário Teste
+    - main [ref=f2e65]:
+      - generic [ref=f2e67]:
+        - button "Toggle sidebar" [ref=f2e68]
+        - navigation "breadcrumb" [ref=f2e70]:
+          - list [ref=f2e71]:
+            - listitem [ref=f2e72]:
+              - link "Comandas" [ref=f2e158] [cursor=pointer]:
+                - /url: /sales
+            - listitem [ref=f2e159]
+            - listitem [ref=f2e162]:
+              - link "Detalhes da Comanda" [disabled] [ref=f2e163]
+      - generic [ref=f2e164]:
+        - generic [ref=f2e165]:
+          - link "Voltar para Comandas" [ref=f2e167] [cursor=pointer]:
+            - /url: /sales
+          - generic [ref=f2e168]:
+            - generic [ref=f2e169]:
+              - generic [ref=f2e170]:
+                - heading "Mesa 02 — Carlos Silva" [level=1] [ref=f2e171]
+                - generic [ref=f2e172]: Aberta
+                - generic [ref=f2e174]: Atendimento Barbearia & Salão
+              - paragraph [ref=f2e175]: "Aberta em 25/08/2026, 20:41 • ID: 01a03b4c-9e0e-70a5-8993-e8a1d281b921"
+            - generic [ref=f2e176]:
+              - button "Pronto para Fechar" [ref=f2e178]
+              - button "Fechar Comanda" [ref=f2e179]
+              - button "Cancelar Comanda" [ref=f2e180]
+        - generic [ref=f2e181]:
+          - generic [ref=f2e183]:
+            - generic [ref=f2e184]:
+              - generic [ref=f2e185]:
+                - heading "Itens da Comanda" [level=2] [ref=f2e186]
+                - paragraph [ref=f2e187]: Serviços, produtos consumidos e itens avulsos.
+              - button "Adicionar Item" [ref=f2e188]
+            - generic [ref=f2e189]:
+              - paragraph [ref=f2e193]: Nenhum item adicionado ainda
+              - paragraph [ref=f2e194]: Clique no botão "Adicionar Item" acima para lançar serviços ou produtos.
+          - generic [ref=f2e195]:
+            - generic [ref=f2e196]:
+              - heading "Resumo Financeiro" [level=2] [ref=f2e197]
+              - generic [ref=f2e198]:
+                - generic [ref=f2e199]:
+                  - generic [ref=f2e200]: "Total Bruto:"
+                  - generic [ref=f2e201]: R$ 0,00
+                - generic [ref=f2e202]:
+                  - generic [ref=f2e203]: "Desconto Geral:"
+                  - generic [ref=f2e208]: R$ 0,00
+                - generic [ref=f2e210]:
+                  - generic [ref=f2e211]: "Total a Pagar:"
+                  - generic [ref=f2e212]: R$ 0,00
+              - button "Aplicar Desconto Geral" [ref=f2e214]
+            - generic [ref=f2e215]:
+              - heading "Vínculo & Atendimento" [level=3] [ref=f2e216]
+              - generic [ref=f2e222]:
+                - paragraph [ref=f2e223]: Carlos Silva
+                - paragraph [ref=f2e224]: "11999998888"
+            - generic [ref=f2e225]:
+              - heading "Histórico de Transições" [level=3] [ref=f2e231]
+              - generic [ref=f2e233]:
+                - generic [ref=f2e234]:
+                  - generic [ref=f2e235]: open
+                  - generic [ref=f2e236]: 25/08/2026, 20:41
+                - paragraph [ref=f2e237]: Abertura de comanda
+                - paragraph [ref=f2e238]: Por Usuário Teste
+  - region "Notifications alt+T"

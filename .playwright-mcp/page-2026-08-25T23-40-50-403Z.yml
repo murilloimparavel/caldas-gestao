@@ -1,0 +1,81 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e3]:
+    - generic [ref=f2e7]:
+      - list [ref=f2e9]:
+        - listitem [ref=f2e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f2e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f2e13]
+            - generic [ref=f2e17]:
+              - generic [ref=f2e18]: Caldas Gestão
+              - generic [ref=f2e19]: Operação diária
+      - navigation "Navegação principal" [ref=f2e21]:
+        - generic [ref=f2e22]:
+          - button "Operação — expandir ou recolher seção" [expanded] [ref=f2e23] [cursor=pointer]:
+            - generic [ref=f2e24]: Operação
+          - list [ref=f2e29]:
+            - listitem [ref=f2e30]:
+              - link "Visão de hoje" [ref=f2e31] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=f2e38]:
+              - link "Comandas" [ref=f2e39] [cursor=pointer]:
+                - /url: /sales
+        - button "Relacionamento — expandir ou recolher seção" [ref=f2e45] [cursor=pointer]:
+          - generic [ref=f2e46]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f2e50] [cursor=pointer]:
+          - generic [ref=f2e51]: Gestão
+      - list [ref=f2e55]:
+        - listitem [ref=f2e56]:
+          - button "UT Usuário Teste" [ref=f2e57]:
+            - generic [ref=f2e58]: UT
+            - generic [ref=f2e60]: Usuário Teste
+    - main [ref=f2e65]:
+      - generic [ref=f2e67]:
+        - button "Toggle sidebar" [ref=f2e68]
+        - navigation "breadcrumb" [ref=f2e70]:
+          - list [ref=f2e71]:
+            - listitem [ref=f2e72]:
+              - link "Comandas" [disabled] [ref=f2e73]
+      - generic [ref=f2e74]:
+        - generic [ref=f2e75]:
+          - generic [ref=f2e76]:
+            - paragraph [ref=f2e77]: Operação & Checkout
+            - generic [ref=f2e78]:
+              - heading "Comandas" [level=1] [ref=f2e79]
+              - paragraph [ref=f2e80]: Controle o atendimento, consumo e faturamento de clientes e mesas em tempo real.
+          - button "Nova comanda" [ref=f2e81]
+        - generic [ref=f2e82]:
+          - generic [ref=f2e88]:
+            - paragraph [ref=f2e89]: Comandas Abertas
+            - paragraph [ref=f2e90]: "0"
+          - generic [ref=f2e95]:
+            - paragraph [ref=f2e96]: Prontas p/ Fechar
+            - paragraph [ref=f2e97]: "0"
+          - generic [ref=f2e104]:
+            - paragraph [ref=f2e105]: Faturamento Aberto (Hoje)
+            - paragraph [ref=f2e106]: R$ 0,00
+        - generic [ref=f2e107]:
+          - generic [ref=f2e108]:
+            - textbox "Buscar comanda" [ref=f2e110]:
+              - /placeholder: Buscar por cliente, mesa ou referência...
+            - combobox "Filtrar por status" [ref=f2e112]:
+              - option "Todos os status" [selected]
+              - option "Abertas"
+              - option "Prontas para Fechamento"
+              - option "Finalizadas"
+              - option "Canceladas"
+              - option "Rascunhos"
+            - combobox "Filtrar por categoria" [ref=f2e114]:
+              - option "Todas as categorias" [selected]
+              - option "Atendimento Barbearia & Salão"
+            - button "Filtrar" [ref=f2e116]
+          - generic [ref=f2e117]: 0 comandas encontradas
+        - generic [ref=f2e119]:
+          - generic [ref=f2e125]:
+            - heading "Nenhuma comanda aberta nesta unidade" [level=2] [ref=f2e126]
+            - paragraph [ref=f2e127]: Abra uma comanda para registrar consumos de clientes, mesas ou atendimentos da agenda.
+          - button "Abrir primeira comanda" [ref=f2e128]
+        - navigation "Paginação" [ref=f2e129]:
+          - link "1" [ref=f2e131] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/sales?page=1
+  - region "Notifications alt+T"

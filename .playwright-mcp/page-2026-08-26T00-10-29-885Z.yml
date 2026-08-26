@@ -1,0 +1,82 @@
+- generic [ref=f49e2]:
+  - generic [ref=f49e3]:
+    - generic [ref=f49e7]:
+      - list [ref=f49e9]:
+        - listitem [ref=f49e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f49e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f49e13]
+            - generic [ref=f49e17]:
+              - generic [ref=f49e18]: Caldas Gestão
+              - generic [ref=f49e19]: Operação diária
+      - navigation "Navegação principal" [ref=f49e21]:
+        - generic [ref=f49e22]:
+          - button "Operação — expandir ou recolher seção" [expanded] [ref=f49e23] [cursor=pointer]:
+            - generic [ref=f49e24]: Operação
+          - list [ref=f49e29]:
+            - listitem [ref=f49e30]:
+              - link "Visão de hoje" [ref=f49e31] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=f49e38]:
+              - link "Comandas" [ref=f49e39] [cursor=pointer]:
+                - /url: /sales
+            - listitem [ref=f49e44]:
+              - link "Caixa Operacional" [ref=f49e45] [cursor=pointer]:
+                - /url: /finance/cash
+        - button "Relacionamento — expandir ou recolher seção" [ref=f49e51] [cursor=pointer]:
+          - generic [ref=f49e52]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f49e56] [cursor=pointer]:
+          - generic [ref=f49e57]: Gestão
+        - button "Financeiro — expandir ou recolher seção" [ref=f49e61] [cursor=pointer]:
+          - generic [ref=f49e62]: Financeiro
+      - list [ref=f49e66]:
+        - listitem [ref=f49e67]:
+          - button "UT Usuário Teste" [ref=f49e68]:
+            - generic [ref=f49e69]: UT
+            - generic [ref=f49e71]: Usuário Teste
+    - main [ref=f49e76]:
+      - button "Toggle sidebar" [ref=f49e79]
+      - generic [ref=f49e81]:
+        - generic [ref=f49e83]:
+          - paragraph
+          - generic [ref=f49e84]:
+            - heading "Caixa Operacional" [level=1] [ref=f49e85]
+            - paragraph [ref=f49e86]: Gestão de abertura de turno, suprimentos, sangrias e fechamento com conferência física.
+        - generic [ref=f49e87]:
+          - generic [ref=f49e88]:
+            - generic [ref=f49e89]:
+              - generic [ref=f49e90]:
+                - generic [ref=f49e91]: Saldo Atual em Caixa
+                - generic [ref=f49e92]: Aberto
+              - paragraph [ref=f49e93]: R$ 150,00
+              - text: Saldo esperado em gaveta
+            - generic [ref=f49e94]:
+              - text: Fundo de Troco (Inicial)
+              - paragraph [ref=f49e95]: R$ 150,00
+              - generic [ref=f49e96]: Aberto em 25/08/2026, 21:10
+            - generic [ref=f49e97]:
+              - generic [ref=f49e98]: Total de Entradas / Suprimentos
+              - paragraph [ref=f49e103]: +R$ 0,00
+              - text: Reforços e recebimentos
+            - generic [ref=f49e104]:
+              - generic [ref=f49e105]: Total de Saídas / Sangrias
+              - paragraph [ref=f49e110]: "-R$ 0,00"
+              - text: Retiradas e despesas
+          - generic [ref=f49e111]:
+            - generic [ref=f49e117]:
+              - 'heading "Operador: Usuário Teste" [level=4] [ref=f49e118]'
+              - paragraph [ref=f49e119]: Turno iniciado às 25/08/2026, 21:10 • Abertura operacional com troco
+            - generic [ref=f49e120]:
+              - button "Suprimento (+)" [ref=f49e121]
+              - button "Sangria (-)" [ref=f49e122]
+              - button "Fechar Turno" [ref=f49e123]
+          - generic [ref=f49e124]:
+            - generic [ref=f49e125]:
+              - generic [ref=f49e126]:
+                - heading "Movimentações do Turno" [level=3] [ref=f49e127]
+                - paragraph [ref=f49e128]: Histórico de todas as entradas, sangrias e operações registradas neste turno
+              - generic [ref=f49e129]: 0 lançamentos
+            - generic [ref=f49e136]:
+              - heading "Nenhuma movimentação avulsa lançada" [level=2] [ref=f49e137]
+              - paragraph [ref=f49e138]: Realize suprimentos ou sangrias para movimentar o caixa operacional.
+  - region "Notifications alt+T"

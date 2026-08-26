@@ -1,0 +1,90 @@
+- generic [ref=f51e2]:
+  - generic [ref=f51e3]:
+    - generic [ref=f51e7]:
+      - list [ref=f51e9]:
+        - listitem [ref=f51e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f51e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f51e13]
+            - generic [ref=f51e17]:
+              - generic [ref=f51e18]: Caldas Gestão
+              - generic [ref=f51e19]: Operação diária
+      - navigation "Navegação principal" [ref=f51e21]:
+        - button "Operação — expandir ou recolher seção" [ref=f51e23] [cursor=pointer]:
+          - generic [ref=f51e24]: Operação
+        - button "Relacionamento — expandir ou recolher seção" [ref=f51e28] [cursor=pointer]:
+          - generic [ref=f51e29]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f51e33] [cursor=pointer]:
+          - generic [ref=f51e34]: Gestão
+        - generic [ref=f51e37]:
+          - button "Financeiro — expandir ou recolher seção" [expanded] [ref=f51e38] [cursor=pointer]:
+            - generic [ref=f51e39]: Financeiro
+          - list [ref=f51e44]:
+            - listitem [ref=f51e45]:
+              - link "Painel Financeiro" [ref=f51e46] [cursor=pointer]:
+                - /url: /finance/dashboard
+            - listitem [ref=f51e51]:
+              - link "Contas a Pagar/Receber" [ref=f51e52] [cursor=pointer]:
+                - /url: /finance/transactions
+            - listitem [ref=f51e57]:
+              - link "Comissões" [ref=f51e58] [cursor=pointer]:
+                - /url: /finance/commissions
+      - list [ref=f51e65]:
+        - listitem [ref=f51e66]:
+          - button "UT Usuário Teste" [ref=f51e67]:
+            - generic [ref=f51e68]: UT
+            - generic [ref=f51e70]: Usuário Teste
+    - main [ref=f51e75]:
+      - button "Toggle sidebar" [ref=f51e78]
+      - generic [ref=f51e80]:
+        - generic [ref=f51e81]:
+          - generic [ref=f51e82]:
+            - paragraph [ref=f51e83]: Financeiro
+            - generic [ref=f51e84]:
+              - heading "Contas a Pagar e Receber" [level=1] [ref=f51e85]
+              - paragraph [ref=f51e86]: Controle e liquidação de obrigações financeiras, despesas operacionais e receitas da unidade.
+          - button "Novo Lançamento" [ref=f51e87]
+        - generic [ref=f51e88]:
+          - generic [ref=f51e91]:
+            - paragraph [ref=f51e92]: A Receber (Pendente)
+            - paragraph [ref=f51e93]: R$ 0,00
+          - generic [ref=f51e100]:
+            - paragraph [ref=f51e101]: A Pagar (Pendente)
+            - paragraph [ref=f51e102]: R$ 0,00
+          - generic [ref=f51e109]:
+            - paragraph [ref=f51e110]: Total Vencido
+            - paragraph [ref=f51e111]: R$ 0,00
+          - generic [ref=f51e117]:
+            - paragraph [ref=f51e118]: Liquidado no Mês
+            - paragraph [ref=f51e119]: R$ 0,00
+        - generic [ref=f51e124]:
+          - generic [ref=f51e125]:
+            - generic [ref=f51e126]:
+              - generic [ref=f51e127]:
+                - button "Todos" [ref=f51e128]
+                - button "A Pagar" [ref=f51e129]
+                - button "A Receber" [ref=f51e130]
+              - generic [ref=f51e131]:
+                - button "Todos Status" [ref=f51e132]
+                - button "Pendentes" [ref=f51e133]
+                - button "Vencidos" [ref=f51e134]
+                - button "Liquidados" [ref=f51e135]
+                - button "Cancelados" [ref=f51e136]
+            - generic [ref=f51e137]:
+              - textbox "Buscar descrição, cliente ou fornecedor..." [ref=f51e142]
+              - button "Buscar" [ref=f51e143]
+          - generic [ref=f51e144]:
+            - generic [ref=f51e145]:
+              - generic [ref=f51e146]: Categoria
+              - combobox [ref=f51e147]:
+                - option "Todas as categorias" [selected]
+            - generic [ref=f51e148]:
+              - generic [ref=f51e149]: Data De
+              - textbox [ref=f51e150]
+            - generic [ref=f51e151]:
+              - generic [ref=f51e152]: Data Até
+              - textbox [ref=f51e153]
+        - generic [ref=f51e161]:
+          - heading "Nenhum lançamento encontrado" [level=2] [ref=f51e162]
+          - paragraph [ref=f51e163]: Não há contas a pagar ou receber correspondentes aos filtros selecionados.
+  - region "Notifications alt+T"

@@ -60,4 +60,12 @@ class Service extends Model
             ->withPivot(['tenant_id', 'unit_id'])
             ->withTimestamps();
     }
+
+    /** @return BelongsToMany<PackageTemplate, $this, Pivot, 'pivot'> */
+    public function packageTemplates(): BelongsToMany
+    {
+        return $this->belongsToMany(PackageTemplate::class, 'package_template_services')
+            ->withPivot(['tenant_id', 'unit_id'])
+            ->withTimestamps();
+    }
 }

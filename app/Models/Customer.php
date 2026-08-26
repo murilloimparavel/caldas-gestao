@@ -56,4 +56,16 @@ class Customer extends Model
     {
         return $this->hasMany(Sale::class);
     }
+
+    /** @return HasMany<CustomerPackage, $this> */
+    public function packages(): HasMany
+    {
+        return $this->hasMany(CustomerPackage::class);
+    }
+
+    /** @return HasMany<CustomerPackage, $this> */
+    public function customerPackages(): HasMany
+    {
+        return $this->hasMany(CustomerPackage::class);
+    }
 }

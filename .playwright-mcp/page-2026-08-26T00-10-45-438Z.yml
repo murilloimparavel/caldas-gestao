@@ -1,0 +1,98 @@
+- generic [ref=f50e2]:
+  - generic [ref=f50e3]:
+    - generic [ref=f50e7]:
+      - list [ref=f50e9]:
+        - listitem [ref=f50e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f50e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f50e13]
+            - generic [ref=f50e17]:
+              - generic [ref=f50e18]: Caldas Gestão
+              - generic [ref=f50e19]: Operação diária
+      - navigation "Navegação principal" [ref=f50e21]:
+        - button "Operação — expandir ou recolher seção" [ref=f50e23] [cursor=pointer]:
+          - generic [ref=f50e24]: Operação
+        - button "Relacionamento — expandir ou recolher seção" [ref=f50e28] [cursor=pointer]:
+          - generic [ref=f50e29]: Relacionamento
+        - generic [ref=f50e32]:
+          - button "Gestão — expandir ou recolher seção" [expanded] [ref=f50e33] [cursor=pointer]:
+            - generic [ref=f50e34]: Gestão
+          - list [ref=f50e39]:
+            - listitem [ref=f50e40]:
+              - link "Serviços" [ref=f50e41] [cursor=pointer]:
+                - /url: /services
+            - listitem [ref=f50e49]:
+              - link "Produtos" [ref=f50e50] [cursor=pointer]:
+                - /url: /products
+            - listitem [ref=f50e56]:
+              - link "Estoque" [ref=f50e57] [cursor=pointer]:
+                - /url: /inventory
+            - listitem [ref=f50e69]:
+              - link "Categorias" [ref=f50e70] [cursor=pointer]:
+                - /url: /categories
+            - listitem [ref=f50e77]:
+              - link "Categorias de Comanda" [ref=f50e78] [cursor=pointer]:
+                - /url: /sale-categories
+            - listitem [ref=f50e84]:
+              - link "Fornecedores" [ref=f50e85] [cursor=pointer]:
+                - /url: /suppliers
+            - listitem [ref=f50e92]:
+              - button "Catálogo — Em breve" [disabled]:
+                - generic: Catálogo
+                - generic: Em breve
+            - listitem [ref=f50e93]:
+              - button "Relatórios — Em breve" [disabled]:
+                - generic: Relatórios
+                - generic: Em breve
+        - button "Financeiro — expandir ou recolher seção" [ref=f50e95] [cursor=pointer]:
+          - generic [ref=f50e96]: Financeiro
+      - list [ref=f50e100]:
+        - listitem [ref=f50e101]:
+          - button "UT Usuário Teste" [ref=f50e102]:
+            - generic [ref=f50e103]: UT
+            - generic [ref=f50e105]: Usuário Teste
+    - main [ref=f50e110]:
+      - generic [ref=f50e112]:
+        - button "Toggle sidebar" [ref=f50e113]
+        - navigation "breadcrumb" [ref=f50e115]:
+          - list [ref=f50e116]:
+            - listitem [ref=f50e117]:
+              - link "Produtos" [ref=f50e118] [cursor=pointer]:
+                - /url: /products
+            - listitem [ref=f50e119]
+            - listitem [ref=f50e122]:
+              - link "Extrato de estoque" [disabled] [ref=f50e123]
+      - generic [ref=f50e124]:
+        - generic [ref=f50e125]:
+          - generic [ref=f50e126]:
+            - paragraph [ref=f50e127]: Gestão
+            - generic [ref=f50e128]:
+              - heading "Extrato de Estoque" [level=1] [ref=f50e129]
+              - paragraph [ref=f50e130]: Acompanhe o fluxo de entradas por compra, saídas automáticas por comanda e ajustes físicos da unidade.
+          - button "Lançar movimentação" [ref=f50e131]
+        - generic [ref=f50e132]:
+          - generic [ref=f50e133]:
+            - generic [ref=f50e134]: Produto
+            - combobox "Produto" [ref=f50e135]:
+              - option "Todos os produtos" [selected]
+              - option "Pomada Modeladora Matte"
+          - generic [ref=f50e136]:
+            - generic [ref=f50e137]: Tipo de movimentação
+            - combobox "Tipo de movimentação" [ref=f50e138]:
+              - option "Todos os tipos" [selected]
+              - option "Venda / Saída"
+              - option "Compra / Entrada"
+              - option "Ajuste (Ganho)"
+              - option "Ajuste (Perda)"
+              - option "Contagem física"
+          - generic [ref=f50e139]:
+            - generic [ref=f50e140]: Data
+            - textbox "Data" [ref=f50e141]
+          - button "Filtrar" [ref=f50e143]
+        - generic [ref=f50e150]:
+          - heading "Nenhuma movimentação encontrada" [level=2] [ref=f50e151]
+          - paragraph [ref=f50e152]: Lance movimentações de compra ou finalize vendas de produtos para alimentar o extrato.
+        - navigation "Paginação" [ref=f50e153]:
+          - link "1" [ref=f50e155] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/inventory?page=1
+  - region "Notifications alt+T"

@@ -1,0 +1,36 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - link "Caldas Gestão Log in to your account" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img "Caldas Gestão" [ref=e9]
+        - generic [ref=e13]: Log in to your account
+      - generic [ref=e14]:
+        - heading "Log in to your account" [level=1] [ref=e15]
+        - paragraph [ref=e16]: Enter your email and password below to log in
+    - button "Sign in with a passkey" [ref=e18]
+    - generic [ref=e19]: Or continue with email
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]: Email address
+          - textbox "Email address" [active] [ref=e27]:
+            - /placeholder: email@example.com
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - generic [ref=e30]: Password
+            - link "Forgot your password?" [ref=e31] [cursor=pointer]:
+              - /url: /forgot-password
+          - generic [ref=e32]:
+            - textbox "Password" [ref=e33]
+            - button "Show password" [ref=e34]
+        - generic [ref=e38]:
+          - checkbox "Remember me" [ref=e39]
+          - checkbox
+          - generic [ref=e40]: Remember me
+        - button "Log in" [ref=e41]
+      - generic [ref=e42]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e43] [cursor=pointer]:
+          - /url: /register
+  - region "Notifications alt+T"

@@ -1,0 +1,112 @@
+- generic [ref=f86e2]:
+  - generic [ref=f86e3]:
+    - generic [ref=f86e7]:
+      - list [ref=f86e9]:
+        - listitem [ref=f86e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f86e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f86e13]
+            - generic [ref=f86e17]:
+              - generic [ref=f86e18]: Caldas Gestão
+              - generic [ref=f86e19]: Operação diária
+      - navigation "Navegação principal" [ref=f86e21]:
+        - generic [ref=f86e22]:
+          - button "Operação — expandir ou recolher seção" [expanded] [ref=f86e23] [cursor=pointer]:
+            - generic [ref=f86e24]: Operação
+          - list [ref=f86e29]:
+            - listitem [ref=f86e30]:
+              - link "Visão de hoje" [ref=f86e31] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=f86e38]:
+              - link "Comandas" [ref=f86e39] [cursor=pointer]:
+                - /url: /sales
+            - listitem [ref=f86e44]:
+              - link "Caixa Operacional" [ref=f86e45] [cursor=pointer]:
+                - /url: /finance/cash
+        - generic [ref=f86e50]:
+          - button "Relacionamento — expandir ou recolher seção" [expanded] [ref=f86e51] [cursor=pointer]:
+            - generic [ref=f86e52]: Relacionamento
+          - list [ref=f86e57]:
+            - listitem [ref=f86e58]:
+              - link "Clientes" [ref=f86e59] [cursor=pointer]:
+                - /url: /customers
+            - listitem [ref=f86e66]:
+              - link "Profissionais" [ref=f86e67] [cursor=pointer]:
+                - /url: /professionals
+        - generic [ref=f86e72]:
+          - button "Gestão — expandir ou recolher seção" [expanded] [ref=f86e73] [cursor=pointer]:
+            - generic [ref=f86e74]: Gestão
+          - list [ref=f86e79]:
+            - listitem [ref=f86e80]:
+              - link "Serviços" [ref=f86e81] [cursor=pointer]:
+                - /url: /services
+            - listitem [ref=f86e89]:
+              - link "Produtos" [ref=f86e90] [cursor=pointer]:
+                - /url: /products
+            - listitem [ref=f86e96]:
+              - link "Estoque" [ref=f86e97] [cursor=pointer]:
+                - /url: /inventory
+            - listitem [ref=f86e109]:
+              - link "Categorias" [ref=f86e110] [cursor=pointer]:
+                - /url: /categories
+            - listitem [ref=f86e117]:
+              - link "Categorias de Comanda" [ref=f86e118] [cursor=pointer]:
+                - /url: /sale-categories
+            - listitem [ref=f86e124]:
+              - link "Fornecedores" [ref=f86e125] [cursor=pointer]:
+                - /url: /suppliers
+            - listitem [ref=f86e132]:
+              - button "Catálogo — Em breve" [disabled]:
+                - generic: Catálogo
+                - generic: Em breve
+            - listitem [ref=f86e133]:
+              - button "Relatórios — Em breve" [disabled]:
+                - generic: Relatórios
+                - generic: Em breve
+        - generic [ref=f86e134]:
+          - button "Financeiro — expandir ou recolher seção" [expanded] [ref=f86e135] [cursor=pointer]:
+            - generic [ref=f86e136]: Financeiro
+          - list [ref=f86e141]:
+            - listitem [ref=f86e142]:
+              - link "Painel Financeiro" [ref=f86e143] [cursor=pointer]:
+                - /url: /finance/dashboard
+            - listitem [ref=f86e148]:
+              - link "Contas a Pagar/Receber" [ref=f86e149] [cursor=pointer]:
+                - /url: /finance/transactions
+            - listitem [ref=f86e154]:
+              - link "Comissões" [ref=f86e155] [cursor=pointer]:
+                - /url: /finance/commissions
+      - list [ref=f86e162]:
+        - listitem [ref=f86e163]:
+          - button "UT Usuário Teste" [ref=f86e164]:
+            - generic [ref=f86e165]: UT
+            - generic [ref=f86e167]: Usuário Teste
+    - main [ref=f86e172]:
+      - generic [ref=f86e174]:
+        - button "Toggle sidebar" [ref=f86e175]
+        - navigation "breadcrumb" [ref=f86e177]:
+          - list [ref=f86e178]:
+            - listitem [ref=f86e179]:
+              - link "Visão de hoje" [disabled] [ref=f86e180]
+      - generic [ref=f86e181]:
+        - generic [ref=f86e183]:
+          - heading "Seu painel começa assim que os dados estiverem conectados." [level=1] [ref=f86e184]
+          - paragraph [ref=f86e185]: Os indicadores, atendimentos e alertas aparecerão aqui quando houver uma fonte operacional configurada.
+        - region [ref=f86e186]:
+          - heading "Pulso de hoje" [level=2] [ref=f86e188]
+          - generic [ref=f86e189]: Nenhum indicador disponível ainda.
+        - generic [ref=f86e191]:
+          - region [ref=f86e192]:
+            - generic [ref=f86e194]:
+              - paragraph [ref=f86e195]: Agenda
+              - heading "Próximos atendimentos" [level=2] [ref=f86e196]
+            - paragraph [ref=f86e197]: Nenhum atendimento disponível ainda. A agenda conectada aparecerá nesta área.
+          - complementary [ref=f86e198]:
+            - generic [ref=f86e199]:
+              - generic [ref=f86e200]: Requer atenção
+              - heading "Antes do próximo horário" [level=2] [ref=f86e203]
+            - paragraph [ref=f86e204]: Nenhum alerta pendente. Os avisos aparecerão quando os módulos operacionais estiverem conectados.
+        - generic [ref=f86e206]:
+          - paragraph [ref=f86e207]: Resumo financeiro
+          - paragraph [ref=f86e208]: A previsão aparecerá quando os dados financeiros estiverem conectados.
+  - region "Notifications alt+T"

@@ -1,0 +1,60 @@
+- generic [ref=e2]:
+  - generic [ref=e44]:
+    - generic [ref=e48]:
+      - list [ref=e50]:
+        - listitem [ref=e51]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=e52] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=e54]
+            - generic [ref=e58]:
+              - generic [ref=e59]: Caldas Gestão
+              - generic [ref=e60]: Operação diária
+      - navigation "Navegação principal" [ref=e62]:
+        - generic [ref=e63]:
+          - button "Operação — expandir ou recolher seção" [expanded] [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]: Operação
+          - list [ref=e70]:
+            - listitem [ref=e71]:
+              - link "Visão de hoje" [ref=e72] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=e79]:
+              - link "Comandas" [ref=e80] [cursor=pointer]:
+                - /url: /sales
+        - button "Relacionamento — expandir ou recolher seção" [ref=e86] [cursor=pointer]:
+          - generic [ref=e87]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=e91] [cursor=pointer]:
+          - generic [ref=e92]: Gestão
+      - list [ref=e96]:
+        - listitem [ref=e97]:
+          - button "UT Usuário Teste" [ref=e98]:
+            - generic [ref=e99]: UT
+            - generic [ref=e101]: Usuário Teste
+    - main [ref=e106]:
+      - generic [ref=e108]:
+        - button "Toggle sidebar" [ref=e109]
+        - navigation "breadcrumb" [ref=e111]:
+          - list [ref=e112]:
+            - listitem [ref=e113]:
+              - link "Visão de hoje" [disabled] [ref=e114]
+      - generic [ref=e115]:
+        - generic [ref=e117]:
+          - heading "Seu painel começa assim que os dados estiverem conectados." [level=1] [ref=e118]
+          - paragraph [ref=e119]: Os indicadores, atendimentos e alertas aparecerão aqui quando houver uma fonte operacional configurada.
+        - region [ref=e120]:
+          - heading "Pulso de hoje" [level=2] [ref=e122]
+          - generic [ref=e123]: Nenhum indicador disponível ainda.
+        - generic [ref=e125]:
+          - region [ref=e126]:
+            - generic [ref=e128]:
+              - paragraph [ref=e129]: Agenda
+              - heading "Próximos atendimentos" [level=2] [ref=e130]
+            - paragraph [ref=e131]: Nenhum atendimento disponível ainda. A agenda conectada aparecerá nesta área.
+          - complementary [ref=e132]:
+            - generic [ref=e133]:
+              - generic [ref=e134]: Requer atenção
+              - heading "Antes do próximo horário" [level=2] [ref=e137]
+            - paragraph [ref=e138]: Nenhum alerta pendente. Os avisos aparecerão quando os módulos operacionais estiverem conectados.
+        - generic [ref=e140]:
+          - paragraph [ref=e141]: Resumo financeiro
+          - paragraph [ref=e142]: A previsão aparecerá quando os dados financeiros estiverem conectados.
+  - region "Notifications alt+T"

@@ -7,10 +7,12 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClosingSessionController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\PackageTemplateController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
 use App\Http\Controllers\SaleCategoryController;
@@ -60,6 +62,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('sale-categories', SaleCategoryController::class)
             ->except(['create', 'edit']);
         Route::patch('sale-categories/{sale_category}/reactivate', [SaleCategoryController::class, 'reactivate'])->name('sale-categories.reactivate');
+        Route::resource('packages', PackageTemplateController::class)
+            ->parameters(['packages' => 'package_template'])
+            ->except(['create', 'edit']);
+        Route::patch('packages/{package_template}/reactivate', [PackageTemplateController::class, 'reactivate'])->name('packages.reactivate');
+        Route::post('customer-packages', [CustomerPackageController::class, 'store'])->name('customer-packages.store');
+        Route::post('customer-packages/{customer_package}/consume', [CustomerPackageController::class, 'consume'])->name('customer-packages.consume');
         Route::resource('sales', SaleController::class)
             ->only(['index', 'show', 'store']);
         Route::resource('closing-sessions', ClosingSessionController::class)

@@ -1,0 +1,128 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /dashboard
+                    - generic:
+                      - generic: Caldas Gestão
+                      - generic: Operação diária
+            - generic:
+              - navigation:
+                - generic:
+                  - button [expanded]:
+                    - generic: Operação
+                  - generic:
+                    - generic:
+                      - list:
+                        - listitem:
+                          - link:
+                            - /url: /dashboard
+                            - generic: Visão de hoje
+                        - listitem:
+                          - link:
+                            - /url: /sales
+                            - generic: Comandas
+                - generic:
+                  - button:
+                    - generic: Relacionamento
+                - generic:
+                  - button:
+                    - generic: Gestão
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic: UT
+                    - generic: Usuário Teste
+      - main:
+        - generic:
+          - generic:
+            - button:
+              - generic: Toggle sidebar
+            - navigation:
+              - list:
+                - listitem:
+                  - link [disabled]: Comandas
+        - generic:
+          - generic:
+            - generic:
+              - paragraph: Operação & Checkout
+              - generic:
+                - heading [level=1]: Comandas
+                - paragraph: Controle o atendimento, consumo e faturamento de clientes e mesas em tempo real.
+            - button [expanded]: Nova comanda
+          - generic:
+            - generic:
+              - generic:
+                - paragraph: Comandas Abertas
+                - paragraph: "0"
+            - generic:
+              - generic:
+                - paragraph: Prontas p/ Fechar
+                - paragraph: "0"
+            - generic:
+              - generic:
+                - paragraph: Faturamento Aberto (Hoje)
+                - paragraph: R$ 0,00
+          - generic:
+            - generic:
+              - generic:
+                - textbox:
+                  - /placeholder: Buscar por cliente, mesa ou referência...
+              - generic:
+                - combobox
+              - generic:
+                - combobox
+              - generic:
+                - button: Filtrar
+            - generic: 0 comandas encontradas
+          - generic:
+            - generic:
+              - heading [level=2]: Nenhuma comanda aberta nesta unidade
+              - paragraph: Abra uma comanda para registrar consumos de clientes, mesas ou atendimentos da agenda.
+            - button: Abrir primeira comanda
+          - navigation:
+            - generic:
+              - link:
+                - /url: http://127.0.0.1:8000/sales?page=1
+                - text: "1"
+    - region "Notifications alt+T"
+  - dialog [ref=f2e133]:
+    - generic [ref=f2e134]:
+      - heading "Abrir nova comanda" [level=2] [ref=f2e135]
+      - paragraph [ref=f2e136]: Inicie um atendimento ou consumo selecionando a categoria e o cliente ou referência.
+    - generic [ref=f2e137]:
+      - generic [ref=f2e138]:
+        - generic [ref=f2e139]:
+          - generic [ref=f2e140]:
+            - text: Categoria de comanda
+            - combobox "Categoria de comanda" [active] [ref=f2e141]:
+              - option "Selecione a categoria"
+              - option "Atendimento Barbearia & Salão" [selected]
+          - paragraph [ref=f2e156]:
+            - text: "Tipo:"
+            - strong [ref=f2e157]: Misto
+            - text: "• Regra: 1 por cliente"
+        - generic [ref=f2e143]:
+          - text: Cliente (opcional)
+          - combobox "Cliente (opcional)" [ref=f2e144]:
+            - option "Cliente avulso / Não identificado" [selected]
+            - option "Carlos Silva (11999998888)"
+        - generic [ref=f2e146]:
+          - text: Identificador / Mesa / Referência (opcional)
+          - textbox "Identificador / Mesa / Referência (opcional)" [ref=f2e147]:
+            - /placeholder: "Ex.: Mesa 04, Cartão 12, Balcão, Pedido 33"
+        - generic [ref=f2e149]:
+          - text: Observações da comanda
+          - textbox "Observações da comanda" [ref=f2e150]:
+            - /placeholder: Informações adicionais para este atendimento...
+      - generic [ref=f2e151]:
+        - button "Cancelar" [ref=f2e152]
+        - button "Abrir comanda" [ref=f2e153]
+    - button "Close" [ref=f2e154]

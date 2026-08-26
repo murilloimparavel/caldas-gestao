@@ -6,6 +6,8 @@ import {
     Clock,
     DollarSign,
     ExternalLink,
+    Gift,
+    History,
     Mail,
     Package,
     Phone,
@@ -41,6 +43,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { index as calendarIndex } from '@/routes/calendar';
+import customerPackagesRoutes from '@/routes/customer-packages';
 import customers from '@/routes/customers';
 import sales from '@/routes/sales';
 import type { SharedPageProps } from '@/types';
@@ -81,10 +84,49 @@ type CustomerSale = {
     total_amount_cents: number;
 };
 
+type CustomerPackageUsage = {
+    created_at: string;
+    id: string;
+    sessions_consumed: number;
+    user?: { id: string; name: string } | null;
+};
+
+type CustomerPackageItem = {
+    created_at: string;
+    expires_at: string | null;
+    id: string;
+    lock_version: number;
+    package_template?: {
+        description?: string | null;
+        id: string;
+        name: string;
+        price_cents: number;
+        services?: Array<{ id: string; name: string }>;
+        total_sessions: number;
+        validity_days: number;
+    } | null;
+    package_template_id: string;
+    remaining_sessions: number;
+    status: ResourceStatus;
+    total_sessions: number;
+    usages?: CustomerPackageUsage[];
+};
+
+type PackageTemplateOption = {
+    description?: string | null;
+    id: string;
+    name: string;
+    price_cents: number;
+    services?: Array<{ id: string; name: string }>;
+    total_sessions: number;
+    validity_days: number;
+};
+
 type Customer = {
     appointments?: CustomerAppointment[];
     birth_date: string | null;
     created_at?: string;
+    customerPackages?: CustomerPackageItem[];
     email: string | null;
     id: string;
     lock_version: number;
@@ -101,6 +143,7 @@ type Props = {
         total_spent_cents: number;
         total_visits: number;
     };
+    packageTemplates?: PackageTemplateOption[];
 };
 
 function formatAppointmentDate(isoString: string): string {
@@ -207,8 +250,14 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
     }
 }
 
-export default function CustomerShow({ customer, metrics }: Props) {
-    const [activeTab, setActiveTab] = useState<'sales' | 'appointments' | 'details'>('sales');
+export default function CustomerShow({
+    customer,
+    metrics,
+    packageTemplates = [],
+}: Props) {
+    const [activeTab, setActiveTab] = useState<
+        'sales' | 'appointments' | 'packages' | 'details'
+    >('sales');
     const [updateKey] = useState(() => createIdempotencyKey('customer-update'));
     const [destroyKey] = useState(() =>
         createIdempotencyKey('customer-destroy'),
@@ -216,12 +265,31 @@ export default function CustomerShow({ customer, metrics }: Props) {
     const [reactivateKey] = useState(() =>
         createIdempotencyKey('customer-reactivate'),
     );
+    const [sellKey] = useState(() =>
+        createIdempotencyKey('customer-package-sell'),
+    );
+    const [consumeKey] = useState(() =>
+        createIdempotencyKey('customer-package-consume'),
+    );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [sellPackageOpen, setSellPackageOpen] = useState(false);
+    const [consumePackageOpen, setConsumePackageOpen] = useState(false);
+    const [selectedPackageForConsume, setSelectedPackageForConsume] =
+        useState<CustomerPackageItem | null>(null);
+
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('customer.manage');
+    const canSellPackage =
+        props.auth.permissions.includes('package.sell') ||
+        props.auth.permissions.includes('package.manage');
+    const canConsumePackage =
+        props.auth.permissions.includes('package.consume') ||
+        props.auth.permissions.includes('package.manage');
+
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
+    const customerPackages = customer.customerPackages ?? [];
 
     const totalSpentCents =
         metrics?.total_spent_cents ??
@@ -341,6 +409,21 @@ export default function CustomerShow({ customer, metrics }: Props) {
                                 <span>Agendamentos</span>
                                 <Badge variant="secondary" className="ml-1 text-xs">
                                     {appointments.length}
+                                </Badge>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('packages')}
+                                className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
+                                    activeTab === 'packages'
+                                        ? 'border-primary text-primary font-semibold'
+                                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                <Gift className="size-4" />
+                                <span>Pacotes de Serviços</span>
+                                <Badge variant="secondary" className="ml-1 text-xs">
+                                    {customerPackages.length}
                                 </Badge>
                             </button>
                             <button
@@ -532,6 +615,203 @@ export default function CustomerShow({ customer, metrics }: Props) {
                                                         </Link>
                                                     </Button>
                                                 </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
+                        {/* Aba: Pacotes de Serviços */}
+                        {activeTab === 'packages' && (
+                            <section className="surface-panel p-5 sm:p-6 space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <h2 className="text-base font-semibold">
+                                            Pacotes de Serviços
+                                        </h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            Sessões pré-pagas, validades e histórico de utilização de pacotes.
+                                        </p>
+                                    </div>
+                                    {canSellPackage && packageTemplates.length > 0 && (
+                                        <Dialog open={sellPackageOpen} onOpenChange={setSellPackageOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button size="sm">
+                                                    <Gift className="mr-2 h-4 w-4" />
+                                                    Vender / Adicionar Pacote
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                                                <DialogHeader>
+                                                    <DialogTitle>Vender Pacote para {customer.name}</DialogTitle>
+                                                    <DialogDescription>
+                                                        Selecione o modelo do pacote para atribuir as sessões e calcular a validade.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+
+                                                <Form
+                                                    method="post"
+                                                    action={customerPackagesRoutes.store().url}
+                                                    headers={{ 'X-Idempotency-Key': sellKey }}
+                                                    onSuccess={() => setSellPackageOpen(false)}
+                                                    className="space-y-4"
+                                                >
+                                                    {({ processing, errors }) => (
+                                                        <>
+                                                            <FormErrorSummary errors={errors} />
+                                                            <input type="hidden" name="customer_id" value={customer.id} />
+
+                                                            <FormField
+                                                                id="package_template_id"
+                                                                label="Modelo de Pacote"
+                                                                required
+                                                                error={errors.package_template_id}
+                                                            >
+                                                                <select
+                                                                    id="package_template_id"
+                                                                    name="package_template_id"
+                                                                    required
+                                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                                    defaultValue=""
+                                                                >
+                                                                    <option value="" disabled>Selecione um pacote...</option>
+                                                                    {packageTemplates.map((tmpl) => (
+                                                                        <option key={tmpl.id} value={tmpl.id}>
+                                                                            {tmpl.name} ({tmpl.total_sessions} sessões - {formatMoney(tmpl.price_cents)})
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </FormField>
+
+                                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                                                <FormField
+                                                                    id="total_sessions"
+                                                                    label="Sessões (opcional)"
+                                                                    error={errors.total_sessions}
+                                                                >
+                                                                    <Input
+                                                                        id="total_sessions"
+                                                                        name="total_sessions"
+                                                                        type="number"
+                                                                        min="1"
+                                                                        placeholder="Padrão do modelo"
+                                                                    />
+                                                                </FormField>
+
+                                                                <FormField
+                                                                    id="expires_at"
+                                                                    label="Validade personalizada (opcional)"
+                                                                    error={errors.expires_at}
+                                                                >
+                                                                    <Input
+                                                                        id="expires_at"
+                                                                        name="expires_at"
+                                                                        type="date"
+                                                                    />
+                                                                </FormField>
+                                                            </div>
+
+                                                            <FormActions
+                                                                cancelLabel="Cancelar"
+                                                                onCancel={() => setSellPackageOpen(false)}
+                                                                submitLabel="Confirmar Venda"
+                                                                submitting={processing}
+                                                            />
+                                                        </>
+                                                    )}
+                                                </Form>
+                                            </DialogContent>
+                                        </Dialog>
+                                    )}
+                                </div>
+
+                                {customerPackages.length === 0 ? (
+                                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                                        <Gift className="mx-auto size-8 text-muted-foreground/50 mb-2" />
+                                        Nenhum pacote contratado por este cliente até o momento.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {customerPackages.map((cp) => (
+                                            <div
+                                                key={cp.id}
+                                                className="rounded-xl border bg-card p-5 shadow-xs space-y-4"
+                                            >
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="font-semibold text-foreground text-base">
+                                                                {cp.package_template?.name ?? 'Pacote de Serviços'}
+                                                            </h3>
+                                                            <StatusBadge status={cp.status} />
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                                            <span>Adquirido em {new Date(cp.created_at).toLocaleDateString('pt-BR')}</span>
+                                                            {cp.expires_at ? (
+                                                                <span className="font-medium text-foreground">
+                                                                    Válido até {new Date(cp.expires_at).toLocaleDateString('pt-BR')}
+                                                                </span>
+                                                            ) : (
+                                                                <span>Sem validade</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-right">
+                                                            <div className="text-lg font-bold text-foreground">
+                                                                {cp.remaining_sessions} / {cp.total_sessions}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                sessões restantes
+                                                            </div>
+                                                        </div>
+
+                                                        {canConsumePackage && cp.status === 'active' && cp.remaining_sessions > 0 && (
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setSelectedPackageForConsume(cp);
+                                                                    setConsumePackageOpen(true);
+                                                                }}
+                                                            >
+                                                                Consumir Sessão
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {cp.package_template?.services && cp.package_template.services.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+                                                        <span className="text-xs text-muted-foreground self-center mr-1">Serviços inclusos:</span>
+                                                        {cp.package_template.services.map((srv) => (
+                                                            <Badge key={srv.id} variant="secondary" className="text-xs">
+                                                                <Scissors className="mr-1 h-3 w-3" />
+                                                                {srv.name}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {cp.usages && cp.usages.length > 0 && (
+                                                    <div className="pt-2 border-t">
+                                                        <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                                                            <History className="h-3 w-3" /> Utilizações:
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            {cp.usages.map((u) => (
+                                                                <div key={u.id} className="text-xs text-muted-foreground flex justify-between">
+                                                                    <span>
+                                                                        {u.sessions_consumed} {u.sessions_consumed === 1 ? 'sessão consumida' : 'sessões consumidas'}
+                                                                        {u.user ? ` por ${u.user.name}` : ''}
+                                                                    </span>
+                                                                    <span>{new Date(u.created_at).toLocaleString('pt-BR')}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -931,6 +1211,89 @@ export default function CustomerShow({ customer, metrics }: Props) {
                         ) : null}
                     </aside>
                 </div>
+
+                {selectedPackageForConsume && (
+                    <Dialog open={consumePackageOpen} onOpenChange={setConsumePackageOpen}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Consumir Sessão do Pacote</DialogTitle>
+                                <DialogDescription>
+                                    Confirmar a baixa de sessão do pacote para {customer.name}.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <Form
+                                method="post"
+                                action={customerPackagesRoutes.consume(selectedPackageForConsume.id).url}
+                                headers={{ 'X-Idempotency-Key': consumeKey }}
+                                onSuccess={() => {
+                                    setConsumePackageOpen(false);
+                                    setSelectedPackageForConsume(null);
+                                }}
+                                className="space-y-4"
+                            >
+                                {({ processing, errors }) => (
+                                    <>
+                                        <FormErrorSummary errors={errors} />
+
+                                        <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Pacote:</span>
+                                                <span className="font-semibold text-foreground">
+                                                    {selectedPackageForConsume.package_template?.name ?? 'Pacote de Serviços'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Sessões disponíveis:</span>
+                                                <span className="font-semibold">{selectedPackageForConsume.remaining_sessions} de {selectedPackageForConsume.total_sessions}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Após o consumo:</span>
+                                                <span className="font-semibold text-primary">{Math.max(0, selectedPackageForConsume.remaining_sessions - 1)} restantes</span>
+                                            </div>
+                                        </div>
+
+                                        <FormField
+                                            id="sessions_consumed"
+                                            label="Quantidade de Sessões a Consumir"
+                                            required
+                                            error={errors.sessions_consumed}
+                                        >
+                                            <Input
+                                                id="sessions_consumed"
+                                                name="sessions_consumed"
+                                                type="number"
+                                                min="1"
+                                                max={selectedPackageForConsume.remaining_sessions}
+                                                defaultValue={1}
+                                                required
+                                            />
+                                        </FormField>
+
+                                        <DialogFooter>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setConsumePackageOpen(false);
+                                                    setSelectedPackageForConsume(null);
+                                                }}
+                                            >
+                                                Cancelar
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                            >
+                                                {processing ? 'Registrando…' : 'Confirmar Consumo'}
+                                            </Button>
+                                        </DialogFooter>
+                                    </>
+                                )}
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </PageCanvas>
         </>
     );

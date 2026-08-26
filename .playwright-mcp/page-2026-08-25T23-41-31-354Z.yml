@@ -1,0 +1,144 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /dashboard
+                    - generic:
+                      - generic: Caldas Gestão
+                      - generic: Operação diária
+            - generic:
+              - navigation:
+                - generic:
+                  - button:
+                    - generic: Operação
+                - generic:
+                  - button:
+                    - generic: Relacionamento
+                - generic:
+                  - button:
+                    - generic: Gestão
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic: UT
+                    - generic: Usuário Teste
+      - main:
+        - generic:
+          - generic:
+            - button:
+              - generic: Toggle sidebar
+            - navigation:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /sales
+                    - text: Comandas
+                - listitem
+                - listitem:
+                  - link [disabled]: Detalhes da Comanda
+        - generic:
+          - generic:
+            - generic:
+              - link:
+                - /url: /sales
+                - text: Voltar para Comandas
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Mesa 02 — Carlos Silva
+                  - generic: Aberta
+                  - generic: Atendimento Barbearia & Salão
+                - paragraph: "Aberta em 25/08/2026, 20:41 • ID: 01a03b4c-9e0e-70a5-8993-e8a1d281b921"
+              - generic:
+                - generic:
+                  - button: Pronto para Fechar
+                - button: Fechar Comanda
+                - button: Cancelar Comanda
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=2]: Itens da Comanda
+                    - paragraph: Serviços, produtos consumidos e itens avulsos.
+                  - button [expanded]: Adicionar Item
+                - generic:
+                  - paragraph: Nenhum item adicionado ainda
+                  - paragraph: Clique no botão "Adicionar Item" acima para lançar serviços ou produtos.
+            - generic:
+              - generic:
+                - heading [level=2]: Resumo Financeiro
+                - generic:
+                  - generic:
+                    - generic: "Total Bruto:"
+                    - generic: R$ 0,00
+                  - generic:
+                    - generic: "Desconto Geral:"
+                    - generic: R$ 0,00
+                  - generic:
+                    - generic:
+                      - generic: "Total a Pagar:"
+                      - generic: R$ 0,00
+                - generic:
+                  - button: Aplicar Desconto Geral
+              - generic:
+                - heading [level=3]: Vínculo & Atendimento
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: Carlos Silva
+                      - paragraph: "11999998888"
+              - generic:
+                - generic:
+                  - heading [level=3]: Histórico de Transições
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: open
+                      - generic: 25/08/2026, 20:41
+                    - paragraph: Abertura de comanda
+                    - paragraph: Por Usuário Teste
+    - region "Notifications alt+T"
+  - dialog [ref=f2e240]:
+    - generic [ref=f2e241]:
+      - heading "Adicionar item à comanda" [level=2] [ref=f2e242]
+      - paragraph [ref=f2e243]: Selecione o catálogo ou cadastre um item personalizado.
+    - generic [ref=f2e244]:
+      - generic [ref=f2e245]:
+        - text: Tipo de Item
+        - generic [ref=f2e246]:
+          - button "Serviço" [active] [ref=f2e247]
+          - button "Produto" [ref=f2e255]
+          - button "Avulso" [ref=f2e261]
+      - generic [ref=f2e265]:
+        - generic [ref=f2e266]:
+          - text: Serviço
+          - combobox "Serviço" [ref=f2e267]:
+            - option "Selecione o serviço" [selected]
+            - option "Corte Masculino Degradê — R$ 50,00 (30 min)"
+        - generic [ref=f2e268]:
+          - text: Profissional Executor (opcional)
+          - combobox "Profissional Executor (opcional)" [ref=f2e269]:
+            - option "Sem profissional atribuído" [selected]
+            - option "Lucas Barbeiro"
+      - generic [ref=f2e270]:
+        - generic [ref=f2e271]:
+          - text: Quantidade
+          - spinbutton "Quantidade" [ref=f2e272]: "1"
+        - generic [ref=f2e273]:
+          - text: Desconto no item (R$)
+          - textbox "0,00" [ref=f2e274]
+      - generic [ref=f2e275]:
+        - generic [ref=f2e276]: "Subtotal estimado:"
+        - generic [ref=f2e277]: R$ 0,00
+      - generic [ref=f2e278]:
+        - button "Cancelar" [ref=f2e279]
+        - button "Adicionar Item" [ref=f2e280]
+    - button "Close" [ref=f2e281]

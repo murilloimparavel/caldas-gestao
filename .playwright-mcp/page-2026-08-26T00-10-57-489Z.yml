@@ -1,0 +1,92 @@
+- generic [ref=f52e2]:
+  - generic [ref=f52e3]:
+    - generic [ref=f52e7]:
+      - list [ref=f52e9]:
+        - listitem [ref=f52e10]:
+          - link "Caldas Gestão Caldas Gestão Operação diária" [ref=f52e11] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Caldas Gestão" [ref=f52e13]
+            - generic [ref=f52e17]:
+              - generic [ref=f52e18]: Caldas Gestão
+              - generic [ref=f52e19]: Operação diária
+      - navigation "Navegação principal" [ref=f52e21]:
+        - button "Operação — expandir ou recolher seção" [ref=f52e23] [cursor=pointer]:
+          - generic [ref=f52e24]: Operação
+        - button "Relacionamento — expandir ou recolher seção" [ref=f52e28] [cursor=pointer]:
+          - generic [ref=f52e29]: Relacionamento
+        - button "Gestão — expandir ou recolher seção" [ref=f52e33] [cursor=pointer]:
+          - generic [ref=f52e34]: Gestão
+        - generic [ref=f52e37]:
+          - button "Financeiro — expandir ou recolher seção" [expanded] [ref=f52e38] [cursor=pointer]:
+            - generic [ref=f52e39]: Financeiro
+          - list [ref=f52e44]:
+            - listitem [ref=f52e45]:
+              - link "Painel Financeiro" [ref=f52e46] [cursor=pointer]:
+                - /url: /finance/dashboard
+            - listitem [ref=f52e51]:
+              - link "Contas a Pagar/Receber" [ref=f52e52] [cursor=pointer]:
+                - /url: /finance/transactions
+            - listitem [ref=f52e57]:
+              - link "Comissões" [ref=f52e58] [cursor=pointer]:
+                - /url: /finance/commissions
+      - list [ref=f52e65]:
+        - listitem [ref=f52e66]:
+          - button "UT Usuário Teste" [ref=f52e67]:
+            - generic [ref=f52e68]: UT
+            - generic [ref=f52e70]: Usuário Teste
+    - main [ref=f52e75]:
+      - button "Toggle sidebar" [ref=f52e78]
+      - generic [ref=f52e81]:
+        - generic [ref=f52e83]:
+          - paragraph
+          - generic [ref=f52e84]:
+            - heading "Comissões dos Profissionais" [level=1] [ref=f52e85]
+            - paragraph [ref=f52e86]: Regras de repasse, apuração automática por atendimento e liquidação de pagamentos.
+        - generic [ref=f52e87]:
+          - generic [ref=f52e88]:
+            - generic [ref=f52e89]: Total Pendente (A Pagar)
+            - generic [ref=f52e97]: R$ 0,00
+            - paragraph [ref=f52e98]: Comissões apuradas aguardando liquidação
+          - generic [ref=f52e99]:
+            - generic [ref=f52e100]: Liquidado este Mês
+            - generic [ref=f52e106]: R$ 0,00
+            - paragraph [ref=f52e107]: Total já pago e baixado no período atual
+          - generic [ref=f52e108]:
+            - generic [ref=f52e109]: Regras de Comissão
+            - generic [ref=f52e115]: "0"
+            - paragraph [ref=f52e116]: Regras ativas configuradas no workspace
+        - generic [ref=f52e117]:
+          - generic [ref=f52e119]:
+            - heading "Apuração por Profissional" [level=2] [ref=f52e120]
+            - paragraph [ref=f52e121]: Saldo acumulado e histórico de repasses de cada profissional.
+          - table [ref=f52e124]:
+            - rowgroup [ref=f52e125]:
+              - row [ref=f52e126]:
+                - columnheader "Profissional" [ref=f52e127]
+                - columnheader "Contato" [ref=f52e128]
+                - columnheader "Atendimentos Pendentes" [ref=f52e129]
+                - columnheader "Comissão Pendente" [ref=f52e130]
+                - columnheader "Total Liquidado" [ref=f52e131]
+                - columnheader "Ações" [ref=f52e132]
+            - rowgroup [ref=f52e133]:
+              - row [ref=f52e134]:
+                - cell "Lucas Barbeiro" [ref=f52e135]
+                - cell "11988887777 barbeiro@caldas.local" [ref=f52e137]:
+                  - generic [ref=f52e138]: "11988887777"
+                  - generic [ref=f52e139]: barbeiro@caldas.local
+                - cell "Em dia" [ref=f52e140]
+                - cell "R$ 0,00" [ref=f52e141]
+                - cell "R$ 0,00" [ref=f52e142]
+                - cell [ref=f52e143]:
+                  - link "Extrato" [ref=f52e144] [cursor=pointer]:
+                    - /url: /finance/commissions/professionals/01a03b4c-0ebb-710e-a869-fb707ec3e59e
+        - generic [ref=f52e145]:
+          - generic [ref=f52e147]:
+            - heading "Regras de Comissionamento" [level=2] [ref=f52e148]
+            - paragraph [ref=f52e149]: Defina regras gerais ou específicas por profissional, serviço e produto.
+          - generic [ref=f52e150]:
+            - generic [ref=f52e156]:
+              - heading "Nenhuma regra cadastrada" [level=2] [ref=f52e157]
+              - paragraph [ref=f52e158]: Crie sua primeira regra de comissão para que os atendimentos sejam apurados automaticamente.
+            - button "Criar Regra" [ref=f52e159]
+  - region "Notifications alt+T"

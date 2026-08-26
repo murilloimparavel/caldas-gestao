@@ -8,6 +8,7 @@ use App\Actions\Customers\ReactivateCustomer;
 use App\Actions\Customers\UpdateCustomer;
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
+use App\Models\PackageTemplate;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -59,7 +60,21 @@ final class CustomerController extends Controller
                     'saleCategory:id,name',
                 ])
                 ->orderBy('created_at', 'desc'),
+            'customerPackages' => fn ($query) => $query
+                ->with([
+                    'packageTemplate.services:id,name,price_cents',
+                    'usages.user:id,name',
+                ])
+                ->orderBy('created_at', 'desc'),
         ]);
+
+        $packageTemplates = PackageTemplate::query()
+            ->where('tenant_id', $customer->tenant_id)
+            ->where('unit_id', $customer->unit_id)
+            ->where('is_active', true)
+            ->with('services:id,name,price_cents')
+            ->orderBy('name')
+            ->get();
 
         $totalSpentCents = (int) $customer->sales
             ->where('status', 'finalized')
@@ -71,6 +86,7 @@ final class CustomerController extends Controller
 
         return Inertia::render('customers/show', [
             'customer' => $customer,
+            'packageTemplates' => $packageTemplates,
             'metrics' => [
                 'total_spent_cents' => $totalSpentCents,
                 'total_visits' => $totalVisits,

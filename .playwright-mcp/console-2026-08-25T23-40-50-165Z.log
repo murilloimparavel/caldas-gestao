@@ -1,0 +1,198 @@
+[     129ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/sales:51
+[     173ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/sales:121
+[  267275ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  267281ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  272268ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  272278ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  319584ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  319590ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  324099ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  324104ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  329310ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/Users/murilloalves/Projects/caldas-gestao/resources/js/pages/customers/index.tsx?t=1787701579330:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  329310ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  390739ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  390931ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  391026ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/resources/js/pages/customers/index.tsx?t=1787701579330:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  391021ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  396836ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  396982ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  397018ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/resources/js/pages/customers/index.tsx?t=1787701579330:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  397018ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  404289ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  404355ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  404386ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/resources/js/pages/customers/index.tsx?t=1787701579330:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  404385ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  431408ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  431411ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  431482ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/resources/js/pages/customers/index.tsx?t=1787701579330:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  431478ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  586701ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  586741ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  591015ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  591021ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  596584ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  596590ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  612081ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  612094ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  617847ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  617857ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  630824ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  630831ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  642625ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  642630ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  650350ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  650357ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  653350ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  653355ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  656122ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/Users/murilloalves/Projects/caldas-gestao/resources/js/pages/customers/index.tsx?t=1787701906095:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  656121ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  796120ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  796277ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  796337ms] TypeError: customers.store.form is not a function
+    at CustomersIndex (http://[::1]:5173/resources/js/pages/customers/index.tsx?t=1787701906095:84:25)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[  796331ms] [WARNING] %s
+
+%s
+ An error occurred in the <CustomersIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/customers:121
+[  869006ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  869012ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[  891333ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[  891339ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1060035ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1060065ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1074583ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1074589ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1081267ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1081273ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1112122ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1112132ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1117328ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1117333ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1131876ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1131882ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1153099ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1153105ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1156479ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1156485ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1212217ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1212674ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1224960ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1225105ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1239086ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1239093ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1239905ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1239910ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1379010ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1379017ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1384337ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1384342ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1458221ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1458227ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1462038ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1462043ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1522544ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1522598ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1531707ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1531843ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1563401ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1563407ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1563692ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1563697ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1563964ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1563968ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121
+[ 1598070ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/customers:51
+[ 1598084ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/customers:121

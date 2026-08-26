@@ -1,0 +1,152 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /dashboard
+                    - generic:
+                      - generic: Caldas Gestão
+                      - generic: Operação diária
+            - generic:
+              - navigation:
+                - generic:
+                  - button:
+                    - generic: Operação
+                - generic:
+                  - button:
+                    - generic: Relacionamento
+                - generic:
+                  - button:
+                    - generic: Gestão
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic: UT
+                    - generic: Usuário Teste
+      - main:
+        - generic:
+          - generic:
+            - button:
+              - generic: Toggle sidebar
+            - navigation:
+              - list:
+                - listitem:
+                  - link:
+                    - /url: /sales
+                    - text: Comandas
+                - listitem
+                - listitem:
+                  - link [disabled]: Detalhes da Comanda
+        - generic:
+          - generic:
+            - generic:
+              - link:
+                - /url: /sales
+                - text: Voltar para Comandas
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Mesa 02 — Carlos Silva
+                  - generic: Aberta
+                  - generic: Atendimento Barbearia & Salão
+                - paragraph: "Aberta em 25/08/2026, 20:41 • ID: 01a03b4c-9e0e-70a5-8993-e8a1d281b921"
+              - generic:
+                - generic:
+                  - button: Pronto para Fechar
+                - button: Fechar Comanda
+                - button: Cancelar Comanda
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=2]: Itens da Comanda
+                    - paragraph: Serviços, produtos consumidos e itens avulsos.
+                  - button: Adicionar Item
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Item / Descrição
+                        - columnheader: Profissional
+                        - columnheader: Qtd
+                        - columnheader: Preço Unit.
+                        - columnheader: Desconto
+                        - columnheader: Subtotal
+                        - columnheader:
+                          - generic: Ações
+                    - rowgroup:
+                      - row:
+                        - cell:
+                          - generic:
+                            - generic:
+                              - generic: Serviço
+                              - generic: Corte Masculino Degradê
+                        - cell: Lucas Barbeiro
+                        - cell: "1"
+                        - cell: R$ 50,00
+                        - cell: —
+                        - cell: R$ 50,00
+                        - cell:
+                          - generic:
+                            - button
+            - generic:
+              - generic:
+                - heading [level=2]: Resumo Financeiro
+                - generic:
+                  - generic:
+                    - generic: "Total Bruto:"
+                    - generic: R$ 50,00
+                  - generic:
+                    - generic: "Desconto Geral:"
+                    - generic: R$ 0,00
+                  - generic:
+                    - generic:
+                      - generic: "Total a Pagar:"
+                      - generic: R$ 50,00
+                - generic:
+                  - button: Aplicar Desconto Geral
+              - generic:
+                - heading [level=3]: Vínculo & Atendimento
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: Carlos Silva
+                      - paragraph: "11999998888"
+              - generic:
+                - generic:
+                  - heading [level=3]: Histórico de Transições
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: open
+                      - generic: 25/08/2026, 20:41
+                    - paragraph: Abertura de comanda
+                    - paragraph: Por Usuário Teste
+    - region "Notifications alt+T"
+  - dialog [ref=f2e313]:
+    - generic [ref=f2e314]:
+      - heading "Fechar Comanda" [level=2] [ref=f2e315]
+      - paragraph [ref=f2e316]: Confirme o encerramento desta comanda para emitir o recibo operacional interno.
+    - generic [ref=f2e317]:
+      - generic [ref=f2e318]:
+        - generic [ref=f2e319]:
+          - generic [ref=f2e320]: "Subtotal da comanda:"
+          - generic [ref=f2e321]: R$ 50,00
+        - generic [ref=f2e322]:
+          - generic [ref=f2e323]: "Total a Fechar:"
+          - generic [ref=f2e324]: R$ 50,00
+      - generic [ref=f2e325]:
+        - text: Observações do fechamento (opcional)
+        - textbox "Observações do fechamento (opcional)" [active] [ref=f2e326]:
+          - /placeholder: Anotações para constar no recibo...
+      - generic [ref=f2e327]:
+        - button "Cancelar" [ref=f2e328]
+        - button "Salvar cadastro" [ref=f2e329]
+    - button "Close" [ref=f2e330]
