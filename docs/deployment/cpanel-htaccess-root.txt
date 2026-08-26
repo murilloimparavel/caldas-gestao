@@ -1,0 +1,6 @@
+# Apache configuration for cPanel root deployment (/home/millabus/gestao.murilloalves.com.br/.htaccess)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ public/ [L]
+    RewriteRule (.*) public/$1 [L]
+</IfModule>
