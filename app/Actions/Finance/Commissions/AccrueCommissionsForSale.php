@@ -1,0 +1,143 @@
+<?php
+
+namespace App\Actions\Finance\Commissions;
+
+use App\Actions\Operational\OperationalAction;
+use App\Models\CommissionAccrual;
+use App\Models\CommissionRule;
+use App\Models\Sale;
+use App\Models\SaleItem;
+use App\Models\User;
+use App\Support\TenantContext;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
+
+final class AccrueCommissionsForSale extends OperationalAction
+{
+    /**
+     * @return Collection<int, CommissionAccrual>
+     */
+    public function handle(User $actor, TenantContext $context, Sale $sale): Collection
+    {
+        $tenantId = $context->tenant->getKey();
+        $unitId = $sale->unit_id;
+
+        /** @var Collection<int, CommissionRule> $activeRules */
+        $activeRules = CommissionRule::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->get();
+
+        $accruals = new Collection;
+
+        $sale->loadMissing('items');
+
+        foreach ($sale->items as $item) {
+            if ($item->professional_id === null) {
+                continue;
+            }
+
+            $matchedRule = $this->findBestMatchingRule($activeRules, $item);
+
+            if ($matchedRule === null) {
+                continue;
+            }
+
+            $commissionAmountCents = match ($matchedRule->type) {
+                'percentage' => (int) round(($item->total_cents * $matchedRule->value_rate) / 100),
+                'fixed' => (int) ($matchedRule->value_rate * max(1, $item->quantity)),
+                default => 0,
+            };
+
+            /** @var CommissionAccrual $accrual */
+            $accrual = CommissionAccrual::query()->create([
+                'id' => (string) Str::uuid7(),
+                'tenant_id' => $tenantId,
+                'unit_id' => $unitId,
+                'professional_id' => $item->professional_id,
+                'sale_id' => $sale->getKey(),
+                'sale_item_id' => $item->getKey(),
+                'item_name_snapshot' => $item->name_snapshot,
+                'gross_amount_cents' => $item->total_cents,
+                'rate_type' => $matchedRule->type,
+                'rate_value' => $matchedRule->value_rate,
+                'commission_amount_cents' => $commissionAmountCents,
+                'status' => 'accrued',
+                'lock_version' => 1,
+            ]);
+
+            $this->events->record($actor, $context, 'commission_accrual.created', $accrual, [
+                'commission_accrual_id' => $accrual->getKey(),
+                'professional_id' => $accrual->professional_id,
+                'sale_id' => $accrual->sale_id,
+                'sale_item_id' => $accrual->sale_item_id,
+                'gross_amount_cents' => $accrual->gross_amount_cents,
+                'rate_type' => $accrual->rate_type,
+                'rate_value' => $accrual->rate_value,
+                'commission_amount_cents' => $accrual->commission_amount_cents,
+                'status' => $accrual->status,
+                'lock_version' => $accrual->lock_version,
+            ]);
+
+            $accruals->push($accrual);
+        }
+
+        return $accruals;
+    }
+
+    /**
+     * @param  Collection<int, CommissionRule>  $rules
+     */
+    private function findBestMatchingRule(Collection $rules, SaleItem $item): ?CommissionRule
+    {
+        $bestRule = null;
+        $highestScore = -1;
+
+        foreach ($rules as $rule) {
+            $score = $this->calculateRuleMatchScore($rule, $item);
+
+            if ($score !== null && $score > $highestScore) {
+                $highestScore = $score;
+                $bestRule = $rule;
+            }
+        }
+
+        return $bestRule;
+    }
+
+    private function calculateRuleMatchScore(CommissionRule $rule, SaleItem $item): ?int
+    {
+        $professionalMatches = ($rule->professional_id === null || $rule->professional_id === $item->professional_id);
+
+        if (! $professionalMatches) {
+            return null;
+        }
+
+        $serviceMatches = ($item->service_id !== null && $rule->service_id === $item->service_id);
+        $productMatches = ($item->product_id !== null && $rule->product_id === $item->product_id);
+        $isItemSpecific = ($serviceMatches || $productMatches);
+        $isRuleItemGeneric = ($rule->service_id === null && $rule->product_id === null);
+
+        if (! $isItemSpecific && ! $isRuleItemGeneric) {
+            return null;
+        }
+
+        // Scoring:
+        // Specific professional + Specific item => 4
+        // Specific professional + Generic item  => 3
+        // Generic professional  + Specific item => 2
+        // Generic professional  + Generic item  => 1
+        $score = 1;
+
+        if ($rule->professional_id !== null) {
+            $score += 2;
+        }
+
+        if ($isItemSpecific) {
+            $score += 1;
+        }
+
+        return $score;
+    }
+}

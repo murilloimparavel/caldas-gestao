@@ -5,6 +5,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashShiftController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClosingSessionController;
+use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
@@ -66,6 +67,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('finance/cash/{cashShift}/close', [CashShiftController::class, 'close'])->name('cash_shifts.close');
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::post('inventory/movements', [InventoryController::class, 'store'])->name('inventory.movements.store');
+        Route::get('finance/commissions', [CommissionController::class, 'index'])->name('commissions.index');
+        Route::get('finance/commissions/professionals/{professional}', [CommissionController::class, 'show'])->name('commissions.show');
+        Route::post('finance/commissions/rules', [CommissionController::class, 'storeRule'])->name('commissions.rules.store');
+        Route::put('finance/commissions/rules/{rule}', [CommissionController::class, 'updateRule'])->name('commissions.rules.update');
+        Route::delete('finance/commissions/rules/{rule}', [CommissionController::class, 'deleteRule'])->name('commissions.rules.destroy');
+        Route::post('finance/commissions/settle', [CommissionController::class, 'settle'])->name('commissions.settle');
     });
 });
 

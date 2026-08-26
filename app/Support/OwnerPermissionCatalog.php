@@ -30,6 +30,7 @@ final class OwnerPermissionCatalog
         'sale.view', 'sale.manage', 'sale.discount', 'sale.close',
         'cash_shift.view', 'cash_shift.open', 'cash_shift.move', 'cash_shift.close',
         'inventory.view', 'inventory.manage',
+        'commission.view', 'commission.manage', 'commission.settle',
     ];
 
     /**

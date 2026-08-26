@@ -2,6 +2,7 @@
 
 namespace App\Actions\Closing;
 
+use App\Actions\Finance\Commissions\AccrueCommissionsForSale;
 use App\Actions\Operational\OperationalAction;
 use App\Models\ClosingSession;
 use App\Models\InventoryMovement;
@@ -10,6 +11,10 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SaleStatusHistory;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,6 +25,14 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class FinalizeClosingSession extends OperationalAction
 {
+    public function __construct(
+        AuthorizationService $authorization = new AuthorizationService,
+        IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly AccrueCommissionsForSale $accrueCommissions = new AccrueCommissionsForSale,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /**
      * @param  array{
      *     sale_ids: list<string>,
@@ -225,6 +238,8 @@ final class FinalizeClosingSession extends OperationalAction
                     'receipt_number' => $receiptNumber,
                     'lock_version' => $lockedSale->lock_version,
                 ]);
+
+                $this->accrueCommissions->handle($actor, $context, $lockedSale);
             }
 
             $productQuantities = [];

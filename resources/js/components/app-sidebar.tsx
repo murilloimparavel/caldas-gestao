@@ -127,8 +127,18 @@ const mainNavGroups: SidebarNavGroup[] = [
                 permission: 'supplier.view',
             },
             { title: 'Catálogo', icon: Tags, disabled: true },
-            { title: 'Financeiro', icon: WalletCards, disabled: true },
             { title: 'Relatórios', icon: BarChart3, disabled: true },
+        ],
+    },
+    {
+        label: 'Financeiro',
+        items: [
+            {
+                title: 'Comissões',
+                href: '/finance/commissions',
+                icon: WalletCards,
+                permission: 'commission.view',
+            },
         ],
     },
 ];

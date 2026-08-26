@@ -63,4 +63,22 @@ class Professional extends Model
     {
         return $this->hasMany(ScheduleBlock::class);
     }
+
+    /** @return HasMany<CommissionRule, $this> */
+    public function commissionRules(): HasMany
+    {
+        return $this->hasMany(CommissionRule::class);
+    }
+
+    /** @return HasMany<CommissionAccrual, $this> */
+    public function commissionAccruals(): HasMany
+    {
+        return $this->hasMany(CommissionAccrual::class);
+    }
+
+    /** @return HasMany<CommissionSettlement, $this> */
+    public function commissionSettlements(): HasMany
+    {
+        return $this->hasMany(CommissionSettlement::class);
+    }
 }
