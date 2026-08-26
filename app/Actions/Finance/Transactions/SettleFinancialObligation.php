@@ -3,11 +3,14 @@
 namespace App\Actions\Finance\Transactions;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\CashMovement;
+use App\Models\CashShift;
 use App\Models\FinancialObligation;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -64,6 +67,57 @@ final class SettleFinancialObligation extends OperationalAction
                 'payment_method' => $paymentMethod,
                 'lock_version' => $locked->lock_version + 1,
             ])->save();
+
+            if ($paymentMethod === 'cash') {
+                /** @var CashShift|null $openCashShift */
+                $openCashShift = CashShift::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('opened_by_user_id', $actor->getKey())
+                    ->where('status', 'open')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($openCashShift !== null) {
+                    $isReceivable = $locked->type === 'receivable';
+                    $movementType = $isReceivable ? 'supply' : 'expense_outflow';
+                    $reason = $isReceivable
+                        ? ('Recebimento de conta: '.$locked->description)
+                        : ('Pagamento de despesa: '.$locked->description);
+                    $amountCents = $locked->amount_cents;
+
+                    $newExpectedAmountCents = $isReceivable
+                        ? ($openCashShift->expected_amount_cents + $amountCents)
+                        : ($openCashShift->expected_amount_cents - $amountCents);
+
+                    $movement = CashMovement::query()->create([
+                        'id' => (string) Str::uuid7(),
+                        'tenant_id' => $tenantId,
+                        'unit_id' => $unitId,
+                        'cash_shift_id' => $openCashShift->getKey(),
+                        'type' => $movementType,
+                        'amount_cents' => $amountCents,
+                        'reason' => $reason,
+                        'reference_type' => 'financial_obligation',
+                        'reference_id' => $locked->getKey(),
+                        'user_id' => $actor->getKey(),
+                    ]);
+
+                    $openCashShift->forceFill([
+                        'expected_amount_cents' => $newExpectedAmountCents,
+                        'lock_version' => $openCashShift->lock_version + 1,
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'cash_shift.moved', $openCashShift, [
+                        'cash_shift_id' => $openCashShift->getKey(),
+                        'cash_movement_id' => $movement->getKey(),
+                        'type' => $movementType,
+                        'amount_cents' => $amountCents,
+                        'expected_amount_cents' => $newExpectedAmountCents,
+                        'lock_version' => $openCashShift->lock_version,
+                    ]);
+                }
+            }
 
             $this->events->record($actor, $context, 'financial_obligation.settled', $locked, [
                 'type' => $locked->type,

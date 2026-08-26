@@ -99,6 +99,12 @@ class Sale extends Model
         return $this->belongsTo(SaleCategory::class, 'sale_category_id');
     }
 
+    /** @return BelongsTo<SaleCategory, $this> */
+    public function saleCategory(): BelongsTo
+    {
+        return $this->belongsTo(SaleCategory::class, 'sale_category_id');
+    }
+
     /** @return HasMany<SaleItem, $this> */
     public function items(): HasMany
     {

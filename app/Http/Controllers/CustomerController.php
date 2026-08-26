@@ -53,9 +53,29 @@ final class CustomerController extends Controller
                 ->with('professional:id,name')
                 ->orderBy('starts_at', 'desc')
                 ->limit(20),
+            'sales' => fn ($query) => $query
+                ->with([
+                    'items',
+                    'saleCategory:id,name',
+                ])
+                ->orderBy('created_at', 'desc'),
         ]);
 
-        return Inertia::render('customers/show', ['customer' => $customer]);
+        $totalSpentCents = (int) $customer->sales
+            ->where('status', 'finalized')
+            ->sum('final_amount_cents');
+
+        $totalVisits = $customer->appointments()
+            ->whereIn('status', ['confirmed', 'checked_in', 'in_service', 'completed'])
+            ->count();
+
+        return Inertia::render('customers/show', [
+            'customer' => $customer,
+            'metrics' => [
+                'total_spent_cents' => $totalSpentCents,
+                'total_visits' => $totalVisits,
+            ],
+        ]);
     }
 
     public function store(CustomerRequest $request, TenantContext $context, CreateCustomer $createCustomer): RedirectResponse

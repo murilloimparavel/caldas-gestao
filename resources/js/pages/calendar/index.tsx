@@ -1,12 +1,13 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
     CheckCircle2,
     Lock,
     Plus,
     Receipt,
     SlidersHorizontal,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     CalendarError,
     CalendarLoading,
@@ -94,6 +95,8 @@ function optionList(
 function AppointmentForm({
     appointment,
     customers,
+    existingAppointments = [],
+    existingScheduleBlocks = [],
     onClose,
     professionals,
     services,
@@ -101,6 +104,8 @@ function AppointmentForm({
 }: {
     appointment: CalendarAppointment | null;
     customers: CalendarOption[];
+    existingAppointments?: CalendarAppointment[];
+    existingScheduleBlocks?: ScheduleBlock[];
     onClose: () => void;
     professionals: CalendarOption[];
     services: CalendarOption[];
@@ -113,6 +118,78 @@ function AppointmentForm({
                 : 'appointment-create',
         ),
     );
+    const [selectedProfessional, setSelectedProfessional] = useState(
+        appointment?.professional_id ?? appointment?.professional?.id ?? '',
+    );
+    const [selectedStartsAt, setSelectedStartsAt] = useState(
+        appointment ? dateTimeValue(appointment.starts_at, unitTimezone) : '',
+    );
+    const [selectedDuration, setSelectedDuration] = useState<number>(
+        appointment?.duration_minutes ?? 30,
+    );
+
+    const conflict = useMemo(() => {
+        if (!selectedProfessional || !selectedStartsAt || !selectedDuration) {
+            return null;
+        }
+
+        const start = new Date(selectedStartsAt);
+        if (Number.isNaN(start.getTime())) {
+            return null;
+        }
+
+        const durationMin = Number(selectedDuration) || 30;
+        const end = new Date(start.getTime() + durationMin * 60 * 1000);
+
+        // 1. Verificar conflitos com outros agendamentos do profissional
+        if (existingAppointments && existingAppointments.length > 0) {
+            const aptConflict = existingAppointments.find((apt) => {
+                if (appointment && apt.id === appointment.id) {
+                    return false;
+                }
+                if (apt.status === 'cancelled') {
+                    return false;
+                }
+                const profId = apt.professional_id ?? apt.professional?.id;
+                if (profId !== selectedProfessional) {
+                    return false;
+                }
+                const aStart = new Date(apt.starts_at);
+                const aEnd = new Date(apt.ends_at);
+                return start < aEnd && end > aStart;
+            });
+
+            if (aptConflict) {
+                const customerName = aptConflict.customer?.name || 'Outro cliente';
+                return {
+                    type: 'appointment',
+                    description: `Conflito com agendamento de ${customerName} (${formatTime(aptConflict.starts_at, unitTimezone)} - ${formatTime(aptConflict.ends_at, unitTimezone)}).`,
+                };
+            }
+        }
+
+        // 2. Verificar conflitos com bloqueios de agenda
+        if (existingScheduleBlocks && existingScheduleBlocks.length > 0) {
+            const blockConflict = existingScheduleBlocks.find((block) => {
+                if (block.professional_id && block.professional_id !== selectedProfessional) {
+                    return false;
+                }
+                const bStart = new Date(block.starts_at);
+                const bEnd = new Date(block.ends_at);
+                return start < bEnd && end > bStart;
+            });
+
+            if (blockConflict) {
+                return {
+                    type: 'block',
+                    description: `Conflito com bloqueio: ${blockConflict.reason || 'Horário reservado'} (${formatTime(blockConflict.starts_at, unitTimezone)} - ${formatTime(blockConflict.ends_at, unitTimezone)}).`,
+                };
+            }
+        }
+
+        return null;
+    }, [selectedProfessional, selectedStartsAt, selectedDuration, existingAppointments, existingScheduleBlocks, appointment, unitTimezone]);
+
     const isEditing = appointment !== null;
     const route = isEditing
         ? updateAppointment.form(appointment.id)
@@ -128,6 +205,25 @@ function AppointmentForm({
             {({ errors, processing }) => (
                 <>
                     <FormErrorSummary errors={errors} />
+
+                    {/* Aviso amigável de conflito de horário */}
+                    {conflict && (
+                        <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <Badge
+                                    variant="outline"
+                                    className="border-amber-400 bg-amber-100 font-semibold text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                                >
+                                    Atenção: Horário coincide com outro agendamento/bloqueio
+                                </Badge>
+                            </div>
+                            <p className="text-xs text-amber-800 dark:text-amber-300">
+                                {conflict.description}
+                            </p>
+                        </div>
+                    )}
+
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="sm:col-span-2">
                             <FormField
@@ -226,11 +322,8 @@ function AppointmentForm({
                                 <select
                                     id="professional_id"
                                     name="professional_id"
-                                    defaultValue={
-                                        appointment?.professional_id ??
-                                        appointment?.professional?.id ??
-                                        ''
-                                    }
+                                    value={selectedProfessional}
+                                    onChange={(e) => setSelectedProfessional(e.target.value)}
                                     required
                                     className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 >
@@ -250,11 +343,8 @@ function AppointmentForm({
                                 <Input
                                     id="professional_id"
                                     name="professional_id"
-                                    defaultValue={
-                                        appointment?.professional_id ??
-                                        appointment?.professional?.id ??
-                                        ''
-                                    }
+                                    value={selectedProfessional}
+                                    onChange={(e) => setSelectedProfessional(e.target.value)}
                                     placeholder="ID do profissional"
                                     required
                                 />
@@ -269,14 +359,8 @@ function AppointmentForm({
                                 id="starts_at"
                                 name="starts_at"
                                 type="datetime-local"
-                                defaultValue={
-                                    appointment
-                                        ? dateTimeValue(
-                                              appointment.starts_at,
-                                              unitTimezone,
-                                          )
-                                        : ''
-                                }
+                                value={selectedStartsAt}
+                                onChange={(e) => setSelectedStartsAt(e.target.value)}
                                 required
                             />
                         </FormField>
@@ -292,9 +376,8 @@ function AppointmentForm({
                                 min={5}
                                 max={1440}
                                 step={5}
-                                defaultValue={
-                                    appointment?.duration_minutes ?? 30
-                                }
+                                value={selectedDuration}
+                                onChange={(e) => setSelectedDuration(Number(e.target.value))}
                                 required
                             />
                         </FormField>
@@ -1004,6 +1087,8 @@ export default function CalendarIndex(props: CalendarProps) {
                     <AppointmentForm
                         appointment={editing}
                         customers={customers}
+                        existingAppointments={appointments}
+                        existingScheduleBlocks={scheduleBlocks}
                         onClose={() => {
                             setCreateOpen(false);
                             setEditing(null);

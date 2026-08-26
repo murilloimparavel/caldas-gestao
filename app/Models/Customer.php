@@ -50,4 +50,10 @@ class Customer extends Model
     {
         return $this->hasMany(Appointment::class);
     }
+
+    /** @return HasMany<Sale, $this> */
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
 }
