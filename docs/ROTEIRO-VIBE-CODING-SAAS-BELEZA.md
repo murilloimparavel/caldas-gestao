@@ -78,16 +78,14 @@ Critério de saída: fluxo E2E cliente → agenda → confirmação sem dupla re
 - [x] Fechamento consolidado (`ClosingSession`, `FinalizeClosingSession`), recibo interno e histórico auditável;
 - [x] Invariantes de totais, fechamento uniforme, concorrência otimista (`lock_version`) e idempotência testadas com 100% de aprovação. Pagamentos, recebimentos, gateways, Pix/cartão e estornos ficam para a Fase 5.
 
-### Fase 5 — Financeiro, comissões e estoque
+### Fase 5 — Financeiro, comissões e estoque (Concluída - 100%)
 
-- caixa e lançamentos;
-- contas a pagar/receber;
-- regras de comissão versionadas;
-- fechamento e pagamento de comissão;
-- movimentos de estoque por venda/consumo;
-- compras e inventário.
+- Sprint 1: Caixa Operacional e Lançamentos (abertura, suprimento, sangria, fechamento e conferência de caixa);
+- Sprint 2: Gestão e Movimentações de Estoque (entrada, saída, perda, ajustes e auditoria de inventário);
+- Sprint 3: Regras e Apuração de Comissões (comissão flexível por profissional/serviço/produto, apuração automática por venda e liquidação periódica);
+- Sprint 4: Contas a Pagar/Receber e Painel Financeiro Consolidado (obrigações financeiras, liquidações, fluxo de caixa e dashboards integrados).
 
-Critério de saída: razão financeiro/estoque reconciliável e imutável por eventos de ajuste.
+Critério de saída atingido: razão financeiro/estoque reconciliável e imutável por eventos de ajuste, com controle de concorrência e auditoria.
 
 ### Fase 6 — Pacotes, assinatura e retenção
 

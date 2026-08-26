@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
     Banknote,
     BarChart3,
     Boxes,
@@ -9,6 +10,7 @@ import {
     Layers,
     LayoutDashboard,
     Package,
+    PieChart,
     Scissors,
     Tags,
     Truck,
@@ -133,6 +135,18 @@ const mainNavGroups: SidebarNavGroup[] = [
     {
         label: 'Financeiro',
         items: [
+            {
+                title: 'Painel Financeiro',
+                href: '/finance/dashboard',
+                icon: PieChart,
+                permission: 'financial.view',
+            },
+            {
+                title: 'Contas a Pagar/Receber',
+                href: '/finance/transactions',
+                icon: ArrowLeftRight,
+                permission: 'financial.view',
+            },
             {
                 title: 'Comissões',
                 href: '/finance/commissions',

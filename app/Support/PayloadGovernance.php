@@ -33,6 +33,7 @@ final class PayloadGovernance
         'inventory_movement_id', 'unit_cost_cents', 'previous_stock', 'resulting_stock',
         'commission_rule_id', 'commission_settlement_id', 'commission_accrual_id', 'rate_type', 'rate_value', 'value_rate',
         'commission_amount_cents', 'gross_amount_cents', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
+        'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
     ];
 
     /** @var list<string> */
@@ -54,6 +55,7 @@ final class PayloadGovernance
         'inventory_movement_id', 'unit_cost_cents', 'previous_stock', 'resulting_stock',
         'commission_rule_id', 'commission_settlement_id', 'commission_accrual_id', 'rate_type', 'rate_value', 'value_rate',
         'commission_amount_cents', 'gross_amount_cents', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
+        'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
     ];
 
     /** @var list<string> */
