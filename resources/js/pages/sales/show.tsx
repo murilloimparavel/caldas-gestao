@@ -27,6 +27,11 @@ import {
     PageCanvas,
     parseBrazilianCurrency,
 } from '@/components/operational';
+import {
+    QuickCreateProductModal,
+    QuickCreateServiceModal,
+} from '@/components/operational/quick-create-dialogs';
+import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -112,8 +117,8 @@ function ItemTypeBadge({ type }: { type: 'service' | 'product' | 'custom' }) {
 
 export default function SalesShow({
     sale,
-    services,
-    products,
+    services: initialServices,
+    products: initialProducts,
     professionals,
 }: Props) {
     const { props } = usePage<SharedPageProps>();
@@ -129,6 +134,13 @@ export default function SalesShow({
     const [closeOpen, setCloseOpen] = useState(false);
     const [adjustOpen, setAdjustOpen] = useState(false);
 
+    // Dynamic lists for quick-created items
+    const [services, setServices] = useState<ServiceOption[]>(initialServices);
+    const [products, setProducts] = useState<ProductOption[]>(initialProducts);
+
+    const [quickServiceOpen, setQuickServiceOpen] = useState(false);
+    const [quickProductOpen, setQuickProductOpen] = useState(false);
+
     // Add item form state
     const [itemType, setItemType] = useState<'service' | 'product' | 'custom'>(
         sale.category?.type === 'product' ? 'product' : 'service',
@@ -139,6 +151,28 @@ export default function SalesShow({
     const [customPriceStr, setCustomPriceStr] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [itemDiscountStr, setItemDiscountStr] = useState('');
+
+    const handleServiceCreated = (created: CreatedEntity) => {
+        const newOpt: ServiceOption = {
+            id: created.id,
+            name: created.name,
+            price_cents: created.price_cents ?? 0,
+            duration_minutes: created.duration_minutes ?? 30,
+        };
+        setServices((prev) => [...prev.filter((s) => s.id !== created.id), newOpt]);
+        setSelectedServiceId(created.id);
+    };
+
+    const handleProductCreated = (created: CreatedEntity) => {
+        const newOpt: ProductOption = {
+            id: created.id,
+            name: created.name,
+            price_cents: created.price_cents ?? 0,
+            current_stock: created.current_stock ?? 0,
+        };
+        setProducts((prev) => [...prev.filter((p) => p.id !== created.id), newOpt]);
+        setSelectedProductId(created.id);
+    };
 
     // General discount state
     const [generalDiscountStr, setGeneralDiscountStr] = useState(
@@ -247,6 +281,7 @@ export default function SalesShow({
                                 <span className="font-mono text-xs">{sale.id}</span>
                             </p>
                         </div>
+
 
                         {/* Status Transition Action Buttons */}
                         {canManage && isSaleActive ? (
@@ -702,6 +737,15 @@ export default function SalesShow({
                                                                     label="Serviço"
                                                                     name="service_id"
                                                                     error={errors.service_id}
+                                                                    action={
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setQuickServiceOpen(true)}
+                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        >
+                                                                            + Novo Serviço
+                                                                        </button>
+                                                                    }
                                                                 >
                                                                     <select
                                                                         id="service_id"
@@ -762,6 +806,15 @@ export default function SalesShow({
                                                                     label="Produto"
                                                                     name="product_id"
                                                                     error={errors.product_id}
+                                                                    action={
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setQuickProductOpen(true)}
+                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        >
+                                                                            + Novo Produto
+                                                                        </button>
+                                                                    }
                                                                 >
                                                                     <select
                                                                         id="product_id"
@@ -936,6 +989,17 @@ export default function SalesShow({
                                                     </>
                                                 )}
                                             </Form>
+
+                                            <QuickCreateServiceModal
+                                                open={quickServiceOpen}
+                                                onOpenChange={setQuickServiceOpen}
+                                                onSuccess={handleServiceCreated}
+                                            />
+                                            <QuickCreateProductModal
+                                                open={quickProductOpen}
+                                                onOpenChange={setQuickProductOpen}
+                                                onSuccess={handleProductCreated}
+                                            />
                                         </DialogContent>
                                     </Dialog>
                                 ) : null}

@@ -10,6 +10,7 @@ use App\Http\Requests\SupplierRequest;
 use App\Models\Supplier;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -63,7 +64,7 @@ final class SupplierController extends Controller
         ]);
     }
 
-    public function store(SupplierRequest $request, TenantContext $context, CreateSupplier $createSupplier): RedirectResponse
+    public function store(SupplierRequest $request, TenantContext $context, CreateSupplier $createSupplier): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createSupplier, $request, $context, $data): array {
@@ -72,6 +73,14 @@ final class SupplierController extends Controller
             return ['resource_id' => $supplier->getKey(), 'resource_type' => 'supplier'];
         });
         $supplier = Supplier::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+                'supplier' => $supplier,
+            ], 201);
+        }
 
         return to_route('suppliers.show', $supplier)->with('success', 'Fornecedor cadastrado com sucesso.');
     }

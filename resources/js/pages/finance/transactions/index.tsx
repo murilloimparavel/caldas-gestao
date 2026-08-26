@@ -27,6 +27,12 @@ import {
     ResourceHeader,
 } from '@/components/operational';
 import type { Paginated } from '@/components/operational';
+import {
+    QuickCreateCategoryModal,
+    QuickCreateCustomerModal,
+    QuickCreateSupplierModal,
+} from '@/components/operational/quick-create-dialogs';
+import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -87,9 +93,9 @@ export default function FinancialTransactionsIndex({
     obligations,
     metrics,
     filters,
-    categoryOptions,
-    supplierOptions,
-    customerOptions,
+    categoryOptions: initialCategoryOptions,
+    supplierOptions: initialSupplierOptions,
+    customerOptions: initialCustomerOptions,
 }: Props) {
     const { auth } = usePage<SharedPageProps>().props;
     const canManage = auth.permissions.includes('financial.manage');
@@ -99,6 +105,37 @@ export default function FinancialTransactionsIndex({
     const [createType, setCreateType] = useState<FinancialObligationType>('payable');
     const [createAmount, setCreateAmount] = useState('');
     const [createKey] = useState(() => createIdempotencyKey('create-obligation'));
+
+    // Dynamic lists & selected values for quick create auto-selection
+    const [categories, setCategories] = useState<Option[]>(initialCategoryOptions);
+    const [suppliers, setSuppliers] = useState<Option[]>(initialSupplierOptions);
+    const [customersList, setCustomersList] = useState<Option[]>(initialCustomerOptions);
+
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [selectedSupplierId, setSelectedSupplierId] = useState('');
+    const [selectedCustomerId, setSelectedCustomerId] = useState('');
+
+    const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
+    const [quickSupplierOpen, setQuickSupplierOpen] = useState(false);
+    const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
+
+    const handleCategoryCreated = (created: CreatedEntity) => {
+        const newOpt: Option = { id: created.id, name: created.name };
+        setCategories((prev) => [...prev.filter((c) => c.id !== created.id), newOpt]);
+        setSelectedCategoryId(created.id);
+    };
+
+    const handleSupplierCreated = (created: CreatedEntity) => {
+        const newOpt: Option = { id: created.id, name: created.name };
+        setSuppliers((prev) => [...prev.filter((s) => s.id !== created.id), newOpt]);
+        setSelectedSupplierId(created.id);
+    };
+
+    const handleCustomerCreated = (created: CreatedEntity) => {
+        const newOpt: Option = { id: created.id, name: created.name };
+        setCustomersList((prev) => [...prev.filter((c) => c.id !== created.id), newOpt]);
+        setSelectedCustomerId(created.id);
+    };
 
     const [editingObligation, setEditingObligation] = useState<FinancialObligation | null>(null);
     const [editAmount, setEditAmount] = useState('');
@@ -219,6 +256,9 @@ export default function FinancialTransactionsIndex({
                                         onSuccess={() => {
                                             setIsCreateOpen(false);
                                             setCreateAmount('');
+                                            setSelectedCategoryId('');
+                                            setSelectedSupplierId('');
+                                            setSelectedCustomerId('');
                                         }}
                                         className="space-y-4"
                                     >
@@ -276,14 +316,29 @@ export default function FinancialTransactionsIndex({
                                                     </div>
 
                                                     <div>
-                                                        <FormField label="Categoria" name="category_id" error={errors.category_id}>
+                                                        <FormField
+                                                            label="Categoria"
+                                                            name="category_id"
+                                                            error={errors.category_id}
+                                                            action={
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setQuickCategoryOpen(true)}
+                                                                    className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                >
+                                                                    + Nova Categoria
+                                                                </button>
+                                                            }
+                                                        >
                                                             <select
                                                                 id="category_id"
                                                                 name="category_id"
+                                                                value={selectedCategoryId}
+                                                                onChange={(e) => setSelectedCategoryId(e.target.value)}
                                                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                                             >
                                                                 <option value="">Selecione uma categoria (opcional)</option>
-                                                                {categoryOptions.map((cat) => (
+                                                                {categories.map((cat) => (
                                                                     <option key={cat.id} value={cat.id}>
                                                                         {cat.name}
                                                                     </option>
@@ -294,14 +349,29 @@ export default function FinancialTransactionsIndex({
 
                                                     {createType === 'payable' ? (
                                                         <div>
-                                                            <FormField label="Fornecedor" name="supplier_id" error={errors.supplier_id}>
+                                                            <FormField
+                                                                label="Fornecedor"
+                                                                name="supplier_id"
+                                                                error={errors.supplier_id}
+                                                                action={
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setQuickSupplierOpen(true)}
+                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                    >
+                                                                        + Novo Fornecedor
+                                                                    </button>
+                                                                }
+                                                            >
                                                                 <select
                                                                     id="supplier_id"
                                                                     name="supplier_id"
+                                                                    value={selectedSupplierId}
+                                                                    onChange={(e) => setSelectedSupplierId(e.target.value)}
                                                                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                                                 >
                                                                     <option value="">Selecione o fornecedor (opcional)</option>
-                                                                    {supplierOptions.map((sup) => (
+                                                                    {suppliers.map((sup) => (
                                                                         <option key={sup.id} value={sup.id}>
                                                                             {sup.name}
                                                                         </option>
@@ -311,14 +381,29 @@ export default function FinancialTransactionsIndex({
                                                         </div>
                                                     ) : (
                                                         <div>
-                                                            <FormField label="Cliente" name="customer_id" error={errors.customer_id}>
+                                                            <FormField
+                                                                label="Cliente"
+                                                                name="customer_id"
+                                                                error={errors.customer_id}
+                                                                action={
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setQuickCustomerOpen(true)}
+                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                    >
+                                                                        + Novo Cliente
+                                                                    </button>
+                                                                }
+                                                            >
                                                                 <select
                                                                     id="customer_id"
                                                                     name="customer_id"
+                                                                    value={selectedCustomerId}
+                                                                    onChange={(e) => setSelectedCustomerId(e.target.value)}
                                                                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                                                 >
                                                                     <option value="">Selecione o cliente (opcional)</option>
-                                                                    {customerOptions.map((cus) => (
+                                                                    {customersList.map((cus) => (
                                                                         <option key={cus.id} value={cus.id}>
                                                                             {cus.name}
                                                                         </option>
@@ -347,11 +432,28 @@ export default function FinancialTransactionsIndex({
                                             </>
                                         )}
                                     </Form>
+
+                                    <QuickCreateCategoryModal
+                                        open={quickCategoryOpen}
+                                        onOpenChange={setQuickCategoryOpen}
+                                        onSuccess={handleCategoryCreated}
+                                    />
+                                    <QuickCreateSupplierModal
+                                        open={quickSupplierOpen}
+                                        onOpenChange={setQuickSupplierOpen}
+                                        onSuccess={handleSupplierCreated}
+                                    />
+                                    <QuickCreateCustomerModal
+                                        open={quickCustomerOpen}
+                                        onOpenChange={setQuickCustomerOpen}
+                                        onSuccess={handleCustomerCreated}
+                                    />
                                 </DialogContent>
                             </Dialog>
                         ) : null
                     }
                 />
+
 
                 {/* Metrics Banner */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -523,7 +625,7 @@ export default function FinancialTransactionsIndex({
                                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
                             >
                                 <option value="">Todas as categorias</option>
-                                {categoryOptions.map((cat) => (
+                                {categories.map((cat) => (
                                     <option key={cat.id} value={cat.id}>
                                         {cat.name}
                                     </option>
@@ -796,7 +898,7 @@ export default function FinancialTransactionsIndex({
                                                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                                     >
                                                         <option value="">Selecione uma categoria (opcional)</option>
-                                                        {categoryOptions.map((cat) => (
+                                                        {categories.map((cat) => (
                                                             <option key={cat.id} value={cat.id}>
                                                                 {cat.name}
                                                             </option>
@@ -815,7 +917,7 @@ export default function FinancialTransactionsIndex({
                                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                                         >
                                                             <option value="">Selecione o fornecedor (opcional)</option>
-                                                            {supplierOptions.map((sup) => (
+                                                            {suppliers.map((sup) => (
                                                                 <option key={sup.id} value={sup.id}>
                                                                     {sup.name}
                                                                 </option>
@@ -833,7 +935,7 @@ export default function FinancialTransactionsIndex({
                                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                                         >
                                                             <option value="">Selecione o cliente (opcional)</option>
-                                                            {customerOptions.map((cus) => (
+                                                            {customersList.map((cus) => (
                                                                 <option key={cus.id} value={cus.id}>
                                                                     {cus.name}
                                                                 </option>

@@ -10,6 +10,7 @@ use App\Http\Requests\SaleCategoryRequest;
 use App\Models\SaleCategory;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -61,7 +62,7 @@ final class SaleCategoryController extends Controller
         ]);
     }
 
-    public function store(SaleCategoryRequest $request, TenantContext $context, CreateSaleCategory $createSaleCategory): RedirectResponse
+    public function store(SaleCategoryRequest $request, TenantContext $context, CreateSaleCategory $createSaleCategory): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createSaleCategory, $request, $context, $data): array {
@@ -70,6 +71,14 @@ final class SaleCategoryController extends Controller
             return ['resource_id' => $category->getKey(), 'resource_type' => 'sale-category'];
         });
         $category = SaleCategory::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $category->id,
+                'name' => $category->name,
+                'category' => $category,
+            ], 201);
+        }
 
         return to_route('sale-categories.show', $category)->with('success', 'Categoria de comanda cadastrada com sucesso.');
     }

@@ -10,6 +10,7 @@ use App\Http\Requests\CategoryRequest;
 use App\Models\Category;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -58,7 +59,7 @@ final class CategoryController extends Controller
         ]);
     }
 
-    public function store(CategoryRequest $request, TenantContext $context, CreateCategory $createCategory): RedirectResponse
+    public function store(CategoryRequest $request, TenantContext $context, CreateCategory $createCategory): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createCategory, $request, $context, $data): array {
@@ -67,6 +68,14 @@ final class CategoryController extends Controller
             return ['resource_id' => $category->getKey(), 'resource_type' => 'category'];
         });
         $category = Category::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $category->id,
+                'name' => $category->name,
+                'category' => $category,
+            ], 201);
+        }
 
         return to_route('categories.show', $category)->with('success', 'Categoria cadastrada com sucesso.');
     }

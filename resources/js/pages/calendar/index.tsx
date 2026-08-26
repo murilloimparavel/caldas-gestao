@@ -720,7 +720,7 @@ function ScheduleBlockForm({
     defaultProfessionalId = '',
     defaultStartsAt: prefilledStartsAt,
     onClose,
-    professionals,
+    professionals: initialProfessionals,
     unitTimezone,
 }: {
     defaultDate: string;
@@ -735,97 +735,128 @@ function ScheduleBlockForm({
         createIdempotencyKey('schedule-block-create'),
     );
 
+    const [professionalList, setProfessionalList] = useState<CalendarOption[]>(initialProfessionals);
+    const [selectedProfessional, setSelectedProfessional] = useState(defaultProfessionalId);
+    const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
+
+    const handleProfessionalCreated = (created: CreatedEntity) => {
+        const newOpt: CalendarOption = { id: created.id, name: created.name };
+        setProfessionalList((prev) => [
+            ...prev.filter((p) => p.id !== created.id),
+            newOpt,
+        ]);
+        setSelectedProfessional(created.id);
+    };
+
     const defaultStartsAt = prefilledStartsAt || `${defaultDate}T09:00`;
     const defaultEndsAt = prefilledEndsAt || `${defaultDate}T10:00`;
 
     return (
-        <Form
-            {...storeScheduleBlock.form()}
-            headers={{ 'X-Idempotency-Key': mutationKey }}
-            className="space-y-4"
-            onSuccess={onClose}
-        >
-            {({ errors, processing }) => (
-                <>
-                    <FormErrorSummary errors={errors} />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="sm:col-span-2">
-                            <FormField
-                                label="Profissional"
-                                name="professional_id"
-                                error={errors.professional_id}
-                            >
-                                <select
-                                    id="professional_id"
+        <>
+            <Form
+                {...storeScheduleBlock.form()}
+                headers={{ 'X-Idempotency-Key': mutationKey }}
+                className="space-y-4"
+                onSuccess={onClose}
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <FormErrorSummary errors={errors} />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
+                                <FormField
+                                    label="Profissional"
                                     name="professional_id"
-                                    defaultValue={defaultProfessionalId}
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    error={errors.professional_id}
+                                    action={
+                                        <button
+                                            type="button"
+                                            onClick={() => setQuickProfessionalOpen(true)}
+                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                        >
+                                            + Novo Profissional
+                                        </button>
+                                    }
                                 >
-                                    <option value="">
-                                        Toda a unidade (Bloqueio geral)
-                                    </option>
-                                    {professionals.map((p) => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.name}
+                                    <select
+                                        id="professional_id"
+                                        name="professional_id"
+                                        value={selectedProfessional}
+                                        onChange={(e) => setSelectedProfessional(e.target.value)}
+                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    >
+                                        <option value="">
+                                            Toda a unidade (Bloqueio geral)
                                         </option>
-                                    ))}
-                                </select>
-                            </FormField>
-                        </div>
-                        <FormField
-                            label="Início do bloqueio"
-                            name="starts_at"
-                            error={errors.starts_at}
-                        >
-                            <Input
-                                id="starts_at"
-                                name="starts_at"
-                                type="datetime-local"
-                                defaultValue={defaultStartsAt}
-                                required
-                            />
-                        </FormField>
-                        <FormField
-                            label="Fim do bloqueio"
-                            name="ends_at"
-                            error={errors.ends_at}
-                        >
-                            <Input
-                                id="ends_at"
-                                name="ends_at"
-                                type="datetime-local"
-                                defaultValue={defaultEndsAt}
-                                required
-                            />
-                        </FormField>
-                        <div className="sm:col-span-2">
+                                        {professionalList.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormField>
+                            </div>
                             <FormField
-                                label="Motivo / Justificativa"
-                                name="reason"
-                                error={errors.reason}
+                                label="Início do bloqueio"
+                                name="starts_at"
+                                error={errors.starts_at}
                             >
                                 <Input
-                                    id="reason"
-                                    name="reason"
-                                    placeholder="Ex.: Intervalo, Almoço, Consulta médica, Manutenção"
+                                    id="starts_at"
+                                    name="starts_at"
+                                    type="datetime-local"
+                                    defaultValue={defaultStartsAt}
                                     required
                                 />
                             </FormField>
+                            <FormField
+                                label="Fim do bloqueio"
+                                name="ends_at"
+                                error={errors.ends_at}
+                            >
+                                <Input
+                                    id="ends_at"
+                                    name="ends_at"
+                                    type="datetime-local"
+                                    defaultValue={defaultEndsAt}
+                                    required
+                                />
+                            </FormField>
+                            <div className="sm:col-span-2">
+                                <FormField
+                                    label="Motivo / Justificativa"
+                                    name="reason"
+                                    error={errors.reason}
+                                >
+                                    <Input
+                                        id="reason"
+                                        name="reason"
+                                        placeholder="Ex.: Intervalo, Almoço, Consulta médica, Manutenção"
+                                        required
+                                    />
+                                </FormField>
+                            </div>
+                            <input
+                                type="hidden"
+                                name="timezone"
+                                value={unitTimezone}
+                            />
                         </div>
-                        <input
-                            type="hidden"
-                            name="timezone"
-                            value={unitTimezone}
+                        <FormActions
+                            processing={processing}
+                            onCancel={onClose}
+                            label="Criar bloqueio"
                         />
-                    </div>
-                    <FormActions
-                        processing={processing}
-                        onCancel={onClose}
-                        label="Criar bloqueio"
-                    />
-                </>
-            )}
-        </Form>
+                    </>
+                )}
+            </Form>
+
+            <QuickCreateProfessionalModal
+                open={quickProfessionalOpen}
+                onOpenChange={setQuickProfessionalOpen}
+                onSuccess={handleProfessionalCreated}
+            />
+        </>
     );
 }
 

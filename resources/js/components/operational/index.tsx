@@ -266,6 +266,7 @@ export function FormField({
     required = false,
     description,
     error,
+    action,
     children,
 }: {
     label: string;
@@ -274,6 +275,7 @@ export function FormField({
     required?: boolean;
     description?: ReactNode;
     error?: unknown;
+    action?: ReactNode;
     children: ReactNode;
 }) {
     const errorMessage = firstError(error);
@@ -306,20 +308,25 @@ export function FormField({
     });
 
     return (
-        <div className="space-y-2">
-            <label
-                htmlFor={controlId}
-                className="text-sm font-medium text-foreground"
-            >
-                {label}
-                {required ? <span aria-hidden="true"> *</span> : null}
-            </label>
-            {enhancedChildren}
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+                <label
+                    htmlFor={controlId}
+                    className="block text-sm font-medium text-foreground"
+                >
+                    {label}
+                    {required ? (
+                        <span className="ml-1 text-destructive">*</span>
+                    ) : null}
+                </label>
+                {action ?? null}
+            </div>
             {description ? (
                 <p id={descriptionId} className="text-xs text-muted-foreground">
                     {description}
                 </p>
             ) : null}
+            {enhancedChildren}
             <InputError id={errorId} message={errorMessage} role="alert" />
         </div>
     );

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import customers from '@/routes/customers';
+import products from '@/routes/products';
 import professionals from '@/routes/professionals';
 import services from '@/routes/services';
 
@@ -24,6 +25,7 @@ export type CreatedEntity = {
     phone?: string | null;
     duration_minutes?: number;
     price_cents?: number;
+    current_stock?: number;
 };
 
 interface QuickCreateModalProps {
@@ -421,3 +423,377 @@ export function QuickCreateProfessionalModal({
         </Dialog>
     );
 }
+
+export function QuickCreateSupplierModal({
+    open,
+    onOpenChange,
+    onSuccess,
+}: QuickCreateModalProps) {
+    const [mutationKey, setMutationKey] = useState(() =>
+        createIdempotencyKey('supplier-quick-create'),
+    );
+    const [name, setName] = useState('');
+    const [documentNumber, setDocumentNumber] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [processing, setProcessing] = useState(false);
+
+    const handleClose = () => {
+        setName('');
+        setDocumentNumber('');
+        setPhone('');
+        setEmail('');
+        setErrors({});
+        onOpenChange(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProcessing(true);
+        setErrors({});
+
+        try {
+            const response = await fetch('/suppliers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Idempotency-Key': mutationKey,
+                    'X-CSRF-TOKEN':
+                        (
+                            document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ) as HTMLMetaElement
+                        )?.content || '',
+                },
+                body: JSON.stringify({
+                    name,
+                    document_number: documentNumber || null,
+                    phone: phone || null,
+                    email: email || null,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors) {
+                    setErrors(data.errors);
+                } else {
+                    setErrors({
+                        name: data.message || 'Erro ao cadastrar fornecedor.',
+                    });
+                }
+
+                setProcessing(false);
+
+                return;
+            }
+
+            const createdSupplier: CreatedEntity = {
+                id: data.id || data.supplier?.id,
+                name: data.name || data.supplier?.name,
+                phone: data.phone || data.supplier?.phone,
+            };
+
+            setProcessing(false);
+            handleClose();
+            setMutationKey(createIdempotencyKey('supplier-quick-create'));
+            onSuccess(createdSupplier);
+        } catch {
+            setErrors({ name: 'Erro de conexão ao cadastrar fornecedor.' });
+            setProcessing(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Novo Fornecedor</DialogTitle>
+                    <DialogDescription>
+                        Cadastre um fornecedor rapidamente para vincular ao lançamento.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <FormErrorSummary errors={errors} />
+                    <FormField label="Razão Social / Empresa" name="name" error={errors.name} required>
+                        <Input
+                            id="quick_supplier_name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Nome da empresa ou fornecedor"
+                            required
+                        />
+                    </FormField>
+
+                    <FormField label="CNPJ / CPF" name="document_number" error={errors.document_number}>
+                        <Input
+                            id="quick_supplier_document"
+                            value={documentNumber}
+                            onChange={(e) => setDocumentNumber(e.target.value)}
+                            placeholder="00.000.000/0000-00"
+                        />
+                    </FormField>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField label="Telefone / Contato" name="phone" error={errors.phone}>
+                            <Input
+                                id="quick_supplier_phone"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="(11) 99999-9999"
+                            />
+                        </FormField>
+
+                        <FormField label="E-mail" name="email" error={errors.email}>
+                            <Input
+                                id="quick_supplier_email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="fornecedor@exemplo.com"
+                            />
+                        </FormField>
+                    </div>
+
+                    <FormActions
+                        processing={processing}
+                        onCancel={handleClose}
+                        submitLabel="Cadastrar e Selecionar"
+                    />
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export function QuickCreateCategoryModal({
+    open,
+    onOpenChange,
+    onSuccess,
+}: QuickCreateModalProps) {
+    const [mutationKey, setMutationKey] = useState(() =>
+        createIdempotencyKey('category-quick-create'),
+    );
+    const [name, setName] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [processing, setProcessing] = useState(false);
+
+    const handleClose = () => {
+        setName('');
+        setErrors({});
+        onOpenChange(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProcessing(true);
+        setErrors({});
+
+        try {
+            const response = await fetch('/categories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Idempotency-Key': mutationKey,
+                    'X-CSRF-TOKEN':
+                        (
+                            document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ) as HTMLMetaElement
+                        )?.content || '',
+                },
+                body: JSON.stringify({
+                    name,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors) {
+                    setErrors(data.errors);
+                } else {
+                    setErrors({
+                        name: data.message || 'Erro ao cadastrar categoria.',
+                    });
+                }
+
+                setProcessing(false);
+
+                return;
+            }
+
+            const createdCategory: CreatedEntity = {
+                id: data.id || data.category?.id,
+                name: data.name || data.category?.name,
+            };
+
+            setProcessing(false);
+            handleClose();
+            setMutationKey(createIdempotencyKey('category-quick-create'));
+            onSuccess(createdCategory);
+        } catch {
+            setErrors({ name: 'Erro de conexão ao cadastrar categoria.' });
+            setProcessing(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Nova Categoria</DialogTitle>
+                    <DialogDescription>
+                        Cadastre uma nova categoria para organizar itens e lançamentos.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <FormErrorSummary errors={errors} />
+                    <FormField label="Nome da Categoria" name="name" error={errors.name} required>
+                        <Input
+                            id="quick_category_name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Ex.: Produtos de Cabelo, Bebidas, etc."
+                            required
+                        />
+                    </FormField>
+
+                    <FormActions
+                        processing={processing}
+                        onCancel={handleClose}
+                        submitLabel="Cadastrar e Selecionar"
+                    />
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export function QuickCreateProductModal({
+    open,
+    onOpenChange,
+    onSuccess,
+}: QuickCreateModalProps) {
+    const [mutationKey, setMutationKey] = useState(() =>
+        createIdempotencyKey('product-quick-create'),
+    );
+    const [name, setName] = useState('');
+    const [priceFormatted, setPriceFormatted] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [processing, setProcessing] = useState(false);
+
+    const handleClose = () => {
+        setName('');
+        setPriceFormatted('');
+        setErrors({});
+        onOpenChange(false);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProcessing(true);
+        setErrors({});
+
+        const priceCents = parseBrazilianCurrency(priceFormatted);
+
+        try {
+            const response = await fetch(products.store.url(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-Idempotency-Key': mutationKey,
+                    'X-CSRF-TOKEN':
+                        (
+                            document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ) as HTMLMetaElement
+                        )?.content || '',
+                },
+                body: JSON.stringify({
+                    name,
+                    sale_price_cents: priceCents,
+                    unit_of_measure: 'un',
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors) {
+                    setErrors(data.errors);
+                } else {
+                    setErrors({
+                        name: data.message || 'Erro ao cadastrar produto.',
+                    });
+                }
+
+                setProcessing(false);
+
+                return;
+            }
+
+            const createdProduct: CreatedEntity = {
+                id: data.id || data.product?.id,
+                name: data.name || data.product?.name,
+                price_cents: priceCents,
+                current_stock: data.current_stock ?? data.product?.current_stock ?? 0,
+            };
+
+            setProcessing(false);
+            handleClose();
+            setMutationKey(createIdempotencyKey('product-quick-create'));
+            onSuccess(createdProduct);
+        } catch {
+            setErrors({ name: 'Erro de conexão ao cadastrar produto.' });
+            setProcessing(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Novo Produto</DialogTitle>
+                    <DialogDescription>
+                        Cadastre um produto rapidamente para incluir na comanda.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <FormErrorSummary errors={errors} />
+                    <FormField label="Nome do Produto" name="name" error={errors.name} required>
+                        <Input
+                            id="quick_product_name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Ex.: Pomada Modeladora"
+                            required
+                        />
+                    </FormField>
+
+                    <FormField label="Preço de Venda (R$)" name="sale_price_cents" error={errors.sale_price_cents} required>
+                        <Input
+                            id="quick_product_price"
+                            value={priceFormatted}
+                            onChange={(e) => setPriceFormatted(e.target.value)}
+                            placeholder="35,00"
+                            required
+                        />
+                    </FormField>
+
+                    <FormActions
+                        processing={processing}
+                        onCancel={handleClose}
+                        submitLabel="Cadastrar e Selecionar"
+                    />
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+

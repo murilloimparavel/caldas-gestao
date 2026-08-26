@@ -22,6 +22,8 @@ import type {
     RelationOption,
     ResourceFilters,
 } from '@/components/operational';
+import { QuickCreateProfessionalModal } from '@/components/operational/quick-create-dialogs';
+import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -96,13 +98,26 @@ export default function ServicesIndex({
     services: paginator,
     filters,
     options,
-    professionalOptions,
+    professionalOptions: initialProfessionalOptions,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
     const [createKey] = useState(() => createIdempotencyKey('service-create'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
+
+    const [professionalOptions, setProfessionalOptions] = useState<RelationOption[]>(
+        initialProfessionalOptions ?? options?.professionals ?? [],
+    );
+    const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
+
+    const handleProfessionalCreated = (created: CreatedEntity) => {
+        const newOpt: RelationOption = { id: created.id, name: created.name };
+        setProfessionalOptions((prev) => [
+            ...prev.filter((p) => p.id !== created.id),
+            newOpt,
+        ]);
+    };
 
     const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
         router.get(
@@ -111,8 +126,6 @@ export default function ServicesIndex({
             { preserveState: true, preserveScroll: true },
         );
     };
-    const availableProfessionals =
-        professionalOptions ?? options?.professionals ?? [];
 
     return (
         <>
@@ -241,14 +254,22 @@ export default function ServicesIndex({
                                                         </FormField>
                                                     </div>
                                                     <div className="space-y-2 sm:col-span-2">
-                                                        <p className="text-sm font-medium text-foreground">
-                                                            Profissionais
-                                                            habilitados
-                                                        </p>
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="text-sm font-medium text-foreground">
+                                                                Profissionais habilitados
+                                                            </p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setQuickProfessionalOpen(true)}
+                                                                className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                            >
+                                                                + Novo Profissional
+                                                            </button>
+                                                        </div>
                                                         <RelationCheckboxes
                                                             name="professional_ids"
                                                             options={
-                                                                availableProfessionals
+                                                                professionalOptions
                                                             }
                                                         />
                                                         <p className="text-xs text-muted-foreground">
@@ -265,15 +286,20 @@ export default function ServicesIndex({
                                                 />
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() => {
-                                                        setCreateOpen(false);
-                                                        setSelectedPhoto(null);
-                                                    }}
+                                                    onCancel={() =>
+                                                        setCreateOpen(false)
+                                                    }
                                                     label="Cadastrar serviço"
                                                 />
                                             </>
                                         )}
                                     </Form>
+
+                                    <QuickCreateProfessionalModal
+                                        open={quickProfessionalOpen}
+                                        onOpenChange={setQuickProfessionalOpen}
+                                        onSuccess={handleProfessionalCreated}
+                                    />
                                 </DialogContent>
                             </Dialog>
                         ) : null

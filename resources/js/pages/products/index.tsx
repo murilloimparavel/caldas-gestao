@@ -24,6 +24,8 @@ import {
     StatusBadge,
 } from '@/components/operational';
 import type { Paginated, ResourceFilters } from '@/components/operational';
+import { QuickCreateCategoryModal } from '@/components/operational/quick-create-dialogs';
+import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -118,7 +120,7 @@ function MoneyPriceField({
 export default function ProductsIndex({
     products: paginator,
     filters,
-    categoryOptions = [],
+    categoryOptions: initialCategoryOptions = [],
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
@@ -131,6 +133,16 @@ export default function ProductsIndex({
     const canViewInventory =
         props.auth.permissions.includes('inventory.view') ||
         props.auth.permissions.includes('product.view');
+
+    const [categories, setCategories] = useState<CategoryOption[]>(initialCategoryOptions);
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
+
+    const handleCategoryCreated = (created: CreatedEntity) => {
+        const newOpt: CategoryOption = { id: created.id, name: created.name };
+        setCategories((prev) => [...prev.filter((c) => c.id !== created.id), newOpt]);
+        setSelectedCategoryId(created.id);
+    };
 
     const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
         router.get(
@@ -192,6 +204,7 @@ export default function ProductsIndex({
                                         onSuccess={() => {
                                             setCreateOpen(false);
                                             setSelectedPhoto(null);
+                                            setSelectedCategoryId('');
                                         }}
                                         className="space-y-5"
                                     >
@@ -235,15 +248,25 @@ export default function ProductsIndex({
                                                             label="Categoria"
                                                             name="category_id"
                                                             error={errors.category_id}
+                                                            action={
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setQuickCategoryOpen(true)}
+                                                                    className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                >
+                                                                    + Nova Categoria
+                                                                </button>
+                                                            }
                                                         >
                                                             <select
                                                                 id="category_id"
                                                                 name="category_id"
-                                                                defaultValue=""
+                                                                value={selectedCategoryId}
+                                                                onChange={(e) => setSelectedCategoryId(e.target.value)}
                                                                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
                                                                 <option value="">Sem categoria</option>
-                                                                {categoryOptions.map((cat) => (
+                                                                {categories.map((cat) => (
                                                                     <option key={cat.id} value={cat.id}>
                                                                         {cat.name}
                                                                     </option>
@@ -351,7 +374,7 @@ export default function ProductsIndex({
                                                     name="is_active"
                                                     value="1"
                                                 />
-                                                <FormActions
+                                                 <FormActions
                                                     processing={processing}
                                                     onCancel={() => setCreateOpen(false)}
                                                     label="Cadastrar produto"
@@ -359,6 +382,12 @@ export default function ProductsIndex({
                                             </>
                                         )}
                                     </Form>
+
+                                    <QuickCreateCategoryModal
+                                        open={quickCategoryOpen}
+                                        onOpenChange={setQuickCategoryOpen}
+                                        onSuccess={handleCategoryCreated}
+                                    />
                                 </DialogContent>
                             </Dialog>
                         ) : null}
