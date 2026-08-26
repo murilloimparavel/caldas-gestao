@@ -23,6 +23,15 @@ import {
 import type { ResourceStatus } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { index as calendarIndex } from '@/routes/calendar';
 import customers from '@/routes/customers';
@@ -76,6 +85,11 @@ export default function CustomerShow({ customer }: Props) {
     const [destroyKey] = useState(() =>
         createIdempotencyKey('customer-destroy'),
     );
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('customer-reactivate'),
+    );
+    const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('customer.manage');
     const appointments = customer.appointments ?? [];
@@ -379,60 +393,187 @@ export default function CustomerShow({ customer }: Props) {
                             </div>
                         </section>
                         {canManage ? (
-                            <section className="surface-panel border-destructive/30 p-5 sm:p-6">
-                                <div className="flex items-start gap-3">
-                                    <UserRound
-                                        aria-hidden="true"
-                                        className="mt-0.5 size-4 text-destructive"
-                                    />
-                                    <div>
-                                        <h2 className="text-base font-semibold">
-                                            Desativar cadastro
-                                        </h2>
-                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                            O histórico é preservado e o cliente
-                                            pode ser reativado editando o
-                                            status.
-                                        </p>
+                            customer.status === 'inactive' ? (
+                                <section className="surface-panel border-emerald-500/30 bg-emerald-50/20 p-5 sm:p-6 dark:bg-emerald-950/20">
+                                    <div className="flex items-start gap-3">
+                                        <UserRound
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold text-foreground">
+                                                Reativar cadastro
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                Este cliente está atualmente inativo. Reative o cadastro para que ele volte a aparecer em novos agendamentos e atendimentos.
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <Form
-                                    {...customers.destroy.form(customer.id)}
-                                    headers={{
-                                        'X-Idempotency-Key': destroyKey,
-                                    }}
-                                    className="mt-4"
-                                    onSubmit={(event) => {
-                                        if (
-                                            !window.confirm(
-                                                'Desativar este cliente?',
-                                            )
-                                        ) {
-                                            event.preventDefault();
-                                        }
-                                    }}
-                                >
-                                    {({ processing }) => (
-                                        <>
-                                            <input
-                                                type="hidden"
-                                                name="lock_version"
-                                                value={customer.lock_version}
-                                            />
+                                    <Dialog
+                                        open={reactivateOpen}
+                                        onOpenChange={setReactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
                                             <Button
-                                                type="submit"
-                                                variant="destructive"
-                                                disabled={processing}
-                                                className="w-full"
+                                                type="button"
+                                                className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                             >
-                                                {processing
-                                                    ? 'Desativando…'
-                                                    : 'Desativar cliente'}
+                                                Reativar cadastro
                                             </Button>
-                                        </>
-                                    )}
-                                </Form>
-                            </section>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Reativar cliente?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O cliente voltará a ficar ativo e poderá ser selecionado em novos agendamentos.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...customers.reactivate.form(
+                                                    customer.id,
+                                                )}
+                                                method="patch"
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        reactivateKey,
+                                                }}
+                                                onSuccess={() =>
+                                                    setReactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                customer.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setReactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                            >
+                                                                {processing
+                                                                    ? 'Reativando…'
+                                                                    : 'Confirmar reativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            ) : (
+                                <section className="surface-panel border-destructive/30 p-5 sm:p-6">
+                                    <div className="flex items-start gap-3">
+                                        <UserRound
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-destructive"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold">
+                                                Desativar cadastro
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                O histórico é preservado e o cliente
+                                                pode ser reativado a qualquer momento.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Dialog
+                                        open={inactivateOpen}
+                                        onOpenChange={setInactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                className="mt-4 w-full"
+                                            >
+                                                Desativar cliente
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Desativar cliente?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O cliente deixará de aparecer em novas buscas e agendamentos, mantendo todo o histórico de visitas.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...customers.destroy.form(
+                                                    customer.id,
+                                                )}
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        destroyKey,
+                                                }}
+                                                method="delete"
+                                                onSuccess={() =>
+                                                    setInactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                customer.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setInactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                variant="destructive"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                {processing
+                                                                    ? 'Desativando…'
+                                                                    : 'Confirmar desativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            )
                         ) : null}
                     </aside>
                 </div>

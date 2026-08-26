@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Services\CreateService;
 use App\Actions\Services\DeactivateService;
+use App\Actions\Services\ReactivateService;
 use App\Actions\Services\UpdateService;
 use App\Http\Requests\ServiceRequest;
 use App\Models\Service;
@@ -23,9 +24,25 @@ final class ServiceController extends Controller
     {
         Gate::authorize('viewAny', Service::class);
         $search = trim((string) $request->string('search'));
-        $services = Service::query()->with('professionals:id,name')->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))->orderBy('name')->paginate(25)->withQueryString();
+        $status = (string) $request->string('status', 'active');
+        $services = Service::query()
+            ->with('professionals:id,name')
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $context->unit?->getKey())
+            ->when($status === 'active', fn ($query) => $query->where('status', 'active'))
+            ->when($status === 'inactive', fn ($query) => $query->where('status', 'inactive'))
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
 
-        return Inertia::render('services/index', ['services' => $services, 'filters' => ['search' => $search]]);
+        return Inertia::render('services/index', [
+            'services' => $services,
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+            ],
+        ]);
     }
 
     public function show(Service $service): Response
@@ -71,5 +88,17 @@ final class ServiceController extends Controller
         });
 
         return to_route('services.index')->with('success', 'Serviço inativado.');
+    }
+
+    public function reactivate(ServiceRequest $request, TenantContext $context, Service $service, ReactivateService $reactivateService): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateService, $request, $context, $service, $data): array {
+            $reactivated = $reactivateService->handle($request->user(), $context, $service, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'service'];
+        });
+
+        return to_route('services.show', $service)->with('success', 'Serviço reativado.');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Professionals\CreateProfessional;
 use App\Actions\Professionals\DeactivateProfessional;
+use App\Actions\Professionals\ReactivateProfessional;
 use App\Actions\Professionals\UpdateProfessional;
 use App\Http\Requests\ProfessionalRequest;
 use App\Models\Professional;
@@ -23,9 +24,25 @@ final class ProfessionalController extends Controller
     {
         Gate::authorize('viewAny', Professional::class);
         $search = trim((string) $request->string('search'));
-        $professionals = Professional::query()->with('services:id,name')->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))->orderBy('name')->paginate(25)->withQueryString();
+        $status = (string) $request->string('status', 'active');
+        $professionals = Professional::query()
+            ->with('services:id,name')
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $context->unit?->getKey())
+            ->when($status === 'active', fn ($query) => $query->where('status', 'active'))
+            ->when($status === 'inactive', fn ($query) => $query->where('status', 'inactive'))
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
 
-        return Inertia::render('professionals/index', ['professionals' => $professionals, 'filters' => ['search' => $search]]);
+        return Inertia::render('professionals/index', [
+            'professionals' => $professionals,
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+            ],
+        ]);
     }
 
     public function show(Professional $professional): Response
@@ -77,5 +94,17 @@ final class ProfessionalController extends Controller
         });
 
         return to_route('professionals.index')->with('success', 'Profissional inativado.');
+    }
+
+    public function reactivate(ProfessionalRequest $request, TenantContext $context, Professional $professional, ReactivateProfessional $reactivateProfessional): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateProfessional, $request, $context, $professional, $data): array {
+            $reactivated = $reactivateProfessional->handle($request->user(), $context, $professional, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'professional'];
+        });
+
+        return to_route('professionals.show', $professional)->with('success', 'Profissional reativado.');
     }
 }

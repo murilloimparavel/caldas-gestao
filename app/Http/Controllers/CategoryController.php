@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Categories\CreateCategory;
 use App\Actions\Categories\DeactivateCategory;
+use App\Actions\Categories\ReactivateCategory;
 use App\Actions\Categories\UpdateCategory;
 use App\Http\Requests\CategoryRequest;
 use App\Models\Category;
@@ -24,11 +25,14 @@ final class CategoryController extends Controller
         Gate::authorize('viewAny', Category::class);
         $search = trim((string) $request->string('search'));
         $type = trim((string) $request->string('type'));
+        $status = (string) $request->string('status', 'active');
 
         $categories = Category::query()
             ->withCount(['services', 'products'])
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit?->getKey())
+            ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
             ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
             ->when($type !== '', fn ($query) => $query->where('type', $type))
             ->orderBy('name')
@@ -40,6 +44,7 @@ final class CategoryController extends Controller
             'filters' => [
                 'search' => $search,
                 'type' => $type,
+                'status' => $status,
             ],
         ]);
     }
@@ -89,5 +94,17 @@ final class CategoryController extends Controller
         });
 
         return to_route('categories.index')->with('success', 'Categoria inativada com sucesso.');
+    }
+
+    public function reactivate(CategoryRequest $request, TenantContext $context, Category $category, ReactivateCategory $reactivateCategory): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateCategory, $request, $context, $category, $data): array {
+            $reactivated = $reactivateCategory->handle($request->user(), $context, $category, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'category'];
+        });
+
+        return to_route('categories.show', $category)->with('success', 'Categoria reativada com sucesso.');
     }
 }

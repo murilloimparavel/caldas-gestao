@@ -22,6 +22,15 @@ import {
 } from '@/components/operational';
 import type { RelationOption, ResourceStatus } from '@/components/operational';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import professionals from '@/routes/professionals';
 import type { SharedPageProps } from '@/types';
@@ -95,6 +104,11 @@ export default function ProfessionalShow({
     const [destroyKey] = useState(() =>
         createIdempotencyKey('professional-destroy'),
     );
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('professional-reactivate'),
+    );
+    const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
     const availableServices =
@@ -499,63 +513,187 @@ export default function ProfessionalShow({
                             </div>
                         </section>
                         {canManage ? (
-                            <section className="surface-panel border-destructive/30 p-5 sm:p-6">
-                                <div className="flex items-start gap-3">
-                                    <UserRound
-                                        aria-hidden="true"
-                                        className="mt-0.5 size-4 text-destructive"
-                                    />
-                                    <div>
-                                        <h2 className="text-base font-semibold">
-                                            Desativar profissional
-                                        </h2>
-                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                            O histórico permanece disponível e o
-                                            status pode ser reativado.
-                                        </p>
+                            professional.status === 'inactive' ? (
+                                <section className="surface-panel border-emerald-500/30 bg-emerald-50/20 p-5 sm:p-6 dark:bg-emerald-950/20">
+                                    <div className="flex items-start gap-3">
+                                        <UserRound
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold text-foreground">
+                                                Reativar profissional
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                Este profissional está atualmente inativo. Reative o cadastro para disponibilizá-lo novamente na agenda e atendimentos.
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <Form
-                                    {...professionals.destroy.form(
-                                        professional.id,
-                                    )}
-                                    headers={{
-                                        'X-Idempotency-Key': destroyKey,
-                                    }}
-                                    className="mt-4"
-                                    onSubmit={(event) => {
-                                        if (
-                                            !window.confirm(
-                                                'Desativar este profissional?',
-                                            )
-                                        ) {
-                                            event.preventDefault();
-                                        }
-                                    }}
-                                >
-                                    {({ processing }) => (
-                                        <>
-                                            <input
-                                                type="hidden"
-                                                name="lock_version"
-                                                value={
-                                                    professional.lock_version
-                                                }
-                                            />
+                                    <Dialog
+                                        open={reactivateOpen}
+                                        onOpenChange={setReactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
                                             <Button
-                                                type="submit"
-                                                variant="destructive"
-                                                disabled={processing}
-                                                className="w-full"
+                                                type="button"
+                                                className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                             >
-                                                {processing
-                                                    ? 'Desativando…'
-                                                    : 'Desativar profissional'}
+                                                Reativar cadastro
                                             </Button>
-                                        </>
-                                    )}
-                                </Form>
-                            </section>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Reativar profissional?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O profissional voltará a ficar ativo e poderá ser selecionado em novos agendamentos e atendimentos.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...professionals.reactivate.form(
+                                                    professional.id,
+                                                )}
+                                                method="patch"
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        reactivateKey,
+                                                }}
+                                                onSuccess={() =>
+                                                    setReactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                professional.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setReactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                            >
+                                                                {processing
+                                                                    ? 'Reativando…'
+                                                                    : 'Confirmar reativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            ) : (
+                                <section className="surface-panel border-destructive/30 p-5 sm:p-6">
+                                    <div className="flex items-start gap-3">
+                                        <UserRound
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-destructive"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold">
+                                                Desativar profissional
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                O histórico permanece disponível e o
+                                                status pode ser reativado.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Dialog
+                                        open={inactivateOpen}
+                                        onOpenChange={setInactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                className="mt-4 w-full"
+                                            >
+                                                Desativar profissional
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Desativar profissional?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O profissional deixará de aparecer em novos agendamentos, preservando o histórico existente.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...professionals.destroy.form(
+                                                    professional.id,
+                                                )}
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        destroyKey,
+                                                }}
+                                                method="delete"
+                                                onSuccess={() =>
+                                                    setInactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                professional.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setInactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                variant="destructive"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                {processing
+                                                                    ? 'Desativando…'
+                                                                    : 'Confirmar desativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            )
                         ) : null}
                     </aside>
                 </div>

@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -68,6 +68,15 @@ export default function ProfessionalsIndex({
     );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
+
+    const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
+        router.get(
+            professionals.index.url(),
+            { ...filters, status },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
+
     const availableServices = serviceOptions ?? options?.services ?? [];
 
     return (
@@ -196,6 +205,8 @@ export default function ProfessionalsIndex({
                 <SearchToolbar
                     action={professionals.index.url()}
                     defaultValue={filters.search}
+                    status={filters.status ?? 'active'}
+                    onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'profissional encontrado' : 'profissionais encontrados'}`}
                 />
@@ -203,17 +214,19 @@ export default function ProfessionalsIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search
+                            filters.search || filters.status === 'inactive'
                                 ? 'Nenhum profissional encontrado'
                                 : 'Nenhum profissional cadastrado'
                         }
                         description={
-                            filters.search
-                                ? 'Tente outro nome.'
+                            filters.search || filters.status === 'inactive'
+                                ? 'Tente outro termo ou altere o filtro de status.'
                                 : 'Cadastre a equipe que atende nesta unidade para liberar as escolhas da agenda.'
                         }
                         action={
-                            !filters.search && canManage ? (
+                            !filters.search &&
+                            (!filters.status || filters.status === 'active') &&
+                            canManage ? (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus aria-hidden="true" />
                                     Cadastrar primeiro profissional

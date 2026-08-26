@@ -21,7 +21,7 @@ final class SupplierRequest extends FormRequest
     /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
-        if ($this->isMethod('delete')) {
+        if ($this->isMethod('delete') || $this->routeIs('*.reactivate')) {
             return [
                 'lock_version' => ['required', 'integer', 'min:0'],
             ];

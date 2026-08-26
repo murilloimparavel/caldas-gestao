@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Building2, FileText, Mail, Phone, Plus, Truck } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -52,6 +52,14 @@ export default function SuppliersIndex({
     const [createKey] = useState(() => createIdempotencyKey('supplier-store'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('supplier.manage');
+
+    const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
+        router.get(
+            suppliers.index.url(),
+            { ...filters, status },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
 
     return (
         <>
@@ -206,6 +214,8 @@ export default function SuppliersIndex({
                 <SearchToolbar
                     action={suppliers.index.url()}
                     defaultValue={filters.search}
+                    status={filters.status ?? 'active'}
+                    onStatusChange={handleStatusChange}
                     placeholder="Buscar por razão social, nome fantasia ou documento"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'fornecedor encontrado' : 'fornecedores encontrados'}`}
                 />
@@ -213,17 +223,19 @@ export default function SuppliersIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search
+                            filters.search || filters.status === 'inactive'
                                 ? 'Nenhum fornecedor encontrado'
                                 : 'Nenhum fornecedor cadastrado'
                         }
                         description={
-                            filters.search
-                                ? 'Tente outro termo de busca.'
+                            filters.search || filters.status === 'inactive'
+                                ? 'Tente outro termo de busca ou altere o filtro de status.'
                                 : 'Cadastre fornecedores e parceiros de produtos para gerenciar compras e insumos da sua unidade.'
                         }
                         action={
-                            !filters.search && canManage ? (
+                            !filters.search &&
+                            (!filters.status || filters.status === 'active') &&
+                            canManage ? (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus aria-hidden="true" />
                                     Cadastrar primeiro fornecedor

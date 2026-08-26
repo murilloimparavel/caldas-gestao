@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\SaleCategories\CreateSaleCategory;
 use App\Actions\SaleCategories\DeactivateSaleCategory;
+use App\Actions\SaleCategories\ReactivateSaleCategory;
 use App\Actions\SaleCategories\UpdateSaleCategory;
 use App\Http\Requests\SaleCategoryRequest;
 use App\Models\SaleCategory;
@@ -25,11 +26,14 @@ final class SaleCategoryController extends Controller
         $search = trim((string) $request->string('search'));
         $type = trim((string) $request->string('type'));
         $uniquenessScope = trim((string) $request->string('uniqueness_scope'));
+        $status = (string) $request->string('status', 'active');
 
         $categories = SaleCategory::query()
             ->withCount(['sales'])
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit?->getKey())
+            ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('key', 'like', "%{$search}%")))
             ->when($type !== '', fn ($query) => $query->where('type', $type))
             ->when($uniquenessScope !== '', fn ($query) => $query->where('uniqueness_scope', $uniquenessScope))
@@ -43,6 +47,7 @@ final class SaleCategoryController extends Controller
                 'search' => $search,
                 'type' => $type,
                 'uniqueness_scope' => $uniquenessScope,
+                'status' => $status,
             ],
         ]);
     }
@@ -92,5 +97,17 @@ final class SaleCategoryController extends Controller
         });
 
         return to_route('sale-categories.index')->with('success', 'Categoria de comanda inativada com sucesso.');
+    }
+
+    public function reactivate(SaleCategoryRequest $request, TenantContext $context, SaleCategory $saleCategory, ReactivateSaleCategory $reactivateSaleCategory): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateSaleCategory, $request, $context, $saleCategory, $data): array {
+            $reactivated = $reactivateSaleCategory->handle($request->user(), $context, $saleCategory, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'sale-category'];
+        });
+
+        return to_route('sale-categories.show', $saleCategory)->with('success', 'Categoria de comanda reativada com sucesso.');
     }
 }

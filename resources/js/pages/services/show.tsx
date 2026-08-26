@@ -16,6 +16,15 @@ import {
 } from '@/components/operational';
 import type { RelationOption, ResourceStatus } from '@/components/operational';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
@@ -84,6 +93,11 @@ export default function ServiceShow({
     const [destroyKey] = useState(() =>
         createIdempotencyKey('service-destroy'),
     );
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('service-reactivate'),
+    );
+    const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
     const availableProfessionals =
@@ -347,60 +361,188 @@ export default function ServiceShow({
                             </div>
                         </section>
                         {canManage ? (
-                            <section className="surface-panel border-destructive/30 p-5 sm:p-6">
-                                <div className="flex items-start gap-3">
-                                    <Scissors
-                                        aria-hidden="true"
-                                        className="mt-0.5 size-4 text-destructive"
-                                    />
-                                    <div>
-                                        <h2 className="text-base font-semibold">
-                                            Desativar serviço
-                                        </h2>
-                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                            O serviço deixa de aparecer em novas
-                                            operações, mas o histórico continua
-                                            íntegro.
-                                        </p>
+                            service.status === 'inactive' ? (
+                                <section className="surface-panel border-emerald-500/30 bg-emerald-50/20 p-5 sm:p-6 dark:bg-emerald-950/20">
+                                    <div className="flex items-start gap-3">
+                                        <Scissors
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold text-foreground">
+                                                Reativar serviço
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                Este serviço está atualmente inativo. Reative o cadastro para disponibilizá-lo novamente para agendamentos e comandas.
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <Form
-                                    {...services.destroy.form(service.id)}
-                                    headers={{
-                                        'X-Idempotency-Key': destroyKey,
-                                    }}
-                                    className="mt-4"
-                                    onSubmit={(event) => {
-                                        if (
-                                            !window.confirm(
-                                                'Desativar este serviço?',
-                                            )
-                                        ) {
-                                            event.preventDefault();
-                                        }
-                                    }}
-                                >
-                                    {({ processing }) => (
-                                        <>
-                                            <input
-                                                type="hidden"
-                                                name="lock_version"
-                                                value={service.lock_version}
-                                            />
+                                    <Dialog
+                                        open={reactivateOpen}
+                                        onOpenChange={setReactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
                                             <Button
-                                                type="submit"
-                                                variant="destructive"
-                                                disabled={processing}
-                                                className="w-full"
+                                                type="button"
+                                                className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                             >
-                                                {processing
-                                                    ? 'Desativando…'
-                                                    : 'Desativar serviço'}
+                                                Reativar cadastro
                                             </Button>
-                                        </>
-                                    )}
-                                </Form>
-                            </section>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Reativar serviço?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O serviço voltará a ficar ativo e poderá ser selecionado em novos atendimentos e agendamentos.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...services.reactivate.form(
+                                                    service.id,
+                                                )}
+                                                method="patch"
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        reactivateKey,
+                                                }}
+                                                onSuccess={() =>
+                                                    setReactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                service.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setReactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                            >
+                                                                {processing
+                                                                    ? 'Reativando…'
+                                                                    : 'Confirmar reativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            ) : (
+                                <section className="surface-panel border-destructive/30 p-5 sm:p-6">
+                                    <div className="flex items-start gap-3">
+                                        <Scissors
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-destructive"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold">
+                                                Desativar serviço
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                O serviço deixa de aparecer em novas
+                                                operações, mas o histórico continua
+                                                íntegro.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Dialog
+                                        open={inactivateOpen}
+                                        onOpenChange={setInactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                className="mt-4 w-full"
+                                            >
+                                                Desativar serviço
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Desativar serviço?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O serviço deixará de aparecer no catálogo de agendamento e novas comandas.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...services.destroy.form(
+                                                    service.id,
+                                                )}
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        destroyKey,
+                                                }}
+                                                method="delete"
+                                                onSuccess={() =>
+                                                    setInactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                service.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setInactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                variant="destructive"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                {processing
+                                                                    ? 'Desativando…'
+                                                                    : 'Confirmar desativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            )
                         ) : null}
                     </aside>
                 </div>

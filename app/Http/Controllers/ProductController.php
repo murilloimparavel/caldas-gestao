@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Products\CreateProduct;
 use App\Actions\Products\DeactivateProduct;
+use App\Actions\Products\ReactivateProduct;
 use App\Actions\Products\UpdateProduct;
 use App\Http\Requests\ProductRequest;
 use App\Models\Category;
@@ -25,11 +26,14 @@ final class ProductController extends Controller
         Gate::authorize('viewAny', Product::class);
         $search = trim((string) $request->string('search'));
         $categoryId = trim((string) $request->string('category_id'));
+        $status = (string) $request->string('status', 'active');
 
         $products = Product::query()
             ->with('category:id,name')
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit?->getKey())
+            ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('name', 'like', "%{$search}%")
@@ -58,6 +62,7 @@ final class ProductController extends Controller
             'filters' => [
                 'search' => $search,
                 'category_id' => $categoryId,
+                'status' => $status,
             ],
             'categoryOptions' => $categoryOptions,
         ]);
@@ -126,5 +131,17 @@ final class ProductController extends Controller
         });
 
         return to_route('products.index')->with('success', 'Produto inativado com sucesso.');
+    }
+
+    public function reactivate(ProductRequest $request, TenantContext $context, Product $product, ReactivateProduct $reactivateProduct): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateProduct, $request, $context, $product, $data): array {
+            $reactivated = $reactivateProduct->handle($request->user(), $context, $product, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'product'];
+        });
+
+        return to_route('products.show', $product)->with('success', 'Produto reativado com sucesso.');
     }
 }

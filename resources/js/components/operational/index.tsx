@@ -28,6 +28,7 @@ export type Paginated<T> = {
 
 export type ResourceFilters = {
     search?: string;
+    status?: string;
 };
 
 export type RelationOption = {
@@ -295,38 +296,80 @@ export function SearchToolbar({
     defaultValue = '',
     placeholder,
     resultLabel,
+    status,
+    onStatusChange,
+    children,
 }: {
     action: string;
     defaultValue?: string;
     placeholder: string;
     resultLabel?: string;
+    status?: string;
+    onStatusChange?: (status: 'active' | 'inactive' | 'all') => void;
+    children?: ReactNode;
 }) {
+    const currentStatus = status ?? 'active';
+
     return (
         <div className="surface-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-            <form
-                action={action}
-                method="get"
-                className="flex w-full items-center gap-2 sm:max-w-md"
-            >
-                <div className="relative min-w-0 flex-1">
-                    <Search
-                        aria-hidden="true"
-                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                        aria-label="Buscar"
-                        name="search"
-                        defaultValue={defaultValue}
-                        placeholder={placeholder}
-                        className="h-11 rounded-lg pl-9"
-                    />
-                </div>
-                <Button type="submit" variant="secondary" className="shrink-0">
-                    Buscar
-                </Button>
-            </form>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
+                <form
+                    action={action}
+                    method="get"
+                    className="flex w-full items-center gap-2 sm:max-w-md"
+                >
+                    {status ? (
+                        <input type="hidden" name="status" value={currentStatus} />
+                    ) : null}
+                    <div className="relative min-w-0 flex-1">
+                        <Search
+                            aria-hidden="true"
+                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <Input
+                            aria-label="Buscar"
+                            name="search"
+                            defaultValue={defaultValue}
+                            placeholder={placeholder}
+                            className="h-11 rounded-lg pl-9"
+                        />
+                    </div>
+                    <Button type="submit" variant="secondary" className="shrink-0">
+                        Buscar
+                    </Button>
+                </form>
+
+                {onStatusChange ? (
+                    <div className="flex rounded-lg border border-border bg-muted/60 p-1 text-xs font-medium">
+                        {(
+                            [
+                                { label: 'Ativos', value: 'active' },
+                                { label: 'Inativos', value: 'inactive' },
+                                { label: 'Todos', value: 'all' },
+                            ] as const
+                        ).map((tab) => (
+                            <button
+                                key={tab.value}
+                                type="button"
+                                onClick={() => onStatusChange(tab.value)}
+                                className={cn(
+                                    'rounded-md px-3 py-1.5 transition-colors',
+                                    currentStatus === tab.value
+                                        ? 'bg-background text-foreground shadow-xs font-semibold'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                ) : null}
+
+                {children}
+            </div>
+
             {resultLabel ? (
-                <p className="text-xs text-muted-foreground sm:text-right">
+                <p className="text-xs text-muted-foreground sm:text-right shrink-0">
                     {resultLabel}
                 </p>
             ) : null}

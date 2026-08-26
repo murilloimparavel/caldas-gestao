@@ -172,96 +172,102 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         </Button>
 
                         {!active_shift && canOpen && (
-                            <Dialog open={openModalOpen} onOpenChange={setOpenModalOpen}>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" className="bg-primary text-primary-foreground">
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Abrir Turno de Caixa
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                    <DialogHeader>
-                                        <DialogTitle>Abrir Novo Turno de Caixa</DialogTitle>
-                                        <DialogDescription>
-                                            Informe o fundo de troco (saldo inicial) para iniciar a operação.
-                                        </DialogDescription>
-                                    </DialogHeader>
-
-                                    <Form
-                                        {...cashShifts.store.post()}
-                                        headers={{
-                                            'X-Idempotency-Key': createIdempotencyKey(
-                                                'cash-shift-open',
-                                                props.auth.user.id,
-                                            ),
-                                        }}
-                                        onSuccess={() => {
-                                            setOpenModalOpen(false);
-                                            setInitialAmountFloat('0,00');
-                                            setOpenNotes('');
-                                        }}
-                                        className="space-y-4"
-                                    >
-                                        {({ errors, processing }) => (
-                                            <>
-                                                <FormErrorSummary errors={errors} />
-
-                                                <FormField
-                                                    label="Saldo Inicial de Fundo de Troco (R$)"
-                                                    name="initial_amount_cents"
-                                                    required
-                                                    error={errors.initial_amount_cents}
-                                                >
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">
-                                                            R$
-                                                        </span>
-                                                        <Input
-                                                            type="text"
-                                                            className="pl-10 text-lg font-bold"
-                                                            placeholder="0,00"
-                                                            value={initialAmountFloat}
-                                                            onChange={(e) =>
-                                                                setInitialAmountFloat(e.target.value)
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <input
-                                                        type="hidden"
-                                                        name="initial_amount_cents"
-                                                        value={initialAmountCents}
-                                                    />
-                                                </FormField>
-
-                                                <FormField
-                                                    label="Observações de Abertura"
-                                                    name="notes"
-                                                    error={errors.notes}
-                                                >
-                                                    <textarea
-                                                        className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                                        placeholder="Ex: Gaveta 1, troco em notas miúdas"
-                                                        value={openNotes}
-                                                        onChange={(e) => setOpenNotes(e.target.value)}
-                                                        name="notes"
-                                                    />
-                                                </FormField>
-
-                                                <FormActions
-                                                    submitLabel="Confirmar Abertura"
-                                                    submittingLabel="Abrindo..."
-                                                    isSubmitting={processing}
-                                                    onCancel={() => setOpenModalOpen(false)}
-                                                />
-                                            </>
-                                        )}
-                                    </Form>
-                                </DialogContent>
-                            </Dialog>
+                            <Button
+                                size="sm"
+                                className="bg-primary text-primary-foreground"
+                                onClick={() => setOpenModalOpen(true)}
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Abrir Turno de Caixa
+                            </Button>
                         )}
                     </div>
                 }
             />
+
+            {/* Modal de Abertura de Caixa Independente */}
+            {canOpen && (
+                <Dialog open={openModalOpen} onOpenChange={setOpenModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Abrir Novo Turno de Caixa</DialogTitle>
+                            <DialogDescription>
+                                Informe o fundo de troco (saldo inicial) para iniciar a operação.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <Form
+                            {...cashShifts.store.post()}
+                            headers={{
+                                'X-Idempotency-Key': createIdempotencyKey(
+                                    'cash-shift-open',
+                                    props.auth.user.id,
+                                ),
+                            }}
+                            onSuccess={() => {
+                                setOpenModalOpen(false);
+                                setInitialAmountFloat('0,00');
+                                setOpenNotes('');
+                            }}
+                            className="space-y-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <FormErrorSummary errors={errors} />
+
+                                    <FormField
+                                        label="Saldo Inicial de Fundo de Troco (R$)"
+                                        name="initial_amount_cents"
+                                        required
+                                        error={errors.initial_amount_cents}
+                                    >
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">
+                                                R$
+                                            </span>
+                                            <Input
+                                                type="text"
+                                                className="pl-10 text-lg font-bold"
+                                                placeholder="0,00"
+                                                value={initialAmountFloat}
+                                                onChange={(e) =>
+                                                    setInitialAmountFloat(e.target.value)
+                                                }
+                                            />
+                                        </div>
+                                        <input
+                                            type="hidden"
+                                            name="initial_amount_cents"
+                                            value={initialAmountCents}
+                                        />
+                                    </FormField>
+
+                                    <FormField
+                                        label="Observações de Abertura"
+                                        name="notes"
+                                        error={errors.notes}
+                                    >
+                                        <textarea
+                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                            placeholder="Ex: Gaveta 1, troco em notas miúdas"
+                                            value={openNotes}
+                                            onChange={(e) => setOpenNotes(e.target.value)}
+                                            name="notes"
+                                        />
+                                    </FormField>
+
+                                    <FormActions
+                                        submitLabel="Confirmar Abertura"
+                                        submittingLabel="Abrindo..."
+                                        isSubmitting={processing}
+                                        onCancel={() => setOpenModalOpen(false)}
+                                    />
+                                </>
+                            )}
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {!active_shift ? (
                 /* Estado: Caixa Fechado */

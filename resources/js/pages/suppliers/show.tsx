@@ -18,6 +18,15 @@ import {
     StatusBadge,
 } from '@/components/operational';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import suppliers from '@/routes/suppliers';
 import type { SharedPageProps } from '@/types';
@@ -41,6 +50,11 @@ type Props = {
 export default function SupplierShow({ supplier }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('supplier-update'));
     const [destroyKey] = useState(() => createIdempotencyKey('supplier-destroy'));
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('supplier-reactivate'),
+    );
+    const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('supplier.manage');
 
@@ -290,59 +304,186 @@ export default function SupplierShow({ supplier }: Props) {
                         </section>
 
                         {canManage ? (
-                            <section className="surface-panel border-destructive/30 p-5 sm:p-6">
-                                <div className="flex items-start gap-3">
-                                    <Truck
-                                        aria-hidden="true"
-                                        className="mt-0.5 size-4 text-destructive shrink-0"
-                                    />
-                                    <div>
-                                        <h2 className="text-base font-semibold">
-                                            Desativar fornecedor
-                                        </h2>
-                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                            O histórico de movimentações e pedidos é preservado. O fornecedor pode ser reativado a qualquer momento editando o status.
-                                        </p>
+                            !supplier.is_active ? (
+                                <section className="surface-panel border-emerald-500/30 bg-emerald-50/20 p-5 sm:p-6 dark:bg-emerald-950/20">
+                                    <div className="flex items-start gap-3">
+                                        <Truck
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400 shrink-0"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold text-foreground">
+                                                Reativar fornecedor
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                Este fornecedor está atualmente inativo. Reative o cadastro para utilizá-lo novamente em pedidos, compras e entradas de estoque.
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <Form
-                                    {...suppliers.destroy.form(supplier.id)}
-                                    headers={{
-                                        'X-Idempotency-Key': destroyKey,
-                                    }}
-                                    method="delete"
-                                    className="mt-4"
-                                    onSubmit={(event) => {
-                                        if (
-                                            !window.confirm(
-                                                'Desativar este fornecedor?',
-                                            )
-                                        ) {
-                                            event.preventDefault();
-                                        }
-                                    }}
-                                >
-                                    {({ processing }) => (
-                                        <>
-                                            <input
-                                                type="hidden"
-                                                name="lock_version"
-                                                value={supplier.lock_version}
-                                            />
+                                    <Dialog
+                                        open={reactivateOpen}
+                                        onOpenChange={setReactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
                                             <Button
-                                                type="submit"
-                                                variant="destructive"
-                                                disabled={processing}
-                                                className="w-full"
+                                                type="button"
+                                                className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                             >
-                                                {processing
-                                                    ? 'Desativando…'
-                                                    : 'Desativar fornecedor'}
+                                                Reativar cadastro
                                             </Button>
-                                        </>
-                                    )}
-                                </Form>
-                            </section>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Reativar fornecedor?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O fornecedor voltará a ficar ativo e poderá ser selecionado em novos lançamentos e pedidos.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...suppliers.reactivate.form(
+                                                    supplier.id,
+                                                )}
+                                                method="patch"
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        reactivateKey,
+                                                }}
+                                                onSuccess={() =>
+                                                    setReactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                supplier.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setReactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                            >
+                                                                {processing
+                                                                    ? 'Reativando…'
+                                                                    : 'Confirmar reativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            ) : (
+                                <section className="surface-panel border-destructive/30 p-5 sm:p-6">
+                                    <div className="flex items-start gap-3">
+                                        <Truck
+                                            aria-hidden="true"
+                                            className="mt-0.5 size-4 text-destructive shrink-0"
+                                        />
+                                        <div>
+                                            <h2 className="text-base font-semibold">
+                                                Desativar fornecedor
+                                            </h2>
+                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                O histórico de movimentações e pedidos é preservado. O fornecedor pode ser reativado a qualquer momento.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Dialog
+                                        open={inactivateOpen}
+                                        onOpenChange={setInactivateOpen}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                className="mt-4 w-full"
+                                            >
+                                                Desativar fornecedor
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Desativar fornecedor?
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    O fornecedor deixará de aparecer em novas compras e entradas, preservando o histórico existente.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Form
+                                                {...suppliers.destroy.form(
+                                                    supplier.id,
+                                                )}
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        destroyKey,
+                                                }}
+                                                method="delete"
+                                                onSuccess={() =>
+                                                    setInactivateOpen(false)
+                                                }
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                supplier.lock_version
+                                                            }
+                                                        />
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setInactivateOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancelar
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                variant="destructive"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                {processing
+                                                                    ? 'Desativando…'
+                                                                    : 'Confirmar desativação'}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </section>
+                            )
                         ) : null}
                     </aside>
                 </div>

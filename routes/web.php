@@ -41,18 +41,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('schedule-blocks/{scheduleBlock}', [CalendarAvailabilityController::class, 'deleteScheduleBlock'])->name('schedule_blocks.destroy');
         Route::resource('categories', CategoryController::class)
             ->except(['create', 'edit']);
+        Route::patch('categories/{category}/reactivate', [CategoryController::class, 'reactivate'])->name('categories.reactivate');
         Route::resource('customers', CustomerController::class)
             ->except(['create', 'edit']);
+        Route::patch('customers/{customer}/reactivate', [CustomerController::class, 'reactivate'])->name('customers.reactivate');
         Route::resource('products', ProductController::class)
             ->except(['create', 'edit']);
+        Route::patch('products/{product}/reactivate', [ProductController::class, 'reactivate'])->name('products.reactivate');
         Route::resource('professionals', ProfessionalController::class)
             ->except(['create', 'edit']);
+        Route::patch('professionals/{professional}/reactivate', [ProfessionalController::class, 'reactivate'])->name('professionals.reactivate');
         Route::resource('services', ServiceController::class)
             ->except(['create', 'edit']);
+        Route::patch('services/{service}/reactivate', [ServiceController::class, 'reactivate'])->name('services.reactivate');
         Route::resource('suppliers', SupplierController::class)
             ->except(['create', 'edit']);
+        Route::patch('suppliers/{supplier}/reactivate', [SupplierController::class, 'reactivate'])->name('suppliers.reactivate');
         Route::resource('sale-categories', SaleCategoryController::class)
             ->except(['create', 'edit']);
+        Route::patch('sale-categories/{sale_category}/reactivate', [SaleCategoryController::class, 'reactivate'])->name('sale-categories.reactivate');
         Route::resource('sales', SaleController::class)
             ->only(['index', 'show', 'store']);
         Route::resource('closing-sessions', ClosingSessionController::class)

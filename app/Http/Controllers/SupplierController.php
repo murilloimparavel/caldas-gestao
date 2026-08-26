@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Suppliers\CreateSupplier;
 use App\Actions\Suppliers\DeactivateSupplier;
+use App\Actions\Suppliers\ReactivateSupplier;
 use App\Actions\Suppliers\UpdateSupplier;
 use App\Http\Requests\SupplierRequest;
 use App\Models\Supplier;
@@ -23,6 +24,7 @@ final class SupplierController extends Controller
     {
         Gate::authorize('viewAny', Supplier::class);
         $search = trim((string) $request->string('search'));
+        $status = (string) $request->string('status', 'active');
 
         $suppliers = Supplier::query()
             ->where('tenant_id', $context->tenant->getKey())
@@ -30,6 +32,8 @@ final class SupplierController extends Controller
                 $query->whereNull('unit_id')
                     ->orWhere('unit_id', $context->unit?->getKey());
             })
+            ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery->where('name', 'like', "%{$search}%")
@@ -45,6 +49,7 @@ final class SupplierController extends Controller
             'suppliers' => $suppliers,
             'filters' => [
                 'search' => $search,
+                'status' => $status,
             ],
         ]);
     }
@@ -94,5 +99,17 @@ final class SupplierController extends Controller
         });
 
         return to_route('suppliers.index')->with('success', 'Fornecedor inativado com sucesso.');
+    }
+
+    public function reactivate(SupplierRequest $request, TenantContext $context, Supplier $supplier, ReactivateSupplier $reactivateSupplier): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateSupplier, $request, $context, $supplier, $data): array {
+            $reactivated = $reactivateSupplier->handle($request->user(), $context, $supplier, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'supplier'];
+        });
+
+        return to_route('suppliers.show', $supplier)->with('success', 'Fornecedor reativado com sucesso.');
     }
 }

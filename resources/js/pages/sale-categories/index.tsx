@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Layers, Plus, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -68,6 +68,14 @@ export default function SaleCategoriesIndex({
     const [createKey] = useState(() => createIdempotencyKey('sale-category-create'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale_category.manage');
+
+    const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
+        router.get(
+            saleCategories.index.url(),
+            { ...filters, status },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
 
     return (
         <>
@@ -197,6 +205,8 @@ export default function SaleCategoriesIndex({
                 <SearchToolbar
                     action={saleCategories.index.url()}
                     defaultValue={filters.search}
+                    status={filters.status ?? 'active'}
+                    onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome ou chave"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'categoria encontrada' : 'categorias encontradas'}`}
                 />
@@ -204,17 +214,19 @@ export default function SaleCategoriesIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search
+                            filters.search || filters.status === 'inactive'
                                 ? 'Nenhuma categoria encontrada'
                                 : 'Nenhuma categoria de comanda cadastrada'
                         }
                         description={
-                            filters.search
-                                ? 'Tente outro termo de busca.'
+                            filters.search || filters.status === 'inactive'
+                                ? 'Tente outro termo de busca ou altere o filtro de status.'
                                 : 'Cadastre categorias de comanda para iniciar a operação de consumo e atendimento.'
                         }
                         action={
-                            !filters.search && canManage ? (
+                            !filters.search &&
+                            (!filters.status || filters.status === 'active') &&
+                            canManage ? (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus aria-hidden="true" />
                                     Cadastrar primeira categoria

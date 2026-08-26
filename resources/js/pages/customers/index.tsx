@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -49,6 +49,14 @@ export default function CustomersIndex({
     const [createKey] = useState(() => createIdempotencyKey('customer-create'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('customer.manage');
+
+    const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
+        router.get(
+            customers.index.url(),
+            { ...filters, status },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
 
     return (
         <>
@@ -185,6 +193,8 @@ export default function CustomersIndex({
                 <SearchToolbar
                     action={customers.index.url()}
                     defaultValue={filters.search}
+                    status={filters.status ?? 'active'}
+                    onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome ou telefone"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'cliente encontrado' : 'clientes encontrados'}`}
                 />
@@ -192,17 +202,19 @@ export default function CustomersIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search
+                            filters.search || filters.status === 'inactive'
                                 ? 'Nenhum cliente encontrado'
                                 : 'Sua base começa aqui'
                         }
                         description={
-                            filters.search
-                                ? 'Tente outro nome ou telefone.'
+                            filters.search || filters.status === 'inactive'
+                                ? 'Tente outro termo de busca ou altere o filtro de status.'
                                 : 'Cadastre o primeiro cliente para começar a organizar seus atendimentos.'
                         }
                         action={
-                            !filters.search && canManage ? (
+                            !filters.search &&
+                            (!filters.status || filters.status === 'active') &&
+                            canManage ? (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus aria-hidden="true" />
                                     Cadastrar primeiro cliente

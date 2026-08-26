@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Clock3, Plus, Scissors } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -100,6 +100,14 @@ export default function ServicesIndex({
     const [createKey] = useState(() => createIdempotencyKey('service-create'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
+
+    const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
+        router.get(
+            services.index.url(),
+            { ...filters, status },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
     const availableProfessionals =
         professionalOptions ?? options?.professionals ?? [];
 
@@ -246,6 +254,8 @@ export default function ServicesIndex({
                 <SearchToolbar
                     action={services.index.url()}
                     defaultValue={filters.search}
+                    status={filters.status ?? 'active'}
+                    onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'serviço encontrado' : 'serviços encontrados'}`}
                 />
@@ -253,17 +263,19 @@ export default function ServicesIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search
+                            filters.search || filters.status === 'inactive'
                                 ? 'Nenhum serviço encontrado'
                                 : 'Nenhum serviço cadastrado'
                         }
                         description={
-                            filters.search
-                                ? 'Tente outro nome.'
+                            filters.search || filters.status === 'inactive'
+                                ? 'Tente outro nome ou altere o filtro de status.'
                                 : 'Cadastre os serviços para que a equipe possa montar uma agenda real.'
                         }
                         action={
-                            !filters.search && canManage ? (
+                            !filters.search &&
+                            (!filters.status || filters.status === 'active') &&
+                            canManage ? (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus aria-hidden="true" />
                                     Cadastrar primeiro serviço

@@ -193,7 +193,9 @@ export default function ProductShow({
 }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('product-update'));
     const [destroyKey] = useState(() => createIdempotencyKey('product-destroy'));
+    const [reactivateKey] = useState(() => createIdempotencyKey('product-reactivate'));
     const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [reactivateOpen, setReactivateOpen] = useState(false);
     const [adjustOpen, setAdjustOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('product.manage');
@@ -255,6 +257,24 @@ export default function ProductShow({
                                 Mantenha o estoque e os preços sincronizados para apuração de resultados.
                             </p>
                         </div>
+                        {!product.is_active ? (
+                            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <p className="font-semibold text-sm">Este produto está inativo</p>
+                                    <p className="text-xs text-muted-foreground">Ele não pode ser adicionado a novas comandas até que seja reativado.</p>
+                                </div>
+                                {canManage ? (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => setReactivateOpen(true)}
+                                        className="bg-emerald-600 text-white hover:bg-emerald-700 shrink-0"
+                                    >
+                                        Reativar cadastro
+                                    </Button>
+                                ) : null}
+                            </div>
+                        ) : null}
                         <Form
                             {...products.update.form(product.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
@@ -469,9 +489,63 @@ export default function ProductShow({
                                                     </DialogContent>
                                                 </Dialog>
                                             ) : (
-                                                <span className="text-sm text-muted-foreground">
-                                                    Este produto está inativo.
-                                                </span>
+                                                <Dialog
+                                                    open={reactivateOpen}
+                                                    onOpenChange={setReactivateOpen}
+                                                >
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                                                        >
+                                                            Reativar cadastro
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>
+                                                                Reativar produto?
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                O produto voltará a ficar ativo para venda e movimentações de estoque.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <Form
+                                                            {...products.reactivate.form(product.id)}
+                                                            headers={{
+                                                                'X-Idempotency-Key': reactivateKey,
+                                                            }}
+                                                            method="patch"
+                                                            onSuccess={() => setReactivateOpen(false)}
+                                                        >
+                                                            {({ processing: reactivating }) => (
+                                                                <>
+                                                                    <input
+                                                                        type="hidden"
+                                                                        name="lock_version"
+                                                                        value={product.lock_version}
+                                                                    />
+                                                                    <DialogFooter className="mt-4">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            onClick={() => setReactivateOpen(false)}
+                                                                        >
+                                                                            Cancelar
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="submit"
+                                                                            disabled={reactivating}
+                                                                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                                        >
+                                                                            {reactivating ? 'Reativando...' : 'Confirmar reativação'}
+                                                                        </Button>
+                                                                    </DialogFooter>
+                                                                </>
+                                                            )}
+                                                        </Form>
+                                                    </DialogContent>
+                                                </Dialog>
                                             )}
                                             <FormActions
                                                 processing={processing}

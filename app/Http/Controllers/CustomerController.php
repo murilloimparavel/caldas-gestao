@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Customers\CreateCustomer;
 use App\Actions\Customers\DeactivateCustomer;
+use App\Actions\Customers\ReactivateCustomer;
 use App\Actions\Customers\UpdateCustomer;
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
@@ -23,9 +24,24 @@ final class CustomerController extends Controller
     {
         Gate::authorize('viewAny', Customer::class);
         $search = trim((string) $request->string('search'));
-        $customers = Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")))->orderBy('name')->paginate(25)->withQueryString();
+        $status = (string) $request->string('status', 'active');
+        $customers = Customer::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $context->unit?->getKey())
+            ->when($status === 'active', fn ($query) => $query->where('status', 'active'))
+            ->when($status === 'inactive', fn ($query) => $query->where('status', 'inactive'))
+            ->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")))
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
 
-        return Inertia::render('customers/index', ['customers' => $customers, 'filters' => ['search' => $search]]);
+        return Inertia::render('customers/index', [
+            'customers' => $customers,
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+            ],
+        ]);
     }
 
     public function show(Customer $customer): Response
@@ -78,5 +94,17 @@ final class CustomerController extends Controller
         });
 
         return to_route('customers.index')->with('success', 'Cliente inativado.');
+    }
+
+    public function reactivate(CustomerRequest $request, TenantContext $context, Customer $customer, ReactivateCustomer $reactivateCustomer): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reactivateCustomer, $request, $context, $customer, $data): array {
+            $reactivated = $reactivateCustomer->handle($request->user(), $context, $customer, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+
+            return ['resource_id' => $reactivated->getKey(), 'resource_type' => 'customer'];
+        });
+
+        return to_route('customers.show', $customer)->with('success', 'Cliente reativado.');
     }
 }

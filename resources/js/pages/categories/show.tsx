@@ -69,7 +69,11 @@ const categoryTypeLabels: Record<CategoryType, string> = {
 export default function CategoryShow({ category }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('category-update'));
     const [destroyKey] = useState(() => createIdempotencyKey('category-destroy'));
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('category-reactivate'),
+    );
     const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('category.manage');
 
@@ -100,6 +104,24 @@ export default function CategoryShow({ category }: Props) {
                                 Categorias ativas organizam serviços e produtos para agenda e comanda.
                             </p>
                         </div>
+                        {!category.is_active ? (
+                            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <p className="font-semibold text-sm">Esta categoria está inativa</p>
+                                    <p className="text-xs text-muted-foreground">Ela não pode ser selecionada em novos cadastros de serviços ou produtos até que seja reativada.</p>
+                                </div>
+                                {canManage ? (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => setReactivateOpen(true)}
+                                        className="bg-emerald-600 text-white hover:bg-emerald-700 shrink-0"
+                                    >
+                                        Reativar cadastro
+                                    </Button>
+                                ) : null}
+                            </div>
+                        ) : null}
                         <Form
                             {...categories.update.form(category.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
@@ -226,9 +248,63 @@ export default function CategoryShow({ category }: Props) {
                                                     </DialogContent>
                                                 </Dialog>
                                             ) : (
-                                                <span className="text-sm text-muted-foreground">
-                                                    Esta categoria está inativa.
-                                                </span>
+                                                <Dialog
+                                                    open={reactivateOpen}
+                                                    onOpenChange={setReactivateOpen}
+                                                >
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                                                        >
+                                                            Reativar cadastro
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>
+                                                                Reativar categoria?
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                A categoria voltará a ficar ativa e poderá ser vinculada a produtos e serviços.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <Form
+                                                            {...categories.reactivate.form(category.id)}
+                                                            headers={{
+                                                                'X-Idempotency-Key': reactivateKey,
+                                                            }}
+                                                            method="patch"
+                                                            onSuccess={() => setReactivateOpen(false)}
+                                                        >
+                                                            {({ processing: reactivating }) => (
+                                                                <>
+                                                                    <input
+                                                                        type="hidden"
+                                                                        name="lock_version"
+                                                                        value={category.lock_version}
+                                                                    />
+                                                                    <DialogFooter className="mt-4">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            onClick={() => setReactivateOpen(false)}
+                                                                        >
+                                                                            Cancelar
+                                                                        </Button>
+                                                                        <Button
+                                                                            type="submit"
+                                                                            disabled={reactivating}
+                                                                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                                        >
+                                                                            {reactivating ? 'Reativando...' : 'Confirmar reativação'}
+                                                                        </Button>
+                                                                    </DialogFooter>
+                                                                </>
+                                                            )}
+                                                        </Form>
+                                                    </DialogContent>
+                                                </Dialog>
                                             )}
                                             <FormActions
                                                 processing={processing}

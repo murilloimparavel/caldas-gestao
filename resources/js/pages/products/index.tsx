@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     Boxes,
@@ -128,6 +128,14 @@ export default function ProductsIndex({
     const canViewInventory =
         props.auth.permissions.includes('inventory.view') ||
         props.auth.permissions.includes('product.view');
+
+    const handleStatusChange = (status: 'active' | 'inactive' | 'all') => {
+        router.get(
+            products.index.url(),
+            { ...filters, status },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
 
     return (
         <>
@@ -333,6 +341,8 @@ export default function ProductsIndex({
                 <SearchToolbar
                     action={products.index.url()}
                     defaultValue={filters.search}
+                    status={filters.status ?? 'active'}
+                    onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome, SKU ou código de barras"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'produto encontrado' : 'produtos encontrados'}`}
                 />
@@ -340,17 +350,19 @@ export default function ProductsIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search
+                            filters.search || filters.status === 'inactive'
                                 ? 'Nenhum produto encontrado'
                                 : 'Nenhum produto cadastrado'
                         }
                         description={
-                            filters.search
-                                ? 'Tente outro termo de busca.'
+                            filters.search || filters.status === 'inactive'
+                                ? 'Tente outro termo de busca ou altere o filtro de status.'
                                 : 'Cadastre produtos físicos para venda e controle de estoque da sua unidade.'
                         }
                         action={
-                            !filters.search && canManage ? (
+                            !filters.search &&
+                            (!filters.status || filters.status === 'active') &&
+                            canManage ? (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus aria-hidden="true" />
                                     Cadastrar primeiro produto
