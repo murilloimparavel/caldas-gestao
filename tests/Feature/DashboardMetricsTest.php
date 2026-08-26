@@ -2,6 +2,7 @@
 
 use App\Actions\Identity\OnboardTenant;
 use App\Models\Appointment;
+use App\Models\FinancialObligation;
 use App\Models\Professional;
 use App\Models\Sale;
 use App\Models\SaleCategory;
@@ -16,7 +17,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 /** @return array{0: User, 1: Tenant, 2: Unit} */
 function dashboardTestWorkspace(): array
 {
-    $owner = User::factory()->create();
+    $owner = User::factory()->create(['name' => 'João Dutra']);
     $tenant = (new OnboardTenant)->handle($owner, [
         'name' => 'Workspace '.Str::random(8),
         'slug' => 'workspace-'.Str::lower(Str::random(8)),
@@ -26,7 +27,7 @@ function dashboardTestWorkspace(): array
     return [$owner, $tenant, $unit];
 }
 
-it('calculates dashboard metrics with existing sales and appointments', function () {
+it('calculates dashboard metrics with existing sales and appointments in camelCase format', function () {
     Carbon::setTestNow('2026-08-26 12:00:00');
 
     [$owner, $tenant, $unit] = dashboardTestWorkspace();
@@ -74,26 +75,38 @@ it('calculates dashboard metrics with existing sales and appointments', function
         'total_cents' => 15000,
     ]);
 
+    // Overdue financial obligation to trigger attention item
+    FinancialObligation::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'status' => 'pending',
+        'due_date' => Carbon::parse('2026-08-20'),
+    ]);
+
     $this->actingAs($owner)
         ->get(route('dashboard'))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
             ->has('dashboard', fn (Assert $dash) => $dash
-                ->where('total_sales_cents', 15000)
-                ->where('today_sales_cents', 15000)
-                ->where('total_appointments', 2)
-                ->where('total_sales_count', 1)
-                ->where('conversion_rate_percentage', 50)
-                ->where('ticket_medio.current_cents', 15000)
-                ->where('appointment_funnel.total', 2)
-                ->where('appointment_funnel.confirmed', 2)
-                ->where('appointment_funnel.billed', 1)
-                ->has('visits_trend')
-                ->has('status_breakdown')
-                ->has('professionals_performance')
-                ->has('sales_by_category')
-                ->has('schedule_heatmap')
+                ->where('userName', 'João Dutra')
+                ->where('topKpis.totalSales.value', 'R$ 150,00')
+                ->where('topKpis.totalSales.todayValue', 'R$ 150,00')
+                ->where('topKpis.appointments.value', '2')
+                ->where('topKpis.tickets.value', '1')
+                ->where('topKpis.tickets.conversionRate', 50)
+                ->has('visitsTrend')
+                ->has('statusBreakdown')
+                ->has('professionalPerformance', 1, fn (Assert $prof) => $prof
+                    ->where('name', 'Dr. Ana Silva')
+                    ->where('totalServices', 2)
+                    ->where('averageTicket', 'R$ 75,00')
+                    ->etc()
+                )
+                ->has('salesCategoryBreakdown')
+                ->has('scheduleHeatmap')
+                ->has('appointments', 1)
+                ->has('attentionItems', 1)
                 ->etc()
             )
         );
@@ -132,7 +145,7 @@ it('responds to preset date filters correctly', function () {
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->where('filters.preset', 'today')
-            ->where('dashboard.total_sales_cents', 5000)
+            ->where('dashboard.topKpis.totalSales.value', 'R$ 50,00')
         );
 
     // Test '7d' preset filter
@@ -141,7 +154,7 @@ it('responds to preset date filters correctly', function () {
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->where('filters.preset', '7d')
-            ->where('dashboard.total_sales_cents', 13000)
+            ->where('dashboard.topKpis.totalSales.value', 'R$ 130,00')
         );
 
     // Test 'custom' preset filter
@@ -154,6 +167,6 @@ it('responds to preset date filters correctly', function () {
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->where('filters.preset', 'custom')
-            ->where('dashboard.total_sales_cents', 5000)
+            ->where('dashboard.topKpis.totalSales.value', 'R$ 50,00')
         );
 });

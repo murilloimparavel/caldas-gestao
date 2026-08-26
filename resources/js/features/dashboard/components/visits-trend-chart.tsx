@@ -5,19 +5,10 @@ type VisitsTrendChartProps = {
     data?: DailyVisitTrend[];
 };
 
-const DEFAULT_TREND_DATA: DailyVisitTrend[] = [
-    { date: '2026-08-20', label: 'Seg', visits: 24 },
-    { date: '2026-08-21', label: 'Ter', visits: 38 },
-    { date: '2026-08-22', label: 'Qua', visits: 42 },
-    { date: '2026-08-23', label: 'Qui', visits: 35 },
-    { date: '2026-08-24', label: 'Sex', visits: 58 },
-    { date: '2026-08-25', label: 'Sáb', visits: 64 },
-    { date: '2026-08-26', label: 'Dom', visits: 18 },
-];
-
-export function VisitsTrendChart({ data = DEFAULT_TREND_DATA }: VisitsTrendChartProps) {
-    const maxVisits = Math.max(...data.map((item) => item.visits), 1);
+export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
     const totalVisits = data.reduce((acc, curr) => acc + curr.visits, 0);
+    const maxVisits = Math.max(...data.map((item) => item.visits), 0);
+    const hasData = data.length > 0 && totalVisits > 0;
 
     return (
         <Card className="border-border/60">
@@ -32,33 +23,39 @@ export function VisitsTrendChart({ data = DEFAULT_TREND_DATA }: VisitsTrendChart
                 </div>
             </CardHeader>
             <CardContent className="pt-4">
-                <div className="flex h-44 items-end gap-2 sm:gap-4">
-                    {data.map((item, idx) => {
-                        const heightPct = Math.max(10, Math.round((item.visits / maxVisits) * 100));
-                        const isHighest = item.visits === maxVisits;
+                {!hasData ? (
+                    <div className="flex h-44 items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
+                        Nenhuma visita registrada no período
+                    </div>
+                ) : (
+                    <div className="flex h-44 items-end gap-2 sm:gap-4">
+                        {data.map((item, idx) => {
+                            const heightPct = maxVisits > 0 ? Math.max(10, Math.round((item.visits / maxVisits) * 100)) : 0;
+                            const isHighest = item.visits > 0 && item.visits === maxVisits;
 
-                        return (
-                            <div key={idx} className="group relative flex flex-1 flex-col items-center gap-2">
-                                {/* Tooltip hover */}
-                                <div className="absolute -top-9 z-10 hidden rounded bg-popover px-2 py-1 text-xs font-semibold text-popover-foreground shadow-md group-hover:block">
-                                    {item.visits} visitas
-                                </div>
+                            return (
+                                <div key={idx} className="group relative flex flex-1 flex-col items-center gap-2">
+                                    {/* Tooltip hover */}
+                                    <div className="absolute -top-9 z-10 hidden rounded bg-popover px-2 py-1 text-xs font-semibold text-popover-foreground shadow-md group-hover:block">
+                                        {item.visits} visitas
+                                    </div>
 
-                                <div className="relative flex w-full flex-1 items-end justify-center rounded-t bg-muted/40 p-1">
-                                    <div
-                                        style={{ height: `${heightPct}%` }}
-                                        className={`w-full max-w-[32px] rounded-t transition-all duration-300 group-hover:brightness-110 ${
-                                            isHighest
-                                                ? 'bg-primary shadow-xs'
-                                                : 'bg-primary/60 dark:bg-primary/40'
-                                        }`}
-                                    />
+                                    <div className="relative flex w-full flex-1 items-end justify-center rounded-t bg-muted/40 p-1">
+                                        <div
+                                            style={{ height: `${heightPct}%` }}
+                                            className={`w-full max-w-[32px] rounded-t transition-all duration-300 group-hover:brightness-110 ${
+                                                isHighest
+                                                    ? 'bg-primary shadow-xs'
+                                                    : 'bg-primary/60 dark:bg-primary/40'
+                                            }`}
+                                        />
+                                    </div>
+                                    <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
                                 </div>
-                                <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

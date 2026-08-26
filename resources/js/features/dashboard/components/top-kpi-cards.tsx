@@ -8,37 +8,10 @@ type TopKpiCardsProps = {
     tickets?: KpiCardData;
 };
 
-const DEFAULT_SALES: KpiCardData = {
-    id: 'sales',
-    title: 'Vendas Totais',
-    value: 'R$ 14.850,00',
-    changePercentage: 12.5,
-    trend: 'up',
-    sparklineData: [40, 55, 35, 60, 75, 80, 95],
-};
-
-const DEFAULT_APPOINTMENTS: KpiCardData = {
-    id: 'appointments',
-    title: 'Agendamentos',
-    value: '142',
-    changePercentage: 8.2,
-    trend: 'up',
-    sparklineData: [15, 22, 18, 25, 30, 28, 35],
-};
-
-const DEFAULT_TICKETS: KpiCardData = {
-    id: 'tickets',
-    title: 'Comandas',
-    value: '98',
-    changePercentage: -3.1,
-    trend: 'down',
-    sparklineData: [20, 18, 15, 14, 16, 12, 11],
-};
-
 function Sparkline({ data, trend }: { data: number[]; trend: 'up' | 'down' | 'neutral' }) {
     if (!data || data.length < 2) {
-return null;
-}
+        return null;
+    }
 
     const min = Math.min(...data);
     const max = Math.max(...data);
@@ -78,9 +51,30 @@ return null;
 }
 
 export function TopKpiCards({
-    totalSales = DEFAULT_SALES,
-    appointments = DEFAULT_APPOINTMENTS,
-    tickets = DEFAULT_TICKETS,
+    totalSales = {
+        id: 'sales',
+        title: 'Vendas Totais',
+        value: 'R$ 0,00',
+        changePercentage: 0,
+        trend: 'neutral',
+        sparklineData: [],
+    },
+    appointments = {
+        id: 'appointments',
+        title: 'Agendamentos',
+        value: '0',
+        changePercentage: 0,
+        trend: 'neutral',
+        sparklineData: [],
+    },
+    tickets = {
+        id: 'tickets',
+        title: 'Comandas',
+        value: 'R$ 0,00',
+        changePercentage: 0,
+        trend: 'neutral',
+        sparklineData: [],
+    },
 }: TopKpiCardsProps) {
     const kpis = [
         {

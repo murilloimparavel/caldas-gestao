@@ -16,15 +16,15 @@ type DashboardHeaderProps = {
 
 const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
     { value: 'today', label: 'Hoje' },
-    { value: '7days', label: '7 dias' },
-    { value: '30days', label: '30 dias' },
+    { value: '7d', label: '7 dias' },
+    { value: '30d', label: '30 dias' },
     { value: 'this_month', label: 'Este mês' },
     { value: 'custom', label: 'Personalizado' },
 ];
 
 export function DashboardHeader({
     userName = 'Usuário',
-    period = '7days',
+    period = '7d',
     startDate: initialStartDate = '',
     endDate: initialEndDate = '',
 }: DashboardHeaderProps) {

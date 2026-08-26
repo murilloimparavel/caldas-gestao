@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { ScheduleHeatmapCell } from '../types';
+import type { ScheduleHeatmapCell, ScheduleHeatmapDay } from '../types';
 
 type ScheduleHeatmapProps = {
-    data?: ScheduleHeatmapCell[];
+    data?: ScheduleHeatmapCell[] | ScheduleHeatmapDay[];
 };
 
 const DAYS = [
@@ -16,51 +16,60 @@ const DAYS = [
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h to 19h
 
-// Generate default mock occupancy map
-const generateDefaultHeatmap = (): ScheduleHeatmapCell[] => {
-    const cells: ScheduleHeatmapCell[] = [];
-    DAYS.forEach((day) => {
-        HOURS.forEach((hour) => {
-            let pct = Math.floor(Math.sin(hour) * 40 + Math.cos(day.id) * 30 + 40);
-
-            if (hour >= 10 && hour <= 16) {
-pct += 30;
-} // Peak hours
-
-            if (day.id === 5 || day.id === 6) {
-pct += 20;
-} // Fri/Sat peak
-
-            pct = Math.max(0, Math.min(100, pct));
-            cells.push({
-                dayOfWeek: day.id,
-                dayLabel: day.label,
-                hour,
-                occupancyPercentage: pct,
-            });
-        });
-    });
-
-    return cells;
-};
-
-const DEFAULT_HEATMAP = generateDefaultHeatmap();
-
-export function ScheduleHeatmap({ data = DEFAULT_HEATMAP }: ScheduleHeatmapProps) {
+export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
     const getIntensityClass = (pct: number) => {
         if (pct < 20) {
-return 'bg-muted/40 text-muted-foreground/60';
-}
+            return 'bg-muted/40 text-muted-foreground/60';
+        }
 
         if (pct < 40) {
-return 'bg-primary/20 text-primary dark:text-primary';
-}
+            return 'bg-primary/20 text-primary dark:text-primary';
+        }
 
         if (pct < 70) {
-return 'bg-primary/50 text-primary-foreground';
-}
+            return 'bg-primary/50 text-primary-foreground';
+        }
 
         return 'bg-primary text-primary-foreground font-bold';
+    };
+
+    // Calculate max count for scaling percentage if count is supplied by backend
+    let maxCount = 0;
+
+    if (Array.isArray(data) && data.length > 0 && 'hours' in data[0]) {
+        (data as ScheduleHeatmapDay[]).forEach((day) => {
+            day.hours.forEach((h) => {
+                if (h.count > maxCount) {
+                    maxCount = h.count;
+                }
+            });
+        });
+    }
+
+    const getOccupancyPercentage = (dayId: number, hour: number): number => {
+        if (!data || data.length === 0) {
+            return 0;
+        }
+
+        if ('hours' in data[0]) {
+            const dayData = (data as ScheduleHeatmapDay[]).find((d) => d.day_of_week === dayId);
+
+            if (!dayData) {
+                return 0;
+            }
+
+            const hourData = dayData.hours.find((h) => h.hour === hour);
+
+            if (!hourData || hourData.count === 0) {
+                return 0;
+            }
+
+            return maxCount > 0 ? Math.round((hourData.count / maxCount) * 100) : 0;
+        }
+
+        const cell = (data as ScheduleHeatmapCell[]).find((c) => c.dayOfWeek === dayId && c.hour === hour);
+
+        return cell ? cell.occupancyPercentage : 0;
     };
 
     return (
@@ -101,10 +110,7 @@ return 'bg-primary/50 text-primary-foreground';
                                 <div key={day.id} className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 items-center">
                                     <span className="text-xs font-medium text-muted-foreground">{day.label}</span>
                                     {HOURS.map((hour) => {
-                                        const cell = data.find(
-                                            (c) => c.dayOfWeek === day.id && c.hour === hour
-                                        );
-                                        const pct = cell ? cell.occupancyPercentage : 0;
+                                        const pct = getOccupancyPercentage(day.id, hour);
 
                                         return (
                                             <div

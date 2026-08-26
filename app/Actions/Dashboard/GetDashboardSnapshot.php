@@ -52,7 +52,18 @@ class GetDashboardSnapshot
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('starts_at', [$prevStartDate, $prevEndDate]);
 
-        // 1. Sales metrics
+        // 1. User Name
+        $userName = auth()->user()?->name;
+        if (! $userName) {
+            $ownerMembership = $tenant->memberships()
+                ->whereHas('roles', fn ($q) => $q->where('name', 'owner'))
+                ->with('user')
+                ->first();
+
+            $userName = $ownerMembership?->user->name ?? 'Usuário';
+        }
+
+        // 2. Sales metrics
         $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'completed')->sum('final_amount_cents');
         $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'completed')->sum('final_amount_cents');
 
@@ -67,72 +78,91 @@ class GetDashboardSnapshot
 
         $salesVariationPercentage = $this->calculateVariation($totalSalesCents, $prevTotalSalesCents);
 
-        // 2. Appointments count & growth rate
+        // 3. Appointments count & growth rate
         $totalAppointments = (clone $currentAppointmentsQuery)->count();
         $prevAppointments = (clone $prevAppointmentsQuery)->count();
         $growthRatePercentage = $this->calculateVariation($totalAppointments, $prevAppointments);
 
-        // 3. Sales count & Conversion rate
+        // 4. Sales count & Conversion rate & Tickets (Comandas)
         $totalSalesCount = (clone $currentSalesQuery)->where('status', 'completed')->count();
+        $prevSalesCount = (clone $prevSalesQuery)->where('status', 'completed')->count();
+        $ticketsVariationPercentage = $this->calculateVariation($totalSalesCount, $prevSalesCount);
+
         $conversionRatePercentage = $totalAppointments > 0
             ? round(($totalSalesCount / $totalAppointments) * 100, 1)
             : 0.0;
 
-        // 4. Ticket Médio
-        $ticketCurrentCents = $totalSalesCount > 0 ? (int) round($totalSalesCents / $totalSalesCount) : 0;
-        $prevSalesCount = (clone $prevSalesQuery)->where('status', 'completed')->count();
-        $ticketPrevCents = $prevSalesCount > 0 ? (int) round($prevTotalSalesCents / $prevSalesCount) : 0;
-        $ticketVariationPercentage = $this->calculateVariation($ticketCurrentCents, $ticketPrevCents);
+        // 5. Sparkline data (daily counts/totals)
+        $salesSparkline = $this->calculateSalesSparkline($tenant, $unit, $startDate, $endDate);
+        $appointmentsSparkline = $this->calculateAppointmentsSparkline($tenant, $unit, $startDate, $endDate);
+        $ticketsSparkline = $this->calculateTicketsSparkline($tenant, $unit, $startDate, $endDate);
 
-        // 5. Visits trend (daily breakdown)
-        $visitsTrend = $this->calculateVisitsTrend($tenant, $unit, $startDate, $endDate);
-
-        // 6. Status breakdown
-        $statusBreakdown = $this->calculateStatusBreakdown((clone $currentAppointmentsQuery)->get(), $totalAppointments);
-
-        // 7. Professionals performance
-        $professionalsPerformance = $this->calculateProfessionalsPerformance($tenant, $unit, $startDate, $endDate, $prevStartDate, $prevEndDate);
-
-        // 8. Sales by category
-        $salesByCategory = $this->calculateSalesByCategory($tenant, $unit, $startDate, $endDate);
-
-        // 9. Appointment funnel
-        $allPeriodAppointments = (clone $currentAppointmentsQuery)->get();
-        $appointmentFunnel = [
-            'total' => $allPeriodAppointments->count(),
-            'confirmed' => $allPeriodAppointments->whereIn('status', ['confirmed', 'completed'])->count(),
-            'billed' => $totalSalesCount,
+        // Top KPIs
+        $topKpis = [
+            'totalSales' => [
+                'title' => 'Vendas Totais',
+                'value' => $this->formatCurrency($totalSalesCents),
+                'changePercentage' => $salesVariationPercentage,
+                'trend' => $this->getTrend($salesVariationPercentage),
+                'sparklineData' => $salesSparkline,
+                'todayValue' => $this->formatCurrency($todaySalesCents),
+            ],
+            'appointments' => [
+                'title' => 'Agendamentos',
+                'value' => (string) $totalAppointments,
+                'changePercentage' => $growthRatePercentage,
+                'trend' => $this->getTrend($growthRatePercentage),
+                'sparklineData' => $appointmentsSparkline,
+            ],
+            'tickets' => [
+                'title' => 'Comandas',
+                'value' => (string) $totalSalesCount,
+                'changePercentage' => $ticketsVariationPercentage,
+                'trend' => $this->getTrend($ticketsVariationPercentage),
+                'sparklineData' => $ticketsSparkline,
+                'conversionRate' => $conversionRatePercentage,
+            ],
         ];
 
+        // 6. Visits trend (daily breakdown)
+        $visitsTrend = $this->calculateVisitsTrend($tenant, $unit, $startDate, $endDate);
+
+        // 7. Status breakdown
+        $statusBreakdown = $this->calculateStatusBreakdown((clone $currentAppointmentsQuery)->get(), $totalAppointments);
+
+        // 8. Professionals performance
+        $professionalPerformance = $this->calculateProfessionalsPerformance($tenant, $unit, $startDate, $endDate, $prevStartDate, $prevEndDate);
+
+        // 9. Sales by category
+        $salesCategoryBreakdown = $this->calculateSalesByCategory($tenant, $unit, $startDate, $endDate);
+
         // 10. Schedule heatmap
+        $allPeriodAppointments = (clone $currentAppointmentsQuery)->get();
         $scheduleHeatmap = $this->calculateScheduleHeatmap($allPeriodAppointments);
+
+        // 11. Today's Next 5 Appointments
+        $nextAppointments = $this->calculateNextAppointments($tenant, $unit);
+
+        // 12. Attention Items (alerts)
+        $attentionItems = $this->calculateAttentionItems($tenant, $unit);
 
         return [
             'period' => [
                 'preset' => $preset,
-                'start_date' => $startDate->toDateString(),
-                'end_date' => $endDate->toDateString(),
-                'previous_start_date' => $prevStartDate->toDateString(),
-                'previous_end_date' => $prevEndDate->toDateString(),
+                'startDate' => $startDate->toDateString(),
+                'endDate' => $endDate->toDateString(),
+                'previousStartDate' => $prevStartDate->toDateString(),
+                'previousEndDate' => $prevEndDate->toDateString(),
             ],
-            'total_sales_cents' => $totalSalesCents,
-            'today_sales_cents' => $todaySalesCents,
-            'sales_variation_percentage' => $salesVariationPercentage,
-            'total_appointments' => $totalAppointments,
-            'growth_rate_percentage' => $growthRatePercentage,
-            'total_sales_count' => $totalSalesCount,
-            'conversion_rate_percentage' => $conversionRatePercentage,
-            'visits_trend' => $visitsTrend,
-            'status_breakdown' => $statusBreakdown,
-            'ticket_medio' => [
-                'current_cents' => $ticketCurrentCents,
-                'previous_cents' => $ticketPrevCents,
-                'variation_percentage' => $ticketVariationPercentage,
-            ],
-            'professionals_performance' => $professionalsPerformance,
-            'sales_by_category' => $salesByCategory,
-            'appointment_funnel' => $appointmentFunnel,
-            'schedule_heatmap' => $scheduleHeatmap,
+            'userName' => $userName,
+            'topKpis' => $topKpis,
+            'visitsTrend' => $visitsTrend,
+            'statusBreakdown' => $statusBreakdown,
+            'professionalPerformance' => $professionalPerformance,
+            'salesCategoryBreakdown' => $salesCategoryBreakdown,
+            'scheduleHeatmap' => $scheduleHeatmap,
+            'appointments' => $nextAppointments,
+            'attentionItems' => $attentionItems,
         ];
     }
 
@@ -164,8 +194,99 @@ class GetDashboardSnapshot
         return round((($current - $previous) / $previous) * 100, 1);
     }
 
+    private function formatCurrency(int $cents): string
+    {
+        return 'R$ '.number_format($cents / 100, 2, ',', '.');
+    }
+
+    private function getTrend(float $variation): string
+    {
+        if ($variation > 0) {
+            return 'up';
+        }
+        if ($variation < 0) {
+            return 'down';
+        }
+
+        return 'neutral';
+    }
+
     /**
-     * @return list<array{date: string, label: string, visits: int, sales_cents: int}>
+     * @return list<int>
+     */
+    private function calculateSalesSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    {
+        $sales = Sale::query()
+            ->selectRaw('DATE(created_at) as date_key, SUM(final_amount_cents) as aggregate')
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->where('status', 'completed')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('date_key')
+            ->pluck('aggregate', 'date_key');
+
+        $data = [];
+        $cursor = $startDate->startOfDay();
+        while ($cursor->lte($endDate)) {
+            $dateKey = $cursor->toDateString();
+            $data[] = (int) ($sales[$dateKey] ?? 0);
+            $cursor = $cursor->addDay();
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function calculateAppointmentsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    {
+        $appointments = Appointment::query()
+            ->selectRaw('DATE(starts_at) as date_key, COUNT(*) as aggregate')
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->whereBetween('starts_at', [$startDate, $endDate])
+            ->groupBy('date_key')
+            ->pluck('aggregate', 'date_key');
+
+        $data = [];
+        $cursor = $startDate->startOfDay();
+        while ($cursor->lte($endDate)) {
+            $dateKey = $cursor->toDateString();
+            $data[] = (int) ($appointments[$dateKey] ?? 0);
+            $cursor = $cursor->addDay();
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function calculateTicketsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    {
+        $tickets = Sale::query()
+            ->selectRaw('DATE(created_at) as date_key, COUNT(*) as aggregate')
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->where('status', 'completed')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('date_key')
+            ->pluck('aggregate', 'date_key');
+
+        $data = [];
+        $cursor = $startDate->startOfDay();
+        while ($cursor->lte($endDate)) {
+            $dateKey = $cursor->toDateString();
+            $data[] = (int) ($tickets[$dateKey] ?? 0);
+            $cursor = $cursor->addDay();
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return list<array{date: string, label: string, visits: int, salesCents: int}>
      */
     private function calculateVisitsTrend(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
     {
@@ -195,7 +316,7 @@ class GetDashboardSnapshot
                 'date' => $dateKey,
                 'label' => $cursor->format('d/m'),
                 'visits' => (int) ($appointments[$dateKey] ?? 0),
-                'sales_cents' => (int) ($sales[$dateKey] ?? 0),
+                'salesCents' => (int) ($sales[$dateKey] ?? 0),
             ];
             $cursor = $cursor->addDay();
         }
@@ -236,7 +357,7 @@ class GetDashboardSnapshot
     }
 
     /**
-     * @return list<array{id: string, name: string, avatar_url: ?string, services_count: int, variation_percentage: float, average_ticket_cents: int}>
+     * @return list<array{id: string, name: string, avatarUrl: ?string, totalServices: int, changePercentage: float, averageTicket: string}>
      */
     private function calculateProfessionalsPerformance(
         Tenant $tenant,
@@ -267,7 +388,6 @@ class GetDashboardSnapshot
             ->groupBy('professional_id')
             ->pluck('aggregate', 'professional_id');
 
-        // Sales totals per professional from SaleItems
         $currentSalesByProf = DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->selectRaw('sale_items.professional_id, SUM(sale_items.total_cents) as total_cents')
@@ -294,21 +414,20 @@ class GetDashboardSnapshot
             $result[] = [
                 'id' => $prof->id,
                 'name' => $prof->name,
-                'avatar_url' => $prof->avatar_url,
-                'services_count' => $currCount,
-                'variation_percentage' => $variation,
-                'average_ticket_cents' => $avgTicketCents,
+                'avatarUrl' => $prof->avatar_url,
+                'totalServices' => $currCount,
+                'changePercentage' => $variation,
+                'averageTicket' => $this->formatCurrency($avgTicketCents),
             ];
         }
 
-        // Sort by services_count desc
-        usort($result, fn ($a, $b) => $b['services_count'] <=> $a['services_count']);
+        usort($result, fn ($a, $b) => $b['totalServices'] <=> $a['totalServices']);
 
         return $result;
     }
 
     /**
-     * @return array{services: array{total_cents: int, percentage: float}, products: array{total_cents: int, percentage: float}, packages: array{total_cents: int, percentage: float}}
+     * @return list<array{category: string, label: string, totalAmount: string, percentage: float, color: string}>
      */
     private function calculateSalesByCategory(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
     {
@@ -331,50 +450,56 @@ class GetDashboardSnapshot
         $totalCents = $servicesCents + $productsCents + $packagesCents;
 
         return [
-            'services' => [
-                'total_cents' => $servicesCents,
+            [
+                'category' => 'services',
+                'label' => 'Serviços',
+                'totalAmount' => $this->formatCurrency($servicesCents),
                 'percentage' => $totalCents > 0 ? round(($servicesCents / $totalCents) * 100, 1) : 0.0,
+                'color' => '#3b82f6',
             ],
-            'products' => [
-                'total_cents' => $productsCents,
+            [
+                'category' => 'products',
+                'label' => 'Produtos',
+                'totalAmount' => $this->formatCurrency($productsCents),
                 'percentage' => $totalCents > 0 ? round(($productsCents / $totalCents) * 100, 1) : 0.0,
+                'color' => '#10b981',
             ],
-            'packages' => [
-                'total_cents' => $packagesCents,
+            [
+                'category' => 'packages',
+                'label' => 'Pacotes',
+                'totalAmount' => $this->formatCurrency($packagesCents),
                 'percentage' => $totalCents > 0 ? round(($packagesCents / $totalCents) * 100, 1) : 0.0,
+                'color' => '#8b5cf6',
             ],
         ];
     }
 
     /**
      * @param  Collection<int, Appointment>  $appointments
-     * @return list<array{day_of_week: int, day_label: string, hours: list<array{hour: int, label: string, count: int}>}>
+     * @return list<array{dayOfWeek: int, dayLabel: string, hour: int, label: string, count: int}>
      */
     private function calculateScheduleHeatmap($appointments): array
     {
-        // Days of week: 1 (Monday) to 6 (Saturday)
         $days = [
-            1 => 'Segunda',
-            2 => 'Terça',
-            3 => 'Quarta',
-            4 => 'Quinta',
-            5 => 'Sexta',
-            6 => 'Sábado',
+            1 => 'Seg',
+            2 => 'Ter',
+            3 => 'Qua',
+            4 => 'Qui',
+            5 => 'Sex',
+            6 => 'Sáb',
         ];
 
-        // Hours: 8 to 19
         $grid = [];
-
         foreach ($days as $dayOfWeek => $dayLabel) {
-            $hours = [];
             for ($h = 8; $h <= 19; $h++) {
-                $hours[$h] = 0;
+                $grid["{$dayOfWeek}_{$h}"] = [
+                    'dayOfWeek' => $dayOfWeek,
+                    'dayLabel' => $dayLabel,
+                    'hour' => $h,
+                    'label' => sprintf('%02d:00', $h),
+                    'count' => 0,
+                ];
             }
-            $grid[$dayOfWeek] = [
-                'day_of_week' => $dayOfWeek,
-                'day_label' => $dayLabel,
-                'hours' => $hours,
-            ];
         }
 
         foreach ($appointments as $appointment) {
@@ -384,32 +509,94 @@ class GetDashboardSnapshot
                 continue;
             }
 
-            $dayOfWeek = (int) $startsAt->dayOfWeekIso; // 1 = Mon, 7 = Sun
+            $dayOfWeek = (int) $startsAt->dayOfWeekIso;
             $hour = (int) $startsAt->hour;
+            $key = "{$dayOfWeek}_{$hour}";
 
-            if (isset($grid[$dayOfWeek]) && isset($grid[$dayOfWeek]['hours'][$hour])) {
-                $grid[$dayOfWeek]['hours'][$hour]++;
+            if (isset($grid[$key])) {
+                $grid[$key]['count']++;
             }
         }
 
-        $formattedHeatmap = [];
-        foreach ($grid as $dayOfWeek => $dayData) {
-            $hoursList = [];
-            foreach ($dayData['hours'] as $hour => $count) {
-                $hoursList[] = [
-                    'hour' => $hour,
-                    'label' => sprintf('%02d:00', $hour),
-                    'count' => $count,
-                ];
-            }
+        return array_values($grid);
+    }
 
-            $formattedHeatmap[] = [
-                'day_of_week' => $dayOfWeek,
-                'day_label' => $dayData['day_label'],
-                'hours' => $hoursList,
+    /**
+     * @return list<array{id: string, startsAt: string, client: string, service: string, professional: string, status: string}>
+     */
+    private function calculateNextAppointments(Tenant $tenant, ?Unit $unit): array
+    {
+        $todayStart = CarbonImmutable::now()->startOfDay();
+        $todayEnd = CarbonImmutable::now()->endOfDay();
+
+        $appointments = Appointment::query()
+            ->with(['customer', 'professional', 'items.service'])
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->whereBetween('starts_at', [$todayStart, $todayEnd])
+            ->orderBy('starts_at', 'asc')
+            ->limit(5)
+            ->get();
+
+        return array_values($appointments->map(function (Appointment $app) {
+            /** @var CarbonInterface|null $startsAt */
+            $startsAt = $app->starts_at;
+            $firstItem = $app->items->first();
+
+            return [
+                'id' => $app->id,
+                'startsAt' => $startsAt ? $startsAt->format('H:i') : '--:--',
+                'client' => $app->customer->name ?? 'Cliente sem nome',
+                'service' => $firstItem?->service->name ?? 'Serviço',
+                'professional' => $app->professional->name ?? 'Profissional',
+                'status' => $app->status,
+            ];
+        })->all());
+    }
+
+    /**
+     * @return list<array{id: string, label: string, detail: string, level: string}>
+     */
+    private function calculateAttentionItems(Tenant $tenant, ?Unit $unit): array
+    {
+        $items = [];
+
+        // 1. Overdue bills (FinancialObligations overdue)
+        $overdueCount = DB::table('financial_obligations')
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->whereNull('deleted_at')
+            ->where('status', 'pending')
+            ->where('due_date', '<', CarbonImmutable::now()->toDateString())
+            ->count();
+
+        if ($overdueCount > 0) {
+            $items[] = [
+                'id' => 'overdue_bills',
+                'label' => 'Contas vencidas',
+                'detail' => "{$overdueCount} conta(s) a pagar estão vencida(s)",
+                'level' => 'high',
             ];
         }
 
-        return $formattedHeatmap;
+        // 2. Open draft sales created more than 4 hours ago
+        $fourHoursAgo = CarbonImmutable::now()->subHours(4);
+        $openSalesCount = Sale::query()
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->where('status', 'draft')
+            ->where('created_at', '<=', $fourHoursAgo)
+            ->count();
+
+        if ($openSalesCount > 0) {
+            $items[] = [
+                'id' => 'open_sales',
+                'label' => 'Comandas abertas há mais de 4h',
+                'detail' => "{$openSalesCount} comanda(s) aberta(s) necessitam fechamento",
+                'level' => 'medium',
+            ];
+        }
+
+        return $items;
     }
 }
