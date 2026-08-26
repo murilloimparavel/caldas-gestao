@@ -1,8 +1,6 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
-    AlertCircle,
     ArrowRight,
-    CheckCircle2,
     Coins,
     Percent,
     Plus,
@@ -11,7 +9,6 @@ import {
     Trash2,
     UserCheck,
     Users,
-    WalletCards,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -32,7 +29,6 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import type {
@@ -88,6 +84,7 @@ export default function CommissionsIndex({
 
     const openEditModal = (rule: CommissionRule) => {
         setEditingRule(rule);
+
         if (rule.service_id) {
             setItemTargetType('service');
         } else if (rule.product_id) {
@@ -95,6 +92,7 @@ export default function CommissionsIndex({
         } else {
             setItemTargetType('all');
         }
+
         setRuleRateType(rule.type);
         setIsRuleModalOpen(true);
     };

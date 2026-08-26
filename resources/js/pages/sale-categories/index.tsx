@@ -1,5 +1,5 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { Layers, Plus, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
+import { Layers, Plus, Receipt, ShieldAlert, Tag } from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -14,7 +14,6 @@ import {
     StatusBadge,
 } from '@/components/operational';
 import type { Paginated, ResourceFilters } from '@/components/operational';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,

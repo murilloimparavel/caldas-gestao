@@ -14,7 +14,7 @@ class SaleCategoryFactory extends Factory
 {
     public function definition(): array
     {
-        $name = fake()->words(2, true);
+        $name = implode(' ', (array) fake()->words(2));
 
         return [
             'id' => (string) Str::uuid7(),

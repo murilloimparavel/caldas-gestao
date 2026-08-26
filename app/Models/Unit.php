@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property UnitStatus $status
  * @property int $lock_version
  */
-#[Fillable(['tenant_id', 'slug', 'name', 'status', 'timezone', 'address'])]
+#[Fillable(['tenant_id', 'slug', 'name', 'status', 'timezone', 'address', 'online_booking_enabled'])]
 class Unit extends Model
 {
     /** @use HasFactory<UnitFactory> */
@@ -25,6 +25,7 @@ class Unit extends Model
 
     protected $attributes = [
         'status' => UnitStatus::Active->value,
+        'online_booking_enabled' => false,
         'lock_version' => 0,
     ];
 
@@ -33,6 +34,7 @@ class Unit extends Model
         return [
             'status' => UnitStatus::class,
             'address' => 'array',
+            'online_booking_enabled' => 'boolean',
             'lock_version' => 'integer',
         ];
     }

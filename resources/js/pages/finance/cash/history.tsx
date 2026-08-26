@@ -1,20 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    Banknote,
-    Calendar,
-    CheckCircle2,
-    Clock,
-    DollarSign,
-    Eye,
-    History,
-    Lock,
-    Search,
-    ShieldAlert,
-    User,
-    WalletCards,
-    X,
-} from 'lucide-react';
+import { ArrowLeft, Eye, X } from 'lucide-react';
 import { useState } from 'react';
 import {
     EmptyState,
@@ -42,7 +27,9 @@ function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }

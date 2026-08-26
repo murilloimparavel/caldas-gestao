@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     AlertCircle,
     ArrowDownRight,
@@ -6,31 +6,23 @@ import {
     ArrowRight,
     ArrowUpRight,
     Banknote,
-    Calendar,
     CheckCircle2,
     Clock,
-    DollarSign,
     PiggyBank,
-    Plus,
     TrendingDown,
     TrendingUp,
-    User,
-    Users,
     WalletCards,
 } from 'lucide-react';
 import {
-    EmptyState,
     formatMoney,
     PageCanvas,
     ResourceHeader,
 } from '@/components/operational';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type {
     FinanceDashboardMetrics,
     FinancialObligation,
-    SharedPageProps,
 } from '@/types';
 
 type Props = {
@@ -44,10 +36,6 @@ export default function FinanceDashboard({
     upcomingObligations,
     recentSettled,
 }: Props) {
-    const { auth } = usePage<SharedPageProps>().props;
-    const canManage = auth.permissions.includes('financial.manage');
-
-    const todayStr = new Date().toISOString().split('T')[0];
 
     return (
         <>

@@ -6,23 +6,18 @@ import {
     ArrowLeft,
     ArrowUpRight,
     Boxes,
-    Calendar,
     CheckCircle2,
-    Clock,
     DollarSign,
     FolderTree,
     History,
-    Package,
     RotateCcw,
     SlidersHorizontal,
     TrendingUp,
-    User,
 } from 'lucide-react';
 import { useState } from 'react';
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
 import {
     createIdempotencyKey,
-    EmptyState,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -34,7 +29,6 @@ import {
     StatusBadge,
 } from '@/components/operational';
 import type { Paginated } from '@/components/operational';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,

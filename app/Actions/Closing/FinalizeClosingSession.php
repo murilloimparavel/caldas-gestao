@@ -78,7 +78,7 @@ final class FinalizeClosingSession extends OperationalAction
             }
 
             // Concurrency lock_version validation
-            if (isset($data['lock_versions']) && is_array($data['lock_versions'])) {
+            if (isset($data['lock_versions'])) {
                 foreach ($sales as $sale) {
                     if (isset($data['lock_versions'][$sale->getKey()])) {
                         $expected = (int) $data['lock_versions'][$sale->getKey()];
@@ -177,7 +177,7 @@ final class FinalizeClosingSession extends OperationalAction
                 ],
                 'sales' => $sales->map(fn (Sale $s): array => [
                     'id' => $s->getKey(),
-                    'category_name' => $s->category_name_snapshot ?? $s->category?->name ?? 'Geral',
+                    'category_name' => $s->category_name_snapshot ?? ($s->category ? $s->category->name : 'Geral'),
                     'reference_label' => $s->reference_label,
                     'total_amount_cents' => $s->total_amount_cents,
                     'discount_amount_cents' => $s->discount_amount_cents,

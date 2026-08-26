@@ -1,17 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    Banknote,
-    CheckCircle2,
-    Clock,
-    DollarSign,
-    Lock,
-    Printer,
-    ShieldAlert,
-    TrendingDown,
-    TrendingUp,
-    User,
-} from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import {
     EmptyState,
     formatMoney,
@@ -67,7 +55,9 @@ function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }
@@ -204,6 +194,7 @@ export default function CashShow({ shift }: Props) {
                                     const config =
                                         movementTypeConfig[movement.type] ??
                                         movementTypeConfig.supply;
+
                                     return (
                                         <tr key={movement.id} className="transition-colors hover:bg-muted/30">
                                             <td className="whitespace-nowrap px-6 py-4">

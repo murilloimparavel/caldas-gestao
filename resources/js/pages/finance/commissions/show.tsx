@@ -1,17 +1,12 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
-    Calendar,
-    CheckCircle2,
-    Clock,
     DollarSign,
     Filter,
     History,
     Receipt,
     UserCheck,
     Wallet,
-    WalletCards,
-    X,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -34,7 +29,6 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import type {
@@ -71,7 +65,9 @@ function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }
@@ -89,7 +85,9 @@ function formatDate(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }

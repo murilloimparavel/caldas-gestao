@@ -57,11 +57,11 @@ import {
     update as updateAppointment,
 } from '@/routes/appointments';
 import { index as calendarIndex } from '@/routes/calendar';
+import sales from '@/routes/sales';
 import {
     destroy as destroyScheduleBlock,
     store as storeScheduleBlock,
 } from '@/routes/schedule_blocks';
-import sales from '@/routes/sales';
 import type { SharedPageProps } from '@/types';
 import type {
     AppointmentStatus,
@@ -134,6 +134,7 @@ function AppointmentForm({
         }
 
         const start = new Date(selectedStartsAt);
+
         if (Number.isNaN(start.getTime())) {
             return null;
         }
@@ -147,20 +148,26 @@ function AppointmentForm({
                 if (appointment && apt.id === appointment.id) {
                     return false;
                 }
+
                 if (apt.status === 'cancelled') {
                     return false;
                 }
+
                 const profId = apt.professional_id ?? apt.professional?.id;
+
                 if (profId !== selectedProfessional) {
                     return false;
                 }
+
                 const aStart = new Date(apt.starts_at);
                 const aEnd = new Date(apt.ends_at);
+
                 return start < aEnd && end > aStart;
             });
 
             if (aptConflict) {
                 const customerName = aptConflict.customer?.name || 'Outro cliente';
+
                 return {
                     type: 'appointment',
                     description: `Conflito com agendamento de ${customerName} (${formatTime(aptConflict.starts_at, unitTimezone)} - ${formatTime(aptConflict.ends_at, unitTimezone)}).`,
@@ -174,8 +181,10 @@ function AppointmentForm({
                 if (block.professional_id && block.professional_id !== selectedProfessional) {
                     return false;
                 }
+
                 const bStart = new Date(block.starts_at);
                 const bEnd = new Date(block.ends_at);
+
                 return start < bEnd && end > bStart;
             });
 
@@ -864,6 +873,7 @@ export default function CalendarIndex(props: CalendarProps) {
         if (block.status === 'cancelled') {
             return false;
         }
+
         if (selectedProfessionalIds.length === 0) {
             return true;
         }

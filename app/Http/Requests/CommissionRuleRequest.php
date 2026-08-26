@@ -31,4 +31,23 @@ final class CommissionRuleRequest extends FormRequest
             'lock_version' => ['nullable', 'integer', 'min:0'],
         ];
     }
+
+    /**
+     * @param  string|null  $key
+     * @param  mixed  $default
+     * @return array{
+     *     professional_id?: string|null,
+     *     service_id?: string|null,
+     *     product_id?: string|null,
+     *     type?: string,
+     *     value_rate: int,
+     *     is_active?: bool,
+     *     lock_version?: int
+     * }
+     */
+    public function validated($key = null, $default = null): array
+    {
+        /** @var array{professional_id?: string|null, service_id?: string|null, product_id?: string|null, type?: string, value_rate: int, is_active?: bool, lock_version?: int} */
+        return parent::validated($key, $default);
+    }
 }

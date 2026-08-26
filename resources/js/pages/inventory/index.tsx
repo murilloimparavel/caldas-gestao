@@ -2,10 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowDownRight,
     ArrowUpRight,
-    Boxes,
-    Calendar,
     Filter,
-    Package,
     RotateCcw,
     SlidersHorizontal,
 } from 'lucide-react';

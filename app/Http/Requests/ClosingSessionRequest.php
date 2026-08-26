@@ -23,4 +23,15 @@ final class ClosingSessionRequest extends FormRequest
             'lock_versions.*' => ['integer', 'min:1'],
         ];
     }
+
+    /**
+     * @param  string|null  $key
+     * @param  mixed  $default
+     * @return array{sale_ids: list<string>, expected_total_cents?: int|null, notes?: string|null, lock_versions?: array<string, int>|null}
+     */
+    public function validated($key = null, $default = null): array
+    {
+        /** @var array{sale_ids: list<string>, expected_total_cents?: int|null, notes?: string|null, lock_versions?: array<string, int>|null} */
+        return parent::validated($key, $default);
+    }
 }

@@ -4,7 +4,6 @@ import {
     ArrowLeft,
     Calendar,
     CheckCircle2,
-    Clock,
     History,
     Package,
     Percent,
@@ -27,7 +26,6 @@ import {
     formatMoney,
     PageCanvas,
     parseBrazilianCurrency,
-    ResourceHeader,
 } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,7 +41,6 @@ import { Input } from '@/components/ui/input';
 import { SaleStatusBadge } from '@/pages/sales/index';
 import calendar from '@/routes/calendar';
 import closingSessions from '@/routes/closing-sessions';
-import customers from '@/routes/customers';
 import sales from '@/routes/sales';
 import type {
     ProductOption,
@@ -67,7 +64,9 @@ function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }
@@ -116,7 +115,6 @@ export default function SalesShow({
     services,
     products,
     professionals,
-    categories,
 }: Props) {
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
@@ -156,12 +154,6 @@ export default function SalesShow({
     // Adjust reason state
     const [adjustReason, setAdjustReason] = useState('');
 
-    const [itemAddKey] = useState(() =>
-        createIdempotencyKey(`sale-item-add:${sale.id}`),
-    );
-    const [discountKey] = useState(() =>
-        createIdempotencyKey(`sale-discount:${sale.id}`),
-    );
     const [transitionKey] = useState(() =>
         createIdempotencyKey(`sale-transition:${sale.id}`),
     );
@@ -611,6 +603,7 @@ export default function SalesShow({
                                         open={addItemOpen}
                                         onOpenChange={(open) => {
                                             setAddItemOpen(open);
+
                                             if (!open) {
                                                 resetItemForm();
                                             }

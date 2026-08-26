@@ -25,7 +25,7 @@ final class ReactivatePackageTemplate extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $template, $expectedVersion): PackageTemplate {
             $locked = PackageTemplate::query()->whereKey($template->getKey())->lockForUpdate()->firstOrFail();
 
-            if ($expectedVersion !== null && $locked->lock_version !== $expectedVersion) {
+            if ($locked->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('The package template was modified concurrently.');
             }
 

@@ -13,9 +13,11 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\OnlineBookingSettingsController;
 use App\Http\Controllers\PackageTemplateController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
+use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\SaleCategoryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleItemController;
@@ -26,12 +28,25 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
 
+Route::prefix('book/{tenant:slug}/{unit:slug}')
+    ->scopeBindings()
+    ->middleware('throttle:public-booking')
+    ->group(function (): void {
+        Route::get('/', [PublicBookingController::class, 'show'])->name('public_booking.show');
+        Route::get('/availability', [PublicBookingController::class, 'availability'])->name('public_booking.availability');
+        Route::post('/appointments', [PublicBookingController::class, 'store'])
+            ->middleware('throttle:public-booking-create')
+            ->name('public_booking.appointments.store');
+    });
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('tenant.context')
         ->name('dashboard');
 
     Route::middleware('tenant.context')->group(function (): void {
+        Route::get('online-booking', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.index');
+        Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
         Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
         Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
         Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');

@@ -1,5 +1,5 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Layers, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
+import { ArrowLeft, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,

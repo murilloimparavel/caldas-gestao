@@ -23,7 +23,7 @@ class SubscriptionPlanFactory extends Factory
             'id' => (string) Str::uuid7(),
             'unit_id' => Unit::factory(),
             'tenant_id' => fn (array $attributes): string => (string) Unit::query()->whereKey($attributes['unit_id'])->value('tenant_id'),
-            'name' => fake()->words(3, true).' Plan',
+            'name' => implode(' ', (array) fake()->words(3)).' Plan',
             'description' => fake()->sentence(),
             'price_cents' => fake()->randomElement([4990, 9990, 19990, 29990]),
             'billing_cycle' => fake()->randomElement(['monthly', 'quarterly', 'yearly']),

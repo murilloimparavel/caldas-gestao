@@ -1,5 +1,5 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, FolderTree, Layers, Package, Scissors, Tag } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Tag } from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,

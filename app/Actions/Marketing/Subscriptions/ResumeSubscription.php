@@ -26,7 +26,7 @@ final class ResumeSubscription extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $subscription, $expectedVersion): CustomerSubscription {
             $locked = CustomerSubscription::query()->whereKey($subscription->getKey())->lockForUpdate()->firstOrFail();
 
-            if ($expectedVersion !== null && $locked->lock_version !== $expectedVersion) {
+            if ($locked->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('The subscription was modified concurrently.');
             }
 
@@ -39,16 +39,12 @@ final class ResumeSubscription extends OperationalAction
             }
 
             $plan = $locked->plan;
-            $newNextBillingDate = now()->toDateString();
-
-            if ($locked->billing_cycle !== null) {
-                $newNextBillingDate = match ($locked->billing_cycle) {
-                    'monthly' => now()->addMonth()->toDateString(),
-                    'quarterly' => now()->addMonths(3)->toDateString(),
-                    'yearly' => now()->addYear()->toDateString(),
-                    default => now()->addMonth()->toDateString(),
-                };
-            }
+            $newNextBillingDate = match ($locked->billing_cycle) {
+                'monthly' => now()->addMonth()->toDateString(),
+                'quarterly' => now()->addMonths(3)->toDateString(),
+                'yearly' => now()->addYear()->toDateString(),
+                default => now()->addMonth()->toDateString(),
+            };
 
             $locked->forceFill([
                 'status' => 'active',

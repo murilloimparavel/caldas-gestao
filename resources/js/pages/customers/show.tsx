@@ -3,9 +3,7 @@ import {
     ArrowLeft,
     Calendar,
     CalendarDays,
-    CheckCircle2,
     Clock,
-    DollarSign,
     ExternalLink,
     Gift,
     History,
@@ -18,7 +16,6 @@ import {
     Sparkles,
     TrendingUp,
     UserRound,
-    XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { statusLabels } from '@/components/calendar';
@@ -45,13 +42,11 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { index as calendarIndex } from '@/routes/calendar';
 import customerPackagesRoutes from '@/routes/customer-packages';
 import customerSubscriptionsRoutes from '@/routes/customer-subscriptions';
 import customers from '@/routes/customers';
 import sales from '@/routes/sales';
-import subscriptionsRoutes from '@/routes/subscriptions';
 import type { SharedPageProps } from '@/types';
 
 type CustomerAppointment = {
@@ -182,6 +177,7 @@ type Props = {
 
 function formatAppointmentDate(isoString: string): string {
     const date = new Date(isoString);
+
     return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -191,6 +187,7 @@ function formatAppointmentDate(isoString: string): string {
 
 function formatAppointmentTime(isoString: string): string {
     const date = new Date(isoString);
+
     return date.toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
@@ -199,6 +196,7 @@ function formatAppointmentTime(isoString: string): string {
 
 function formatSaleDateTime(isoString: string): string {
     const date = new Date(isoString);
+
     return date.toLocaleString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -328,7 +326,6 @@ export default function CustomerShow({
     const canCancelSub = props.auth.permissions.includes('subscription.cancel');
     const canManageSub = props.auth.permissions.includes('subscription.manage');
     const [subscribeKey] = useState(() => createIdempotencyKey('customer-subscribe'));
-    const [cancelSubOpen, setCancelSubOpen] = useState(false);
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
     const customerPackages = customer.customerPackages ?? [];

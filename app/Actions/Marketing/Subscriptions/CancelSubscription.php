@@ -27,7 +27,7 @@ final class CancelSubscription extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $subscription, $data, $expectedVersion): CustomerSubscription {
             $locked = CustomerSubscription::query()->whereKey($subscription->getKey())->lockForUpdate()->firstOrFail();
 
-            if ($expectedVersion !== null && $locked->lock_version !== $expectedVersion) {
+            if ($locked->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('The subscription was modified concurrently.');
             }
 

@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /** @property int $lock_version */
-#[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'status'])]
+#[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'status', 'online_booking_enabled'])]
 #[UsePolicy(ProfessionalPolicy::class)]
 class Professional extends Model
 {
@@ -24,12 +24,13 @@ class Professional extends Model
 
     protected $attributes = [
         'status' => 'active',
+        'online_booking_enabled' => false,
         'lock_version' => 0,
     ];
 
     protected function casts(): array
     {
-        return ['lock_version' => 'integer'];
+        return ['lock_version' => 'integer', 'online_booking_enabled' => 'boolean'];
     }
 
     /** @return BelongsTo<Tenant, $this> */

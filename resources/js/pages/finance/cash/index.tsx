@@ -1,23 +1,13 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
-    AlertCircle,
-    ArrowDownRight,
-    ArrowUpRight,
-    Banknote,
-    CheckCircle2,
-    Clock,
-    DollarSign,
     History,
     Lock,
     MinusCircle,
     Plus,
     PlusCircle,
-    ShieldAlert,
     TrendingDown,
     TrendingUp,
     User,
-    WalletCards,
-    X,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -41,10 +31,10 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import cashShifts from '@/routes/cash_shifts';
 import type {
     CashMetrics,
-    CashMovement,
     CashMovementType,
     CashShift,
     SharedPageProps,
@@ -95,7 +85,9 @@ function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }
@@ -134,6 +126,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
     const parseMoneyToCents = (val: string): number => {
         const cleaned = val.replace(/[^\d,]/g, '').replace(',', '.');
         const num = parseFloat(cleaned);
+
         return isNaN(num) ? 0 : Math.round(num * 100);
     };
 
@@ -201,7 +194,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                             headers={{
                                 'X-Idempotency-Key': createIdempotencyKey(
                                     'cash-shift-open',
-                                    props.auth.user.id,
+                                    props.auth.user?.id ?? 'anonymous',
                                 ),
                             }}
                             onSuccess={() => {
@@ -247,7 +240,8 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         name="notes"
                                         error={errors.notes}
                                     >
-                                        <textarea
+                                        <Textarea
+                                            id="open-notes"
                                             className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                             placeholder="Ex: Gaveta 1, troco em notas miúdas"
                                             value={openNotes}
@@ -740,7 +734,8 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         name="notes"
                                                         error={errors.notes}
                                                     >
-                                                        <textarea
+                                                        <Textarea
+                                                            id="close-notes"
                                                             className="flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                                             placeholder="Ex: Justificativa de eventuais sobras ou quebras"
                                                             value={closeNotes}
@@ -800,6 +795,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                             const config =
                                                 movementTypeConfig[movement.type] ??
                                                 movementTypeConfig.supply;
+
                                             return (
                                                 <tr
                                                     key={movement.id}

@@ -6,7 +6,6 @@ import {
     Package,
     Plus,
     SlidersHorizontal,
-    Tag,
 } from 'lucide-react';
 import { useState } from 'react';
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';

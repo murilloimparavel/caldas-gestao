@@ -20,6 +20,8 @@ export type SidebarNavItem = Omit<NavItem, 'href'> & {
 };
 
 export type SidebarNavGroup = {
+    id: string;
     label: string;
+    icon?: LucideIcon | null;
     items: SidebarNavItem[];
 };

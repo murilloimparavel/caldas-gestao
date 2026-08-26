@@ -1,6 +1,5 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import {
-    ArrowLeft,
     Calendar,
     CheckCircle2,
     DollarSign,
@@ -130,6 +129,7 @@ function SubscriberStatusBadge({ status }: { status: string }) {
         cancelled: 'destructive',
         expired: 'outline',
     };
+
     return (
         <Badge variant={variantMap[status] ?? 'outline'}>
             {statusLabel[status] ?? status}

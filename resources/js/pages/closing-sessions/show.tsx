@@ -2,18 +2,11 @@ import { Head, Link } from '@inertiajs/react';
 import {
     ArrowLeft,
     CheckCircle2,
-    Clock,
     FileText,
-    Layers,
     MapPin,
-    Package,
     Printer,
-    Scissors,
-    Sparkles,
-    User,
-    WalletCards,
 } from 'lucide-react';
-import { formatMoney, PageCanvas, ResourceHeader } from '@/components/operational';
+import { formatMoney, PageCanvas } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import sales from '@/routes/sales';
@@ -27,7 +20,9 @@ function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
     }
+
     const date = new Date(iso);
+
     if (Number.isNaN(date.getTime())) {
         return iso;
     }
@@ -220,7 +215,11 @@ export default function ClosingSessionShow({ session }: Props) {
                                             ) : (
                                                 saleItems.map((item, itemIdx) => {
                                                     const itemName = 'name' in item ? item.name : item.name_snapshot;
-                                                    const itemProf = 'professional_name' in item ? item.professional_name : item.professional?.name;
+                                                    const itemProf = 'professional_name' in item
+                                                        ? item.professional_name
+                                                        : 'professional' in item
+                                                            ? item.professional?.name
+                                                            : null;
 
                                                     return (
                                                         <div
@@ -331,6 +330,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                 </div>
                                 {saleItems.map((item, itemIdx) => {
                                     const itemName = 'name' in item ? item.name : item.name_snapshot;
+
                                     return (
                                         <div key={itemIdx} className="flex justify-between pl-2 text-[10px]">
                                             <span>{item.quantity}x {itemName}</span>

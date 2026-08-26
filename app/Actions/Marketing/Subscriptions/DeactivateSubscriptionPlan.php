@@ -25,7 +25,7 @@ final class DeactivateSubscriptionPlan extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $plan, $expectedVersion): SubscriptionPlan {
             $locked = SubscriptionPlan::query()->whereKey($plan->getKey())->lockForUpdate()->firstOrFail();
 
-            if ($expectedVersion !== null && $locked->lock_version !== $expectedVersion) {
+            if ($locked->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('The subscription plan was modified concurrently.');
             }
 

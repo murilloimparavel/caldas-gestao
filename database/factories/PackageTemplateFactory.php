@@ -23,7 +23,7 @@ class PackageTemplateFactory extends Factory
             'id' => (string) Str::uuid7(),
             'unit_id' => Unit::factory(),
             'tenant_id' => fn (array $attributes): string => (string) Unit::query()->whereKey($attributes['unit_id'])->value('tenant_id'),
-            'name' => fake()->words(3, true).' Package',
+            'name' => implode(' ', (array) fake()->words(3)).' Package',
             'description' => fake()->sentence(),
             'price_cents' => 30000,
             'total_sessions' => 5,

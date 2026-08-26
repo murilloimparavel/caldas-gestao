@@ -218,6 +218,7 @@ function Sidebar({
           <SheetDescription>Displays the mobile sidebar.</SheetDescription>
         </SheetHeader>
         <SheetContent
+          id="mobile-sidebar-menu"
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"

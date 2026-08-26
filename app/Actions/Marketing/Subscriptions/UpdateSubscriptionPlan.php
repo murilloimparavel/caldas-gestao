@@ -39,7 +39,7 @@ final class UpdateSubscriptionPlan extends OperationalAction
 
             $serviceIds = null;
             if (array_key_exists('service_ids', $data)) {
-                $serviceIds = $data['service_ids'];
+                $serviceIds = is_array($data['service_ids']) ? array_values(array_map('strval', $data['service_ids'])) : [];
                 unset($data['service_ids']);
             }
 

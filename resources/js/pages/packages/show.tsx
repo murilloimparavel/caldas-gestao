@@ -1,10 +1,8 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
-    CheckCircle2,
     Clock,
     DollarSign,
-    Gift,
     History,
     Scissors,
     User,

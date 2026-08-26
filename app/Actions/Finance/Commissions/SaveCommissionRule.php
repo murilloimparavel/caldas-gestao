@@ -48,7 +48,7 @@ final class SaveCommissionRule extends OperationalAction
                     'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
                     'product_id' => array_key_exists('product_id', $data) ? $data['product_id'] : $lockedRule->product_id,
                     'type' => $data['type'] ?? $lockedRule->type,
-                    'value_rate' => $data['value_rate'] ?? $lockedRule->value_rate,
+                    'value_rate' => $data['value_rate'],
                     'is_active' => $data['is_active'] ?? $lockedRule->is_active,
                     'lock_version' => $lockedRule->lock_version + 1,
                 ])->save();

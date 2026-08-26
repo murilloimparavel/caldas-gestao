@@ -8,14 +8,11 @@ import {
     Calendar,
     CheckCircle2,
     Clock,
-    DollarSign,
     Edit3,
-    Filter,
     Plus,
     Search,
     User,
     Users,
-    Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -585,6 +582,7 @@ export default function FinancialTransactionsIndex({
                                 <tbody className="divide-y">
                                     {obligations.data.map((item) => {
                                         const overdue = isOverdue(item);
+
                                         return (
                                             <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                                                 <td className="px-4 py-3 whitespace-nowrap">

@@ -1,6 +1,8 @@
 import { Link } from '@inertiajs/react';
+import type { LucideIcon } from 'lucide-react';
 import { ChevronLeft, ChevronRight, Search, UsersRound } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactElement, ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,15 +39,20 @@ export type RelationOption = {
     status?: ResourceStatus;
 };
 
-export function createIdempotencyKey(scope: string): string {
+export function createIdempotencyKey(
+    scope: string,
+    discriminator?: string | null,
+): string {
+    const scopedKey = discriminator ? `${scope}-${discriminator}` : scope;
+
     if (
         typeof crypto !== 'undefined' &&
         typeof crypto.randomUUID === 'function'
     ) {
-        return `${scope}-${crypto.randomUUID()}`;
+        return `${scopedKey}-${crypto.randomUUID()}`;
     }
 
-    return `${scope}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `${scopedKey}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function parseBrazilianCurrency(value: string): number {
@@ -75,13 +82,18 @@ export function RelationCheckboxes({
     name,
     options,
     selectedIds = [],
+    initialSelected,
     disabled = false,
 }: {
     name: string;
     options: RelationOption[];
     selectedIds?: string[];
+    initialSelected?: string[];
     disabled?: boolean;
 }) {
+    const selectedOptionIds =
+        selectedIds.length > 0 ? selectedIds : (initialSelected ?? []);
+
     if (options.length === 0) {
         return (
             <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
@@ -106,7 +118,9 @@ export function RelationCheckboxes({
                             type="checkbox"
                             name={`${name}[]`}
                             value={option.id}
-                            defaultChecked={selectedIds.includes(option.id)}
+                            defaultChecked={selectedOptionIds.includes(
+                                option.id,
+                            )}
                             disabled={disabled}
                             className="size-4 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring"
                         />
@@ -160,55 +174,192 @@ export function FormErrorSummary({
     ) : null;
 }
 
+type FormControlProps = {
+    id?: string;
+    'aria-describedby'?: string;
+    'aria-invalid'?: boolean | 'true' | 'false';
+    children?: ReactNode;
+};
+
+type EnhancedControl = {
+    node: ReactNode;
+    id?: string;
+    enhanced: boolean;
+};
+
+function isControlWrapper(element: ReactElement): boolean {
+    return (
+        typeof element.type === 'string' &&
+        ['div', 'fieldset', 'section', 'span'].includes(element.type)
+    );
+}
+
+function enhanceFormControl(
+    node: ReactNode,
+    fieldId: string,
+    describedBy: string,
+    hasError: boolean,
+): EnhancedControl {
+    if (!isValidElement(node)) {
+        return { node, enhanced: false };
+    }
+
+    const props = node.props as FormControlProps;
+
+    if (isControlWrapper(node)) {
+        let controlId: string | undefined;
+        let enhanced = false;
+        const nestedChildren = Children.map(props.children, (child) => {
+            if (enhanced) {
+                return child;
+            }
+
+            const nestedControl = enhanceFormControl(
+                child,
+                fieldId,
+                describedBy,
+                hasError,
+            );
+
+            if (nestedControl.enhanced) {
+                controlId = nestedControl.id;
+                enhanced = true;
+            }
+
+            return nestedControl.node;
+        });
+
+        return enhanced
+            ? {
+                  node: cloneElement(node, undefined, nestedChildren),
+                  id: controlId,
+                  enhanced: true,
+              }
+            : { node, enhanced: false };
+    }
+
+    const controlId = props.id ?? fieldId;
+    const existingDescribedBy = props['aria-describedby'];
+    const mergedDescribedBy = Array.from(
+        new Set(
+            [existingDescribedBy, describedBy]
+                .filter(Boolean)
+                .flatMap((value) => value?.split(/\s+/) ?? []),
+        ),
+    ).join(' ');
+
+    return {
+        node: cloneElement(node as ReactElement<FormControlProps>, {
+            id: controlId,
+            'aria-describedby': mergedDescribedBy || undefined,
+            'aria-invalid': props['aria-invalid'] ?? hasError,
+        }),
+        id: controlId,
+        enhanced: true,
+    };
+}
+
 export function FormField({
     label,
     name,
+    id,
+    required = false,
+    description,
     error,
     children,
 }: {
     label: string;
-    name: string;
+    name?: string;
+    id?: string;
+    required?: boolean;
+    description?: ReactNode;
     error?: unknown;
     children: ReactNode;
 }) {
     const errorMessage = firstError(error);
+    const fieldId = id ?? name ?? label.toLowerCase().replace(/\s+/g, '-');
+    const errorId = `${fieldId}-error`;
+    const descriptionId = description ? `${fieldId}-description` : undefined;
+    const describedBy = [descriptionId, errorMessage ? errorId : undefined]
+        .filter((value): value is string => Boolean(value))
+        .join(' ');
+
+    const childrenArray = Children.toArray(children);
+    const firstControlIndex = childrenArray.findIndex(isValidElement);
+    const firstControl = childrenArray[firstControlIndex];
+    const controlId =
+        (firstControl && isValidElement(firstControl)
+            ? (firstControl.props as FormControlProps).id
+            : undefined) ?? fieldId;
+
+    const enhancedChildren = childrenArray.map((child, index) => {
+        if (index === firstControlIndex && isValidElement(child)) {
+            return enhanceFormControl(
+                child,
+                fieldId,
+                describedBy,
+                Boolean(errorMessage),
+            ).node;
+        }
+
+        return child;
+    });
 
     return (
         <div className="space-y-2">
             <label
-                htmlFor={name}
+                htmlFor={controlId}
                 className="text-sm font-medium text-foreground"
             >
                 {label}
+                {required ? <span aria-hidden="true"> *</span> : null}
             </label>
-            {children}
-            <InputError
-                id={`${name}-error`}
-                message={errorMessage}
-                role="alert"
-            />
+            {enhancedChildren}
+            {description ? (
+                <p id={descriptionId} className="text-xs text-muted-foreground">
+                    {description}
+                </p>
+            ) : null}
+            <InputError id={errorId} message={errorMessage} role="alert" />
         </div>
     );
 }
 
 export function FormActions({
     processing,
+    isSubmitting,
+    submitting,
     onCancel,
     label = 'Salvar cadastro',
+    submitLabel,
+    submittingLabel,
+    submitText,
+    cancelLabel = 'Cancelar',
 }: {
-    processing: boolean;
+    processing?: boolean;
+    isSubmitting?: boolean;
+    submitting?: boolean;
     onCancel?: () => void;
     label?: string;
+    submitLabel?: string;
+    submittingLabel?: string;
+    submitText?: string;
+    cancelLabel?: string;
 }) {
+    const isProcessing = processing ?? isSubmitting ?? submitting ?? false;
+    const resolvedLabel = submitLabel ?? submitText ?? label;
+
     return (
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
             {onCancel ? (
                 <Button type="button" variant="ghost" onClick={onCancel}>
-                    Cancelar
+                    {cancelLabel}
                 </Button>
             ) : null}
-            <Button type="submit" disabled={processing}>
-                {processing ? 'Salvando…' : label}
+            <Button type="submit" disabled={isProcessing}>
+                {isProcessing
+                    ? (submittingLabel ?? 'Salvando…')
+                    : resolvedLabel}
             </Button>
         </div>
     );
@@ -264,29 +415,55 @@ export function ResourceHeader({
     eyebrow,
     title,
     description,
+    subtitle,
     action,
+    actions,
+    status,
+    backHref,
+    backLabel = 'Voltar',
 }: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
-    description: string;
+    description?: string;
+    subtitle?: string;
     action?: ReactNode;
+    actions?: ReactNode;
+    status?: ReactNode;
+    backHref?: string;
+    backLabel?: string;
 }) {
+    const resolvedDescription = description ?? subtitle ?? '';
+    const resolvedAction = action ?? actions;
+
     return (
         <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl space-y-2">
-                <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-                    {eyebrow}
-                </p>
+                {backHref ? (
+                    <Link
+                        href={backHref}
+                        className="text-sm text-muted-foreground hover:text-foreground"
+                    >
+                        {backLabel}
+                    </Link>
+                ) : null}
+                {eyebrow ? (
+                    <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                        {eyebrow}
+                    </p>
+                ) : null}
                 <div className="space-y-1.5">
                     <h1 className="font-display text-3xl leading-tight font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
                         {title}
                     </h1>
-                    <p className="text-sm leading-6 text-muted-foreground sm:text-base">
-                        {description}
-                    </p>
+                    {status}
+                    {resolvedDescription ? (
+                        <p className="text-sm leading-6 text-muted-foreground sm:text-base">
+                            {resolvedDescription}
+                        </p>
+                    ) : null}
                 </div>
             </div>
-            {action}
+            {resolvedAction}
         </header>
     );
 }
@@ -298,28 +475,66 @@ export function SearchToolbar({
     resultLabel,
     status,
     onStatusChange,
+    searchPlaceholder,
+    initialSearch,
+    initialStatus,
+    onFilterChange,
     children,
 }: {
-    action: string;
+    action?: string;
     defaultValue?: string;
-    placeholder: string;
+    placeholder?: string;
     resultLabel?: string;
     status?: string;
     onStatusChange?: (status: 'active' | 'inactive' | 'all') => void;
+    searchPlaceholder?: string;
+    initialSearch?: string;
+    initialStatus?: string;
+    onFilterChange?: (filters: ResourceFilters) => void;
     children?: ReactNode;
 }) {
-    const currentStatus = status ?? 'active';
+    const [currentStatus, setCurrentStatus] = useState(
+        initialStatus ?? status ?? 'active',
+    );
+    const resolvedPlaceholder = placeholder ?? searchPlaceholder ?? 'Buscar';
+
+    const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
+        if (!onFilterChange) {
+            return;
+        }
+
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        onFilterChange({
+            search: String(formData.get('search') ?? ''),
+            status: currentStatus,
+        });
+    };
+
+    const handleStatusChange = (nextStatus: 'active' | 'inactive' | 'all') => {
+        setCurrentStatus(nextStatus);
+        onStatusChange?.(nextStatus);
+        onFilterChange?.({
+            search: initialSearch ?? defaultValue,
+            status: nextStatus,
+        });
+    };
 
     return (
         <div className="surface-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                 <form
                     action={action}
                     method="get"
+                    onSubmit={handleFilterSubmit}
                     className="flex w-full items-center gap-2 sm:max-w-md"
                 >
-                    {status ? (
-                        <input type="hidden" name="status" value={currentStatus} />
+                    {status || initialStatus || onFilterChange ? (
+                        <input
+                            type="hidden"
+                            name="status"
+                            value={currentStatus}
+                        />
                     ) : null}
                     <div className="relative min-w-0 flex-1">
                         <Search
@@ -329,12 +544,16 @@ export function SearchToolbar({
                         <Input
                             aria-label="Buscar"
                             name="search"
-                            defaultValue={defaultValue}
-                            placeholder={placeholder}
+                            defaultValue={initialSearch ?? defaultValue}
+                            placeholder={resolvedPlaceholder}
                             className="h-11 rounded-lg pl-9"
                         />
                     </div>
-                    <Button type="submit" variant="secondary" className="shrink-0">
+                    <Button
+                        type="submit"
+                        variant="secondary"
+                        className="shrink-0"
+                    >
                         Buscar
                     </Button>
                 </form>
@@ -351,11 +570,11 @@ export function SearchToolbar({
                             <button
                                 key={tab.value}
                                 type="button"
-                                onClick={() => onStatusChange(tab.value)}
+                                onClick={() => handleStatusChange(tab.value)}
                                 className={cn(
                                     'rounded-md px-3 py-1.5 transition-colors',
                                     currentStatus === tab.value
-                                        ? 'bg-background text-foreground shadow-xs font-semibold'
+                                        ? 'bg-background font-semibold text-foreground shadow-xs'
                                         : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
@@ -369,7 +588,7 @@ export function SearchToolbar({
             </div>
 
             {resultLabel ? (
-                <p className="text-xs text-muted-foreground sm:text-right shrink-0">
+                <p className="shrink-0 text-xs text-muted-foreground sm:text-right">
                     {resultLabel}
                 </p>
             ) : null}
@@ -378,18 +597,22 @@ export function SearchToolbar({
 }
 
 export function EmptyState({
+    icon,
     title,
     description,
     action,
 }: {
+    icon?: LucideIcon;
     title: string;
     description: string;
     action?: ReactNode;
 }) {
+    const Icon = icon ?? UsersRound;
+
     return (
         <div className="surface-panel flex min-h-64 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
-                <UsersRound aria-hidden="true" className="size-5" />
+                <Icon aria-hidden="true" className="size-5" />
             </div>
             <div className="max-w-sm space-y-1.5">
                 <h2 className="text-base font-semibold text-foreground">
@@ -404,8 +627,15 @@ export function EmptyState({
     );
 }
 
-export function Pagination({ links }: { links: PaginationLink[] }) {
-    const visibleLinks = links.slice(1, -1);
+export function Pagination({
+    links,
+    paginated,
+}: {
+    links?: PaginationLink[];
+    paginated?: Paginated<unknown>;
+}) {
+    const resolvedLinks = links ?? paginated?.links ?? [];
+    const visibleLinks = resolvedLinks.slice(1, -1);
 
     if (visibleLinks.length === 0) {
         return null;
@@ -417,14 +647,14 @@ export function Pagination({ links }: { links: PaginationLink[] }) {
             className="flex flex-wrap items-center justify-between gap-3"
         >
             <div className="flex items-center gap-1">
-                {links[0]?.url ? (
+                {resolvedLinks[0]?.url ? (
                     <Button
                         asChild
                         variant="outline"
                         size="icon"
                         aria-label="Página anterior"
                     >
-                        <Link href={links[0].url} preserveScroll>
+                        <Link href={resolvedLinks[0].url} preserveScroll>
                             <ChevronLeft aria-hidden="true" />
                         </Link>
                     </Button>
@@ -447,14 +677,17 @@ export function Pagination({ links }: { links: PaginationLink[] }) {
                         )}
                     </Button>
                 ))}
-                {links.at(-1)?.url ? (
+                {resolvedLinks.at(-1)?.url ? (
                     <Button
                         asChild
                         variant="outline"
                         size="icon"
                         aria-label="Próxima página"
                     >
-                        <Link href={links.at(-1)?.url as string} preserveScroll>
+                        <Link
+                            href={resolvedLinks.at(-1)?.url as string}
+                            preserveScroll
+                        >
                             <ChevronRight aria-hidden="true" />
                         </Link>
                     </Button>
@@ -464,9 +697,40 @@ export function Pagination({ links }: { links: PaginationLink[] }) {
     );
 }
 
-export function PageCanvas({ children }: { children: ReactNode }) {
+export function PageCanvas({
+    children,
+    className,
+    breadcrumbs,
+}: {
+    children: ReactNode;
+    className?: string;
+    breadcrumbs?: Array<{ title: string; href: string }>;
+}) {
     return (
-        <div className="dashboard-canvas flex min-h-full flex-1 flex-col gap-6 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
+        <div
+            className={cn(
+                'dashboard-canvas flex min-h-full flex-1 flex-col gap-6 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8',
+                className,
+            )}
+        >
+            {breadcrumbs ? (
+                <nav
+                    aria-label="Breadcrumb"
+                    className="text-sm text-muted-foreground"
+                >
+                    {breadcrumbs.map((breadcrumb, index) => (
+                        <span key={`${breadcrumb.href}-${breadcrumb.title}`}>
+                            {index > 0 ? ' / ' : null}
+                            <Link
+                                href={breadcrumb.href}
+                                className="hover:text-foreground"
+                            >
+                                {breadcrumb.title}
+                            </Link>
+                        </span>
+                    ))}
+                </nav>
+            ) : null}
             {children}
         </div>
     );

@@ -1,144 +1,159 @@
 import { Link } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    useSidebar,
-} from '@/components/ui/sidebar';
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { SidebarNavGroup } from '@/types';
 
-export function NavMain({ groups = [] }: { groups: SidebarNavGroup[] }) {
+const STORAGE_VERSION = 'v1';
+
+function readPersistedState(storageKey: string): Record<string, boolean> {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+
+    try {
+        const value = window.localStorage.getItem(storageKey);
+        const parsed: unknown = value ? JSON.parse(value) : null;
+
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return {};
+        }
+
+        return Object.fromEntries(Object.entries(parsed).filter(([, open]) => typeof open === 'boolean'));
+    } catch {
+        return {};
+    }
+}
+
+type NavMainProps = {
+    groups: SidebarNavGroup[];
+    persistenceKey?: string | number;
+};
+
+export function NavMain({ groups = [], persistenceKey = 'anonymous' }: NavMainProps) {
     const { currentUrl, isCurrentUrl } = useCurrentUrl();
     const { state } = useSidebar();
-    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(groups.map((group) => [group.label, true])),
+    const storageKey = `sidebar-nav-groups:${STORAGE_VERSION}:${persistenceKey}`;
+    const activeGroupIds = useMemo(() => new Set(groups.filter((group) => group.items.some((item) => item.href && isCurrentUrl(item.href, currentUrl))).map((group) => group.id)), [groups, currentUrl, isCurrentUrl]);
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+        const persisted = readPersistedState(storageKey);
+
+        return Object.fromEntries(groups.map((group) => [group.id, persisted[group.id] ?? activeGroupIds.has(group.id)]));
+    });
+    const [openFlyout, setOpenFlyout] = useState<string | null>(null);
+
+    const effectiveOpenGroups = useMemo(
+        () => Object.fromEntries(groups.map((group) => [group.id, Boolean(openGroups[group.id] || activeGroupIds.has(group.id))])),
+        [activeGroupIds, groups, openGroups],
     );
 
     useEffect(() => {
-        const activeGroups = groups.filter((group) =>
-            group.items.some((item) => item.href && isCurrentUrl(item.href)),
-        );
-
-        if (activeGroups.length > 0) {
-            setOpenGroups((prev) => {
-                const next = { ...prev };
-                let hasChanges = false;
-                for (const group of activeGroups) {
-                    if (!next[group.label]) {
-                        next[group.label] = true;
-                        hasChanges = true;
-                    }
-                }
-                return hasChanges ? next : prev;
-            });
+        if (typeof window === 'undefined') {
+            return;
         }
-    }, [currentUrl, groups, isCurrentUrl]);
 
-    return (
-        <>
-            {groups.map((group) => (
-                <Collapsible
-                    key={group.label}
-                    asChild
-                    open={
-                        state === 'collapsed'
-                            ? false
-                            : (openGroups[group.label] ?? true)
-                    }
-                    onOpenChange={(open) => {
-                        setOpenGroups((prev) => ({
-                            ...prev,
-                            [group.label]: open,
-                        }));
-                    }}
-                >
-                    <SidebarGroup className="px-2 py-1">
-                        <CollapsibleTrigger asChild>
-                            <SidebarGroupLabel
-                                asChild
-                                className="group/section-label h-11 cursor-pointer justify-between px-3 text-[11px] font-semibold tracking-[0.14em] text-sidebar-foreground/60 uppercase hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2"
-                            >
-                                <button
-                                    type="button"
-                                    aria-label={`${group.label} — expandir ou recolher seção`}
-                                >
-                                    <span>{group.label}</span>
-                                    <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/section-label:rotate-180" />
-                                </button>
-                            </SidebarGroupLabel>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <SidebarGroupContent>
-                                <SidebarMenu>
-                                    {group.items.map((item) => (
-                                        <SidebarMenuItem key={item.title}>
-                                            {item.disabled ? (
-                                                <SidebarMenuButton
-                                                    aria-disabled="true"
-                                                    aria-label={`${item.title} — Em breve`}
-                                                    tabIndex={-1}
-                                                    className="cursor-not-allowed text-sidebar-foreground/55 hover:bg-transparent hover:text-sidebar-foreground/55"
-                                                    tooltip={{
-                                                        children: `${item.title} — Em breve`,
-                                                    }}
-                                                >
-                                                    {item.icon && <item.icon />}
-                                                    <span className="min-w-0 flex-1 truncate group-data-[collapsible=icon]:sr-only">
-                                                        {item.title}
-                                                    </span>
-                                                    <span className="ml-auto shrink-0 text-[10px] font-medium tracking-wide uppercase group-data-[collapsible=icon]:hidden">
-                                                        Em breve
-                                                    </span>
-                                                </SidebarMenuButton>
-                                            ) : item.href ? (
-                                                <SidebarMenuButton
-                                                    asChild
-                                                    isActive={isCurrentUrl(
-                                                        item.href,
-                                                    )}
-                                                    tooltip={{
-                                                        children: item.title,
-                                                    }}
-                                                >
-                                                    <Link
-                                                        href={item.href}
-                                                        aria-current={
-                                                            isCurrentUrl(
-                                                                item.href,
-                                                            )
-                                                                ? 'page'
-                                                                : undefined
-                                                        }
-                                                        prefetch
-                                                    >
-                                                        {item.icon && (
-                                                            <item.icon />
-                                                        )}
-                                                        <span className="group-data-[collapsible=icon]:sr-only">
-                                                            {item.title}
-                                                        </span>
-                                                    </Link>
-                                                </SidebarMenuButton>
-                                            ) : null}
-                                        </SidebarMenuItem>
-                                    ))}
-                                </SidebarMenu>
-                            </SidebarGroupContent>
-                        </CollapsibleContent>
-                    </SidebarGroup>
-                </Collapsible>
-            ))}
-        </>
-    );
+        try {
+            window.localStorage.setItem(storageKey, JSON.stringify(openGroups));
+        } catch {
+            // Storage may be unavailable.
+        }
+    }, [openGroups, storageKey]);
+
+    if (state === 'collapsed') {
+        return <>
+            {groups.map((group) => {
+                const groupIsActive = activeGroupIds.has(group.id);
+                const GroupIcon = group.icon;
+
+                return <SidebarGroup key={group.id} className="px-2 py-1">
+                    <DropdownMenu
+                        open={openFlyout === group.id}
+                        onOpenChange={(open) => setOpenFlyout(open ? group.id : null)}
+                    >
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <DropdownMenuTrigger asChild>
+                                    <SidebarMenuButton
+                                        isActive={groupIsActive}
+                                        tooltip={group.label}
+                                        aria-label={`${group.label}: abrir itens`}
+                                        aria-haspopup="menu"
+                                        aria-expanded={openFlyout === group.id}
+                                    >
+                                        {GroupIcon && <GroupIcon aria-hidden="true" />}
+                                        <span className="sr-only">{group.label}</span>
+                                    </SidebarMenuButton>
+                                </DropdownMenuTrigger>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                        <DropdownMenuContent
+                            side="right"
+                            align="start"
+                            sideOffset={8}
+                            className="w-60"
+                            aria-label={`Itens de ${group.label}`}
+                        >
+                            <DropdownMenuLabel className="flex items-center gap-2 px-2 py-2 text-sm font-semibold">
+                                {GroupIcon && <GroupIcon aria-hidden="true" className="size-4" />}
+                                {group.label}
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {group.items.map((item) => item.href ? <DropdownMenuItem key={item.title} asChild>
+                                <Link href={item.href} prefetch onClick={() => setOpenFlyout(null)} className="flex w-full items-center gap-2">
+                                    {item.icon && <item.icon aria-hidden="true" />}
+                                    <span>{item.title}</span>
+                                </Link>
+                            </DropdownMenuItem> : null)}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </SidebarGroup>;
+            })}
+        </>;
+    }
+
+    return <>
+        {groups.map((group) => {
+            const groupIsOpen = effectiveOpenGroups[group.id] ?? false;
+            const contentId = `sidebar-group-${group.id}`;
+            const GroupIcon = group.icon;
+
+            return <Collapsible key={group.id} asChild open={groupIsOpen} onOpenChange={(open) => setOpenGroups((previous) => ({ ...previous, [group.id]: open }))}>
+                <SidebarGroup className="px-2 py-1">
+                    <CollapsibleTrigger asChild>
+                        <SidebarGroupLabel asChild className="group/section-label h-11 cursor-pointer justify-between rounded-lg border border-sidebar-border/60 bg-sidebar-accent/35 px-3 text-sm font-semibold text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground focus-visible:ring-2">
+                            <button type="button" aria-expanded={groupIsOpen} aria-controls={contentId} className="gap-2">
+                                <span className="flex min-w-0 items-center gap-2">
+                                    {GroupIcon && <GroupIcon aria-hidden="true" className="size-4 shrink-0" />}
+                                    <span className="truncate tracking-tight">{group.label}</span>
+                                </span>
+                                <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/section-label:rotate-180" />
+                            </button>
+                        </SidebarGroupLabel>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent id={contentId}>
+                        <SidebarGroupContent className="mt-1 border-l border-sidebar-border/70 pl-2"><SidebarMenu className="gap-0.5">
+                            {group.items.map((item) => item.href ? <SidebarMenuItem key={item.title}>
+                                <SidebarMenuButton asChild isActive={isCurrentUrl(item.href)} tooltip={{ children: item.title }} className="min-h-10 pl-3 text-sm font-normal text-sidebar-foreground/80 hover:text-sidebar-accent-foreground data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground">
+                                    <Link href={item.href} aria-current={isCurrentUrl(item.href) ? 'page' : undefined} prefetch className="gap-2">
+                                        {item.icon && <item.icon aria-hidden="true" />}
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem> : null)}
+                        </SidebarMenu></SidebarGroupContent>
+                    </CollapsibleContent>
+                </SidebarGroup>
+            </Collapsible>;
+        })}
+    </>;
 }

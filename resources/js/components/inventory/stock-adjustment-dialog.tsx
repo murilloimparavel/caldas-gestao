@@ -1,10 +1,8 @@
 import { Form } from '@inertiajs/react';
 import {
-    AlertCircle,
     ArrowDownRight,
     ArrowUpRight,
     Boxes,
-    CheckCircle2,
     RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -13,10 +11,8 @@ import {
     FormActions,
     FormErrorSummary,
     FormField,
-    formatMoney,
     parseBrazilianCurrency,
 } from '@/components/operational';
-import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -86,6 +82,7 @@ export function StockAdjustmentDialog({
                     : '',
             );
         }
+
         onOpenChange(nextOpen);
     };
 

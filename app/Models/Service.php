@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /** @property int $duration_minutes @property int $price_cents @property int $lock_version @property string|null $category_id */
-#[Fillable(['tenant_id', 'unit_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status'])]
+#[Fillable(['tenant_id', 'unit_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status', 'online_booking_enabled'])]
 #[UsePolicy(ServicePolicy::class)]
 class Service extends Model
 {
@@ -23,6 +23,7 @@ class Service extends Model
 
     protected $attributes = [
         'status' => 'active',
+        'online_booking_enabled' => false,
         'lock_version' => 0,
     ];
 
@@ -32,6 +33,7 @@ class Service extends Model
             'duration_minutes' => 'integer',
             'price_cents' => 'integer',
             'lock_version' => 'integer',
+            'online_booking_enabled' => 'boolean',
         ];
     }
 

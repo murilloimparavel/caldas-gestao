@@ -40,3 +40,243 @@
 [  934784ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/transactions?category_id=&date_end=&date_start=&search=&status=&type=receivable:121
 [  935375ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/transactions?category_id=&date_end=&date_start=&search=&status=&type=receivable:51
 [  935382ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/transactions?category_id=&date_end=&date_start=&search=&status=&type=receivable:121
+[ 1361095ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1361116ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1380380ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1380387ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1382538ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1382546ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1390797ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1390804ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1391972ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1391978ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1397383ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1397389ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1400745ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/finance/cash:51
+[ 1400753ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/finance/cash:121
+[ 1438549ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/dashboard:51
+[ 1438558ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/dashboard:121
+[ 1463118ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/dashboard:51
+[ 1463134ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/dashboard:121
+[ 1530528ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/dashboard:51
+[ 1530537ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/dashboard:121
+[ 1575909ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/dashboard:51
+[ 1575916ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/dashboard:121
+[ 1600744ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/dashboard:51
+[ 1600750ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/dashboard:121
+[ 1621804ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/inventory:51
+[ 1621819ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/inventory:121
+[ 1653136ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1653154ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1666811ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1666818ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1684644ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1684660ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1705125ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1705131ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1712679ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1712686ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1726763ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1726770ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1736621ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/Users/murilloalves/Projects/caldas-gestao/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[ 1736620ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 1790360ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1790441ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1790505ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=ca474f20:14740:27)
+[ 1790504ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 1791072ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1796804ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1796873ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 1796873ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 1840457ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 1840636ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 1840723ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 1840723ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2120100ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2120582ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2120914ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2120970ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2120969ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2141698ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2141856ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2141978ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2142029ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2142028ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2142128ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2142390ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2142414ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2142466ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2142465ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2142592ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2142777ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2142825ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2142824ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2188374ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2188573ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2188635ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2188634ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2215596ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2215769ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2215841ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2215832ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
+[ 2216253ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2216561ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2216863ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2217480ms] [LOG] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8000/_boost/browser-logs @ http://127.0.0.1:8000/professionals:51
+[ 2217678ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:8000/professionals:121
+[ 2217737ms] TypeError: professionals.store.form is not a function
+    at ProfessionalsIndex (http://[::1]:5173/resources/js/pages/professionals/index.tsx?t=1787707332536:111:29)
+    at Object.react_stack_bottom_frame (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:19612:12)
+    at renderWithHooks (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:10959:19)
+    at updateFunctionComponent (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12315:16)
+    at beginWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:12886:20)
+    at runWithFiberInDEV (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:7597:66)
+    at performUnitOfWork (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15175:92)
+    at workLoopSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15071:37)
+    at renderRootSync (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:15055:6)
+    at performWorkOnRoot (http://[::1]:5173/node_modules/.vite/deps/@inertiajs_react.js?v=38196c40:14740:27)
+[ 2217736ms] [WARNING] %s
+
+%s
+ An error occurred in the <ProfessionalsIndex> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:8000/professionals:121
