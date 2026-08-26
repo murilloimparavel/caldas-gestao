@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Collapsible,
     CollapsibleContent,
@@ -19,25 +19,31 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { SidebarNavGroup } from '@/types';
 
 export function NavMain({ groups = [] }: { groups: SidebarNavGroup[] }) {
-    const { isCurrentUrl } = useCurrentUrl();
+    const { currentUrl, isCurrentUrl } = useCurrentUrl();
     const { state } = useSidebar();
-    const activeGroupLabels = groups
-        .filter((group) =>
-            group.items.some((item) => item.href && isCurrentUrl(item.href)),
-        )
-        .map((group) => group.label);
-    const activeGroupKey = activeGroupLabels.join('|');
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(
-            groups.map((group) => [
-                group.label,
-                activeGroupLabels.includes(group.label),
-            ]),
-        ),
+        Object.fromEntries(groups.map((group) => [group.label, true])),
     );
-    const [lastActiveGroupKey, setLastActiveGroupKey] =
-        useState(activeGroupKey);
-    const routeChanged = lastActiveGroupKey !== activeGroupKey;
+
+    useEffect(() => {
+        const activeGroups = groups.filter((group) =>
+            group.items.some((item) => item.href && isCurrentUrl(item.href)),
+        );
+
+        if (activeGroups.length > 0) {
+            setOpenGroups((prev) => {
+                const next = { ...prev };
+                let hasChanges = false;
+                for (const group of activeGroups) {
+                    if (!next[group.label]) {
+                        next[group.label] = true;
+                        hasChanges = true;
+                    }
+                }
+                return hasChanges ? next : prev;
+            });
+        }
+    }, [currentUrl, groups, isCurrentUrl]);
 
     return (
         <>
@@ -46,18 +52,13 @@ export function NavMain({ groups = [] }: { groups: SidebarNavGroup[] }) {
                     key={group.label}
                     asChild
                     open={
-                        state === 'collapsed' ||
-                        (routeChanged
-                            ? activeGroupLabels.includes(group.label)
-                            : openGroups[group.label])
+                        state === 'collapsed'
+                            ? false
+                            : (openGroups[group.label] ?? true)
                     }
                     onOpenChange={(open) => {
-                        setLastActiveGroupKey(activeGroupKey);
-                        setOpenGroups((current) => ({
-                            ...activeGroupLabels.reduce(
-                                (next, label) => ({ ...next, [label]: true }),
-                                current,
-                            ),
+                        setOpenGroups((prev) => ({
+                            ...prev,
                             [group.label]: open,
                         }));
                     }}
