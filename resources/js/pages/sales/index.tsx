@@ -24,6 +24,11 @@ import {
     ResourceHeader,
 } from '@/components/operational';
 import type { Paginated, ResourceFilters } from '@/components/operational';
+import {
+    QuickCreateCustomerModal
+    
+} from '@/components/operational/quick-create-dialogs';
+import type {CreatedEntity} from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -135,7 +140,7 @@ function formatDateTime(iso: string | null | undefined): string {
 export default function SalesIndex({
     sales: paginator,
     categories,
-    customers,
+    customers: initialCustomers,
     metrics,
     filters,
 }: Props) {
@@ -149,6 +154,20 @@ export default function SalesIndex({
     const canManage = props.auth.permissions.includes('sale.manage');
     const canClosePermission =
         props.auth.permissions.includes('sale.close') || props.auth.permissions.includes('sale.manage');
+
+    const [customerList, setCustomerList] = useState<CustomerOption[]>(initialCustomers);
+    const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+    const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
+
+    const handleCustomerCreated = (created: CreatedEntity) => {
+        const newCust: CustomerOption = {
+            id: created.id,
+            name: created.name,
+            phone: created.phone ?? null,
+        };
+        setCustomerList((prev) => [...prev.filter((c) => c.id !== created.id), newCust]);
+        setSelectedCustomer(created.id);
+    };
 
     const selectedCategoryObj = categories.find((c) => c.id === selectedCategory);
 
@@ -298,18 +317,28 @@ export default function SalesIndex({
                                                             label="Cliente (opcional)"
                                                             name="customer_id"
                                                             error={errors.customer_id}
+                                                            description={
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setQuickCustomerOpen(true)}
+                                                                    className="font-medium text-primary hover:underline"
+                                                                >
+                                                                    + Novo Cliente
+                                                                </button>
+                                                            }
                                                         >
                                                             <select
                                                                 id="customer_id"
                                                                 name="customer_id"
-                                                                defaultValue=""
+                                                                value={selectedCustomer}
+                                                                onChange={(e) => setSelectedCustomer(e.target.value)}
                                                                 className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
                                                                 <option value="">
                                                                     Cliente avulso / Não
                                                                     identificado
                                                                 </option>
-                                                                {customers.map((cust) => (
+                                                                {customerList.map((cust) => (
                                                                     <option
                                                                         key={cust.id}
                                                                         value={cust.id}
@@ -782,6 +811,12 @@ export default function SalesIndex({
                 )}
 
                 <Pagination links={paginator.links} />
+
+                <QuickCreateCustomerModal
+                    open={quickCustomerOpen}
+                    onOpenChange={setQuickCustomerOpen}
+                    onSuccess={handleCustomerCreated}
+                />
             </PageCanvas>
         </>
     );

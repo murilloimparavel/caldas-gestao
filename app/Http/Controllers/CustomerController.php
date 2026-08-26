@@ -12,6 +12,7 @@ use App\Models\PackageTemplate;
 use App\Models\SubscriptionPlan;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -111,7 +112,7 @@ final class CustomerController extends Controller
         ]);
     }
 
-    public function store(CustomerRequest $request, TenantContext $context, CreateCustomer $createCustomer): RedirectResponse
+    public function store(CustomerRequest $request, TenantContext $context, CreateCustomer $createCustomer): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createCustomer, $request, $context, $data): array {
@@ -120,6 +121,14 @@ final class CustomerController extends Controller
             return ['resource_id' => $customer->getKey(), 'resource_type' => 'customer'];
         });
         $customer = Customer::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'customer' => $customer,
+            ], 201);
+        }
 
         return to_route('customers.show', $customer)->with('success', 'Cliente cadastrado.');
     }

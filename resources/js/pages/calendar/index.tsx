@@ -32,6 +32,13 @@ import {
     FormField,
     PageCanvas,
 } from '@/components/operational';
+import {
+    QuickCreateCustomerModal,
+    QuickCreateProfessionalModal,
+    QuickCreateServiceModal
+    
+} from '@/components/operational/quick-create-dialogs';
+import type {CreatedEntity} from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -94,15 +101,15 @@ function optionList(
 
 function AppointmentForm({
     appointment,
-    customers,
+    customers: initialCustomers,
     defaultDurationMinutes,
     defaultProfessionalId = '',
     defaultStartsAt = '',
     existingAppointments = [],
     existingScheduleBlocks = [],
     onClose,
-    professionals,
-    services,
+    professionals: initialProfessionals,
+    services: initialServices,
     unitTimezone,
 }: {
     appointment: CalendarAppointment | null;
@@ -124,6 +131,17 @@ function AppointmentForm({
                 : 'appointment-create',
         ),
     );
+
+    const [customerList, setCustomerList] = useState<CalendarOption[]>(initialCustomers);
+    const [serviceList, setServiceList] = useState<CalendarOption[]>(initialServices);
+    const [professionalList, setProfessionalList] = useState<CalendarOption[]>(initialProfessionals);
+
+    const [selectedCustomer, setSelectedCustomer] = useState(
+        appointment?.customer_id ?? appointment?.customer?.id ?? '',
+    );
+    const [selectedService, setSelectedService] = useState(
+        appointment?.service_id ?? appointment?.service?.id ?? '',
+    );
     const [selectedProfessional, setSelectedProfessional] = useState(
         appointment?.professional_id ?? appointment?.professional?.id ?? defaultProfessionalId,
     );
@@ -135,6 +153,41 @@ function AppointmentForm({
     const [selectedDuration, setSelectedDuration] = useState<number>(
         appointment?.duration_minutes ?? defaultDurationMinutes ?? 30,
     );
+
+    const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
+    const [quickServiceOpen, setQuickServiceOpen] = useState(false);
+    const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
+
+    const handleCustomerCreated = (created: CreatedEntity) => {
+        const newOpt: CalendarOption = { id: created.id, name: created.name };
+        setCustomerList((prev) => [
+            ...prev.filter((c) => c.id !== created.id),
+            newOpt,
+        ]);
+        setSelectedCustomer(created.id);
+    };
+
+    const handleServiceCreated = (created: CreatedEntity) => {
+        const newOpt: CalendarOption = { id: created.id, name: created.name };
+        setServiceList((prev) => [
+            ...prev.filter((s) => s.id !== created.id),
+            newOpt,
+        ]);
+        setSelectedService(created.id);
+
+        if (created.duration_minutes) {
+            setSelectedDuration(created.duration_minutes);
+        }
+    };
+
+    const handleProfessionalCreated = (created: CreatedEntity) => {
+        const newOpt: CalendarOption = { id: created.id, name: created.name };
+        setProfessionalList((prev) => [
+            ...prev.filter((p) => p.id !== created.id),
+            newOpt,
+        ]);
+        setSelectedProfessional(created.id);
+    };
 
     const conflict = useMemo(() => {
         if (!selectedProfessional || !selectedStartsAt || !selectedDuration) {
@@ -213,57 +266,63 @@ function AppointmentForm({
         : storeAppointment.form();
 
     return (
-        <Form
-            {...route}
-            headers={{ 'X-Idempotency-Key': mutationKey }}
-            className="space-y-5"
-            onSuccess={onClose}
-        >
-            {({ errors, processing }) => (
-                <>
-                    <FormErrorSummary errors={errors} />
+        <>
+            <Form
+                {...route}
+                headers={{ 'X-Idempotency-Key': mutationKey }}
+                className="space-y-5"
+                onSuccess={onClose}
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <FormErrorSummary errors={errors} />
 
-                    {/* Aviso amigável de conflito de horário */}
-                    {conflict && (
-                        <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                                <Badge
-                                    variant="outline"
-                                    className="border-amber-400 bg-amber-100 font-semibold text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
-                                >
-                                    Atenção: Horário coincide com outro agendamento/bloqueio
-                                </Badge>
+                        {/* Aviso amigável de conflito de horário */}
+                        {conflict && (
+                            <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <Badge
+                                        variant="outline"
+                                        className="border-amber-400 bg-amber-100 font-semibold text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                                    >
+                                        Atenção: Horário coincide com outro agendamento/bloqueio
+                                    </Badge>
+                                </div>
+                                <p className="text-xs text-amber-800 dark:text-amber-300">
+                                    {conflict.description}
+                                </p>
                             </div>
-                            <p className="text-xs text-amber-800 dark:text-amber-300">
-                                {conflict.description}
-                            </p>
-                        </div>
-                    )}
+                        )}
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="sm:col-span-2">
-                            <FormField
-                                label="Cliente"
-                                name="customer_id"
-                                error={errors.customer_id}
-                            >
-                                {customers.length > 0 ? (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
+                                <FormField
+                                    label="Cliente"
+                                    name="customer_id"
+                                    error={errors.customer_id}
+                                    description={
+                                        <button
+                                            type="button"
+                                            onClick={() => setQuickCustomerOpen(true)}
+                                            className="font-medium text-primary hover:underline"
+                                        >
+                                            + Novo Cliente
+                                        </button>
+                                    }
+                                >
                                     <select
                                         id="customer_id"
                                         name="customer_id"
-                                        defaultValue={
-                                            appointment?.customer_id ??
-                                            appointment?.customer?.id ??
-                                            ''
-                                        }
+                                        value={selectedCustomer}
+                                        onChange={(e) => setSelectedCustomer(e.target.value)}
                                         required
                                         className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                     >
                                         <option value="">
                                             Selecione um cliente
                                         </option>
-                                        {customers.map((customer) => (
+                                        {customerList.map((customer) => (
                                             <option
                                                 key={customer.id}
                                                 value={customer.id}
@@ -272,42 +331,34 @@ function AppointmentForm({
                                             </option>
                                         ))}
                                     </select>
-                                ) : (
-                                    <Input
-                                        id="customer_id"
-                                        name="customer_id"
-                                        defaultValue={
-                                            appointment?.customer_id ??
-                                            appointment?.customer?.id ??
-                                            ''
-                                        }
-                                        placeholder="ID do cliente"
-                                        required
-                                    />
-                                )}
-                            </FormField>
-                        </div>
-                        <FormField
-                            label="Serviço"
-                            name="service_id"
-                            error={errors.service_id}
-                        >
-                            {services.length > 0 ? (
+                                </FormField>
+                            </div>
+                            <FormField
+                                label="Serviço"
+                                name="service_id"
+                                error={errors.service_id}
+                                description={
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuickServiceOpen(true)}
+                                        className="font-medium text-primary hover:underline"
+                                    >
+                                        + Novo Serviço
+                                    </button>
+                                }
+                            >
                                 <select
                                     id="service_id"
                                     name="service_id"
-                                    defaultValue={
-                                        appointment?.service_id ??
-                                        appointment?.service?.id ??
-                                        ''
-                                    }
+                                    value={selectedService}
+                                    onChange={(e) => setSelectedService(e.target.value)}
                                     required
                                     className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 >
                                     <option value="">
                                         Selecione um serviço
                                     </option>
-                                    {services.map((service) => (
+                                    {serviceList.map((service) => (
                                         <option
                                             key={service.id}
                                             value={service.id}
@@ -316,26 +367,21 @@ function AppointmentForm({
                                         </option>
                                     ))}
                                 </select>
-                            ) : (
-                                <Input
-                                    id="service_id"
-                                    name="service_id"
-                                    defaultValue={
-                                        appointment?.service_id ??
-                                        appointment?.service?.id ??
-                                        ''
-                                    }
-                                    placeholder="ID do serviço"
-                                    required
-                                />
-                            )}
-                        </FormField>
-                        <FormField
-                            label="Profissional"
-                            name="professional_id"
-                            error={errors.professional_id}
-                        >
-                            {professionals.length > 0 ? (
+                            </FormField>
+                            <FormField
+                                label="Profissional"
+                                name="professional_id"
+                                error={errors.professional_id}
+                                description={
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuickProfessionalOpen(true)}
+                                        className="font-medium text-primary hover:underline"
+                                    >
+                                        + Novo Profissional
+                                    </button>
+                                }
+                            >
                                 <select
                                     id="professional_id"
                                     name="professional_id"
@@ -347,7 +393,7 @@ function AppointmentForm({
                                     <option value="">
                                         Selecione um profissional
                                     </option>
-                                    {professionals.map((professional) => (
+                                    {professionalList.map((professional) => (
                                         <option
                                             key={professional.id}
                                             value={professional.id}
@@ -356,125 +402,134 @@ function AppointmentForm({
                                         </option>
                                     ))}
                                 </select>
-                            ) : (
+                            </FormField>
+                            <FormField
+                                label="Horário"
+                                name="starts_at"
+                                error={errors.starts_at}
+                            >
                                 <Input
-                                    id="professional_id"
-                                    name="professional_id"
-                                    value={selectedProfessional}
-                                    onChange={(e) => setSelectedProfessional(e.target.value)}
-                                    placeholder="ID do profissional"
+                                    id="starts_at"
+                                    name="starts_at"
+                                    type="datetime-local"
+                                    value={selectedStartsAt}
+                                    onChange={(e) => setSelectedStartsAt(e.target.value)}
                                     required
                                 />
-                            )}
-                        </FormField>
-                        <FormField
-                            label="Horário"
-                            name="starts_at"
-                            error={errors.starts_at}
-                        >
-                            <Input
-                                id="starts_at"
-                                name="starts_at"
-                                type="datetime-local"
-                                value={selectedStartsAt}
-                                onChange={(e) => setSelectedStartsAt(e.target.value)}
-                                required
-                            />
-                        </FormField>
-                        <FormField
-                            label="Duração (minutos)"
-                            name="duration_minutes"
-                            error={errors.duration_minutes}
-                        >
-                            <Input
-                                id="duration_minutes"
-                                name="duration_minutes"
-                                type="number"
-                                min={5}
-                                max={1440}
-                                step={5}
-                                value={selectedDuration}
-                                onChange={(e) => setSelectedDuration(Number(e.target.value))}
-                                required
-                            />
-                        </FormField>
-                        <FormField
-                            label="Status"
-                            name="status"
-                            error={errors.status}
-                        >
-                            <select
-                                id="status"
-                                name="status"
-                                defaultValue={
-                                    appointment?.status ?? 'scheduled'
-                                }
-                                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            >
-                                {statusOptions.map((status) => (
-                                    <option key={status} value={status}>
-                                        {statusLabel(status)}
-                                    </option>
-                                ))}
-                            </select>
-                        </FormField>
-                        <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 sm:col-span-2">
-                            <input
-                                id="reminder_enabled"
-                                name="reminder_enabled"
-                                type="checkbox"
-                                defaultChecked={
-                                    appointment?.reminder_enabled ?? true
-                                }
-                                className="size-4 accent-primary"
-                            />
-                            <label
-                                htmlFor="reminder_enabled"
-                                className="text-sm"
-                            >
-                                Enviar lembrete ao cliente
-                                <span className="block text-xs text-muted-foreground">
-                                    O canal e o consentimento são validados pelo
-                                    servidor.
-                                </span>
-                            </label>
-                        </div>
-                        <div className="sm:col-span-2">
+                            </FormField>
                             <FormField
-                                label="Observações"
-                                name="notes"
-                                error={errors.notes}
+                                label="Duração (minutos)"
+                                name="duration_minutes"
+                                error={errors.duration_minutes}
                             >
-                                <textarea
-                                    id="notes"
-                                    name="notes"
-                                    rows={3}
-                                    defaultValue={appointment?.notes ?? ''}
-                                    className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                    placeholder="Informações úteis para o atendimento"
+                                <Input
+                                    id="duration_minutes"
+                                    name="duration_minutes"
+                                    type="number"
+                                    min={5}
+                                    max={1440}
+                                    step={5}
+                                    value={selectedDuration}
+                                    onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                                    required
                                 />
                             </FormField>
+                            <FormField
+                                label="Status"
+                                name="status"
+                                error={errors.status}
+                            >
+                                <select
+                                    id="status"
+                                    name="status"
+                                    defaultValue={
+                                        appointment?.status ?? 'scheduled'
+                                    }
+                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                >
+                                    {statusOptions.map((status) => (
+                                        <option key={status} value={status}>
+                                            {statusLabel(status)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
+                            <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 sm:col-span-2">
+                                <input
+                                    id="reminder_enabled"
+                                    name="reminder_enabled"
+                                    type="checkbox"
+                                    defaultChecked={
+                                        appointment?.reminder_enabled ?? true
+                                    }
+                                    className="size-4 accent-primary"
+                                />
+                                <label
+                                    htmlFor="reminder_enabled"
+                                    className="text-sm"
+                                >
+                                    Enviar lembrete ao cliente
+                                    <span className="block text-xs text-muted-foreground">
+                                        O canal e o consentimento são validados pelo
+                                        servidor.
+                                    </span>
+                                </label>
+                            </div>
+                            <div className="sm:col-span-2">
+                                <FormField
+                                    label="Observações"
+                                    name="notes"
+                                    error={errors.notes}
+                                >
+                                    <textarea
+                                        id="notes"
+                                        name="notes"
+                                        rows={3}
+                                        defaultValue={appointment?.notes ?? ''}
+                                        className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                        placeholder="Informações úteis para o atendimento"
+                                    />
+                                </FormField>
+                            </div>
                         </div>
-                    </div>
-                    {isEditing ? (
-                        <input
-                            type="hidden"
-                            name="lock_version"
-                            value={appointment.lock_version}
+                        {isEditing ? (
+                            <input
+                                type="hidden"
+                                name="lock_version"
+                                value={appointment.lock_version}
+                            />
+                        ) : null}
+                        <FormActions
+                            processing={processing}
+                            onCancel={onClose}
+                            label={
+                                isEditing
+                                    ? 'Salvar agendamento'
+                                    : 'Criar agendamento'
+                            }
                         />
-                    ) : null}
-                    <FormActions
-                        processing={processing}
-                        onCancel={onClose}
-                        label={
-                            isEditing
-                                ? 'Salvar agendamento'
-                                : 'Criar agendamento'
-                        }
-                    />
-                </>
-            )}
-        </Form>
+                    </>
+                )}
+            </Form>
+
+            <QuickCreateCustomerModal
+                open={quickCustomerOpen}
+                onOpenChange={setQuickCustomerOpen}
+                onSuccess={handleCustomerCreated}
+            />
+
+            <QuickCreateServiceModal
+                open={quickServiceOpen}
+                onOpenChange={setQuickServiceOpen}
+                onSuccess={handleServiceCreated}
+            />
+
+            <QuickCreateProfessionalModal
+                open={quickProfessionalOpen}
+                onOpenChange={setQuickProfessionalOpen}
+                onSuccess={handleProfessionalCreated}
+            />
+        </>
     );
 }
 

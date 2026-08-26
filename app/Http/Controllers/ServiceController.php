@@ -10,6 +10,7 @@ use App\Http\Requests\ServiceRequest;
 use App\Models\Service;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,7 +53,7 @@ final class ServiceController extends Controller
         return Inertia::render('services/show', ['service' => $service->load('professionals:id,name')]);
     }
 
-    public function store(ServiceRequest $request, TenantContext $context, CreateService $createService): RedirectResponse
+    public function store(ServiceRequest $request, TenantContext $context, CreateService $createService): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createService, $request, $context, $data): array {
@@ -61,6 +62,14 @@ final class ServiceController extends Controller
             return ['resource_id' => $service->getKey(), 'resource_type' => 'service'];
         });
         $service = Service::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $service->id,
+                'name' => $service->name,
+                'service' => $service,
+            ], 201);
+        }
 
         return to_route('services.show', $service)->with('success', 'Serviço cadastrado.');
     }

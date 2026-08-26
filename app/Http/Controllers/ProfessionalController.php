@@ -10,6 +10,7 @@ use App\Http\Requests\ProfessionalRequest;
 use App\Models\Professional;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -58,7 +59,7 @@ final class ProfessionalController extends Controller
         ]);
     }
 
-    public function store(ProfessionalRequest $request, TenantContext $context, CreateProfessional $createProfessional): RedirectResponse
+    public function store(ProfessionalRequest $request, TenantContext $context, CreateProfessional $createProfessional): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createProfessional, $request, $context, $data): array {
@@ -67,6 +68,14 @@ final class ProfessionalController extends Controller
             return ['resource_id' => $professional->getKey(), 'resource_type' => 'professional'];
         });
         $professional = Professional::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $professional->id,
+                'name' => $professional->name,
+                'professional' => $professional,
+            ], 201);
+        }
 
         return to_route('professionals.show', $professional)->with('success', 'Profissional cadastrado.');
     }
