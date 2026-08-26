@@ -52,11 +52,6 @@ export function NavMain({ groups = [], persistenceKey = 'anonymous' }: NavMainPr
     });
     const [openFlyout, setOpenFlyout] = useState<string | null>(null);
 
-    const effectiveOpenGroups = useMemo(
-        () => Object.fromEntries(groups.map((group) => [group.id, Boolean(openGroups[group.id] || activeGroupIds.has(group.id))])),
-        [activeGroupIds, groups, openGroups],
-    );
-
     useEffect(() => {
         if (typeof window === 'undefined') {
             return;
@@ -123,7 +118,7 @@ export function NavMain({ groups = [], persistenceKey = 'anonymous' }: NavMainPr
 
     return <>
         {groups.map((group) => {
-            const groupIsOpen = effectiveOpenGroups[group.id] ?? false;
+            const groupIsOpen = openGroups[group.id] ?? activeGroupIds.has(group.id);
             const contentId = `sidebar-group-${group.id}`;
             const GroupIcon = group.icon;
 
