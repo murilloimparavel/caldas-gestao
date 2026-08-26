@@ -33,6 +33,7 @@ final class OwnerPermissionCatalog
         'commission.view', 'commission.manage', 'commission.settle',
         'financial.view', 'financial.manage', 'financial.settle',
         'package.view', 'package.manage', 'package.sell', 'package.consume',
+        'subscription.view', 'subscription.manage', 'subscription.subscribe', 'subscription.cancel',
     ];
 
     /**

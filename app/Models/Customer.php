@@ -68,4 +68,10 @@ class Customer extends Model
     {
         return $this->hasMany(CustomerPackage::class);
     }
+
+    /** @return HasMany<CustomerSubscription, $this> */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(CustomerSubscription::class);
+    }
 }

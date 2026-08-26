@@ -3,6 +3,7 @@ import {
     ArrowLeft,
     Calendar,
     CalendarDays,
+    CheckCircle2,
     Clock,
     DollarSign,
     ExternalLink,
@@ -12,10 +13,12 @@ import {
     Package,
     Phone,
     Receipt,
+    RefreshCw,
     Scissors,
     Sparkles,
     TrendingUp,
     UserRound,
+    XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { statusLabels } from '@/components/calendar';
@@ -42,10 +45,13 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { index as calendarIndex } from '@/routes/calendar';
 import customerPackagesRoutes from '@/routes/customer-packages';
+import customerSubscriptionsRoutes from '@/routes/customer-subscriptions';
 import customers from '@/routes/customers';
 import sales from '@/routes/sales';
+import subscriptionsRoutes from '@/routes/subscriptions';
 import type { SharedPageProps } from '@/types';
 
 type CustomerAppointment = {
@@ -122,6 +128,30 @@ type PackageTemplateOption = {
     validity_days: number;
 };
 
+type ActiveSubscription = {
+    billing_cycle?: string;
+    cancelled_at: string | null;
+    id: string;
+    lock_version: number;
+    next_billing_date: string | null;
+    plan: {
+        billing_cycle: string;
+        id: string;
+        name: string;
+        price_cents: number;
+    };
+    price_cents?: number;
+    start_date: string;
+    status: 'active' | 'paused' | 'cancelled' | 'expired';
+};
+
+type SubscriptionPlanOption = {
+    billing_cycle: string;
+    id: string;
+    name: string;
+    price_cents: number;
+};
+
 type Customer = {
     appointments?: CustomerAppointment[];
     birth_date: string | null;
@@ -138,13 +168,17 @@ type Customer = {
 };
 
 type Props = {
+    active_subscription?: ActiveSubscription | null;
     customer: Customer;
     metrics?: {
         total_spent_cents: number;
         total_visits: number;
     };
     packageTemplates?: PackageTemplateOption[];
+    planOptions?: SubscriptionPlanOption[];
+    subscription_history?: ActiveSubscription[];
 };
+
 
 function formatAppointmentDate(isoString: string): string {
     const date = new Date(isoString);
@@ -254,9 +288,12 @@ export default function CustomerShow({
     customer,
     metrics,
     packageTemplates = [],
+    active_subscription = null,
+    subscription_history = [],
+    planOptions = [],
 }: Props) {
     const [activeTab, setActiveTab] = useState<
-        'sales' | 'appointments' | 'packages' | 'details'
+        'sales' | 'appointments' | 'packages' | 'details' | 'subscriptions'
     >('sales');
     const [updateKey] = useState(() => createIdempotencyKey('customer-update'));
     const [destroyKey] = useState(() =>
@@ -286,7 +323,12 @@ export default function CustomerShow({
     const canConsumePackage =
         props.auth.permissions.includes('package.consume') ||
         props.auth.permissions.includes('package.manage');
-
+    const canSubscribe = props.auth.permissions.includes('subscription.subscribe');
+    const canViewSub = props.auth.permissions.includes('subscription.view');
+    const canCancelSub = props.auth.permissions.includes('subscription.cancel');
+    const canManageSub = props.auth.permissions.includes('subscription.manage');
+    const [subscribeKey] = useState(() => createIdempotencyKey('customer-subscribe'));
+    const [cancelSubOpen, setCancelSubOpen] = useState(false);
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
     const customerPackages = customer.customerPackages ?? [];
@@ -314,7 +356,17 @@ export default function CustomerShow({
                         eyebrow="Cadastro de cliente"
                         title={customer.name}
                         description="Histórico completo de visitas, consumo, comandas e dados cadastrais."
-                        action={<StatusBadge status={customer.status} />}
+                        action={
+                            <div className="flex items-center gap-2">
+                                <StatusBadge status={customer.status} />
+                                {active_subscription?.status === 'active' && (
+                                    <Badge className="gap-1 bg-emerald-500 text-white hover:bg-emerald-600">
+                                        <RefreshCw className="h-3 w-3" />
+                                        Assinante
+                                    </Badge>
+                                )}
+                            </div>
+                        }
                     />
                 </div>
 
@@ -437,6 +489,23 @@ export default function CustomerShow({
                             >
                                 <UserRound className="size-4" />
                                 <span>Dados Cadastrais</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('subscriptions')}
+                                className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
+                                    activeTab === 'subscriptions'
+                                        ? 'border-primary text-primary font-semibold'
+                                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                <RefreshCw className="size-4" />
+                                <span>Assinaturas</span>
+                                {active_subscription?.status === 'active' && (
+                                    <Badge variant="default" className="ml-1 text-xs bg-emerald-500">
+                                        Ativo
+                                    </Badge>
+                                )}
                             </button>
                         </div>
 
@@ -814,6 +883,92 @@ export default function CustomerShow({
                                                 )}
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
+                        {/* Aba: Dados Principais */}
+                        {activeTab === 'subscriptions' && canViewSub && (
+                            <section className="surface-panel space-y-5 p-5 sm:p-6">
+                                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                                    <div className="space-y-1">
+                                        <h2 className="text-base font-semibold">Assinatura recorrente</h2>
+                                        <p className="text-sm text-muted-foreground">Apenas uma assinatura ativa ou pausada pode existir por cliente nesta unidade.</p>
+                                    </div>
+                                    {!active_subscription && canSubscribe && planOptions.length > 0 && (
+                                        <Form
+                                            method="post"
+                                            action={customerSubscriptionsRoutes.store().url}
+                                            headers={{ 'X-Idempotency-Key': subscribeKey }}
+                                            className="flex flex-col gap-2 sm:flex-row sm:items-end"
+                                        >
+                                            {({ processing, errors }) => (
+                                                <>
+                                                    <input type="hidden" name="customer_id" value={customer.id} />
+                                                    <FormField id="subscription_plan_id" label="Plano" error={errors.subscription_plan_id}>
+                                                        <select id="subscription_plan_id" name="subscription_plan_id" required className="flex h-10 min-w-56 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                                            <option value="">Selecione um plano</option>
+                                                            {planOptions.map((plan) => (
+                                                                <option key={plan.id} value={plan.id}>{plan.name} — {formatMoney(plan.price_cents)}</option>
+                                                            ))}
+                                                        </select>
+                                                    </FormField>
+                                                    <Button type="submit" disabled={processing}>Contratar</Button>
+                                                </>
+                                            )}
+                                        </Form>
+                                    )}
+                                </div>
+
+                                {active_subscription ? (
+                                    <div className="rounded-xl border bg-card p-5">
+                                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h3 className="font-semibold">{active_subscription.plan.name}</h3>
+                                                    <StatusBadge status={active_subscription.status as ResourceStatus} />
+                                                </div>
+                                                <p className="mt-1 text-sm text-muted-foreground">{formatMoney(active_subscription.price_cents ?? active_subscription.plan.price_cents)} · {active_subscription.billing_cycle === 'yearly' ? 'Anual' : active_subscription.billing_cycle === 'quarterly' ? 'Trimestral' : 'Mensal'}</p>
+                                                <p className="mt-2 text-xs text-muted-foreground">Início: {active_subscription.start_date}{active_subscription.next_billing_date ? ` · Próxima cobrança: ${active_subscription.next_billing_date}` : ''}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {active_subscription.status === 'active' && canManageSub && (
+                                                    <Form method="post" action={customerSubscriptionsRoutes.pause(active_subscription.id).url}>
+                                                        <input type="hidden" name="lock_version" value={active_subscription.lock_version} />
+                                                        <Button type="submit" variant="outline">Pausar</Button>
+                                                    </Form>
+                                                )}
+                                                {active_subscription.status === 'paused' && canManageSub && (
+                                                    <Form method="post" action={customerSubscriptionsRoutes.resume(active_subscription.id).url}>
+                                                        <input type="hidden" name="lock_version" value={active_subscription.lock_version} />
+                                                        <Button type="submit" variant="outline">Retomar</Button>
+                                                    </Form>
+                                                )}
+                                                {canCancelSub && (
+                                                    <Form method="post" action={customerSubscriptionsRoutes.cancel(active_subscription.id).url}>
+                                                        <input type="hidden" name="lock_version" value={active_subscription.lock_version} />
+                                                        <Button type="submit" variant="destructive">Cancelar</Button>
+                                                    </Form>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Nenhuma assinatura vigente.</div>
+                                )}
+
+                                {subscription_history.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h3 className="text-sm font-semibold">Histórico</h3>
+                                        <div className="divide-y rounded-lg border">
+                                            {subscription_history.map((subscription) => (
+                                                <div key={subscription.id} className="flex flex-col justify-between gap-1 px-4 py-3 text-sm sm:flex-row">
+                                                    <span>{subscription.plan.name} · {formatMoney(subscription.price_cents ?? subscription.plan.price_cents)}</span>
+                                                    <span className="text-muted-foreground">{subscription.status} · {subscription.start_date}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </section>

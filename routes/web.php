@@ -8,6 +8,7 @@ use App\Http\Controllers\ClosingSessionController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerPackageController;
+use App\Http\Controllers\CustomerSubscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\SaleCategoryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleItemController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
@@ -98,6 +100,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('finance/commissions/rules/{rule}', [CommissionController::class, 'updateRule'])->name('commissions.rules.update');
         Route::delete('finance/commissions/rules/{rule}', [CommissionController::class, 'deleteRule'])->name('commissions.rules.destroy');
         Route::post('finance/commissions/settle', [CommissionController::class, 'settle'])->name('commissions.settle');
+        Route::resource('subscriptions', SubscriptionPlanController::class)
+            ->parameters(['subscriptions' => 'subscription_plan'])
+            ->except(['create', 'edit']);
+        Route::patch('subscriptions/{subscription_plan}/reactivate', [SubscriptionPlanController::class, 'reactivate'])->name('subscriptions.reactivate');
+        Route::post('customer-subscriptions', [CustomerSubscriptionController::class, 'store'])->name('customer-subscriptions.store');
+        Route::post('customer-subscriptions/{customer_subscription}/cancel', [CustomerSubscriptionController::class, 'cancel'])->name('customer-subscriptions.cancel');
+        Route::post('customer-subscriptions/{customer_subscription}/pause', [CustomerSubscriptionController::class, 'pause'])->name('customer-subscriptions.pause');
+        Route::post('customer-subscriptions/{customer_subscription}/resume', [CustomerSubscriptionController::class, 'resume'])->name('customer-subscriptions.resume');
     });
 });
 

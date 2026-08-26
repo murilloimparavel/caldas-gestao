@@ -35,6 +35,7 @@ final class PayloadGovernance
         'commission_amount_cents', 'gross_amount_cents', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
         'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
         'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at',
+        'subscription_plan_id', 'customer_subscription_id', 'billing_cycle', 'start_date', 'next_billing_date', 'cancelled_at',
     ];
 
     /** @var list<string> */
@@ -58,6 +59,7 @@ final class PayloadGovernance
         'commission_amount_cents', 'gross_amount_cents', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
         'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
         'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at',
+        'subscription_plan_id', 'customer_subscription_id', 'billing_cycle', 'start_date', 'next_billing_date', 'cancelled_at',
     ];
 
     /** @var list<string> */

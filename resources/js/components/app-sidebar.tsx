@@ -12,6 +12,7 @@ import {
     LayoutDashboard,
     Package,
     PieChart,
+    Repeat2,
     Scissors,
     Tags,
     Truck,
@@ -43,6 +44,7 @@ import saleCategories from '@/routes/sale-categories';
 import sales from '@/routes/sales';
 import services from '@/routes/services';
 import suppliers from '@/routes/suppliers';
+import subscriptions from '@/routes/subscriptions';
 import type { SharedPageProps, SidebarNavGroup } from '@/types';
 
 const mainNavGroups: SidebarNavGroup[] = [
@@ -105,6 +107,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: packagesRoutes.index(),
                 icon: Gift,
                 permission: 'package.view',
+            },
+            {
+                title: 'Assinaturas',
+                href: subscriptions.index(),
+                icon: Repeat2,
+                permission: 'subscription.view',
             },
             {
                 title: 'Produtos',

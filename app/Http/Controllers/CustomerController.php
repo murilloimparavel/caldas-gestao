@@ -9,6 +9,7 @@ use App\Actions\Customers\UpdateCustomer;
 use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
 use App\Models\PackageTemplate;
+use App\Models\SubscriptionPlan;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -66,6 +67,9 @@ final class CustomerController extends Controller
                     'usages.user:id,name',
                 ])
                 ->orderBy('created_at', 'desc'),
+            'subscriptions' => fn ($query) => $query
+                ->with('plan:id,name,price_cents,billing_cycle')
+                ->orderByDesc('created_at'),
         ]);
 
         $packageTemplates = PackageTemplate::query()
@@ -75,6 +79,16 @@ final class CustomerController extends Controller
             ->with('services:id,name,price_cents')
             ->orderBy('name')
             ->get();
+
+        $planOptions = SubscriptionPlan::query()
+            ->where('tenant_id', $customer->tenant_id)
+            ->where('unit_id', $customer->unit_id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'price_cents', 'billing_cycle']);
+
+        $subscriptions = $customer->subscriptions;
+        $activeSubscription = $subscriptions->first(fn ($subscription): bool => in_array($subscription->status, ['active', 'paused'], true));
 
         $totalSpentCents = (int) $customer->sales
             ->where('status', 'finalized')
@@ -87,6 +101,9 @@ final class CustomerController extends Controller
         return Inertia::render('customers/show', [
             'customer' => $customer,
             'packageTemplates' => $packageTemplates,
+            'active_subscription' => $activeSubscription,
+            'subscription_history' => $subscriptions,
+            'planOptions' => $planOptions,
             'metrics' => [
                 'total_spent_cents' => $totalSpentCents,
                 'total_visits' => $totalVisits,
