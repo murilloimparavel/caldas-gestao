@@ -49,7 +49,7 @@
 | `README.md` | canônico | índice, precedência e política de atualização |
 | `../BELASIS-REVERSE-ENGINEERING.md` | resumo | síntese editorial; dossiê canônico prevalece |
 | `../ROTEIRO-VIBE-CODING-SAAS-BELEZA.md` | resumo | roteiro editorial; backlog canônico prevalece |
-| `claim-ledger.md` | ativo | claims sustentados por EV-001 a EV-009 |
+| `claim-ledger.md` | ativo | claims sustentados por EV-001 a EV-010 |
 | `information-architecture.md` | ativo | rotas e agrupamentos observados |
 | `screens/` | ativo | SCR-001 a SCR-014 |
 | `marketing-strategy-observed.md` | ativo | posicionamento, funil, segmentos e monetização públicos |
@@ -62,6 +62,8 @@
 | `design-system-proposed.md` | proposto | direção original |
 | `domain/` | ativo/proposto | modelo, estados, eventos, banco e governança |
 | `frontend-implementation-plan.md` | proposto | arquitetura frontend-first, incrementos e gates de qualidade |
+| `../architecture/wave-navigation-2-sidebar-rail.md` | implementado | progresso, contrato e validação da Wave de Navegação 2 |
+| `evidence/EV-010--sidebar-compacta-flyout-desktop.md` | ativo | comportamento compacto observado e smoke local da navegação |
 | `reconstruction-backlog.md` | ativo | priorização canônica para implementação |
 
 ## Fonte canônica

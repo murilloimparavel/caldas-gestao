@@ -3,6 +3,8 @@
 | ID | Classificação | Claim | Contexto | Evidência | Confiança | Implicação / próximo teste |
 |---|---|---|---|---|---|---|
 | UX-001 | Observed | A navegação autenticada usa sidebar hierárquica com grupos expansíveis. | Desktop, papel desconhecido | DOM acessível do shell em 24/08/2026 | alta | Documentar hierarquia e comportamento expandido/recolhido. |
+| UX-047 | Observed | No estado recolhido, a referência mantém ícones de categorias e abre um flyout lateral de links ao acionar uma categoria; o flyout fecha ao navegar ou com Escape. | Belasis, Chrome, shell autenticado, 26/08/2026 | EV-010 | alta | Usar rail acionável e flyout acessível no produto novo. |
+| UX-048 | Proposed | No Caldas, o cabeçalho da categoria deve ser visualmente distinto dos filhos: módulo com ícone, chevron, contraste e área maior; filhos recuados, mais densos e com ativo próprio. | Shell autenticado do Caldas | Wave de Navegação 2 | alta | Manter hierarquia compreensível nos modos expandido e recolhido. |
 | UX-002 | Observed | O shell oferece ações globais de notificações, mensagens, ajuda, perfil e criação. | Desktop, estado autenticado | DOM acessível do shell | alta | Verificar destinos, badges e comportamento por papel. |
 | UX-003 | Observed | A agenda semanal usa colunas por dia e linhas em intervalos de 10 minutos, agrupadas por profissional. | `/calendar`, semana populada | DOM + inspeção visual em 24/08/2026 | alta | Verificar outras visualizações, scroll, sobreposição e conflito. |
 | UX-004 | Observed | A interface usa Inter, fundo claro, sidebar escura e CTA azul-violeta próximo de `#505afb`. | Shell e configuração de comissões | estilos computados | média-alta | Clusterizar tokens em mais duas telas antes de normalizar. |
@@ -71,6 +73,7 @@
 | A11Y-012 | Observed | Primeiro Tab no diálogo Minha Conta focou `DIV` sem nome/papel. | diálogo de usuário | EV-007 | alta | Corrigir ciclo e foco inicial. |
 | DOM-009 | Observed | Superfícies avaliadas não expõem landmarks `main`/`navigation`. | desktop | EV-007 | alta | Estruturar shell semanticamente. |
 | UX-033 | Observed | Em 390 e 768 px, a sidebar é substituída por barra inferior flutuante com ações variáveis por rota. | shell autenticado | EV-008 | alta | Propor destinos estáveis e ação contextual separada. |
+| UX-049 | Implemented | A navegação do Caldas mantém barra inferior e Sheet no mobile; o rail compacto é exclusivo do desktop. | Caldas local, shell autenticado | Wave de Navegação 2, 26/08/2026 | alta | Validar em dispositivos físicos e com permissões parciais. |
 | UX-034 | Observed | Listagens de clientes, serviços e comandas viram cartões em coluna sem overflow horizontal do documento. | mobile 390 px | EV-008 | alta | Validar paginação, detalhe e ações destrutivas em tenant sintético. |
 | UX-035 | Observed | A agenda semanal mantém sete dias e intervalos de dez minutos comprimidos em 390 e 768 px. | `/calendar` | EV-008 | alta | Usar dia/lista como padrão mobile e três dias no tablet portrait. |
 | UX-036 | Observed | O painel empilha KPIs e análises em uma coluna; em tablet o documento observado ultrapassou quatro mil pixels. | `/wow`, 768 × 1024 | EV-008 | alta contextual | Priorizar resumo progressivo, duas colunas em tablet e drill-down. |

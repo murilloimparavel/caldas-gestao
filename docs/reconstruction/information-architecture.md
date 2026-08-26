@@ -16,6 +16,20 @@
 
 Classificação: itens e agrupamentos são **Observed** (`UX-001`, `DOM-003`, `EV-001`). A função exata de páginas ainda não abertas permanece **Unknown**.
 
+## Atualização da navegação do Caldas — Wave de Navegação 2
+
+Evidência funcional adicional observada no Chrome em 26/08/2026: no estado expandido, os grupos da referência podem permanecer abertos simultaneamente. No estado recolhido, a lateral mantém um rail de ícones; o clique em uma categoria abre um flyout com os itens filhos, sem expandir novamente toda a sidebar.
+
+Implementação independente no Caldas:
+
+- expandido: `Principal`, `Cadastros`, `Controle`, `Configurações` e `Financeiro` usam accordions multiabertos;
+- recolhido: categorias autorizadas permanecem como ícones acionáveis, com tooltip e flyout de links;
+- estado de accordion é persistido por usuário; estado do flyout é efêmero;
+- filhos continuam dependentes de permissões e rotas Wayfinder;
+- mobile preserva barra inferior e Sheet, sem exibir o rail desktop.
+
+Hierarquia visual proposta e implementada: o cabeçalho da categoria é um controle de módulo, com ícone, peso tipográfico, área de toque e estado de abertura próprios. Os links filhos são recuados, mais densos e possuem destaque de rota independente. Ver a especificação de execução em [`wave-navigation-2-sidebar-rail.md`](../architecture/wave-navigation-2-sidebar-rail.md).
+
 ## Criação rápida global
 
 O menu global Novo agrupa atalhos por domínio:

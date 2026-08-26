@@ -22,4 +22,4 @@ Esta pasta é a **fonte canônica** do levantamento clean-room e das propostas p
 
 ## Estado atual
 
-Nove batches somente leitura foram concluídos: sete passes autenticados desktop, um passe autenticado responsivo e um passe amplo do marketing público. Dispositivos físicos, múltiplos papéis, mutações e rede de fluxos transacionais permanecem lacunas declaradas.
+Nove batches somente leitura foram concluídos: sete passes autenticados desktop, um passe autenticado responsivo e um passe amplo do marketing público. Em 26/08/2026, a Wave de Navegação 2 foi implementada no Caldas e registrada em `../architecture/wave-navigation-2-sidebar-rail.md`, com evidência funcional adicional em `evidence/EV-010--sidebar-compacta-flyout-desktop.md`. Dispositivos físicos, múltiplos papéis, mutações e rede de fluxos transacionais permanecem lacunas declaradas.

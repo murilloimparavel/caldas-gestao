@@ -6,6 +6,16 @@ Construir um produto original de gestão para negócios de beleza a partir dos r
 
 **Baseline de evidência:** EV-001 a EV-008. O passe EV-008 tornou mobile e tablet requisitos de arquitetura desde a F0, não uma etapa de adaptação ao final.
 
+## Progresso registrado — Wave de Navegação 2 (26/08/2026)
+
+**Status:** implementada, validada em build e smoke manual no Chrome.
+
+A shell autenticada agora possui accordion hierárquico no modo expandido e rail compacto no modo recolhido. Cada categoria no rail abre um flyout com links autorizados; a navegação fecha o flyout e mantém o destino em Wayfinder. O estado dos accordions é persistido por usuário, enquanto o flyout permanece efêmero.
+
+A hierarquia visual foi refinada para que categorias sejam percebidas como módulos e links filhos como destinos subordinados. A Agenda usa `calendar.view` nas superfícies desktop e mobile. O mobile permanece com barra inferior e Sheet, sem reutilizar o rail desktop.
+
+Validações concluídas: ESLint isolado dos arquivos de navegação, `npm run types:check`, `npm run build`, `git diff --check` e smoke manual no Chrome para accordion, rail, flyout, `Escape` e navegação para `/finance/commissions`. Pendências de QA em permissões parciais e viewports físicos estão registradas no documento da wave.
+
 ## Stack aprovada
 
 - Laravel 13 como aplicação principal, autenticação, autorização, validação, regras de negócio e composição das respostas Inertia;
