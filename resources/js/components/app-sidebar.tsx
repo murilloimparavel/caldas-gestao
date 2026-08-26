@@ -100,12 +100,6 @@ const mainNavGroups: SidebarNavGroup[] = [
                 permission: 'professional.view',
             },
             {
-                title: 'Categorias',
-                href: categories.index(),
-                icon: FolderTree,
-                permission: 'category.view',
-            },
-            {
                 title: 'Fornecedores',
                 href: suppliers.index(),
                 icon: Truck,
@@ -125,22 +119,28 @@ const mainNavGroups: SidebarNavGroup[] = [
                 permission: 'service.view',
             },
             {
+                title: 'Produtos',
+                href: products.index(),
+                icon: Package,
+                permission: 'product.view',
+            },
+            {
                 title: 'Pacotes de Serviços',
                 href: packagesRoutes.index(),
                 icon: Gift,
                 permission: 'package.view',
             },
             {
+                title: 'Categorias',
+                href: categories.index(),
+                icon: FolderTree,
+                permission: 'category.view',
+            },
+            {
                 title: 'Assinaturas',
                 href: subscriptions.index(),
                 icon: Repeat2,
                 permission: 'subscription.view',
-            },
-            {
-                title: 'Produtos',
-                href: products.index(),
-                icon: Package,
-                permission: 'product.view',
             },
             {
                 title: 'Estoque',
