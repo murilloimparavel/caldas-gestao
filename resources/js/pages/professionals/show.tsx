@@ -21,6 +21,7 @@ import {
     StatusBadge,
 } from '@/components/operational';
 import type { RelationOption, ResourceStatus } from '@/components/operational';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -31,7 +32,9 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import { useInitials } from '@/hooks/use-initials';
 import professionals from '@/routes/professionals';
 import type { SharedPageProps } from '@/types';
 
@@ -63,6 +66,7 @@ type ScheduleBlockSummary = {
 type Professional = {
     availability_rules?: AvailabilityRuleSummary[];
     availabilityRules?: AvailabilityRuleSummary[];
+    avatar_url?: string | null;
     email: string | null;
     id: string;
     lock_version: number;
@@ -98,6 +102,10 @@ export default function ProfessionalShow({
     options,
     serviceOptions,
 }: Props) {
+    const [selectedAvatar, setSelectedAvatar] = useState<File | string | null>(
+        professional.avatar_url ?? null,
+    );
+    const getInitials = useInitials();
     const [updateKey] = useState(() =>
         createIdempotencyKey('professional-update'),
     );
@@ -127,12 +135,32 @@ export default function ProfessionalShow({
                             Voltar para profissionais
                         </Link>
                     </Button>
-                    <ResourceHeader
-                        eyebrow="Cadastro de profissional"
-                        title={professional.name}
-                        description="Mantenha os dados da equipe e os serviços que podem ser selecionados na agenda."
-                        action={<StatusBadge status={professional.status} />}
-                    />
+                    <div className="flex items-center gap-4">
+                        <Avatar className="size-16 shrink-0">
+                            {professional.avatar_url ? (
+                                <AvatarImage
+                                    src={professional.avatar_url}
+                                    alt={professional.name}
+                                />
+                            ) : null}
+                            <AvatarFallback className="bg-secondary text-secondary-foreground text-lg font-medium">
+                                {getInitials(professional.name) || (
+                                    <UserRound
+                                        aria-hidden="true"
+                                        className="size-8"
+                                    />
+                                )}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                            <ResourceHeader
+                                eyebrow="Cadastro de profissional"
+                                title={professional.name}
+                                description="Mantenha os dados da equipe e os serviços que podem ser selecionados na agenda."
+                                action={<StatusBadge status={professional.status} />}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
@@ -156,6 +184,22 @@ export default function ProfessionalShow({
                                 <>
                                     <FormErrorSummary errors={errors} />
                                     <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="sm:col-span-2">
+                                            <FormField
+                                                label="Foto do profissional"
+                                                name="avatar"
+                                                error={errors.avatar}
+                                            >
+                                                <ImageUploader
+                                                    value={selectedAvatar}
+                                                    onChange={setSelectedAvatar}
+                                                    disabled={!canManage}
+                                                    error={errors.avatar}
+                                                    aspectRatio="square"
+                                                    previewHeight="140px"
+                                                />
+                                            </FormField>
+                                        </div>
                                         <div className="sm:col-span-2">
                                             <FormField
                                                 label="Nome completo"

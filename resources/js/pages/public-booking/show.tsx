@@ -1,8 +1,11 @@
 import { Head, useHttp } from '@inertiajs/react';
+import { UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useInitials } from '@/hooks/use-initials';
 import { availability } from '@/routes/public_booking';
 import { store } from '@/routes/public_booking/appointments';
 
@@ -22,7 +25,7 @@ type Unit = {
     address: Address | null;
 };
 
-type Professional = { id: string; name: string };
+type Professional = { id: string; name: string; avatar_url?: string | null };
 
 type Service = {
     id: string;
@@ -119,6 +122,7 @@ export default function PublicBooking({ unit, services }: Props) {
     const [date, setDate] = useState('');
     const [selectedSlot, setSelectedSlot] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const getInitials = useInitials();
 
     const selectedService = useMemo(
         () => services.find((service) => service.id === serviceId) ?? null,
@@ -288,13 +292,67 @@ return;
                     </StepCard>
 
                     <StepCard number="02" title="Escolha o profissional">
-                        <Label htmlFor="professional">Profissional</Label>
-                        <select id="professional" value={professionalId} onChange={(event) => {
- setProfessionalId(event.target.value); setDate(''); setSelectedSlot(''); 
-}} disabled={!selectedService} className="mt-2 flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50">
-                            <option value="">{selectedService ? 'Selecione uma pessoa' : 'Escolha um serviço primeiro'}</option>
-                            {selectedService?.professionals.map((professional) => <option key={professional.id} value={professional.id}>{professional.name}</option>)}
-                        </select>
+                        {!selectedService ? (
+                            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                Escolha um serviço primeiro para ver os profissionais disponíveis.
+                            </p>
+                        ) : selectedService.professionals.length === 0 ? (
+                            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                Nenhum profissional disponível para este serviço.
+                            </p>
+                        ) : (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {selectedService.professionals.map((professional) => {
+                                    const isSelected = professionalId === professional.id;
+
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={professional.id}
+                                            onClick={() => {
+                                                setProfessionalId(professional.id);
+                                                setDate('');
+                                                setSelectedSlot('');
+                                            }}
+                                            aria-pressed={isSelected}
+                                            className={`flex items-center gap-3.5 rounded-2xl border p-4 text-left transition focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 dark:focus-visible:ring-white ${
+                                                isSelected
+                                                    ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950'
+                                                    : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500'
+                                            }`}
+                                        >
+                                            <Avatar className="size-11 shrink-0">
+                                                {professional.avatar_url ? (
+                                                    <AvatarImage
+                                                        src={professional.avatar_url}
+                                                        alt={professional.name}
+                                                    />
+                                                ) : null}
+                                                <AvatarFallback
+                                                    className={`font-medium ${
+                                                        isSelected
+                                                            ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-950'
+                                                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                                                    }`}
+                                                >
+                                                    {getInitials(professional.name) || (
+                                                        <UserRound
+                                                            aria-hidden="true"
+                                                            className="size-5"
+                                                        />
+                                                    )}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0 flex-1">
+                                                <span className="block truncate font-semibold">
+                                                    {professional.name}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </StepCard>
 
                     <StepCard number="03" title="Encontre um horário">

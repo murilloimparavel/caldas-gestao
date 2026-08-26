@@ -6,6 +6,7 @@ use App\Policies\ProfessionalPolicy;
 use Database\Factories\ProfessionalFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,14 +14,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Facades\Storage;
 
 /** @property int $lock_version */
-#[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'status', 'online_booking_enabled'])]
+#[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'avatar_path', 'status', 'online_booking_enabled'])]
 #[UsePolicy(ProfessionalPolicy::class)]
 class Professional extends Model
 {
     /** @use HasFactory<ProfessionalFactory> */
     use HasFactory, HasUuids;
+
+    protected $appends = [
+        'avatar_url',
+    ];
+
+    /**
+     * @return Attribute<?string, void>
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?string => $this->avatar_path
+                ? Storage::disk(config('filesystems.default', 'public'))->url($this->avatar_path)
+                : null,
+        );
+    }
 
     protected $attributes = [
         'status' => 'active',

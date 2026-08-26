@@ -7,7 +7,9 @@ use App\Models\Professional;
 use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 final class CreateProfessional extends OperationalAction
@@ -20,7 +22,33 @@ final class CreateProfessional extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $data, $unit): Professional {
             $serviceIds = $data['service_ids'] ?? [];
             unset($data['service_ids']);
-            $professional = Professional::query()->create([...$data, 'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'lock_version' => 0]);
+
+            /** @var UploadedFile|null $avatarFile */
+            $avatarFile = $data['avatar'] ?? $data['avatar_file'] ?? null;
+            unset($data['avatar'], $data['avatar_file']);
+
+            $professionalId = (string) Str::uuid7();
+            $avatarPath = null;
+            if ($avatarFile instanceof UploadedFile) {
+                $hash = Str::random(40);
+                $ext = $avatarFile->guessExtension() ?: $avatarFile->getClientOriginalExtension();
+                $diskName = 'public';
+                $storedPath = Storage::disk($diskName)->putFileAs(
+                    "{$context->tenant->getKey()}/professionals/{$professionalId}",
+                    $avatarFile,
+                    "{$hash}.{$ext}"
+                );
+                $avatarPath = $storedPath !== false ? $storedPath : null;
+            }
+
+            $professional = new Professional;
+            $professional->id = $professionalId;
+            $professional->tenant_id = $context->tenant->getKey();
+            $professional->unit_id = $unit->getKey();
+            $professional->avatar_path = $avatarPath;
+            $professional->lock_version = 0;
+            $professional->fill($data);
+            $professional->save();
             $this->syncServices($professional, $context, $serviceIds);
             $this->events->record($actor, $context, 'professional.created', $professional, [
                 'status' => $professional->status,

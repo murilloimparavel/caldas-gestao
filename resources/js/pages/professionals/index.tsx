@@ -20,6 +20,7 @@ import type {
     RelationOption,
     ResourceFilters,
 } from '@/components/operational';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -29,7 +30,9 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import { useInitials } from '@/hooks/use-initials';
 import professionals from '@/routes/professionals';
 import type { SharedPageProps } from '@/types';
 
@@ -39,6 +42,7 @@ type ServiceSummary = {
 };
 
 type Professional = {
+    avatar_url?: string | null;
     email: string | null;
     id: string;
     name: string;
@@ -63,6 +67,8 @@ export default function ProfessionalsIndex({
     serviceOptions,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
+    const getInitials = useInitials();
     const [createKey] = useState(() =>
         createIdempotencyKey('professional-create'),
     );
@@ -91,7 +97,13 @@ export default function ProfessionalsIndex({
                         canManage ? (
                             <Dialog
                                 open={createOpen}
-                                onOpenChange={setCreateOpen}
+                                onOpenChange={(open) => {
+                                    setCreateOpen(open);
+
+                                    if (!open) {
+                                        setSelectedAvatar(null);
+                                    }
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full sm:w-auto">
@@ -115,7 +127,10 @@ export default function ProfessionalsIndex({
                                             'X-Idempotency-Key': createKey,
                                         }}
                                         resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
+                                        onSuccess={() => {
+                                            setCreateOpen(false);
+                                            setSelectedAvatar(null);
+                                        }}
                                         className="space-y-5"
                                     >
                                         {({ errors, processing }) => (
@@ -124,6 +139,21 @@ export default function ProfessionalsIndex({
                                                     errors={errors}
                                                 />
                                                 <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="sm:col-span-2">
+                                                        <FormField
+                                                            label="Foto do profissional"
+                                                            name="avatar"
+                                                            error={errors.avatar}
+                                                        >
+                                                            <ImageUploader
+                                                                value={selectedAvatar}
+                                                                onChange={setSelectedAvatar}
+                                                                error={errors.avatar}
+                                                                aspectRatio="square"
+                                                                previewHeight="120px"
+                                                            />
+                                                        </FormField>
+                                                    </div>
                                                     <div className="sm:col-span-2">
                                                         <FormField
                                                             label="Nome completo"
@@ -188,9 +218,10 @@ export default function ProfessionalsIndex({
                                                 />
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() =>
-                                                        setCreateOpen(false)
-                                                    }
+                                                    onCancel={() => {
+                                                        setCreateOpen(false);
+                                                        setSelectedAvatar(null);
+                                                    }}
                                                     label="Cadastrar profissional"
                                                 />
                                             </>
@@ -246,12 +277,22 @@ export default function ProfessionalsIndex({
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
-                                            <UserRound
-                                                aria-hidden="true"
-                                                className="size-5"
-                                            />
-                                        </div>
+                                        <Avatar className="size-11 shrink-0">
+                                            {professional.avatar_url ? (
+                                                <AvatarImage
+                                                    src={professional.avatar_url}
+                                                    alt={professional.name}
+                                                />
+                                            ) : null}
+                                            <AvatarFallback className="bg-secondary text-secondary-foreground font-medium">
+                                                {getInitials(professional.name) || (
+                                                    <UserRound
+                                                        aria-hidden="true"
+                                                        className="size-5"
+                                                    />
+                                                )}
+                                            </AvatarFallback>
+                                        </Avatar>
                                         <div className="min-w-0">
                                             <h2 className="truncate font-semibold text-foreground">
                                                 {professional.name}

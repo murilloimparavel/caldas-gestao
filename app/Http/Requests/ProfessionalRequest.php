@@ -41,6 +41,7 @@ final class ProfessionalRequest extends FormRequest
             'name' => ['required', 'string', 'max:160'],
             'email' => ['nullable', 'email:rfc,dns', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
+            'avatar' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'status' => ['sometimes', Rule::in(['active', 'inactive'])],
             'service_ids' => ['sometimes', 'array', 'max:100'],
             'service_ids.*' => ['uuid', 'distinct', $serviceExists],

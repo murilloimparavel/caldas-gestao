@@ -8,7 +8,10 @@ use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class UpdateProfessional extends OperationalAction
@@ -29,10 +32,39 @@ final class UpdateProfessional extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $professional, $data, $expectedVersion): Professional {
             $serviceIds = $data['service_ids'] ?? null;
             unset($data['service_ids']);
+
+            $hasAvatarKey = array_key_exists('avatar', $data) || array_key_exists('avatar_file', $data);
+            /** @var UploadedFile|null $avatarFile */
+            $avatarFile = $data['avatar'] ?? $data['avatar_file'] ?? null;
+            unset($data['avatar'], $data['avatar_file']);
+
             $locked = Professional::query()->whereKey($professional->getKey())->lockForUpdate()->firstOrFail();
             if ($locked->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('The professional was modified concurrently.');
             }
+
+            if ($hasAvatarKey) {
+                $diskName = 'public';
+                if ($avatarFile instanceof UploadedFile) {
+                    if ($locked->avatar_path) {
+                        Storage::disk($diskName)->delete($locked->avatar_path);
+                    }
+                    $hash = Str::random(40);
+                    $ext = $avatarFile->guessExtension() ?: $avatarFile->getClientOriginalExtension();
+                    $storedPath = Storage::disk($diskName)->putFileAs(
+                        "{$context->tenant->getKey()}/professionals/{$locked->getKey()}",
+                        $avatarFile,
+                        "{$hash}.{$ext}"
+                    );
+                    $data['avatar_path'] = $storedPath !== false ? $storedPath : null;
+                } elseif ($avatarFile === null) {
+                    if ($locked->avatar_path) {
+                        Storage::disk($diskName)->delete($locked->avatar_path);
+                    }
+                    $data['avatar_path'] = null;
+                }
+            }
+
             $locked->forceFill([...$data, 'lock_version' => $locked->lock_version + 1])->save();
             if ($serviceIds !== null) {
                 $serviceIds = array_values(array_unique($serviceIds));

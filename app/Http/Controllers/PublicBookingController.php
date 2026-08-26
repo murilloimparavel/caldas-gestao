@@ -121,19 +121,19 @@ final class PublicBookingController extends Controller
             ->where('status', 'active')
             ->where('online_booking_enabled', true)
             ->whereHas('professionals', fn ($query) => $query->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true))
-            ->with(['professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->orderBy('professionals.name')])
+            ->with(['professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name', 'professionals.avatar_path')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->orderBy('professionals.name')])
             ->orderBy('name')
             ->get(['id', 'name', 'description', 'duration_minutes', 'price_cents'])
             ->map(fn (Service $service): array => [
                 'id' => $service->getKey(), 'name' => $service->name, 'description' => $service->description,
                 'duration_minutes' => $service->duration_minutes, 'price_cents' => $service->price_cents,
-                'professionals' => $service->professionals->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name])->values()->all(),
+                'professionals' => $service->professionals->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all(),
             ])->values()->all();
         $professionals = Professional::query()
             ->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)
             ->whereHas('services', fn ($query) => $query->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())->where('services.status', 'active')->where('services.online_booking_enabled', true))
-            ->orderBy('name')->get(['id', 'name'])
-            ->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name])->values()->all();
+            ->orderBy('name')->get(['id', 'name', 'avatar_path'])
+            ->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all();
 
         return compact('services', 'professionals');
     }
