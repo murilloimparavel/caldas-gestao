@@ -3,7 +3,8 @@ export type SaleStatus =
     | 'open'
     | 'ready_to_bill'
     | 'finalized'
-    | 'cancelled';
+    | 'cancelled'
+    | 'adjusted';
 
 export type SaleCategoryType = 'service' | 'product' | 'mixed';
 export type UniquenessScope = 'customer' | 'appointment' | 'reference' | 'none';

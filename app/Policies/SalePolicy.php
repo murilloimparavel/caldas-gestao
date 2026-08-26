@@ -47,6 +47,11 @@ final class SalePolicy
         return $this->allows($user, 'sale.manage', $sale);
     }
 
+    public function adjust(User $user, Sale $sale): bool
+    {
+        return $this->allows($user, 'sale.adjust', $sale) || $this->allows($user, 'sale.manage', $sale);
+    }
+
     private function allows(User $user, string $permission, ?Sale $sale = null): bool
     {
         try {

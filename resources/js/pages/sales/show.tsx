@@ -14,6 +14,7 @@ import {
     Scissors,
     Sparkles,
     Trash2,
+    Undo2,
     User,
     XCircle,
 } from 'lucide-react';
@@ -120,6 +121,7 @@ export default function SalesShow({
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('sale.manage');
+    const canAdjust = permissions.has('sale.adjust') || permissions.has('sale.manage');
     const canClosePermission = permissions.has('sale.close') || permissions.has('sale.manage');
     const canDiscount = permissions.has('sale.discount');
 
@@ -127,6 +129,7 @@ export default function SalesShow({
     const [discountOpen, setDiscountOpen] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
+    const [adjustOpen, setAdjustOpen] = useState(false);
 
     // Add item form state
     const [itemType, setItemType] = useState<'service' | 'product' | 'custom'>(
@@ -150,6 +153,9 @@ export default function SalesShow({
     // Cancel reason state
     const [cancelReason, setCancelReason] = useState('');
 
+    // Adjust reason state
+    const [adjustReason, setAdjustReason] = useState('');
+
     const [itemAddKey] = useState(() =>
         createIdempotencyKey(`sale-item-add:${sale.id}`),
     );
@@ -161,6 +167,9 @@ export default function SalesShow({
     );
     const [closeKey] = useState(() =>
         createIdempotencyKey(`sale-close:${sale.id}`),
+    );
+    const [adjustKey] = useState(() =>
+        createIdempotencyKey(`sale-adjust:${sale.id}`),
     );
 
     const isSaleActive = sale.status === 'open' || sale.status === 'ready_to_bill';
@@ -198,6 +207,11 @@ export default function SalesShow({
         setQuantity(1);
         setItemDiscountStr('');
     };
+
+    const latestAdjustment = (sale.status_histories ?? [])
+        .slice()
+        .reverse()
+        .find((h) => h.to_status === 'adjusted');
 
     return (
         <>
@@ -457,17 +471,124 @@ export default function SalesShow({
                                     </DialogContent>
                                 </Dialog>
                             </div>
-                        ) : sale.status === 'finalized' && sale.closing_sessions && sale.closing_sessions.length > 0 ? (
-                            <div className="flex items-center gap-2">
-                                <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 font-semibold text-white">
-                                    <Link href={closingSessions.show(sale.closing_sessions[0].id)}>
-                                        <Receipt className="size-4" />
-                                        Ver Recibo Interno
-                                    </Link>
-                                </Button>
+                        ) : sale.status === 'finalized' ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                                {sale.closing_sessions && sale.closing_sessions.length > 0 ? (
+                                    <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 font-semibold text-white">
+                                        <Link href={closingSessions.show(sale.closing_sessions[0].id)}>
+                                            <Receipt className="size-4" />
+                                            Ver Recibo Interno
+                                        </Link>
+                                    </Button>
+                                ) : null}
+
+                                {canAdjust ? (
+                                    <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="gap-1.5 border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/50"
+                                            >
+                                                <Undo2 className="size-4" />
+                                                Estornar Comanda
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+                                            <DialogHeader>
+                                                <DialogTitle>Estornar Comanda</DialogTitle>
+                                                <DialogDescription>
+                                                    Realize o estorno compensatório desta comanda já finalizada.
+                                                </DialogDescription>
+                                            </DialogHeader>
+
+                                            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                                                <div className="flex items-start gap-2.5">
+                                                    <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                                    <div className="space-y-1">
+                                                        <p className="font-semibold">Atenção sobre o estorno compensatório</p>
+                                                        <p className="text-amber-800 dark:text-amber-300">
+                                                            O estorno reverterá automaticamente o estoque dos produtos vendidos (lançando ajuste de ganho) e cancelará as comissões apuradas dos profissionais. A comanda permanecerá no sistema como <strong>Estornada</strong>.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <Form
+                                                {...sales.adjust.form(sale.id)}
+                                                headers={{
+                                                    'X-Idempotency-Key': adjustKey,
+                                                }}
+                                                onSuccess={() => {
+                                                    setAdjustOpen(false);
+                                                    setAdjustReason('');
+                                                }}
+                                                className="space-y-4"
+                                            >
+                                                {({ errors, processing }) => (
+                                                    <>
+                                                        <FormErrorSummary errors={errors} />
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={sale.lock_version}
+                                                        />
+
+                                                        <FormField
+                                                            label="Motivo do Estorno (obrigatório)"
+                                                            name="reason"
+                                                            error={errors.reason}
+                                                        >
+                                                            <textarea
+                                                                id="adjust_reason"
+                                                                name="reason"
+                                                                rows={3}
+                                                                value={adjustReason}
+                                                                onChange={(e) => setAdjustReason(e.target.value)}
+                                                                placeholder="Ex.: Desistência do cliente, erro no lançamento de itens, estorno solicitado pela gerência..."
+                                                                required
+                                                                className="min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                            />
+                                                        </FormField>
+
+                                                        <FormActions
+                                                            submitLabel="Confirmar Estorno da Comanda"
+                                                            processing={processing}
+                                                            onCancel={() => setAdjustOpen(false)}
+                                                        />
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                ) : null}
                             </div>
                         ) : null}
                     </div>
+
+                    {/* Adjusted Sale Banner */}
+                    {sale.status === 'adjusted' && (
+                        <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-rose-900 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle className="mt-0.5 size-5 shrink-0 text-rose-600 dark:text-rose-400" />
+                                <div className="space-y-1 text-sm">
+                                    <p className="font-semibold text-rose-950 dark:text-rose-100">
+                                        Esta comanda foi estornada
+                                    </p>
+                                    {latestAdjustment?.reason ? (
+                                        <p className="text-xs text-rose-800 dark:text-rose-300">
+                                            <span className="font-medium">Motivo:</span> {latestAdjustment.reason}
+                                        </p>
+                                    ) : null}
+                                    <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
+                                        Estorno realizado por{' '}
+                                        <span className="font-medium">{latestAdjustment?.user?.name ?? 'Operador'}</span>{' '}
+                                        em {formatDateTime(latestAdjustment?.created_at ?? sale.updated_at)}. As baixas de estoque foram estornadas e as comissões apuradas foram canceladas.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 2-Column Grid: Main Items + Summary Sidebar */}

@@ -85,6 +85,12 @@ const statusConfig: Record<
         bgClass: 'border-border bg-muted text-muted-foreground',
         dotClass: 'bg-muted-foreground',
     },
+    adjusted: {
+        label: 'Estornada',
+        bgClass:
+            'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+        dotClass: 'bg-rose-500',
+    },
     draft: {
         label: 'Rascunho',
         bgClass: 'border-border bg-muted text-muted-foreground',

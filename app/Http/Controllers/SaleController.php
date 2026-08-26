@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sales\AdjustSale;
 use App\Actions\Sales\ApplySaleDiscount;
 use App\Actions\Sales\OpenSale;
 use App\Actions\Sales\TransitionSaleStatus;
+use App\Http\Requests\AdjustSaleRequest;
 use App\Http\Requests\OpenSaleRequest;
 use App\Http\Requests\SaleDiscountRequest;
 use App\Http\Requests\SaleStatusTransitionRequest;
@@ -216,5 +218,25 @@ final class SaleController extends Controller
         $updatedSale = Sale::query()->findOrFail($reference['resource_id']);
 
         return to_route('sales.show', $updatedSale)->with('success', 'Status da comanda atualizado com sucesso.');
+    }
+
+    public function adjust(AdjustSaleRequest $request, TenantContext $context, Sale $sale, AdjustSale $adjustSale): RedirectResponse
+    {
+        $data = $request->validated();
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($adjustSale, $request, $context, $sale, $data): array {
+            $updated = $adjustSale->handle(
+                $request->user(),
+                $context,
+                $sale,
+                (string) $data['reason'],
+                isset($data['lock_version']) ? (int) $data['lock_version'] : null,
+            );
+
+            return ['resource_id' => $updated->getKey(), 'resource_type' => 'sale'];
+        });
+
+        $updatedSale = Sale::query()->findOrFail($reference['resource_id']);
+
+        return to_route('sales.show', $updatedSale)->with('success', 'Comanda estornada com sucesso.');
     }
 }

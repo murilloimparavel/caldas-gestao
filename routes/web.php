@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->only(['show', 'store']);
         Route::post('sales/{sale}/discount', [SaleController::class, 'applyDiscount'])->name('sales.discount');
         Route::post('sales/{sale}/transition', [SaleController::class, 'transitionStatus'])->name('sales.transition');
+        Route::post('sales/{sale}/adjust', [SaleController::class, 'adjust'])->name('sales.adjust');
         Route::post('sales/{sale}/items', [SaleItemController::class, 'store'])->name('sales.items.store');
         Route::delete('sales/{sale}/items/{item}', [SaleItemController::class, 'destroy'])->name('sales.items.destroy');
         Route::get('finance/cash', [CashShiftController::class, 'index'])->name('cash_shifts.index');
