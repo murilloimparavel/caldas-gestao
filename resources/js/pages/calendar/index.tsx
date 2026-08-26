@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -95,6 +95,7 @@ function optionList(
 function AppointmentForm({
     appointment,
     customers,
+    defaultDurationMinutes,
     defaultProfessionalId = '',
     defaultStartsAt = '',
     existingAppointments = [],
@@ -106,6 +107,7 @@ function AppointmentForm({
 }: {
     appointment: CalendarAppointment | null;
     customers: CalendarOption[];
+    defaultDurationMinutes?: number;
     defaultProfessionalId?: string;
     defaultStartsAt?: string;
     existingAppointments?: CalendarAppointment[];
@@ -131,7 +133,7 @@ function AppointmentForm({
             : defaultStartsAt,
     );
     const [selectedDuration, setSelectedDuration] = useState<number>(
-        appointment?.duration_minutes ?? 30,
+        appointment?.duration_minutes ?? defaultDurationMinutes ?? 30,
     );
 
     const conflict = useMemo(() => {
@@ -659,11 +661,17 @@ function OpenAppointmentSaleForm({
 
 function ScheduleBlockForm({
     defaultDate,
+    defaultEndsAt: prefilledEndsAt,
+    defaultProfessionalId = '',
+    defaultStartsAt: prefilledStartsAt,
     onClose,
     professionals,
     unitTimezone,
 }: {
     defaultDate: string;
+    defaultEndsAt?: string;
+    defaultProfessionalId?: string;
+    defaultStartsAt?: string;
     onClose: () => void;
     professionals: CalendarOption[];
     unitTimezone: string;
@@ -672,8 +680,8 @@ function ScheduleBlockForm({
         createIdempotencyKey('schedule-block-create'),
     );
 
-    const defaultStartsAt = `${defaultDate}T09:00`;
-    const defaultEndsAt = `${defaultDate}T10:00`;
+    const defaultStartsAt = prefilledStartsAt || `${defaultDate}T09:00`;
+    const defaultEndsAt = prefilledEndsAt || `${defaultDate}T10:00`;
 
     return (
         <Form
@@ -695,7 +703,7 @@ function ScheduleBlockForm({
                                 <select
                                     id="professional_id"
                                     name="professional_id"
-                                    defaultValue=""
+                                    defaultValue={defaultProfessionalId}
                                     className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 >
                                     <option value="">
@@ -825,8 +833,16 @@ export default function CalendarIndex(props: CalendarProps) {
     );
     const [prefilledSlot, setPrefilledSlot] = useState<{
         date: string;
-        time: string;
+        durationMinutes?: number;
         professionalId?: string;
+        time: string;
+    } | null>(null);
+
+    const [prefilledBlockSlot, setPrefilledBlockSlot] = useState<{
+        date: string;
+        endsAt: string;
+        professionalId?: string;
+        startsAt: string;
     } | null>(null);
 
     const permissions = page.props.auth.permissions;
@@ -913,6 +929,52 @@ export default function CalendarIndex(props: CalendarProps) {
         setCreateOpen(true);
     };
 
+    const handleDragSelect = (
+        action: 'appointment' | 'block',
+        selection: {
+            date: string;
+            endMinutes: number;
+            professionalId?: string;
+            startMinutes: number;
+        },
+    ) => {
+        if (!canManage) {
+            return;
+        }
+
+        const minMins = Math.min(selection.startMinutes, selection.endMinutes);
+        const maxMins = Math.max(selection.startMinutes, selection.endMinutes) + 15;
+        const durationMinutes = maxMins - minMins;
+
+        const startH = Math.floor(minMins / 60);
+        const startM = minMins % 60;
+        const startTimeStr = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+        const startsAt = `${selection.date}T${startTimeStr}`;
+
+        const endH = Math.floor(maxMins / 60);
+        const endM = maxMins % 60;
+        const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        const endsAt = `${selection.date}T${endTimeStr}`;
+
+        if (action === 'appointment') {
+            setPrefilledSlot({
+                date: selection.date,
+                durationMinutes,
+                professionalId: selection.professionalId,
+                time: startTimeStr,
+            });
+            setCreateOpen(true);
+        } else {
+            setPrefilledBlockSlot({
+                date: selection.date,
+                endsAt,
+                professionalId: selection.professionalId,
+                startsAt,
+            });
+            setBlockCreateOpen(true);
+        }
+    };
+
     const activeProfessionalsForHeader = useMemo(() => {
         if (filters.professional_ids && filters.professional_ids.length > 0) {
             return professionals.filter((p) => filters.professional_ids?.includes(p.id));
@@ -920,6 +982,12 @@ export default function CalendarIndex(props: CalendarProps) {
 
         return professionals;
     }, [professionals, filters.professional_ids]);
+
+    const weekDates = useMemo(() => {
+        return Array.from({ length: 7 }, (_, index) => addDays(range.start, index));
+    }, [range.start]);
+
+    const activeMobileProfId = selectedProfessionalIds.length === 1 ? selectedProfessionalIds[0] : undefined;
 
     return (
         <>
@@ -951,7 +1019,7 @@ export default function CalendarIndex(props: CalendarProps) {
                         <Button
                             variant="outline"
                             onClick={() => setFilterOpen(true)}
-                            className="lg:hidden"
+                            className="h-11 min-h-[44px] lg:hidden"
                         >
                             <SlidersHorizontal aria-hidden="true" />
                             Filtros
@@ -976,54 +1044,71 @@ export default function CalendarIndex(props: CalendarProps) {
 
                 {loadError ? <CalendarError message={loadError} /> : null}
 
+                {/* Filtros rápidos de profissionais (responsivo para mobile e desktop) */}
                 <section
-                    className="hidden gap-4 lg:block"
+                    className="gap-4"
                     aria-label="Filtros da agenda"
                 >
-                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3">
-                        <span className="text-xs font-semibold text-muted-foreground">
-                            Profissionais
+                    <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-muted/20 px-3 py-2 scrollbar-none sm:flex-wrap sm:px-4 sm:py-3">
+                        <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                            Profissionais:
                         </span>
-                        {professionals.slice(0, 8).map((professional) => (
-                            <Button
-                                key={professional.id}
-                                asChild
-                                size="sm"
-                                variant={
-                                    selectedProfessionalIds.includes(
-                                        professional.id,
-                                    )
-                                        ? 'secondary'
-                                        : 'ghost'
-                                }
-                                className="h-8 text-xs"
+                        <Button
+                            asChild
+                            size="sm"
+                            variant={
+                                selectedProfessionalIds.length === 0
+                                    ? 'secondary'
+                                    : 'ghost'
+                            }
+                            className="h-11 shrink-0 rounded-full px-3 text-xs font-medium min-h-[44px] sm:h-8 sm:min-h-0"
+                        >
+                            <Link
+                                href={calendarIndex({
+                                    query: {
+                                        ...filters,
+                                        date: selectedDate,
+                                        view,
+                                        professional_ids: [],
+                                    },
+                                })}
                             >
-                                <Link
-                                    href={calendarIndex({
-                                        query: {
-                                            ...filters,
-                                            date: selectedDate,
-                                            view,
-                                            professional_ids:
-                                                selectedProfessionalIds.includes(
-                                                    professional.id,
-                                                )
+                                Todos
+                            </Link>
+                        </Button>
+                        {professionals.map((professional) => {
+                            const isSelected = selectedProfessionalIds.includes(professional.id);
+
+                            return (
+                                <Button
+                                    key={professional.id}
+                                    asChild
+                                    size="sm"
+                                    variant={isSelected ? 'secondary' : 'ghost'}
+                                    className="h-11 shrink-0 rounded-full px-3 text-xs font-medium min-h-[44px] sm:h-8 sm:min-h-0"
+                                >
+                                    <Link
+                                        href={calendarIndex({
+                                            query: {
+                                                ...filters,
+                                                date: selectedDate,
+                                                view,
+                                                professional_ids: isSelected
                                                     ? selectedProfessionalIds.filter(
-                                                          (id) =>
-                                                              id !==
-                                                              professional.id,
+                                                          (id) => id !== professional.id,
                                                       )
                                                     : [
                                                           ...selectedProfessionalIds,
                                                           professional.id,
                                                       ],
-                                        },
-                                    })}
-                                >
-                                    {professional.name}
-                                </Link>
-                            </Button>
-                        ))}
+                                            },
+                                        })}
+                                    >
+                                        {professional.name}
+                                    </Link>
+                                </Button>
+                            );
+                        })}
                         {professionals.length === 0 ? (
                             <span className="text-xs text-muted-foreground">
                                 Nenhum profissional disponível.
@@ -1043,14 +1128,18 @@ export default function CalendarIndex(props: CalendarProps) {
                                         <Button
                                             variant="outline"
                                             onClick={() => setBlockCreateOpen(true)}
+                                            className="h-11 min-h-[44px] sm:h-9 sm:min-h-0"
                                         >
                                             <Lock aria-hidden="true" />
                                             Novo bloqueio
                                         </Button>
-                                        <Button onClick={() => {
-                                            setPrefilledSlot(null);
-                                            setCreateOpen(true);
-                                        }}>
+                                        <Button
+                                            onClick={() => {
+                                                setPrefilledSlot(null);
+                                                setCreateOpen(true);
+                                            }}
+                                            className="h-11 min-h-[44px] sm:h-9 sm:min-h-0"
+                                        >
                                             <Plus aria-hidden="true" />
                                             Novo agendamento
                                         </Button>
@@ -1073,8 +1162,22 @@ export default function CalendarIndex(props: CalendarProps) {
                     <DayAgenda
                         appointments={visibleAppointments}
                         date={selectedDate}
+                        onDragSelect={handleDragSelect}
                         onOpen={setEditing}
                         onOpenBlock={setSelectedBlock}
+                        onSlotClick={handleSlotClick}
+                        professionals={professionals}
+                        selectedProfessionalId={activeMobileProfId}
+                        onSelectProfessional={(id) => {
+                            router.get(calendarIndex({
+                                query: {
+                                    ...filters,
+                                    date: selectedDate,
+                                    view: 'day',
+                                    professional_ids: id ? [id] : [],
+                                },
+                            }));
+                        }}
                         scheduleBlocks={visibleScheduleBlocks}
                         timeZone={unitTimezone}
                     />
@@ -1084,8 +1187,32 @@ export default function CalendarIndex(props: CalendarProps) {
                             <DayAgenda
                                 appointments={visibleAppointments}
                                 date={selectedDate}
+                                onDragSelect={handleDragSelect}
                                 onOpen={setEditing}
                                 onOpenBlock={setSelectedBlock}
+                                onSlotClick={handleSlotClick}
+                                professionals={professionals}
+                                selectedProfessionalId={activeMobileProfId}
+                                onSelectProfessional={(id) => {
+                                    router.get(calendarIndex({
+                                        query: {
+                                            ...filters,
+                                            date: selectedDate,
+                                            view: 'week',
+                                            professional_ids: id ? [id] : [],
+                                        },
+                                    }));
+                                }}
+                                weekDates={weekDates}
+                                onSelectDate={(d) => {
+                                    router.get(calendarIndex({
+                                        query: {
+                                            ...filters,
+                                            date: d,
+                                            view: 'week',
+                                        },
+                                    }));
+                                }}
                                 scheduleBlocks={visibleScheduleBlocks}
                                 timeZone={unitTimezone}
                             />
@@ -1093,6 +1220,7 @@ export default function CalendarIndex(props: CalendarProps) {
                         <div className="hidden md:block">
                             <WeekCalendar
                                 appointments={visibleAppointments}
+                                onDragSelect={handleDragSelect}
                                 onOpen={setEditing}
                                 onOpenBlock={setSelectedBlock}
                                 onSlotClick={handleSlotClick}
@@ -1139,6 +1267,7 @@ export default function CalendarIndex(props: CalendarProps) {
                     <AppointmentForm
                         appointment={editing}
                         customers={customers}
+                        defaultDurationMinutes={prefilledSlot?.durationMinutes}
                         defaultProfessionalId={prefilledSlot?.professionalId}
                         defaultStartsAt={
                             prefilledSlot
@@ -1265,7 +1394,16 @@ export default function CalendarIndex(props: CalendarProps) {
             </Dialog>
 
 
-            <Dialog open={blockCreateOpen} onOpenChange={setBlockCreateOpen}>
+            <Dialog
+                open={blockCreateOpen}
+                onOpenChange={(open) => {
+                    setBlockCreateOpen(open);
+
+                    if (!open) {
+                        setPrefilledBlockSlot(null);
+                    }
+                }}
+            >
                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -1281,8 +1419,14 @@ export default function CalendarIndex(props: CalendarProps) {
                         </DialogDescription>
                     </DialogHeader>
                     <ScheduleBlockForm
-                        defaultDate={selectedDate}
-                        onClose={() => setBlockCreateOpen(false)}
+                        defaultDate={prefilledBlockSlot?.date ?? selectedDate}
+                        defaultEndsAt={prefilledBlockSlot?.endsAt}
+                        defaultProfessionalId={prefilledBlockSlot?.professionalId}
+                        defaultStartsAt={prefilledBlockSlot?.startsAt}
+                        onClose={() => {
+                            setBlockCreateOpen(false);
+                            setPrefilledBlockSlot(null);
+                        }}
                         professionals={professionals}
                         unitTimezone={unitTimezone}
                     />
