@@ -100,12 +100,6 @@ const mainNavGroups: SidebarNavGroup[] = [
                 permission: 'professional.view',
             },
             {
-                title: 'Serviços',
-                href: services.index(),
-                icon: Scissors,
-                permission: 'service.view',
-            },
-            {
                 title: 'Categorias',
                 href: categories.index(),
                 icon: FolderTree,
@@ -124,6 +118,12 @@ const mainNavGroups: SidebarNavGroup[] = [
         label: 'Controle',
         icon: Boxes,
         items: [
+            {
+                title: 'Serviços',
+                href: services.index(),
+                icon: Scissors,
+                permission: 'service.view',
+            },
             {
                 title: 'Pacotes de Serviços',
                 href: packagesRoutes.index(),
