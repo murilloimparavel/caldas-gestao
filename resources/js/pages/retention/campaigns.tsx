@@ -21,6 +21,7 @@ import {
     Pagination,
     ResourceHeader,
 } from '@/components/operational';
+import type { Paginated } from '@/components/operational';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import campaignsRoutes from '@/routes/retention/campaigns';
-import type { Paginated } from '@/components/operational';
 import type { SharedPageProps } from '@/types';
 
 type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed';

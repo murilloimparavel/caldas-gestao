@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 import { PageCanvas } from '@/components/operational';
+import { Button } from '@/components/ui/button';
 import billing from '@/routes/billing';
 
 type Props = {
