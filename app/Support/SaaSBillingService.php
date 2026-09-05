@@ -64,9 +64,10 @@ final class SaaSBillingService
                 $status = match ($eventName) {
                     'Purchase_Order_Confirmed', 'Product_Access_Started', 'Recurrent_Payment' => 'active', 'Subscription_Renewal_Pending' => 'grace', 'Subscription_Canceled', 'Product_Access_Ended', 'Payment_Refund', 'Payment_Chargeback' => 'suspended', 'Subscription_Expired', 'Purchase_Request_Expired' => 'expired', default => $subscription->status
                 };
-                $subscription->update(['status' => $status, 'external_subscription_id' => $subId ?: $subscription->external_subscription_id, 'last_payment_at' => $eventName === 'Recurrent_Payment' ? now() : $subscription->last_payment_at]);
+                $graceEndsAt = $eventName === 'Subscription_Renewal_Pending' ? now()->addDays(3) : null;
+                $subscription->update(['status' => $status, 'external_subscription_id' => $subId ?: $subscription->external_subscription_id, 'last_payment_at' => $eventName === 'Recurrent_Payment' ? now() : $subscription->last_payment_at, 'grace_ends_at' => $graceEndsAt]);
                 $entitlementStatus = $status === 'active' ? 'active' : ($status === 'grace' ? 'grace' : ($status === 'expired' ? 'expired' : 'suspended'));
-                Entitlement::query()->where('tenant_id', $subscription->tenant_id)->where('key', 'saas.access')->update(['status' => $entitlementStatus, 'ends_at' => $status === 'active' ? null : now()->addDays(3)]);
+                Entitlement::query()->where('tenant_id', $subscription->tenant_id)->where('key', 'saas.access')->update(['status' => $entitlementStatus, 'ends_at' => $status === 'active' ? null : ($graceEndsAt ?? now()->addDays(3))]);
             }
             $event->update(['status' => 'processed', 'processed_at' => now(), 'last_error' => null]);
 

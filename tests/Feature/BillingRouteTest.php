@@ -49,6 +49,25 @@ it('processes a Lastlink webhook idempotently', function (): void {
         ->and($subscription->fresh()->status)->toBe('active');
 });
 
+it('grants grace access until the renewal grace period ends', function (): void {
+    $user = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($user, ['name' => 'Grace '.Str::random(6), 'slug' => 'grace-'.Str::lower(Str::random(6))]);
+    $service = app(SaaSBillingService::class);
+    $subscription = $service->ensureFreeTier($tenant);
+    TenantBillingAccount::factory()->create(['tenant_id' => $tenant->getKey(), 'email' => $user->email]);
+    $payload = ['Id' => 'evt-'.Str::random(10), 'Event' => 'Subscription_Renewal_Pending', 'Data' => ['Buyer' => ['Email' => $user->email], 'Subscriptions' => [['Id' => 'sub-'.Str::random(10)]]]];
+
+    $service->processLastlink($payload);
+
+    expect($subscription->fresh()->status)->toBe('grace')
+        ->and($subscription->fresh()->grace_ends_at)->not->toBeNull()
+        ->and($subscription->fresh()->grantsAccess())->toBeTrue();
+
+    $subscription->refresh()->update(['grace_ends_at' => now()->subSecond()]);
+
+    expect($subscription->fresh()->grantsAccess())->toBeFalse();
+});
+
 it('rejects Lastlink webhook requests without the configured secret', function (): void {
     config()->set('services.lastlink.webhook_secret', 'secret');
     $this->postJson(route('webhooks.lastlink'), [])->assertUnauthorized();

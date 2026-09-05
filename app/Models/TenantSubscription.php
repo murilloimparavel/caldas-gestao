@@ -34,6 +34,10 @@ class TenantSubscription extends Model
 
     public function grantsAccess(): bool
     {
-        return in_array($this->status, ['trial', 'active', 'grace'], true) && ($this->ends_at === null || $this->ends_at->isFuture());
+        return match ($this->status) {
+            'trial', 'active' => $this->ends_at === null || $this->ends_at->isFuture(),
+            'grace' => $this->grace_ends_at?->isFuture() ?? false,
+            default => false,
+        };
     }
 }
