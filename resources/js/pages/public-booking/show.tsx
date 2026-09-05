@@ -147,7 +147,9 @@ const clockMinutes = (value: string | undefined): number | null => {
         ? hours * 60 + minutes
         : null;
 };
-const currentBusinessStatus = (unit: Unit): { label: string; open: boolean } => {
+const currentBusinessStatus = (
+    unit: Unit,
+): { label: string; open: boolean } => {
     if (!unit.public_hours) {
         return { label: 'Consulte a disponibilidade', open: false };
     }
@@ -165,10 +167,18 @@ const currentBusinessStatus = (unit: Unit): { label: string; open: boolean } => 
     const current =
         Number(parts.find((part) => part.type === 'hour')?.value ?? 0) * 60 +
         Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
-    const hours = unit.public_hours[String(weekday)] ?? unit.public_hours[weekday];
+    const hours =
+        unit.public_hours[String(weekday)] ?? unit.public_hours[weekday];
     const start = clockMinutes(hours?.starts_at ?? hours?.start);
     const end = clockMinutes(hours?.ends_at ?? hours?.end);
-    const open = Boolean(hours && hours.enabled !== false && start !== null && end !== null && current >= start && current < end);
+    const open = Boolean(
+        hours &&
+        hours.enabled !== false &&
+        start !== null &&
+        end !== null &&
+        current >= start &&
+        current < end,
+    );
 
     return { label: open ? 'Aberto agora' : 'Fechado agora', open };
 };
@@ -221,7 +231,8 @@ export default function PublicBooking({
     );
     const address = addressLabel(unit.address);
     const businessStatus = currentBusinessStatus(unit);
-    const coverUrl = unit.cover_image_url ?? unit.cover_url ?? unit.gallery?.[0]?.url;
+    const coverUrl =
+        unit.cover_image_url ?? unit.cover_url ?? unit.gallery?.[0]?.url;
     const availabilityRequest = useHttp<
         AvailabilityQuery,
         AvailabilityResponse
@@ -371,7 +382,9 @@ export default function PublicBooking({
                         <span
                             className={`inline-flex w-fit items-center rounded-full px-3 py-1.5 text-xs font-semibold ${businessStatus.open ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
                         >
-                            <span className={`mr-2 size-1.5 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                            <span
+                                className={`mr-2 size-1.5 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                            />
                             {businessStatus.label}
                         </span>
                     </div>
@@ -423,10 +436,14 @@ export default function PublicBooking({
                                     <div
                                         className="flex h-52 items-center justify-center text-white sm:h-72"
                                         style={{
-                                            backgroundColor: unit.brand_color ?? '#2563eb',
+                                            backgroundColor:
+                                                unit.brand_color ?? '#2563eb',
                                         }}
                                     >
-                                        <Globe2 aria-hidden="true" className="size-12 opacity-70" />
+                                        <Globe2
+                                            aria-hidden="true"
+                                            className="size-12 opacity-70"
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -480,31 +497,46 @@ export default function PublicBooking({
                         <div className="space-y-5">
                             <InfoCard title="Horário de atendimento">
                                 <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                                    <span className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                    <span
+                                        className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                                    />
                                     <span>{businessStatus.label}</span>
                                 </div>
                                 <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
                                     {Object.entries(unit.public_hours ?? {})
-                                        .sort(([first], [second]) => Number(first) - Number(second))
+                                        .sort(
+                                            ([first], [second]) =>
+                                                Number(first) - Number(second),
+                                        )
                                         .map(([day, hours]) => {
-                                            const start = hours.starts_at ?? hours.start;
-                                            const end = hours.ends_at ?? hours.end;
+                                            const start =
+                                                hours.starts_at ?? hours.start;
+                                            const end =
+                                                hours.ends_at ?? hours.end;
 
-                                            return hours.enabled !== false && start && end ? (
+                                            return hours.enabled !== false &&
+                                                start &&
+                                                end ? (
                                                 <p
                                                     key={day}
                                                     className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800"
                                                 >
-                                                    <span>{dayNames[Number(day)] ?? day}</span>
+                                                    <span>
+                                                        {dayNames[
+                                                            Number(day)
+                                                        ] ?? day}
+                                                    </span>
                                                     <span className="font-medium text-slate-950 dark:text-white">
                                                         {start} – {end}
                                                     </span>
                                                 </p>
                                             ) : null;
                                         })}
-                                    {!Object.keys(unit.public_hours ?? {}).length && (
+                                    {!Object.keys(unit.public_hours ?? {})
+                                        .length && (
                                         <p>
-                                            Consulte os horários disponíveis durante o agendamento.
+                                            Consulte os horários disponíveis
+                                            durante o agendamento.
                                         </p>
                                     )}
                                 </div>
@@ -658,8 +690,10 @@ export default function PublicBooking({
                                 }
                                 title="Escolha o profissional"
                             >
-                                {(!professionalId && bookingFlow === 'professional_first') ||
-                                (!selectedService && bookingFlow === 'service_first') ? (
+                                {(!professionalId &&
+                                    bookingFlow === 'professional_first') ||
+                                (!selectedService &&
+                                    bookingFlow === 'service_first') ? (
                                     <p className="text-sm text-slate-600 dark:text-slate-300">
                                         {bookingFlow === 'professional_first'
                                             ? 'Escolha um profissional primeiro.'
@@ -669,7 +703,8 @@ export default function PublicBooking({
                                     <div className="grid gap-3 sm:grid-cols-2">
                                         {(bookingFlow === 'professional_first'
                                             ? professionals
-                                            : selectedService?.professionals ?? []
+                                            : (selectedService?.professionals ??
+                                              [])
                                         ).map((person) => (
                                             <button
                                                 type="button"

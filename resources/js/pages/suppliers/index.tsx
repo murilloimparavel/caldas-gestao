@@ -83,9 +83,12 @@ export default function SuppliersIndex({
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
                                     <DialogHeader>
-                                        <DialogTitle>Novo fornecedor</DialogTitle>
+                                        <DialogTitle>
+                                            Novo fornecedor
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            Cadastre os dados cadastrais e de contato do fornecedor.
+                                            Cadastre os dados cadastrais e de
+                                            contato do fornecedor.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <Form
@@ -99,7 +102,9 @@ export default function SuppliersIndex({
                                     >
                                         {({ errors, processing }) => (
                                             <>
-                                                <FormErrorSummary errors={errors} />
+                                                <FormErrorSummary
+                                                    errors={errors}
+                                                />
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="sm:col-span-2">
                                                         <FormField
@@ -121,7 +126,9 @@ export default function SuppliersIndex({
                                                         <FormField
                                                             label="Nome Fantasia"
                                                             name="trade_name"
-                                                            error={errors.trade_name}
+                                                            error={
+                                                                errors.trade_name
+                                                            }
                                                         >
                                                             <Input
                                                                 id="trade_name"
@@ -135,7 +142,9 @@ export default function SuppliersIndex({
                                                         <FormField
                                                             label="CNPJ / CPF"
                                                             name="document_number"
-                                                            error={errors.document_number}
+                                                            error={
+                                                                errors.document_number
+                                                            }
                                                         >
                                                             <Input
                                                                 id="document_number"
@@ -199,7 +208,9 @@ export default function SuppliersIndex({
                                                 />
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() => setCreateOpen(false)}
+                                                    onCancel={() =>
+                                                        setCreateOpen(false)
+                                                    }
                                                     label="Cadastrar fornecedor"
                                                 />
                                             </>
@@ -277,7 +288,13 @@ export default function SuppliersIndex({
                                             </p>
                                         </div>
                                     </div>
-                                    <StatusBadge status={supplier.is_active ? 'active' : 'inactive'} />
+                                    <StatusBadge
+                                        status={
+                                            supplier.is_active
+                                                ? 'active'
+                                                : 'inactive'
+                                        }
+                                    />
                                 </div>
 
                                 <div className="grid gap-2 border-y border-border py-3 text-xs text-muted-foreground">
@@ -292,20 +309,24 @@ export default function SuppliersIndex({
                                     <div className="flex items-center gap-2">
                                         <Phone className="size-3.5 shrink-0 text-muted-foreground" />
                                         <span className="truncate">
-                                            {supplier.phone || 'Telefone não informado'}
+                                            {supplier.phone ||
+                                                'Telefone não informado'}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Mail className="size-3.5 shrink-0 text-muted-foreground" />
                                         <span className="truncate">
-                                            {supplier.email || 'E-mail não informado'}
+                                            {supplier.email ||
+                                                'E-mail não informado'}
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="mt-auto flex justify-end">
                                     <Button asChild variant="outline" size="sm">
-                                        <Link href={suppliers.show(supplier.id)}>
+                                        <Link
+                                            href={suppliers.show(supplier.id)}
+                                        >
                                             Ver cadastro
                                         </Link>
                                     </Button>

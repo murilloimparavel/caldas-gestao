@@ -113,7 +113,9 @@ function MoneyPriceField({
     placeholder?: string;
 }) {
     const [displayValue, setDisplayValue] = useState(
-        initialCents > 0 ? (initialCents / 100).toFixed(2).replace('.', ',') : '',
+        initialCents > 0
+            ? (initialCents / 100).toFixed(2).replace('.', ',')
+            : '',
     );
     const cents = parseBrazilianCurrency(displayValue);
 
@@ -189,8 +191,12 @@ export default function ProductShow({
     movements,
 }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('product-update'));
-    const [destroyKey] = useState(() => createIdempotencyKey('product-destroy'));
-    const [reactivateKey] = useState(() => createIdempotencyKey('product-reactivate'));
+    const [destroyKey] = useState(() =>
+        createIdempotencyKey('product-destroy'),
+    );
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('product-reactivate'),
+    );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [adjustOpen, setAdjustOpen] = useState(false);
@@ -240,7 +246,11 @@ export default function ProductShow({
                                     </Button>
                                 ) : null}
                                 <StatusBadge
-                                    status={product.is_active ? 'active' : 'inactive'}
+                                    status={
+                                        product.is_active
+                                            ? 'active'
+                                            : 'inactive'
+                                    }
                                 />
                             </div>
                         }
@@ -254,21 +264,27 @@ export default function ProductShow({
                                 Dados principais do produto
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Mantenha o estoque e os preços sincronizados para apuração de resultados.
+                                Mantenha o estoque e os preços sincronizados
+                                para apuração de resultados.
                             </p>
                         </div>
                         {!product.is_active ? (
-                            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 sm:flex-row sm:items-center sm:justify-between dark:bg-emerald-950/20 dark:text-emerald-200">
                                 <div>
-                                    <p className="font-semibold text-sm">Este produto está inativo</p>
-                                    <p className="text-xs text-muted-foreground">Ele não pode ser adicionado a novas comandas até que seja reativado.</p>
+                                    <p className="text-sm font-semibold">
+                                        Este produto está inativo
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Ele não pode ser adicionado a novas
+                                        comandas até que seja reativado.
+                                    </p>
                                 </div>
                                 {canManage ? (
                                     <Button
                                         type="button"
                                         size="sm"
                                         onClick={() => setReactivateOpen(true)}
-                                        className="bg-emerald-600 text-white hover:bg-emerald-700 shrink-0"
+                                        className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
                                     >
                                         Reativar cadastro
                                     </Button>
@@ -330,16 +346,26 @@ export default function ProductShow({
                                                 <select
                                                     id="category_id"
                                                     name="category_id"
-                                                    defaultValue={product.category_id ?? ''}
+                                                    defaultValue={
+                                                        product.category_id ??
+                                                        ''
+                                                    }
                                                     disabled={!canManage}
-                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 >
-                                                    <option value="">Sem categoria</option>
-                                                    {categoryOptions.map((cat) => (
-                                                        <option key={cat.id} value={cat.id}>
-                                                            {cat.name}
-                                                        </option>
-                                                    ))}
+                                                    <option value="">
+                                                        Sem categoria
+                                                    </option>
+                                                    {categoryOptions.map(
+                                                        (cat) => (
+                                                            <option
+                                                                key={cat.id}
+                                                                value={cat.id}
+                                                            >
+                                                                {cat.name}
+                                                            </option>
+                                                        ),
+                                                    )}
                                                 </select>
                                             </FormField>
                                         </div>
@@ -353,7 +379,9 @@ export default function ProductShow({
                                                 <Input
                                                     id="unit_of_measure"
                                                     name="unit_of_measure"
-                                                    defaultValue={product.unit_of_measure}
+                                                    defaultValue={
+                                                        product.unit_of_measure
+                                                    }
                                                     required
                                                     disabled={!canManage}
                                                 />
@@ -369,7 +397,9 @@ export default function ProductShow({
                                                 <Input
                                                     id="sku"
                                                     name="sku"
-                                                    defaultValue={product.sku ?? ''}
+                                                    defaultValue={
+                                                        product.sku ?? ''
+                                                    }
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
@@ -384,7 +414,9 @@ export default function ProductShow({
                                                 <Input
                                                     id="barcode"
                                                     name="barcode"
-                                                    defaultValue={product.barcode ?? ''}
+                                                    defaultValue={
+                                                        product.barcode ?? ''
+                                                    }
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
@@ -394,7 +426,9 @@ export default function ProductShow({
                                             id="sale_price_cents"
                                             name="sale_price_cents"
                                             label="Preço de venda"
-                                            initialCents={product.sale_price_cents}
+                                            initialCents={
+                                                product.sale_price_cents
+                                            }
                                             disabled={!canManage}
                                             error={errors.sale_price_cents}
                                         />
@@ -403,7 +437,9 @@ export default function ProductShow({
                                             id="cost_price_cents"
                                             name="cost_price_cents"
                                             label="Preço de custo"
-                                            initialCents={product.cost_price_cents}
+                                            initialCents={
+                                                product.cost_price_cents
+                                            }
                                             disabled={!canManage}
                                             error={errors.cost_price_cents}
                                         />
@@ -418,7 +454,9 @@ export default function ProductShow({
                                                     id="current_stock"
                                                     name="current_stock"
                                                     type="number"
-                                                    defaultValue={product.current_stock}
+                                                    defaultValue={
+                                                        product.current_stock
+                                                    }
                                                     required
                                                     disabled={!canManage}
                                                 />
@@ -435,7 +473,9 @@ export default function ProductShow({
                                                     id="min_stock"
                                                     name="min_stock"
                                                     type="number"
-                                                    defaultValue={product.min_stock}
+                                                    defaultValue={
+                                                        product.min_stock
+                                                    }
                                                     min={0}
                                                     required
                                                     disabled={!canManage}
@@ -449,7 +489,9 @@ export default function ProductShow({
                                             {product.is_active ? (
                                                 <Dialog
                                                     open={inactivateOpen}
-                                                    onOpenChange={setInactivateOpen}
+                                                    onOpenChange={
+                                                        setInactivateOpen
+                                                    }
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -462,41 +504,70 @@ export default function ProductShow({
                                                     <DialogContent>
                                                         <DialogHeader>
                                                             <DialogTitle>
-                                                                Inativar produto?
+                                                                Inativar
+                                                                produto?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                O histórico de vendas e movimentações passadas será preservado, mas o produto não poderá ser adicionado a novas comandas.
+                                                                O histórico de
+                                                                vendas e
+                                                                movimentações
+                                                                passadas será
+                                                                preservado, mas
+                                                                o produto não
+                                                                poderá ser
+                                                                adicionado a
+                                                                novas comandas.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
-                                                            {...products.destroy.form(product.id)}
+                                                            {...products.destroy.form(
+                                                                product.id,
+                                                            )}
                                                             headers={{
-                                                                'X-Idempotency-Key': destroyKey,
+                                                                'X-Idempotency-Key':
+                                                                    destroyKey,
                                                             }}
                                                             method="delete"
-                                                            onSuccess={() => setInactivateOpen(false)}
+                                                            onSuccess={() =>
+                                                                setInactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
-                                                            {({ processing: inactivating }) => (
+                                                            {({
+                                                                processing:
+                                                                    inactivating,
+                                                            }) => (
                                                                 <>
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
-                                                                        value={product.lock_version}
+                                                                        value={
+                                                                            product.lock_version
+                                                                        }
                                                                     />
                                                                     <DialogFooter className="mt-4">
                                                                         <Button
                                                                             type="button"
                                                                             variant="outline"
-                                                                            onClick={() => setInactivateOpen(false)}
+                                                                            onClick={() =>
+                                                                                setInactivateOpen(
+                                                                                    false,
+                                                                                )
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
                                                                         <Button
                                                                             type="submit"
                                                                             variant="destructive"
-                                                                            disabled={inactivating}
+                                                                            disabled={
+                                                                                inactivating
+                                                                            }
                                                                         >
-                                                                            {inactivating ? 'Inativando...' : 'Confirmar inativação'}
+                                                                            {inactivating
+                                                                                ? 'Inativando...'
+                                                                                : 'Confirmar inativação'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -507,7 +578,9 @@ export default function ProductShow({
                                             ) : (
                                                 <Dialog
                                                     open={reactivateOpen}
-                                                    onOpenChange={setReactivateOpen}
+                                                    onOpenChange={
+                                                        setReactivateOpen
+                                                    }
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -520,41 +593,66 @@ export default function ProductShow({
                                                     <DialogContent>
                                                         <DialogHeader>
                                                             <DialogTitle>
-                                                                Reativar produto?
+                                                                Reativar
+                                                                produto?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                O produto voltará a ficar ativo para venda e movimentações de estoque.
+                                                                O produto
+                                                                voltará a ficar
+                                                                ativo para venda
+                                                                e movimentações
+                                                                de estoque.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
-                                                            {...products.reactivate.form(product.id)}
+                                                            {...products.reactivate.form(
+                                                                product.id,
+                                                            )}
                                                             headers={{
-                                                                'X-Idempotency-Key': reactivateKey,
+                                                                'X-Idempotency-Key':
+                                                                    reactivateKey,
                                                             }}
                                                             method="patch"
-                                                            onSuccess={() => setReactivateOpen(false)}
+                                                            onSuccess={() =>
+                                                                setReactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
-                                                            {({ processing: reactivating }) => (
+                                                            {({
+                                                                processing:
+                                                                    reactivating,
+                                                            }) => (
                                                                 <>
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
-                                                                        value={product.lock_version}
+                                                                        value={
+                                                                            product.lock_version
+                                                                        }
                                                                     />
                                                                     <DialogFooter className="mt-4">
                                                                         <Button
                                                                             type="button"
                                                                             variant="outline"
-                                                                            onClick={() => setReactivateOpen(false)}
+                                                                            onClick={() =>
+                                                                                setReactivateOpen(
+                                                                                    false,
+                                                                                )
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
                                                                         <Button
                                                                             type="submit"
-                                                                            disabled={reactivating}
+                                                                            disabled={
+                                                                                reactivating
+                                                                            }
                                                                             className="bg-emerald-600 text-white hover:bg-emerald-700"
                                                                         >
-                                                                            {reactivating ? 'Reativando...' : 'Confirmar reativação'}
+                                                                            {reactivating
+                                                                                ? 'Reativando...'
+                                                                                : 'Confirmar reativação'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -583,7 +681,11 @@ export default function ProductShow({
                             {product.photo_url || product.image_url ? (
                                 <div className="overflow-hidden rounded-xl border border-border">
                                     <img
-                                        src={product.photo_url || product.image_url || undefined}
+                                        src={
+                                            product.photo_url ||
+                                            product.image_url ||
+                                            undefined
+                                        }
                                         alt={product.name}
                                         className="h-40 w-full object-cover"
                                     />
@@ -597,7 +699,8 @@ export default function ProductShow({
                                         Margem bruta
                                     </span>
                                     <span className="font-semibold text-foreground">
-                                        {profitMargin}% ({formatMoney(profitCents)})
+                                        {profitMargin}% (
+                                        {formatMoney(profitCents)})
                                     </span>
                                 </div>
 
@@ -620,7 +723,7 @@ export default function ProductShow({
                                         Status do estoque
                                     </span>
                                     <span
-                                        className={`inline-flex items-center gap-1 font-medium text-xs rounded-full px-2.5 py-0.5 ${
+                                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                                             isOutOfStock
                                                 ? 'bg-destructive/15 text-destructive'
                                                 : isLowStock
@@ -660,7 +763,11 @@ export default function ProductShow({
                                         {product.category.name}
                                     </span>
                                     <Button asChild variant="ghost" size="sm">
-                                        <Link href={categories.show(product.category.id)}>
+                                        <Link
+                                            href={categories.show(
+                                                product.category.id,
+                                            )}
+                                        >
                                             Ver categoria
                                         </Link>
                                     </Button>
@@ -670,15 +777,16 @@ export default function ProductShow({
                     </aside>
                 </div>
 
-                <section className="surface-panel mt-6 p-5 sm:p-6 space-y-5">
+                <section className="surface-panel mt-6 space-y-5 p-5 sm:p-6">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h2 className="text-base font-semibold flex items-center gap-2">
+                            <h2 className="flex items-center gap-2 text-base font-semibold">
                                 <History className="size-5 text-primary" />
                                 Histórico de Movimentações de Estoque
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Registro cronológico de vendas, compras, perdas e ajustes físicos deste item.
+                                Registro cronológico de vendas, compras, perdas
+                                e ajustes físicos deste item.
                             </p>
                         </div>
                         {canAdjustStock ? (
@@ -696,22 +804,35 @@ export default function ProductShow({
 
                     {!movements || movements.data.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-                            <Boxes className="mx-auto size-8 text-muted-foreground/50 mb-2" />
-                            Nenhuma movimentação de estoque registrada para este produto ainda.
+                            <Boxes className="mx-auto mb-2 size-8 text-muted-foreground/50" />
+                            Nenhuma movimentação de estoque registrada para este
+                            produto ainda.
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-border text-xs text-muted-foreground uppercase">
                                     <tr>
-                                        <th className="py-3 px-3">Data / Hora</th>
-                                        <th className="py-3 px-3">Tipo</th>
-                                        <th className="py-3 px-3">Quantidade</th>
-                                        <th className="py-3 px-3">Custo Unitário</th>
-                                        <th className="py-3 px-3">Saldo Anterior</th>
-                                        <th className="py-3 px-3">Saldo Resultante</th>
-                                        <th className="py-3 px-3">Motivo / Referência</th>
-                                        <th className="py-3 px-3">Operador</th>
+                                        <th className="px-3 py-3">
+                                            Data / Hora
+                                        </th>
+                                        <th className="px-3 py-3">Tipo</th>
+                                        <th className="px-3 py-3">
+                                            Quantidade
+                                        </th>
+                                        <th className="px-3 py-3">
+                                            Custo Unitário
+                                        </th>
+                                        <th className="px-3 py-3">
+                                            Saldo Anterior
+                                        </th>
+                                        <th className="px-3 py-3">
+                                            Saldo Resultante
+                                        </th>
+                                        <th className="px-3 py-3">
+                                            Motivo / Referência
+                                        </th>
+                                        <th className="px-3 py-3">Operador</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/60">
@@ -724,23 +845,29 @@ export default function ProductShow({
                                             m.type === 'adjustment_loss';
 
                                         const date = new Date(m.created_at);
-                                        const formattedDate = date.toLocaleString('pt-BR', {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        });
+                                        const formattedDate =
+                                            date.toLocaleString('pt-BR', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            });
 
                                         return (
-                                            <tr key={m.id} className="hover:bg-muted/30">
-                                                <td className="py-3 px-3 whitespace-nowrap text-xs text-muted-foreground">
+                                            <tr
+                                                key={m.id}
+                                                className="hover:bg-muted/30"
+                                            >
+                                                <td className="px-3 py-3 text-xs whitespace-nowrap text-muted-foreground">
                                                     {formattedDate}
                                                 </td>
-                                                <td className="py-3 px-3 whitespace-nowrap">
-                                                    <MovementTypeBadge type={m.type} />
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    <MovementTypeBadge
+                                                        type={m.type}
+                                                    />
                                                 </td>
-                                                <td className="py-3 px-3 whitespace-nowrap font-semibold">
+                                                <td className="px-3 py-3 font-semibold whitespace-nowrap">
                                                     <span
                                                         className={
                                                             isInflow
@@ -750,31 +877,45 @@ export default function ProductShow({
                                                                   : 'text-foreground'
                                                         }
                                                     >
-                                                        {isInflow ? '+' : isOutflow ? '-' : ''}
-                                                        {m.quantity} {product.unit_of_measure}
+                                                        {isInflow
+                                                            ? '+'
+                                                            : isOutflow
+                                                              ? '-'
+                                                              : ''}
+                                                        {m.quantity}{' '}
+                                                        {
+                                                            product.unit_of_measure
+                                                        }
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-3 whitespace-nowrap text-muted-foreground text-xs">
+                                                <td className="px-3 py-3 text-xs whitespace-nowrap text-muted-foreground">
                                                     {m.unit_cost_cents > 0
-                                                        ? formatMoney(m.unit_cost_cents)
+                                                        ? formatMoney(
+                                                              m.unit_cost_cents,
+                                                          )
                                                         : '-'}
                                                 </td>
-                                                <td className="py-3 px-3 whitespace-nowrap text-muted-foreground">
-                                                    {m.previous_stock} {product.unit_of_measure}
+                                                <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">
+                                                    {m.previous_stock}{' '}
+                                                    {product.unit_of_measure}
                                                 </td>
-                                                <td className="py-3 px-3 whitespace-nowrap font-medium text-foreground">
-                                                    {m.resulting_stock} {product.unit_of_measure}
+                                                <td className="px-3 py-3 font-medium whitespace-nowrap text-foreground">
+                                                    {m.resulting_stock}{' '}
+                                                    {product.unit_of_measure}
                                                 </td>
-                                                <td className="py-3 px-3 text-xs text-foreground max-w-xs truncate">
+                                                <td className="max-w-xs truncate px-3 py-3 text-xs text-foreground">
                                                     {m.reason}
                                                     {m.reference_type ? (
                                                         <span className="block text-[11px] text-muted-foreground">
-                                                            Ref: {m.reference_type}
-                                                            {m.reference_id ? ` #${m.reference_id.slice(0, 8)}` : ''}
+                                                            Ref:{' '}
+                                                            {m.reference_type}
+                                                            {m.reference_id
+                                                                ? ` #${m.reference_id.slice(0, 8)}`
+                                                                : ''}
                                                         </span>
                                                     ) : null}
                                                 </td>
-                                                <td className="py-3 px-3 whitespace-nowrap text-xs text-muted-foreground">
+                                                <td className="px-3 py-3 text-xs whitespace-nowrap text-muted-foreground">
                                                     {m.user?.name ?? 'Sistema'}
                                                 </td>
                                             </tr>

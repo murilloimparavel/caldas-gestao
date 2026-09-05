@@ -88,7 +88,9 @@ function MoneyPriceField({
     placeholder?: string;
 }) {
     const [displayValue, setDisplayValue] = useState(
-        initialCents > 0 ? (initialCents / 100).toFixed(2).replace('.', ',') : '',
+        initialCents > 0
+            ? (initialCents / 100).toFixed(2).replace('.', ',')
+            : '',
     );
     const cents = parseBrazilianCurrency(displayValue);
 
@@ -125,7 +127,9 @@ export default function ProductsIndex({
     const [createOpen, setCreateOpen] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
     const [createKey] = useState(() => createIdempotencyKey('product-create'));
-    const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
+    const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(
+        null,
+    );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('product.manage');
     const canAdjustStock =
@@ -134,13 +138,18 @@ export default function ProductsIndex({
         props.auth.permissions.includes('inventory.view') ||
         props.auth.permissions.includes('product.view');
 
-    const [categories, setCategories] = useState<CategoryOption[]>(initialCategoryOptions);
+    const [categories, setCategories] = useState<CategoryOption[]>(
+        initialCategoryOptions,
+    );
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
 
     const handleCategoryCreated = (created: CreatedEntity) => {
         const newOpt: CategoryOption = { id: created.id, name: created.name };
-        setCategories((prev) => [...prev.filter((c) => c.id !== created.id), newOpt]);
+        setCategories((prev) => [
+            ...prev.filter((c) => c.id !== created.id),
+            newOpt,
+        ]);
         setSelectedCategoryId(created.id);
     };
 
@@ -188,211 +197,280 @@ export default function ProductsIndex({
                                         </Button>
                                     </DialogTrigger>
 
-                                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Novo produto</DialogTitle>
-                                        <DialogDescription>
-                                            Cadastre um produto físico para venda no caixa ou uso nos procedimentos.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <Form
-                                        {...products.store.form()}
-                                        headers={{
-                                            'X-Idempotency-Key': createKey,
-                                        }}
-                                        resetOnSuccess
-                                        onSuccess={() => {
-                                            setCreateOpen(false);
-                                            setSelectedPhoto(null);
-                                            setSelectedCategoryId('');
-                                        }}
-                                        className="space-y-5"
-                                    >
-                                        {({ errors, processing }) => (
-                                            <>
-                                                <FormErrorSummary errors={errors} />
-                                                <div className="grid gap-4 sm:grid-cols-2">
-                                                    <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Foto do produto"
-                                                            name="photo"
-                                                            error={errors.photo}
-                                                        >
-                                                            <ImageUploader
-                                                                value={selectedPhoto}
-                                                                onChange={setSelectedPhoto}
-                                                                error={errors.photo}
-                                                                aspectRatio="auto"
-                                                                previewHeight="120px"
-                                                            />
-                                                        </FormField>
-                                                    </div>
-                                                    <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Nome do produto"
-                                                            name="name"
-                                                            error={errors.name}
-                                                        >
-                                                            <Input
-                                                                id="name"
-                                                                name="name"
-                                                                required
-                                                                autoFocus
-                                                                placeholder="Ex.: Pomada Modeladora Efeito Matte 100g"
-                                                            />
-                                                        </FormField>
-                                                    </div>
-
-                                                    <div>
-                                                        <FormField
-                                                            label="Categoria"
-                                                            name="category_id"
-                                                            error={errors.category_id}
-                                                            action={
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setQuickCategoryOpen(true)}
-                                                                    className="text-xs font-semibold text-primary hover:underline focus:outline-none"
-                                                                >
-                                                                    + Nova Categoria
-                                                                </button>
-                                                            }
-                                                        >
-                                                            <select
-                                                                id="category_id"
-                                                                name="category_id"
-                                                                value={selectedCategoryId}
-                                                                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                                                                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                    <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle>
+                                                Novo produto
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                Cadastre um produto físico para
+                                                venda no caixa ou uso nos
+                                                procedimentos.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <Form
+                                            {...products.store.form()}
+                                            headers={{
+                                                'X-Idempotency-Key': createKey,
+                                            }}
+                                            resetOnSuccess
+                                            onSuccess={() => {
+                                                setCreateOpen(false);
+                                                setSelectedPhoto(null);
+                                                setSelectedCategoryId('');
+                                            }}
+                                            className="space-y-5"
+                                        >
+                                            {({ errors, processing }) => (
+                                                <>
+                                                    <FormErrorSummary
+                                                        errors={errors}
+                                                    />
+                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                        <div className="sm:col-span-2">
+                                                            <FormField
+                                                                label="Foto do produto"
+                                                                name="photo"
+                                                                error={
+                                                                    errors.photo
+                                                                }
                                                             >
-                                                                <option value="">Sem categoria</option>
-                                                                {categories.map((cat) => (
-                                                                    <option key={cat.id} value={cat.id}>
-                                                                        {cat.name}
+                                                                <ImageUploader
+                                                                    value={
+                                                                        selectedPhoto
+                                                                    }
+                                                                    onChange={
+                                                                        setSelectedPhoto
+                                                                    }
+                                                                    error={
+                                                                        errors.photo
+                                                                    }
+                                                                    aspectRatio="auto"
+                                                                    previewHeight="120px"
+                                                                />
+                                                            </FormField>
+                                                        </div>
+                                                        <div className="sm:col-span-2">
+                                                            <FormField
+                                                                label="Nome do produto"
+                                                                name="name"
+                                                                error={
+                                                                    errors.name
+                                                                }
+                                                            >
+                                                                <Input
+                                                                    id="name"
+                                                                    name="name"
+                                                                    required
+                                                                    autoFocus
+                                                                    placeholder="Ex.: Pomada Modeladora Efeito Matte 100g"
+                                                                />
+                                                            </FormField>
+                                                        </div>
+
+                                                        <div>
+                                                            <FormField
+                                                                label="Categoria"
+                                                                name="category_id"
+                                                                error={
+                                                                    errors.category_id
+                                                                }
+                                                                action={
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setQuickCategoryOpen(
+                                                                                true,
+                                                                            )
+                                                                        }
+                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                    >
+                                                                        + Nova
+                                                                        Categoria
+                                                                    </button>
+                                                                }
+                                                            >
+                                                                <select
+                                                                    id="category_id"
+                                                                    name="category_id"
+                                                                    value={
+                                                                        selectedCategoryId
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setSelectedCategoryId(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                                >
+                                                                    <option value="">
+                                                                        Sem
+                                                                        categoria
                                                                     </option>
-                                                                ))}
-                                                            </select>
-                                                        </FormField>
-                                                    </div>
+                                                                    {categories.map(
+                                                                        (
+                                                                            cat,
+                                                                        ) => (
+                                                                            <option
+                                                                                key={
+                                                                                    cat.id
+                                                                                }
+                                                                                value={
+                                                                                    cat.id
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    cat.name
+                                                                                }
+                                                                            </option>
+                                                                        ),
+                                                                    )}
+                                                                </select>
+                                                            </FormField>
+                                                        </div>
 
-                                                    <div>
-                                                        <FormField
-                                                            label="Unidade de medida"
-                                                            name="unit_of_measure"
-                                                            error={errors.unit_of_measure}
-                                                        >
-                                                            <Input
-                                                                id="unit_of_measure"
+                                                        <div>
+                                                            <FormField
+                                                                label="Unidade de medida"
                                                                 name="unit_of_measure"
-                                                                defaultValue="un"
-                                                                required
-                                                                placeholder="un, cx, ml, g"
-                                                            />
-                                                        </FormField>
-                                                    </div>
+                                                                error={
+                                                                    errors.unit_of_measure
+                                                                }
+                                                            >
+                                                                <Input
+                                                                    id="unit_of_measure"
+                                                                    name="unit_of_measure"
+                                                                    defaultValue="un"
+                                                                    required
+                                                                    placeholder="un, cx, ml, g"
+                                                                />
+                                                            </FormField>
+                                                        </div>
 
-                                                    <div>
-                                                        <FormField
-                                                            label="Código SKU"
-                                                            name="sku"
-                                                            error={errors.sku}
-                                                        >
-                                                            <Input
-                                                                id="sku"
+                                                        <div>
+                                                            <FormField
+                                                                label="Código SKU"
                                                                 name="sku"
-                                                                placeholder="Ex.: POM-MATTE-01"
-                                                            />
-                                                        </FormField>
-                                                    </div>
+                                                                error={
+                                                                    errors.sku
+                                                                }
+                                                            >
+                                                                <Input
+                                                                    id="sku"
+                                                                    name="sku"
+                                                                    placeholder="Ex.: POM-MATTE-01"
+                                                                />
+                                                            </FormField>
+                                                        </div>
 
-                                                    <div>
-                                                        <FormField
-                                                            label="Código de barras (EAN)"
-                                                            name="barcode"
-                                                            error={errors.barcode}
-                                                        >
-                                                            <Input
-                                                                id="barcode"
+                                                        <div>
+                                                            <FormField
+                                                                label="Código de barras (EAN)"
                                                                 name="barcode"
-                                                                placeholder="789..."
-                                                            />
-                                                        </FormField>
-                                                    </div>
+                                                                error={
+                                                                    errors.barcode
+                                                                }
+                                                            >
+                                                                <Input
+                                                                    id="barcode"
+                                                                    name="barcode"
+                                                                    placeholder="789..."
+                                                                />
+                                                            </FormField>
+                                                        </div>
 
-                                                    <MoneyPriceField
-                                                        id="sale_price_cents"
-                                                        name="sale_price_cents"
-                                                        label="Preço de venda"
-                                                        helpText="Preço cobrado na comanda ou balcão."
-                                                        error={errors.sale_price_cents}
-                                                    />
+                                                        <MoneyPriceField
+                                                            id="sale_price_cents"
+                                                            name="sale_price_cents"
+                                                            label="Preço de venda"
+                                                            helpText="Preço cobrado na comanda ou balcão."
+                                                            error={
+                                                                errors.sale_price_cents
+                                                            }
+                                                        />
 
-                                                    <MoneyPriceField
-                                                        id="cost_price_cents"
-                                                        name="cost_price_cents"
-                                                        label="Preço de custo"
-                                                        helpText="Custo de aquisição do produto."
-                                                        error={errors.cost_price_cents}
-                                                    />
+                                                        <MoneyPriceField
+                                                            id="cost_price_cents"
+                                                            name="cost_price_cents"
+                                                            label="Preço de custo"
+                                                            helpText="Custo de aquisição do produto."
+                                                            error={
+                                                                errors.cost_price_cents
+                                                            }
+                                                        />
 
-                                                    <div>
-                                                        <FormField
-                                                            label="Estoque atual"
-                                                            name="current_stock"
-                                                            error={errors.current_stock}
-                                                        >
-                                                            <Input
-                                                                id="current_stock"
+                                                        <div>
+                                                            <FormField
+                                                                label="Estoque atual"
                                                                 name="current_stock"
-                                                                type="number"
-                                                                defaultValue={0}
-                                                                required
-                                                            />
-                                                        </FormField>
-                                                    </div>
+                                                                error={
+                                                                    errors.current_stock
+                                                                }
+                                                            >
+                                                                <Input
+                                                                    id="current_stock"
+                                                                    name="current_stock"
+                                                                    type="number"
+                                                                    defaultValue={
+                                                                        0
+                                                                    }
+                                                                    required
+                                                                />
+                                                            </FormField>
+                                                        </div>
 
-                                                    <div>
-                                                        <FormField
-                                                            label="Estoque mínimo"
-                                                            name="min_stock"
-                                                            error={errors.min_stock}
-                                                        >
-                                                            <Input
-                                                                id="min_stock"
+                                                        <div>
+                                                            <FormField
+                                                                label="Estoque mínimo"
                                                                 name="min_stock"
-                                                                type="number"
-                                                                defaultValue={0}
-                                                                min={0}
-                                                                required
-                                                            />
-                                                        </FormField>
+                                                                error={
+                                                                    errors.min_stock
+                                                                }
+                                                            >
+                                                                <Input
+                                                                    id="min_stock"
+                                                                    name="min_stock"
+                                                                    type="number"
+                                                                    defaultValue={
+                                                                        0
+                                                                    }
+                                                                    min={0}
+                                                                    required
+                                                                />
+                                                            </FormField>
+                                                        </div>
                                                     </div>
-                                                </div>
 
-                                                <input
-                                                    type="hidden"
-                                                    name="is_active"
-                                                    value="1"
-                                                />
-                                                 <FormActions
-                                                    processing={processing}
-                                                    onCancel={() => setCreateOpen(false)}
-                                                    label="Cadastrar produto"
-                                                />
-                                            </>
-                                        )}
-                                    </Form>
+                                                    <input
+                                                        type="hidden"
+                                                        name="is_active"
+                                                        value="1"
+                                                    />
+                                                    <FormActions
+                                                        processing={processing}
+                                                        onCancel={() =>
+                                                            setCreateOpen(false)
+                                                        }
+                                                        label="Cadastrar produto"
+                                                    />
+                                                </>
+                                            )}
+                                        </Form>
 
-                                    <QuickCreateCategoryModal
-                                        open={quickCategoryOpen}
-                                        onOpenChange={setQuickCategoryOpen}
-                                        onSuccess={handleCategoryCreated}
-                                    />
-                                </DialogContent>
-                            </Dialog>
-                        ) : null}
-                    </div>
-                }
+                                        <QuickCreateCategoryModal
+                                            open={quickCategoryOpen}
+                                            onOpenChange={setQuickCategoryOpen}
+                                            onSuccess={handleCategoryCreated}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            ) : null}
+                        </div>
+                    }
                 />
 
                 <SearchToolbar
@@ -443,11 +521,16 @@ export default function ProductsIndex({
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex min-w-0 items-center gap-3">
-                                            {product.photo_url || product.image_url ? (
+                                            {product.photo_url ||
+                                            product.image_url ? (
                                                 <img
-                                                    src={product.photo_url || product.image_url || undefined}
+                                                    src={
+                                                        product.photo_url ||
+                                                        product.image_url ||
+                                                        undefined
+                                                    }
                                                     alt={product.name}
-                                                    className="size-11 shrink-0 rounded-2xl object-cover border border-border"
+                                                    className="size-11 shrink-0 rounded-2xl border border-border object-cover"
                                                 />
                                             ) : (
                                                 <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
@@ -465,17 +548,28 @@ export default function ProductsIndex({
                                                     {product.category?.name ? (
                                                         <span className="inline-flex items-center gap-1">
                                                             <FolderTree className="size-3" />
-                                                            {product.category.name}
+                                                            {
+                                                                product.category
+                                                                    .name
+                                                            }
                                                         </span>
                                                     ) : (
                                                         'Sem categoria'
                                                     )}
-                                                    {product.sku ? ` • SKU: ${product.sku}` : ''}
+                                                    {product.sku
+                                                        ? ` • SKU: ${product.sku}`
+                                                        : ''}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
-                                            <StatusBadge status={product.is_active ? 'active' : 'inactive'} />
+                                            <StatusBadge
+                                                status={
+                                                    product.is_active
+                                                        ? 'active'
+                                                        : 'inactive'
+                                                }
+                                            />
                                             {isLowStock ? (
                                                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-500">
                                                     <AlertTriangle className="size-3" />
@@ -487,21 +581,23 @@ export default function ProductsIndex({
 
                                     <div className="flex items-center justify-between gap-3 border-y border-border py-3">
                                         <div>
-                                            <span className="text-xs text-muted-foreground block">
+                                            <span className="block text-xs text-muted-foreground">
                                                 Preço de venda
                                             </span>
                                             <span className="font-semibold text-foreground">
-                                                {formatMoney(product.sale_price_cents)}
+                                                {formatMoney(
+                                                    product.sale_price_cents,
+                                                )}
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs text-muted-foreground block">
+                                            <span className="block text-xs text-muted-foreground">
                                                 Estoque
                                             </span>
                                             <span
                                                 className={`inline-flex items-center gap-1 text-sm font-medium ${
                                                     isLowStock
-                                                        ? 'text-amber-500 font-semibold'
+                                                        ? 'font-semibold text-amber-500'
                                                         : 'text-foreground'
                                                 }`}
                                             >
@@ -510,17 +606,22 @@ export default function ProductsIndex({
                                                 ) : (
                                                     <Boxes className="size-3.5 text-muted-foreground" />
                                                 )}
-                                                {product.current_stock} {product.unit_of_measure}
+                                                {product.current_stock}{' '}
+                                                {product.unit_of_measure}
                                             </span>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                         <span>
-                                            Custo: {formatMoney(product.cost_price_cents)}
+                                            Custo:{' '}
+                                            {formatMoney(
+                                                product.cost_price_cents,
+                                            )}
                                         </span>
                                         <span>
-                                            Mín: {product.min_stock} {product.unit_of_measure}
+                                            Mín: {product.min_stock}{' '}
+                                            {product.unit_of_measure}
                                         </span>
                                     </div>
 
@@ -530,14 +631,24 @@ export default function ProductsIndex({
                                                 type="button"
                                                 variant="secondary"
                                                 size="sm"
-                                                onClick={() => setAdjustingProduct(product)}
+                                                onClick={() =>
+                                                    setAdjustingProduct(product)
+                                                }
                                             >
                                                 <SlidersHorizontal className="size-3.5" />
                                                 Ajustar
                                             </Button>
-                                        ) : <div />}
-                                        <Button asChild variant="outline" size="sm">
-                                            <Link href={products.show(product.id)}>
+                                        ) : (
+                                            <div />
+                                        )}
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={products.show(product.id)}
+                                            >
                                                 Ver cadastro
                                             </Link>
                                         </Button>

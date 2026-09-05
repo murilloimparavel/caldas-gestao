@@ -23,12 +23,7 @@ import type {
 } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -83,7 +78,9 @@ const billingCycleLabel: Record<string, string> = {
 
 function PlanPriceField({ initialCents = 0 }: { initialCents?: number }) {
     const [displayValue, setDisplayValue] = useState(
-        initialCents > 0 ? (initialCents / 100).toFixed(2).replace('.', ',') : '',
+        initialCents > 0
+            ? (initialCents / 100).toFixed(2).replace('.', ',')
+            : '',
     );
     const cents = parseBrazilianCurrency(displayValue);
 
@@ -117,7 +114,9 @@ export default function SubscriptionsIndex({
     metrics,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
-    const [createKey] = useState(() => createIdempotencyKey('subscription-create'));
+    const [createKey] = useState(() =>
+        createIdempotencyKey('subscription-create'),
+    );
     const [billingCycle, setBillingCycle] = useState('monthly');
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
@@ -142,9 +141,12 @@ export default function SubscriptionsIndex({
                             </DialogTrigger>
                             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                                 <DialogHeader>
-                                    <DialogTitle>Criar Plano de Assinatura</DialogTitle>
+                                    <DialogTitle>
+                                        Criar Plano de Assinatura
+                                    </DialogTitle>
                                     <DialogDescription>
-                                        Defina o nome, preço, ciclo de cobrança e serviços inclusos.
+                                        Defina o nome, preço, ciclo de cobrança
+                                        e serviços inclusos.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -200,18 +202,30 @@ export default function SubscriptionsIndex({
                                                 >
                                                     <Select
                                                         value={billingCycle}
-                                                        onValueChange={setBillingCycle}
+                                                        onValueChange={
+                                                            setBillingCycle
+                                                        }
                                                     >
                                                         <SelectTrigger id="billing_cycle">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="monthly">Mensal</SelectItem>
-                                                            <SelectItem value="quarterly">Trimestral</SelectItem>
-                                                            <SelectItem value="yearly">Anual</SelectItem>
+                                                            <SelectItem value="monthly">
+                                                                Mensal
+                                                            </SelectItem>
+                                                            <SelectItem value="quarterly">
+                                                                Trimestral
+                                                            </SelectItem>
+                                                            <SelectItem value="yearly">
+                                                                Anual
+                                                            </SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                    <input type="hidden" name="billing_cycle" value={billingCycle} />
+                                                    <input
+                                                        type="hidden"
+                                                        name="billing_cycle"
+                                                        value={billingCycle}
+                                                    />
                                                 </FormField>
                                             </div>
 
@@ -228,7 +242,13 @@ export default function SubscriptionsIndex({
                                                 </FormField>
                                             )}
 
-                                            <FormActions processing={processing} onCancel={() => setCreateOpen(false)} label="Criar Plano" />
+                                            <FormActions
+                                                processing={processing}
+                                                onCancel={() =>
+                                                    setCreateOpen(false)
+                                                }
+                                                label="Criar Plano"
+                                            />
                                         </>
                                     )}
                                 </Form>
@@ -239,27 +259,39 @@ export default function SubscriptionsIndex({
             />
 
             {metrics && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Assinantes Ativos</CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                Assinantes Ativos
+                            </CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{metrics.total_active_subscribers}</div>
-                            <p className="text-xs text-muted-foreground">assinaturas ativas no momento</p>
+                            <div className="text-2xl font-bold">
+                                {metrics.total_active_subscribers}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                assinaturas ativas no momento
+                            </p>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Receita Mensal Estimada</CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                Receita Mensal Estimada
+                            </CardTitle>
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {formatMoney(metrics.estimated_monthly_revenue_cents)}
+                                {formatMoney(
+                                    metrics.estimated_monthly_revenue_cents,
+                                )}
                             </div>
-                            <p className="text-xs text-muted-foreground">baseado em assinantes ativos</p>
+                            <p className="text-xs text-muted-foreground">
+                                baseado em assinantes ativos
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
@@ -271,7 +303,12 @@ export default function SubscriptionsIndex({
                     defaultValue={filters.search ?? ''}
                     placeholder="Buscar planos..."
                     status={filters.status ?? 'active'}
-                    onStatusChange={(status) => router.get(subscriptionsRoutes.index().url, { search: filters.search ?? '', status })}
+                    onStatusChange={(status) =>
+                        router.get(subscriptionsRoutes.index().url, {
+                            search: filters.search ?? '',
+                            status,
+                        })
+                    }
                 />
 
                 {paginator.data.length === 0 ? (
@@ -290,16 +327,22 @@ export default function SubscriptionsIndex({
                                 <div className="space-y-3">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                                            <h3 className="font-semibold text-foreground transition-colors group-hover:text-primary">
                                                 {plan.name}
                                             </h3>
                                             {plan.description && (
-                                                <p className="line-clamp-2 text-xs text-muted-foreground mt-1">
+                                                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                                                     {plan.description}
                                                 </p>
                                             )}
                                         </div>
-                                        <StatusBadge status={plan.is_active ? 'active' : 'inactive'} />
+                                        <StatusBadge
+                                            status={
+                                                plan.is_active
+                                                    ? 'active'
+                                                    : 'inactive'
+                                            }
+                                        />
                                     </div>
 
                                     <div className="flex items-baseline gap-2">
@@ -307,35 +350,59 @@ export default function SubscriptionsIndex({
                                             {formatMoney(plan.price_cents)}
                                         </span>
                                         <span className="text-xs text-muted-foreground">
-                                            / {billingCycleLabel[plan.billing_cycle] ?? plan.billing_cycle}
+                                            /{' '}
+                                            {billingCycleLabel[
+                                                plan.billing_cycle
+                                            ] ?? plan.billing_cycle}
                                         </span>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t text-xs text-muted-foreground">
-                                        <Badge variant="outline" className="text-[11px] font-normal">
+                                    <div className="flex flex-wrap items-center gap-2 border-t pt-2 text-xs text-muted-foreground">
+                                        <Badge
+                                            variant="outline"
+                                            className="text-[11px] font-normal"
+                                        >
                                             <RefreshCw className="mr-1 h-3 w-3" />
-                                            {billingCycleLabel[plan.billing_cycle] ?? plan.billing_cycle}
+                                            {billingCycleLabel[
+                                                plan.billing_cycle
+                                            ] ?? plan.billing_cycle}
                                         </Badge>
-                                        {typeof plan.customer_subscriptions_count === 'number' && (
+                                        {typeof plan.customer_subscriptions_count ===
+                                            'number' && (
                                             <span className="flex items-center gap-1">
                                                 <Users className="h-3 w-3" />
-                                                {plan.customer_subscriptions_count}{' '}
-                                                {plan.customer_subscriptions_count === 1 ? 'assinante' : 'assinantes'}
+                                                {
+                                                    plan.customer_subscriptions_count
+                                                }{' '}
+                                                {plan.customer_subscriptions_count ===
+                                                1
+                                                    ? 'assinante'
+                                                    : 'assinantes'}
                                             </span>
                                         )}
                                     </div>
 
                                     {plan.services.length > 0 && (
                                         <div className="flex flex-wrap gap-1 pt-1">
-                                            {plan.services.slice(0, 3).map((srv) => (
-                                                <Badge key={srv.id} variant="secondary" className="text-[11px] font-normal">
-                                                    <Scissors className="mr-1 h-3 w-3" />
-                                                    {srv.name}
-                                                </Badge>
-                                            ))}
+                                            {plan.services
+                                                .slice(0, 3)
+                                                .map((srv) => (
+                                                    <Badge
+                                                        key={srv.id}
+                                                        variant="secondary"
+                                                        className="text-[11px] font-normal"
+                                                    >
+                                                        <Scissors className="mr-1 h-3 w-3" />
+                                                        {srv.name}
+                                                    </Badge>
+                                                ))}
                                             {plan.services.length > 3 && (
-                                                <Badge variant="outline" className="text-[11px] font-normal">
-                                                    +{plan.services.length - 3} mais
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-[11px] font-normal"
+                                                >
+                                                    +{plan.services.length - 3}{' '}
+                                                    mais
                                                 </Badge>
                                             )}
                                         </div>

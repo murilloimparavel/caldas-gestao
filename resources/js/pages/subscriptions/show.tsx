@@ -899,7 +899,8 @@ export default function SubscriptionsShow({
                                 ).url
                             }
                             headers={{
-                                'X-Idempotency-Key': renewSubscriber.idempotencyKey,
+                                'X-Idempotency-Key':
+                                    renewSubscriber.idempotencyKey,
                             }}
                             onSuccess={() => setRenewSubscriber(null)}
                             className="space-y-4"

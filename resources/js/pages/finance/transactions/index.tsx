@@ -102,14 +102,23 @@ export default function FinancialTransactionsIndex({
     const canSettle = auth.permissions.includes('financial.settle');
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [createType, setCreateType] = useState<FinancialObligationType>('payable');
+    const [createType, setCreateType] =
+        useState<FinancialObligationType>('payable');
     const [createAmount, setCreateAmount] = useState('');
-    const [createKey] = useState(() => createIdempotencyKey('create-obligation'));
+    const [createKey] = useState(() =>
+        createIdempotencyKey('create-obligation'),
+    );
 
     // Dynamic lists & selected values for quick create auto-selection
-    const [categories, setCategories] = useState<Option[]>(initialCategoryOptions);
-    const [suppliers, setSuppliers] = useState<Option[]>(initialSupplierOptions);
-    const [customersList, setCustomersList] = useState<Option[]>(initialCustomerOptions);
+    const [categories, setCategories] = useState<Option[]>(
+        initialCategoryOptions,
+    );
+    const [suppliers, setSuppliers] = useState<Option[]>(
+        initialSupplierOptions,
+    );
+    const [customersList, setCustomersList] = useState<Option[]>(
+        initialCustomerOptions,
+    );
 
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedSupplierId, setSelectedSupplierId] = useState('');
@@ -121,33 +130,47 @@ export default function FinancialTransactionsIndex({
 
     const handleCategoryCreated = (created: CreatedEntity) => {
         const newOpt: Option = { id: created.id, name: created.name };
-        setCategories((prev) => [...prev.filter((c) => c.id !== created.id), newOpt]);
+        setCategories((prev) => [
+            ...prev.filter((c) => c.id !== created.id),
+            newOpt,
+        ]);
         setSelectedCategoryId(created.id);
     };
 
     const handleSupplierCreated = (created: CreatedEntity) => {
         const newOpt: Option = { id: created.id, name: created.name };
-        setSuppliers((prev) => [...prev.filter((s) => s.id !== created.id), newOpt]);
+        setSuppliers((prev) => [
+            ...prev.filter((s) => s.id !== created.id),
+            newOpt,
+        ]);
         setSelectedSupplierId(created.id);
     };
 
     const handleCustomerCreated = (created: CreatedEntity) => {
         const newOpt: Option = { id: created.id, name: created.name };
-        setCustomersList((prev) => [...prev.filter((c) => c.id !== created.id), newOpt]);
+        setCustomersList((prev) => [
+            ...prev.filter((c) => c.id !== created.id),
+            newOpt,
+        ]);
         setSelectedCustomerId(created.id);
     };
 
-    const [editingObligation, setEditingObligation] = useState<FinancialObligation | null>(null);
+    const [editingObligation, setEditingObligation] =
+        useState<FinancialObligation | null>(null);
     const [editAmount, setEditAmount] = useState('');
 
-    const [settlingObligation, setSettlingObligation] = useState<FinancialObligation | null>(null);
-    const [cancellingObligation, setCancellingObligation] = useState<FinancialObligation | null>(null);
+    const [settlingObligation, setSettlingObligation] =
+        useState<FinancialObligation | null>(null);
+    const [cancellingObligation, setCancellingObligation] =
+        useState<FinancialObligation | null>(null);
 
     // Search and filter state
     const [search, setSearch] = useState(filters.search || '');
     const [typeFilter, setTypeFilter] = useState(filters.type || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
-    const [categoryIdFilter, setCategoryIdFilter] = useState(filters.category_id || '');
+    const [categoryIdFilter, setCategoryIdFilter] = useState(
+        filters.category_id || '',
+    );
     const [dateStart, setDateStart] = useState(filters.date_start || '');
     const [dateEnd, setDateEnd] = useState(filters.date_end || '');
 
@@ -206,28 +229,36 @@ export default function FinancialTransactionsIndex({
                     description="Controle e liquidação de obrigações financeiras, despesas operacionais e receitas da unidade."
                     action={
                         canManage ? (
-                            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                            <Dialog
+                                open={isCreateOpen}
+                                onOpenChange={setIsCreateOpen}
+                            >
                                 <DialogTrigger asChild>
-                                    <Button className="w-full sm:w-auto gap-2">
+                                    <Button className="w-full gap-2 sm:w-auto">
                                         <Plus className="h-4 w-4" />
                                         Novo Lançamento
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
                                     <DialogHeader>
-                                        <DialogTitle>Novo Lançamento Financeiro</DialogTitle>
+                                        <DialogTitle>
+                                            Novo Lançamento Financeiro
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            Cadastre uma conta a pagar ou a receber com data de vencimento.
+                                            Cadastre uma conta a pagar ou a
+                                            receber com data de vencimento.
                                         </DialogDescription>
                                     </DialogHeader>
 
-                                    <div className="flex gap-2 p-1 bg-muted rounded-lg mb-4">
+                                    <div className="mb-4 flex gap-2 rounded-lg bg-muted p-1">
                                         <button
                                             type="button"
-                                            onClick={() => setCreateType('payable')}
-                                            className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${
+                                            onClick={() =>
+                                                setCreateType('payable')
+                                            }
+                                            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                                                 createType === 'payable'
-                                                    ? 'bg-background shadow-sm text-foreground'
+                                                    ? 'bg-background text-foreground shadow-sm'
                                                     : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                         >
@@ -236,10 +267,12 @@ export default function FinancialTransactionsIndex({
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setCreateType('receivable')}
-                                            className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${
+                                            onClick={() =>
+                                                setCreateType('receivable')
+                                            }
+                                            className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                                                 createType === 'receivable'
-                                                    ? 'bg-background shadow-sm text-foreground'
+                                                    ? 'bg-background text-foreground shadow-sm'
                                                     : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                         >
@@ -251,7 +284,9 @@ export default function FinancialTransactionsIndex({
                                     <Form
                                         action="/finance/transactions"
                                         method="post"
-                                        headers={{ 'X-Idempotency-Key': createKey }}
+                                        headers={{
+                                            'X-Idempotency-Key': createKey,
+                                        }}
                                         resetOnSuccess
                                         onSuccess={() => {
                                             setIsCreateOpen(false);
@@ -264,53 +299,102 @@ export default function FinancialTransactionsIndex({
                                     >
                                         {({ errors, processing }) => (
                                             <>
-                                                <FormErrorSummary errors={errors} />
-                                                <input type="hidden" name="type" value={createType} />
+                                                <FormErrorSummary
+                                                    errors={errors}
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="type"
+                                                    value={createType}
+                                                />
 
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="sm:col-span-2">
-                                                        <FormField label="Descrição" name="description" error={errors.description}>
+                                                        <FormField
+                                                            label="Descrição"
+                                                            name="description"
+                                                            error={
+                                                                errors.description
+                                                            }
+                                                        >
                                                             <Input
                                                                 id="description"
                                                                 name="description"
                                                                 required
-                                                                placeholder={createType === 'payable' ? 'Ex.: Conta de Energia Elétrica' : 'Ex.: Pagamento de Pacote Corporativo'}
+                                                                placeholder={
+                                                                    createType ===
+                                                                    'payable'
+                                                                        ? 'Ex.: Conta de Energia Elétrica'
+                                                                        : 'Ex.: Pagamento de Pacote Corporativo'
+                                                                }
                                                             />
                                                         </FormField>
                                                     </div>
 
                                                     <div>
-                                                        <FormField label="Valor (R$)" name="amount" error={errors.amount_cents}>
+                                                        <FormField
+                                                            label="Valor (R$)"
+                                                            name="amount"
+                                                            error={
+                                                                errors.amount_cents
+                                                            }
+                                                        >
                                                             <div className="relative">
-                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                                                                    R$
+                                                                </span>
                                                                 <Input
                                                                     id="amount_input"
                                                                     type="number"
                                                                     step="0.01"
                                                                     min="0.01"
                                                                     required
-                                                                    value={createAmount}
-                                                                    onChange={(e) => setCreateAmount(e.target.value)}
+                                                                    value={
+                                                                        createAmount
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setCreateAmount(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
                                                                     className="pl-10"
                                                                     placeholder="0,00"
                                                                 />
                                                                 <input
                                                                     type="hidden"
                                                                     name="amount_cents"
-                                                                    value={Math.round((parseFloat(createAmount) || 0) * 100)}
+                                                                    value={Math.round(
+                                                                        (parseFloat(
+                                                                            createAmount,
+                                                                        ) ||
+                                                                            0) *
+                                                                            100,
+                                                                    )}
                                                                 />
                                                             </div>
                                                         </FormField>
                                                     </div>
 
                                                     <div>
-                                                        <FormField label="Data de Vencimento" name="due_date" error={errors.due_date}>
+                                                        <FormField
+                                                            label="Data de Vencimento"
+                                                            name="due_date"
+                                                            error={
+                                                                errors.due_date
+                                                            }
+                                                        >
                                                             <Input
                                                                 id="due_date"
                                                                 name="due_date"
                                                                 type="date"
                                                                 required
-                                                                defaultValue={todayStr}
+                                                                defaultValue={
+                                                                    todayStr
+                                                                }
                                                             />
                                                         </FormField>
                                                     </div>
@@ -319,63 +403,129 @@ export default function FinancialTransactionsIndex({
                                                         <FormField
                                                             label="Categoria"
                                                             name="category_id"
-                                                            error={errors.category_id}
+                                                            error={
+                                                                errors.category_id
+                                                            }
                                                             action={
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setQuickCategoryOpen(true)}
+                                                                    onClick={() =>
+                                                                        setQuickCategoryOpen(
+                                                                            true,
+                                                                        )
+                                                                    }
                                                                     className="text-xs font-semibold text-primary hover:underline focus:outline-none"
                                                                 >
-                                                                    + Nova Categoria
+                                                                    + Nova
+                                                                    Categoria
                                                                 </button>
                                                             }
                                                         >
                                                             <select
                                                                 id="category_id"
                                                                 name="category_id"
-                                                                value={selectedCategoryId}
-                                                                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                                value={
+                                                                    selectedCategoryId
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setSelectedCategoryId(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                                             >
-                                                                <option value="">Selecione uma categoria (opcional)</option>
-                                                                {categories.map((cat) => (
-                                                                    <option key={cat.id} value={cat.id}>
-                                                                        {cat.name}
-                                                                    </option>
-                                                                ))}
+                                                                <option value="">
+                                                                    Selecione
+                                                                    uma
+                                                                    categoria
+                                                                    (opcional)
+                                                                </option>
+                                                                {categories.map(
+                                                                    (cat) => (
+                                                                        <option
+                                                                            key={
+                                                                                cat.id
+                                                                            }
+                                                                            value={
+                                                                                cat.id
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                cat.name
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
                                                             </select>
                                                         </FormField>
                                                     </div>
 
-                                                    {createType === 'payable' ? (
+                                                    {createType ===
+                                                    'payable' ? (
                                                         <div>
                                                             <FormField
                                                                 label="Fornecedor"
                                                                 name="supplier_id"
-                                                                error={errors.supplier_id}
+                                                                error={
+                                                                    errors.supplier_id
+                                                                }
                                                                 action={
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setQuickSupplierOpen(true)}
+                                                                        onClick={() =>
+                                                                            setQuickSupplierOpen(
+                                                                                true,
+                                                                            )
+                                                                        }
                                                                         className="text-xs font-semibold text-primary hover:underline focus:outline-none"
                                                                     >
-                                                                        + Novo Fornecedor
+                                                                        + Novo
+                                                                        Fornecedor
                                                                     </button>
                                                                 }
                                                             >
                                                                 <select
                                                                     id="supplier_id"
                                                                     name="supplier_id"
-                                                                    value={selectedSupplierId}
-                                                                    onChange={(e) => setSelectedSupplierId(e.target.value)}
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                                    value={
+                                                                        selectedSupplierId
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setSelectedSupplierId(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                                                 >
-                                                                    <option value="">Selecione o fornecedor (opcional)</option>
-                                                                    {suppliers.map((sup) => (
-                                                                        <option key={sup.id} value={sup.id}>
-                                                                            {sup.name}
-                                                                        </option>
-                                                                    ))}
+                                                                    <option value="">
+                                                                        Selecione
+                                                                        o
+                                                                        fornecedor
+                                                                        (opcional)
+                                                                    </option>
+                                                                    {suppliers.map(
+                                                                        (
+                                                                            sup,
+                                                                        ) => (
+                                                                            <option
+                                                                                key={
+                                                                                    sup.id
+                                                                                }
+                                                                                value={
+                                                                                    sup.id
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    sup.name
+                                                                                }
+                                                                            </option>
+                                                                        ),
+                                                                    )}
                                                                 </select>
                                                             </FormField>
                                                         </div>
@@ -384,37 +534,76 @@ export default function FinancialTransactionsIndex({
                                                             <FormField
                                                                 label="Cliente"
                                                                 name="customer_id"
-                                                                error={errors.customer_id}
+                                                                error={
+                                                                    errors.customer_id
+                                                                }
                                                                 action={
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setQuickCustomerOpen(true)}
+                                                                        onClick={() =>
+                                                                            setQuickCustomerOpen(
+                                                                                true,
+                                                                            )
+                                                                        }
                                                                         className="text-xs font-semibold text-primary hover:underline focus:outline-none"
                                                                     >
-                                                                        + Novo Cliente
+                                                                        + Novo
+                                                                        Cliente
                                                                     </button>
                                                                 }
                                                             >
                                                                 <select
                                                                     id="customer_id"
                                                                     name="customer_id"
-                                                                    value={selectedCustomerId}
-                                                                    onChange={(e) => setSelectedCustomerId(e.target.value)}
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                                    value={
+                                                                        selectedCustomerId
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setSelectedCustomerId(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                                                 >
-                                                                    <option value="">Selecione o cliente (opcional)</option>
-                                                                    {customersList.map((cus) => (
-                                                                        <option key={cus.id} value={cus.id}>
-                                                                            {cus.name}
-                                                                        </option>
-                                                                    ))}
+                                                                    <option value="">
+                                                                        Selecione
+                                                                        o
+                                                                        cliente
+                                                                        (opcional)
+                                                                    </option>
+                                                                    {customersList.map(
+                                                                        (
+                                                                            cus,
+                                                                        ) => (
+                                                                            <option
+                                                                                key={
+                                                                                    cus.id
+                                                                                }
+                                                                                value={
+                                                                                    cus.id
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    cus.name
+                                                                                }
+                                                                            </option>
+                                                                        ),
+                                                                    )}
                                                                 </select>
                                                             </FormField>
                                                         </div>
                                                     )}
 
                                                     <div className="sm:col-span-2">
-                                                        <FormField label="Observações" name="notes" error={errors.notes}>
+                                                        <FormField
+                                                            label="Observações"
+                                                            name="notes"
+                                                            error={errors.notes}
+                                                        >
                                                             <Input
                                                                 id="notes"
                                                                 name="notes"
@@ -425,7 +614,9 @@ export default function FinancialTransactionsIndex({
                                                 </div>
 
                                                 <FormActions
-                                                    onCancel={() => setIsCreateOpen(false)}
+                                                    onCancel={() =>
+                                                        setIsCreateOpen(false)
+                                                    }
                                                     processing={processing}
                                                     submitText="Criar Lançamento"
                                                 />
@@ -454,60 +645,73 @@ export default function FinancialTransactionsIndex({
                     }
                 />
 
-
                 {/* Metrics Banner */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card className="border-emerald-500/20 bg-emerald-500/5">
-                        <CardContent className="p-4 flex items-center justify-between">
+                        <CardContent className="flex items-center justify-between p-4">
                             <div>
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">A Receber (Pendente)</p>
-                                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                                    {formatMoney(metrics.total_receivable_pending_cents)}
+                                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                    A Receber (Pendente)
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                    {formatMoney(
+                                        metrics.total_receivable_pending_cents,
+                                    )}
                                 </p>
                             </div>
-                            <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
                                 <ArrowUpRight className="h-5 w-5" />
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="border-rose-500/20 bg-rose-500/5">
-                        <CardContent className="p-4 flex items-center justify-between">
+                        <CardContent className="flex items-center justify-between p-4">
                             <div>
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">A Pagar (Pendente)</p>
-                                <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-                                    {formatMoney(metrics.total_payable_pending_cents)}
+                                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                    A Pagar (Pendente)
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">
+                                    {formatMoney(
+                                        metrics.total_payable_pending_cents,
+                                    )}
                                 </p>
                             </div>
-                            <div className="h-10 w-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-600">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-600">
                                 <ArrowDownRight className="h-5 w-5" />
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="border-amber-500/20 bg-amber-500/5">
-                        <CardContent className="p-4 flex items-center justify-between">
+                        <CardContent className="flex items-center justify-between p-4">
                             <div>
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Vencido</p>
-                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+                                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                    Total Vencido
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
                                     {formatMoney(metrics.total_overdue_cents)}
                                 </p>
                             </div>
-                            <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
                                 <AlertCircle className="h-5 w-5" />
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="border-sky-500/20 bg-sky-500/5">
-                        <CardContent className="p-4 flex items-center justify-between">
+                        <CardContent className="flex items-center justify-between p-4">
                             <div>
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Liquidado no Mês</p>
-                                <p className="text-2xl font-bold text-sky-600 dark:text-sky-400 mt-1">
-                                    {formatMoney(metrics.total_paid_month_cents)}
+                                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                    Liquidado no Mês
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-sky-600 dark:text-sky-400">
+                                    {formatMoney(
+                                        metrics.total_paid_month_cents,
+                                    )}
                                 </p>
                             </div>
-                            <div className="h-10 w-10 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-600">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-600">
                                 <CheckCircle2 className="h-5 w-5" />
                             </div>
                         </CardContent>
@@ -522,8 +726,10 @@ export default function FinancialTransactionsIndex({
                                 <button
                                     type="button"
                                     onClick={() => handleTypeChange('')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        typeFilter === '' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        typeFilter === ''
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     Todos
@@ -531,17 +737,23 @@ export default function FinancialTransactionsIndex({
                                 <button
                                     type="button"
                                     onClick={() => handleTypeChange('payable')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        typeFilter === 'payable' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        typeFilter === 'payable'
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     A Pagar
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => handleTypeChange('receivable')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        typeFilter === 'receivable' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    onClick={() =>
+                                        handleTypeChange('receivable')
+                                    }
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        typeFilter === 'receivable'
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     A Receber
@@ -552,26 +764,36 @@ export default function FinancialTransactionsIndex({
                                 <button
                                     type="button"
                                     onClick={() => handleStatusChange('')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        statusFilter === '' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        statusFilter === ''
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     Todos Status
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => handleStatusChange('pending')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        statusFilter === 'pending' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    onClick={() =>
+                                        handleStatusChange('pending')
+                                    }
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        statusFilter === 'pending'
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     Pendentes
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => handleStatusChange('overdue')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        statusFilter === 'overdue' ? 'bg-background shadow-xs text-rose-600 font-semibold' : 'text-muted-foreground hover:text-foreground'
+                                    onClick={() =>
+                                        handleStatusChange('overdue')
+                                    }
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        statusFilter === 'overdue'
+                                            ? 'bg-background font-semibold text-rose-600 shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     Vencidos
@@ -579,17 +801,23 @@ export default function FinancialTransactionsIndex({
                                 <button
                                     type="button"
                                     onClick={() => handleStatusChange('paid')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        statusFilter === 'paid' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        statusFilter === 'paid'
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     Liquidados
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => handleStatusChange('cancelled')}
-                                    className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                                        statusFilter === 'cancelled' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                                    onClick={() =>
+                                        handleStatusChange('cancelled')
+                                    }
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        statusFilter === 'cancelled'
+                                            ? 'bg-background text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 >
                                     Cancelados
@@ -597,9 +825,12 @@ export default function FinancialTransactionsIndex({
                             </div>
                         </div>
 
-                        <form onSubmit={handleSearchSubmit} className="flex flex-1 min-w-[240px] max-w-md items-center gap-2">
+                        <form
+                            onSubmit={handleSearchSubmit}
+                            className="flex max-w-md min-w-[240px] flex-1 items-center gap-2"
+                        >
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     placeholder="Buscar descrição, cliente ou fornecedor..."
                                     value={search}
@@ -613,16 +844,20 @@ export default function FinancialTransactionsIndex({
                         </form>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t text-xs">
+                    <div className="grid grid-cols-1 gap-3 border-t pt-2 text-xs sm:grid-cols-3">
                         <div>
-                            <label className="block font-medium text-muted-foreground mb-1">Categoria</label>
+                            <label className="mb-1 block font-medium text-muted-foreground">
+                                Categoria
+                            </label>
                             <select
                                 value={categoryIdFilter}
                                 onChange={(e) => {
                                     setCategoryIdFilter(e.target.value);
-                                    applyFilters({ category_id: e.target.value });
+                                    applyFilters({
+                                        category_id: e.target.value,
+                                    });
                                 }}
-                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:ring-1 focus:ring-ring focus:outline-none"
                             >
                                 <option value="">Todas as categorias</option>
                                 {categories.map((cat) => (
@@ -633,19 +868,25 @@ export default function FinancialTransactionsIndex({
                             </select>
                         </div>
                         <div>
-                            <label className="block font-medium text-muted-foreground mb-1">Data De</label>
+                            <label className="mb-1 block font-medium text-muted-foreground">
+                                Data De
+                            </label>
                             <Input
                                 type="date"
                                 value={dateStart}
                                 onChange={(e) => {
                                     setDateStart(e.target.value);
-                                    applyFilters({ date_start: e.target.value });
+                                    applyFilters({
+                                        date_start: e.target.value,
+                                    });
                                 }}
                                 className="h-8 text-xs"
                             />
                         </div>
                         <div>
-                            <label className="block font-medium text-muted-foreground mb-1">Data Até</label>
+                            <label className="mb-1 block font-medium text-muted-foreground">
+                                Data Até
+                            </label>
                             <Input
                                 type="date"
                                 value={dateEnd}
@@ -660,7 +901,7 @@ export default function FinancialTransactionsIndex({
                 </div>
 
                 {/* Obligations Table */}
-                <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     {obligations.data.length === 0 ? (
                         <EmptyState
                             icon={ArrowLeftRight}
@@ -670,15 +911,21 @@ export default function FinancialTransactionsIndex({
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                                <thead className="border-b bg-muted/40 text-xs text-muted-foreground uppercase">
                                     <tr>
                                         <th className="px-4 py-3">Tipo</th>
-                                        <th className="px-4 py-3">Descrição / Contato</th>
+                                        <th className="px-4 py-3">
+                                            Descrição / Contato
+                                        </th>
                                         <th className="px-4 py-3">Categoria</th>
-                                        <th className="px-4 py-3">Vencimento</th>
+                                        <th className="px-4 py-3">
+                                            Vencimento
+                                        </th>
                                         <th className="px-4 py-3">Valor</th>
                                         <th className="px-4 py-3">Status</th>
-                                        <th className="px-4 py-3 text-right">Ações</th>
+                                        <th className="px-4 py-3 text-right">
+                                            Ações
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -686,32 +933,45 @@ export default function FinancialTransactionsIndex({
                                         const overdue = isOverdue(item);
 
                                         return (
-                                            <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                                            <tr
+                                                key={item.id}
+                                                className="transition-colors hover:bg-muted/30"
+                                            >
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     {item.type === 'payable' ? (
-                                                        <Badge variant="outline" className="border-rose-500/30 text-rose-600 bg-rose-50 dark:bg-rose-950/30 gap-1 font-medium">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="gap-1 border-rose-500/30 bg-rose-50 font-medium text-rose-600 dark:bg-rose-950/30"
+                                                        >
                                                             <ArrowDownRight className="h-3 w-3" />
                                                             A Pagar
                                                         </Badge>
                                                     ) : (
-                                                        <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 gap-1 font-medium">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="gap-1 border-emerald-500/30 bg-emerald-50 font-medium text-emerald-600 dark:bg-emerald-950/30"
+                                                        >
                                                             <ArrowUpRight className="h-3 w-3" />
                                                             A Receber
                                                         </Badge>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <p className="font-medium text-foreground">{item.description}</p>
+                                                    <p className="font-medium text-foreground">
+                                                        {item.description}
+                                                    </p>
                                                     {item.supplier && (
-                                                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                                                             <Users className="h-3 w-3" />
-                                                            Fornecedor: {item.supplier.name}
+                                                            Fornecedor:{' '}
+                                                            {item.supplier.name}
                                                         </p>
                                                     )}
                                                     {item.customer && (
-                                                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                                                             <User className="h-3 w-3" />
-                                                            Cliente: {item.customer.name}
+                                                            Cliente:{' '}
+                                                            {item.customer.name}
                                                         </p>
                                                     )}
                                                 </td>
@@ -721,60 +981,110 @@ export default function FinancialTransactionsIndex({
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                                                        <span className={overdue ? 'text-rose-600 font-semibold' : 'text-foreground'}>
-                                                            {new Date(item.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                                        <span
+                                                            className={
+                                                                overdue
+                                                                    ? 'font-semibold text-rose-600'
+                                                                    : 'text-foreground'
+                                                            }
+                                                        >
+                                                            {new Date(
+                                                                item.due_date +
+                                                                    'T00:00:00',
+                                                            ).toLocaleDateString(
+                                                                'pt-BR',
+                                                            )}
                                                         </span>
                                                         {overdue && (
-                                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                                            <Badge
+                                                                variant="destructive"
+                                                                className="px-1.5 py-0 text-[10px]"
+                                                            >
                                                                 Vencido
                                                             </Badge>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 whitespace-nowrap font-semibold">
-                                                    <span className={item.type === 'payable' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
-                                                        {item.type === 'payable' ? '- ' : '+ '}
-                                                        {formatMoney(item.amount_cents)}
+                                                <td className="px-4 py-3 font-semibold whitespace-nowrap">
+                                                    <span
+                                                        className={
+                                                            item.type ===
+                                                            'payable'
+                                                                ? 'text-rose-600 dark:text-rose-400'
+                                                                : 'text-emerald-600 dark:text-emerald-400'
+                                                        }
+                                                    >
+                                                        {item.type === 'payable'
+                                                            ? '- '
+                                                            : '+ '}
+                                                        {formatMoney(
+                                                            item.amount_cents,
+                                                        )}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     {item.status === 'paid' && (
                                                         <div className="flex flex-col gap-0.5">
-                                                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 w-fit gap-1">
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="w-fit gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                                            >
                                                                 <CheckCircle2 className="h-3 w-3" />
                                                                 Liquidado
                                                             </Badge>
                                                             {item.paid_date && (
                                                                 <span className="text-[11px] text-muted-foreground">
-                                                                    {new Date(item.paid_date + 'T00:00:00').toLocaleDateString('pt-BR')} ({item.payment_method || '—'})
+                                                                    {new Date(
+                                                                        item.paid_date +
+                                                                            'T00:00:00',
+                                                                    ).toLocaleDateString(
+                                                                        'pt-BR',
+                                                                    )}{' '}
+                                                                    (
+                                                                    {item.payment_method ||
+                                                                        '—'}
+                                                                    )
                                                                 </span>
                                                             )}
                                                         </div>
                                                     )}
-                                                    {item.status === 'pending' && (
-                                                        <Badge variant="outline" className="border-amber-500/40 text-amber-600 bg-amber-50 dark:bg-amber-950/20 gap-1">
+                                                    {item.status ===
+                                                        'pending' && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="gap-1 border-amber-500/40 bg-amber-50 text-amber-600 dark:bg-amber-950/20"
+                                                        >
                                                             <Clock className="h-3 w-3" />
                                                             Pendente
                                                         </Badge>
                                                     )}
-                                                    {item.status === 'cancelled' && (
-                                                        <Badge variant="secondary" className="text-muted-foreground bg-muted gap-1">
+                                                    {item.status ===
+                                                        'cancelled' && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="gap-1 bg-muted text-muted-foreground"
+                                                        >
                                                             <Ban className="h-3 w-3" />
                                                             Cancelado
                                                         </Badge>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right">
-                                                    {item.status === 'pending' && (
+                                                <td className="px-4 py-3 text-right whitespace-nowrap">
+                                                    {item.status ===
+                                                        'pending' && (
                                                         <div className="flex items-center justify-end gap-1.5">
                                                             {canSettle && (
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
                                                                     className="h-8 border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50"
-                                                                    onClick={() => setSettlingObligation(item)}
+                                                                    onClick={() =>
+                                                                        setSettlingObligation(
+                                                                            item,
+                                                                        )
+                                                                    }
                                                                 >
-                                                                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                                                                     Liquidar
                                                                 </Button>
                                                             )}
@@ -784,7 +1094,11 @@ export default function FinancialTransactionsIndex({
                                                                         size="icon"
                                                                         variant="ghost"
                                                                         className="h-8 w-8"
-                                                                        onClick={() => openEdit(item)}
+                                                                        onClick={() =>
+                                                                            openEdit(
+                                                                                item,
+                                                                            )
+                                                                        }
                                                                         title="Editar Lançamento"
                                                                     >
                                                                         <Edit3 className="h-3.5 w-3.5" />
@@ -793,7 +1107,11 @@ export default function FinancialTransactionsIndex({
                                                                         size="icon"
                                                                         variant="ghost"
                                                                         className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                                                                        onClick={() => setCancellingObligation(item)}
+                                                                        onClick={() =>
+                                                                            setCancellingObligation(
+                                                                                item,
+                                                                            )
+                                                                        }
                                                                         title="Cancelar Lançamento"
                                                                     >
                                                                         <Ban className="h-3.5 w-3.5" />
@@ -812,7 +1130,7 @@ export default function FinancialTransactionsIndex({
                     )}
 
                     {obligations.links && obligations.links.length > 3 && (
-                        <div className="p-4 border-t">
+                        <div className="border-t p-4">
                             <Pagination links={obligations.links} />
                         </div>
                     )}
@@ -820,12 +1138,20 @@ export default function FinancialTransactionsIndex({
 
                 {/* Edit Modal */}
                 {editingObligation && (
-                    <Dialog open={!!editingObligation} onOpenChange={(open) => !open && setEditingObligation(null)}>
+                    <Dialog
+                        open={!!editingObligation}
+                        onOpenChange={(open) =>
+                            !open && setEditingObligation(null)
+                        }
+                    >
                         <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
                             <DialogHeader>
-                                <DialogTitle>Editar Lançamento Financeiro</DialogTitle>
+                                <DialogTitle>
+                                    Editar Lançamento Financeiro
+                                </DialogTitle>
                                 <DialogDescription>
-                                    Atualize as informações do lançamento pendente.
+                                    Atualize as informações do lançamento
+                                    pendente.
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -839,25 +1165,47 @@ export default function FinancialTransactionsIndex({
                                 {({ errors, processing }) => (
                                     <>
                                         <FormErrorSummary errors={errors} />
-                                        <input type="hidden" name="lock_version" value={editingObligation.lock_version} />
-                                        <input type="hidden" name="type" value={editingObligation.type} />
+                                        <input
+                                            type="hidden"
+                                            name="lock_version"
+                                            value={
+                                                editingObligation.lock_version
+                                            }
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="type"
+                                            value={editingObligation.type}
+                                        />
 
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div className="sm:col-span-2">
-                                                <FormField label="Descrição" name="description" error={errors.description}>
+                                                <FormField
+                                                    label="Descrição"
+                                                    name="description"
+                                                    error={errors.description}
+                                                >
                                                     <Input
                                                         id="edit_description"
                                                         name="description"
                                                         required
-                                                        defaultValue={editingObligation.description}
+                                                        defaultValue={
+                                                            editingObligation.description
+                                                        }
                                                     />
                                                 </FormField>
                                             </div>
 
                                             <div>
-                                                <FormField label="Valor (R$)" name="amount" error={errors.amount_cents}>
+                                                <FormField
+                                                    label="Valor (R$)"
+                                                    name="amount"
+                                                    error={errors.amount_cents}
+                                                >
                                                     <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                                                            R$
+                                                        </span>
                                                         <Input
                                                             id="edit_amount_input"
                                                             type="number"
@@ -865,99 +1213,189 @@ export default function FinancialTransactionsIndex({
                                                             min="0.01"
                                                             required
                                                             value={editAmount}
-                                                            onChange={(e) => setEditAmount(e.target.value)}
+                                                            onChange={(e) =>
+                                                                setEditAmount(
+                                                                    e.target
+                                                                        .value,
+                                                                )
+                                                            }
                                                             className="pl-10"
                                                         />
                                                         <input
                                                             type="hidden"
                                                             name="amount_cents"
-                                                            value={Math.round((parseFloat(editAmount) || 0) * 100)}
+                                                            value={Math.round(
+                                                                (parseFloat(
+                                                                    editAmount,
+                                                                ) || 0) * 100,
+                                                            )}
                                                         />
                                                     </div>
                                                 </FormField>
                                             </div>
 
                                             <div>
-                                                <FormField label="Data de Vencimento" name="due_date" error={errors.due_date}>
+                                                <FormField
+                                                    label="Data de Vencimento"
+                                                    name="due_date"
+                                                    error={errors.due_date}
+                                                >
                                                     <Input
                                                         id="edit_due_date"
                                                         name="due_date"
                                                         type="date"
                                                         required
-                                                        defaultValue={editingObligation.due_date}
+                                                        defaultValue={
+                                                            editingObligation.due_date
+                                                        }
                                                     />
                                                 </FormField>
                                             </div>
 
                                             <div>
-                                                <FormField label="Categoria" name="category_id" error={errors.category_id}>
+                                                <FormField
+                                                    label="Categoria"
+                                                    name="category_id"
+                                                    error={errors.category_id}
+                                                >
                                                     <select
                                                         id="edit_category_id"
                                                         name="category_id"
-                                                        defaultValue={editingObligation.category_id || ''}
-                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                        defaultValue={
+                                                            editingObligation.category_id ||
+                                                            ''
+                                                        }
+                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                                     >
-                                                        <option value="">Selecione uma categoria (opcional)</option>
-                                                        {categories.map((cat) => (
-                                                            <option key={cat.id} value={cat.id}>
-                                                                {cat.name}
-                                                            </option>
-                                                        ))}
+                                                        <option value="">
+                                                            Selecione uma
+                                                            categoria (opcional)
+                                                        </option>
+                                                        {categories.map(
+                                                            (cat) => (
+                                                                <option
+                                                                    key={cat.id}
+                                                                    value={
+                                                                        cat.id
+                                                                    }
+                                                                >
+                                                                    {cat.name}
+                                                                </option>
+                                                            ),
+                                                        )}
                                                     </select>
                                                 </FormField>
                                             </div>
 
-                                            {editingObligation.type === 'payable' ? (
+                                            {editingObligation.type ===
+                                            'payable' ? (
                                                 <div>
-                                                    <FormField label="Fornecedor" name="supplier_id" error={errors.supplier_id}>
+                                                    <FormField
+                                                        label="Fornecedor"
+                                                        name="supplier_id"
+                                                        error={
+                                                            errors.supplier_id
+                                                        }
+                                                    >
                                                         <select
                                                             id="edit_supplier_id"
                                                             name="supplier_id"
-                                                            defaultValue={editingObligation.supplier_id || ''}
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                            defaultValue={
+                                                                editingObligation.supplier_id ||
+                                                                ''
+                                                            }
+                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                                         >
-                                                            <option value="">Selecione o fornecedor (opcional)</option>
-                                                            {suppliers.map((sup) => (
-                                                                <option key={sup.id} value={sup.id}>
-                                                                    {sup.name}
-                                                                </option>
-                                                            ))}
+                                                            <option value="">
+                                                                Selecione o
+                                                                fornecedor
+                                                                (opcional)
+                                                            </option>
+                                                            {suppliers.map(
+                                                                (sup) => (
+                                                                    <option
+                                                                        key={
+                                                                            sup.id
+                                                                        }
+                                                                        value={
+                                                                            sup.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            sup.name
+                                                                        }
+                                                                    </option>
+                                                                ),
+                                                            )}
                                                         </select>
                                                     </FormField>
                                                 </div>
                                             ) : (
                                                 <div>
-                                                    <FormField label="Cliente" name="customer_id" error={errors.customer_id}>
+                                                    <FormField
+                                                        label="Cliente"
+                                                        name="customer_id"
+                                                        error={
+                                                            errors.customer_id
+                                                        }
+                                                    >
                                                         <select
                                                             id="edit_customer_id"
                                                             name="customer_id"
-                                                            defaultValue={editingObligation.customer_id || ''}
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                            defaultValue={
+                                                                editingObligation.customer_id ||
+                                                                ''
+                                                            }
+                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                                         >
-                                                            <option value="">Selecione o cliente (opcional)</option>
-                                                            {customersList.map((cus) => (
-                                                                <option key={cus.id} value={cus.id}>
-                                                                    {cus.name}
-                                                                </option>
-                                                            ))}
+                                                            <option value="">
+                                                                Selecione o
+                                                                cliente
+                                                                (opcional)
+                                                            </option>
+                                                            {customersList.map(
+                                                                (cus) => (
+                                                                    <option
+                                                                        key={
+                                                                            cus.id
+                                                                        }
+                                                                        value={
+                                                                            cus.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            cus.name
+                                                                        }
+                                                                    </option>
+                                                                ),
+                                                            )}
                                                         </select>
                                                     </FormField>
                                                 </div>
                                             )}
 
                                             <div className="sm:col-span-2">
-                                                <FormField label="Observações" name="notes" error={errors.notes}>
+                                                <FormField
+                                                    label="Observações"
+                                                    name="notes"
+                                                    error={errors.notes}
+                                                >
                                                     <Input
                                                         id="edit_notes"
                                                         name="notes"
-                                                        defaultValue={editingObligation.notes || ''}
+                                                        defaultValue={
+                                                            editingObligation.notes ||
+                                                            ''
+                                                        }
                                                     />
                                                 </FormField>
                                             </div>
                                         </div>
 
                                         <FormActions
-                                            onCancel={() => setEditingObligation(null)}
+                                            onCancel={() =>
+                                                setEditingObligation(null)
+                                            }
                                             processing={processing}
                                             submitText="Salvar Alterações"
                                         />
@@ -970,12 +1408,23 @@ export default function FinancialTransactionsIndex({
 
                 {/* Settle Modal */}
                 {settlingObligation && (
-                    <Dialog open={!!settlingObligation} onOpenChange={(open) => !open && setSettlingObligation(null)}>
+                    <Dialog
+                        open={!!settlingObligation}
+                        onOpenChange={(open) =>
+                            !open && setSettlingObligation(null)
+                        }
+                    >
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Liquidar Lançamento</DialogTitle>
                                 <DialogDescription>
-                                    Confirme o pagamento/recebimento de <strong>{formatMoney(settlingObligation.amount_cents)}</strong> ({settlingObligation.description}).
+                                    Confirme o pagamento/recebimento de{' '}
+                                    <strong>
+                                        {formatMoney(
+                                            settlingObligation.amount_cents,
+                                        )}
+                                    </strong>{' '}
+                                    ({settlingObligation.description}).
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -989,9 +1438,19 @@ export default function FinancialTransactionsIndex({
                                 {({ errors, processing }) => (
                                     <>
                                         <FormErrorSummary errors={errors} />
-                                        <input type="hidden" name="lock_version" value={settlingObligation.lock_version} />
+                                        <input
+                                            type="hidden"
+                                            name="lock_version"
+                                            value={
+                                                settlingObligation.lock_version
+                                            }
+                                        />
 
-                                        <FormField label="Data do Pagamento / Recebimento" name="paid_date" error={errors.paid_date}>
+                                        <FormField
+                                            label="Data do Pagamento / Recebimento"
+                                            name="paid_date"
+                                            error={errors.paid_date}
+                                        >
                                             <Input
                                                 id="settle_paid_date"
                                                 name="paid_date"
@@ -1001,16 +1460,23 @@ export default function FinancialTransactionsIndex({
                                             />
                                         </FormField>
 
-                                        <FormField label="Forma de Pagamento" name="payment_method" error={errors.payment_method}>
+                                        <FormField
+                                            label="Forma de Pagamento"
+                                            name="payment_method"
+                                            error={errors.payment_method}
+                                        >
                                             <select
                                                 id="settle_payment_method"
                                                 name="payment_method"
                                                 required
                                                 defaultValue="pix"
-                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
                                             >
                                                 {PAYMENT_METHODS.map((pm) => (
-                                                    <option key={pm.value} value={pm.value}>
+                                                    <option
+                                                        key={pm.value}
+                                                        value={pm.value}
+                                                    >
                                                         {pm.label}
                                                     </option>
                                                 ))}
@@ -1018,7 +1484,9 @@ export default function FinancialTransactionsIndex({
                                         </FormField>
 
                                         <FormActions
-                                            onCancel={() => setSettlingObligation(null)}
+                                            onCancel={() =>
+                                                setSettlingObligation(null)
+                                            }
                                             processing={processing}
                                             submitText="Confirmar Liquidação"
                                         />
@@ -1031,12 +1499,27 @@ export default function FinancialTransactionsIndex({
 
                 {/* Cancel Modal */}
                 {cancellingObligation && (
-                    <Dialog open={!!cancellingObligation} onOpenChange={(open) => !open && setCancellingObligation(null)}>
+                    <Dialog
+                        open={!!cancellingObligation}
+                        onOpenChange={(open) =>
+                            !open && setCancellingObligation(null)
+                        }
+                    >
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Cancelar Lançamento Financeiro</DialogTitle>
+                                <DialogTitle>
+                                    Cancelar Lançamento Financeiro
+                                </DialogTitle>
                                 <DialogDescription>
-                                    Tem certeza que deseja cancelar o lançamento <strong>"{cancellingObligation.description}"</strong> no valor de {formatMoney(cancellingObligation.amount_cents)}? Esta ação não pode ser desfeita.
+                                    Tem certeza que deseja cancelar o lançamento{' '}
+                                    <strong>
+                                        "{cancellingObligation.description}"
+                                    </strong>{' '}
+                                    no valor de{' '}
+                                    {formatMoney(
+                                        cancellingObligation.amount_cents,
+                                    )}
+                                    ? Esta ação não pode ser desfeita.
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -1050,10 +1533,18 @@ export default function FinancialTransactionsIndex({
                                 {({ errors, processing }) => (
                                     <>
                                         <FormErrorSummary errors={errors} />
-                                        <input type="hidden" name="lock_version" value={cancellingObligation.lock_version} />
+                                        <input
+                                            type="hidden"
+                                            name="lock_version"
+                                            value={
+                                                cancellingObligation.lock_version
+                                            }
+                                        />
 
                                         <FormActions
-                                            onCancel={() => setCancellingObligation(null)}
+                                            onCancel={() =>
+                                                setCancellingObligation(null)
+                                            }
                                             processing={processing}
                                             submitText="Sim, Cancelar Lançamento"
                                         />
