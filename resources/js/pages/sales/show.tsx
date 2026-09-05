@@ -1078,6 +1078,7 @@ export default function SalesShow({
                                                                                     {
                                                                                         prd.current_stock
                                                                                     }
+
                                                                                     )
                                                                                 </option>
                                                                             ),

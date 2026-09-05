@@ -685,10 +685,12 @@ export default function CustomerShow({
                                                                                     {
                                                                                         item.quantity
                                                                                     }
+
                                                                                     x{' '}
                                                                                     {formatMoney(
                                                                                         item.unit_price_cents,
                                                                                     )}
+
                                                                                     )
                                                                                 </span>
                                                                             </div>
@@ -931,6 +933,7 @@ export default function CustomerShow({
                                                                                     {formatMoney(
                                                                                         tmpl.price_cents,
                                                                                     )}
+
                                                                                     )
                                                                                 </option>
                                                                             ),
