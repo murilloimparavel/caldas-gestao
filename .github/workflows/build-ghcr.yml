@@ -71,7 +71,7 @@ jobs:
         run: npm ci
 
       - name: Generate Wayfinder routes
-        run: php artisan wayfinder:generate
+        run: php artisan wayfinder:generate --with-form
 
       - name: Run quality checks
         run: composer ci:check
