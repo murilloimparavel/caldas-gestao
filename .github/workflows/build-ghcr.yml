@@ -18,6 +18,7 @@ jobs:
   quality:
     name: Quality checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17-alpine
@@ -74,12 +75,19 @@ jobs:
         run: php artisan wayfinder:generate --with-form
 
       - name: Run quality checks
-        run: |
-          composer run lint:check
-          npm run format:check
-          npm run types:check
-          npm run build
-          php artisan test --compact
+        run: composer run lint:check
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Check TypeScript
+        run: npm run types:check
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run Laravel tests
+        run: php artisan test --compact
 
   publish:
     name: Publish image to GHCR
