@@ -81,7 +81,7 @@ export default [
                         'sibling',
                         'index',
                     ],
-                    alphabetize: { order: 'asc', caseInsensitive: true },
+                    alphabetize: { order: 'ignore' },
                 },
             ],
             'import/consistent-type-specifier-style': [
