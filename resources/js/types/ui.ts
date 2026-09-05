@@ -21,6 +21,7 @@ export type TenantSummary = {
     status: string;
     timezone: string;
     default_currency: string;
+    branding?: Branding;
 };
 
 export type UnitSummary = {
@@ -35,6 +36,14 @@ export type Workspace = {
     tenant: TenantSummary;
     activeUnit: UnitSummary | null;
     availableUnits: UnitSummary[];
+};
+
+export type Branding = {
+    name: string;
+    logoUrl?: string | null;
+    faviconUrl?: string | null;
+    primaryColor?: string | null;
+    accentColor?: string | null;
 };
 
 export type Flash = {
@@ -53,6 +62,7 @@ export type SharedPageProps = {
     requestId: string;
     correlationId: string;
     name: string;
+    branding: Branding;
     auth: Auth;
     workspace: Workspace | null;
     flash: Flash;

@@ -478,6 +478,6 @@ Uma fatia só está pronta quando:
 - autorização: `roles-permissions.md`;
 - contratos: `api-proposal.md`;
 - persistência e privacidade: `domain/database-proposal.md` e `domain/data-governance.md`;
-- priorização e lacunas: `reconstruction-backlog.md`.
+- priorização e lacunas: `../ROADMAP.md`.
 
 Este plano governa a ordem de construção. Quando uma descoberta futura contradizer uma proposta, atualizar primeiro o claim ledger e o documento de domínio pertinente; depois revisar este plano.

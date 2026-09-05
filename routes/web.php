@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CashShiftController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
 use App\Http\Controllers\OnlineBookingSettingsController;
 use App\Http\Controllers\PackageTemplateController;
@@ -27,8 +29,31 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
-Route::redirect('/', '/dashboard')->name('home');
+Route::post('/webhooks/lastlink', LastlinkWebhookController::class)
+    ->middleware('throttle:30,1')
+    ->name('webhooks.lastlink');
+
+Route::get('/billing', BillingController::class)
+    ->middleware(['auth', 'verified', 'tenant.context'])
+    ->name('billing.index');
+
+Route::get('/', fn () => Inertia::render('marketing/home', [
+    'branding' => [
+        'name' => config('branding.name', config('app.name')),
+        'logoUrl' => config('branding.logo_url'),
+        'primaryColor' => config('branding.primary_color'),
+        'accentColor' => config('branding.accent_color'),
+    ],
+]))->name('home');
+
+Route::redirect('/signin', '/login')->name('signin');
+Route::redirect('/signup', '/register')->name('signup');
+
+Route::get('/book/{public_slug}', [PublicBookingController::class, 'showBySlug'])
+    ->middleware('throttle:public-booking')
+    ->name('public_booking.slug');
 
 Route::prefix('book/{tenant:slug}/{unit:slug}')
     ->scopeBindings()
@@ -43,12 +68,18 @@ Route::prefix('book/{tenant:slug}/{unit:slug}')
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)
-        ->middleware('tenant.context')
+        ->middleware(['tenant.context', 'saas.access'])
         ->name('dashboard');
 
-    Route::middleware('tenant.context')->group(function (): void {
+    Route::middleware(['tenant.context', 'saas.access'])->group(function (): void {
         Route::get('online-booking', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.index');
         Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
+        Route::post('online-booking/cover', [OnlineBookingSettingsController::class, 'storeCover'])->name('online_booking.cover.store');
+        Route::delete('online-booking/cover', [OnlineBookingSettingsController::class, 'destroyCover'])->name('online_booking.cover.destroy');
+        Route::post('online-booking/gallery', [OnlineBookingSettingsController::class, 'storeGallery'])->name('online_booking.gallery.store');
+        Route::patch('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'updateGallery'])->name('online_booking.gallery.update');
+        Route::delete('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'destroyGallery'])->name('online_booking.gallery.destroy');
+        Route::post('online-booking/gallery/reorder', [OnlineBookingSettingsController::class, 'reorderGallery'])->name('online_booking.gallery.reorder');
         Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
         Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
         Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');

@@ -198,4 +198,4 @@ Com os defaults locais, database fica disponível via SQLite e Redis só ficará
 - [ADR-001 — Stack inicial](docs/adr/ADR-001--stack-inicial.md);
 - [Estrutura do projeto](docs/architecture/project-structure.md);
 - [Plano de implementação frontend](docs/reconstruction/frontend-implementation-plan.md);
-- [Roteiro de evolução do SaaS](docs/ROTEIRO-VIBE-CODING-SAAS-BELEZA.md).
+- [Roadmap único do produto](docs/ROADMAP.md).

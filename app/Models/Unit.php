@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /**
@@ -63,5 +64,17 @@ class Unit extends Model
     public function membershipRoles(): HasMany
     {
         return $this->hasMany(MembershipRole::class);
+    }
+
+    /** @return HasOne<OnlineBookingSetting, $this> */
+    public function onlineBookingSetting(): HasOne
+    {
+        return $this->hasOne(OnlineBookingSetting::class);
+    }
+
+    /** @return HasMany<OnlineBookingGalleryImage, $this> */
+    public function onlineBookingGalleryImages(): HasMany
+    {
+        return $this->hasMany(OnlineBookingGalleryImage::class)->orderBy('position');
     }
 }

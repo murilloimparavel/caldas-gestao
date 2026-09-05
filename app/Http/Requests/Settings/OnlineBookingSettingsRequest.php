@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Settings;
 
+use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Unit;
@@ -18,6 +19,7 @@ final class OnlineBookingSettingsRequest extends FormRequest
         $this->merge([
             'service_ids' => is_array($this->input('service_ids')) ? $this->input('service_ids') : [],
             'professional_ids' => is_array($this->input('professional_ids')) ? $this->input('professional_ids') : [],
+            'public_slug' => $this->input('public_slug') ?: ($this->attributes->get(TenantContext::class)?->unit?->slug),
         ]);
     }
 
@@ -52,13 +54,24 @@ final class OnlineBookingSettingsRequest extends FormRequest
                 Rule::exists(Professional::class, 'id')->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active'),
             ],
             'lock_version' => ['required', 'integer', 'min:0'],
+            'public_slug' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique(OnlineBookingSetting::class, 'public_slug')->ignore($context?->unit?->onlineBookingSetting?->getKey())],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'whatsapp_phone' => ['nullable', 'string', 'max:40'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'instagram_url' => ['nullable', 'url', 'max:255'],
+            'facebook_url' => ['nullable', 'url', 'max:255'],
+            'website_url' => ['nullable', 'url', 'max:255'],
+            'brand_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'booking_flow' => ['nullable', Rule::in(['service_first', 'professional_first'])],
+            'minimum_notice_minutes' => ['nullable', 'integer', 'min:0', 'max:10080'],
+            'public_hours' => ['nullable', 'array'],
         ];
     }
 
     /**
      * @param  string|null  $key
      * @param  mixed  $default
-     * @return array{online_booking_enabled: bool, service_ids: list<string>, professional_ids: list<string>, lock_version: int}
+     * @return array<string, mixed>
      */
     public function validated($key = null, $default = null): array
     {

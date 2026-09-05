@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'lastlink' => [
+        'webhook_secret' => env('LASTLINK_WEBHOOK_SECRET'),
+        'checkout_url' => env('LASTLINK_CHECKOUT_URL'),
+    ],
+
 ];

@@ -10,13 +10,13 @@ Esta pasta é a **fonte canônica** do levantamento clean-room e das propostas p
 4. `behavior-rules.md` e `network-observations.md` — comportamento e evidência técnica;
 5. `domain/` — modelo independente;
 6. `api-proposal.md` e `design-system-proposed.md` — contratos e linguagem propostos;
-7. `frontend-implementation-plan.md` e `reconstruction-backlog.md` — ordem de construção e priorização.
+7. `frontend-implementation-plan.md` e `../ROADMAP.md` — ordem de construção e priorização.
 
 ## Política de precedência
 
 - Em conflito, evidência e claim ledger prevalecem sobre sínteses.
 - `Observed`, `Inferred`, `Proposed` e `Unknown` não podem ser misturados.
-- `docs/BELASIS-REVERSE-ENGINEERING.md` e `docs/ROTEIRO-VIBE-CODING-SAAS-BELEZA.md` são resumos editoriais; não recebem novas evidências diretamente.
+- `docs/BELASIS-REVERSE-ENGINEERING.md` é um resumo editorial; não recebe novas evidências diretamente.
 - Resumos devem ser revisados em marcos, usando este dossiê como origem.
 - Nenhum documento descreve código, API ou banco interno do produto observado.
 

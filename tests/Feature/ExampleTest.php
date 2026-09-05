@@ -1,5 +1,7 @@
 <?php
 
-it('redirects home visitors to the dashboard', function () {
-    $this->get(route('home'))->assertRedirect(route('dashboard'));
+it('renders the public marketing landing page', function () {
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->component('marketing/home'));
 });

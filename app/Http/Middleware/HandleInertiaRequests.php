@@ -99,6 +99,13 @@ class HandleInertiaRequests extends Middleware
                 'status' => $context->tenant->status->value,
                 'timezone' => $context->tenant->timezone,
                 'default_currency' => $context->tenant->default_currency,
+                'branding' => [
+                    'name' => $context->tenant->brand_name ?: $context->tenant->name,
+                    'logoUrl' => $context->tenant->logo_url,
+                    'faviconUrl' => $context->tenant->favicon_url,
+                    'primaryColor' => $context->tenant->primary_color,
+                    'accentColor' => $context->tenant->accent_color,
+                ],
             ],
             'activeUnit' => $context->unit === null ? null : $this->unitSummary($context->unit),
             'availableUnits' => $availableUnits,
@@ -110,6 +117,13 @@ class HandleInertiaRequests extends Middleware
             'requestId' => $requestId,
             'correlationId' => $correlationId,
             'name' => config('app.name'),
+            'branding' => [
+                'name' => config('branding.name', config('app.name')),
+                'logoUrl' => config('branding.logo_url'),
+                'faviconUrl' => config('branding.favicon_url'),
+                'primaryColor' => config('branding.primary_color'),
+                'accentColor' => config('branding.accent_color'),
+            ],
             'auth' => [
                 'user' => $user === null ? null : [
                     'id' => (string) $user->id,

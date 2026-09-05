@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property TenantStatus $status
  * @property int $lock_version
  */
-#[Fillable(['slug', 'name', 'legal_name', 'status', 'timezone', 'default_currency'])]
+#[Fillable(['slug', 'name', 'brand_name', 'logo_url', 'favicon_url', 'primary_color', 'accent_color', 'legal_name', 'status', 'timezone', 'default_currency'])]
 class Tenant extends Model
 {
     /** @use HasFactory<TenantFactory> */

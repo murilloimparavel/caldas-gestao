@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\TenantSubscriptionFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable(['tenant_id', 'platform_plan_id', 'provider', 'external_subscription_id', 'external_product_id', 'status', 'starts_at', 'ends_at', 'next_billing_at', 'grace_ends_at', 'last_payment_at', 'metadata'])]
+class TenantSubscription extends Model
+{
+    /** @use HasFactory<TenantSubscriptionFactory> */
+    use HasFactory, HasUuids;
+
+    protected function casts(): array
+    {
+        return ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'next_billing_at' => 'datetime', 'grace_ends_at' => 'datetime', 'last_payment_at' => 'datetime', 'metadata' => 'array'];
+    }
+
+    /** @return BelongsTo<Tenant, $this> */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    /** @return BelongsTo<PlatformPlan, $this> */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(PlatformPlan::class, 'platform_plan_id');
+    }
+
+    public function grantsAccess(): bool
+    {
+        return in_array($this->status, ['trial', 'active', 'grace'], true) && ($this->ends_at === null || $this->ends_at->isFuture());
+    }
+}

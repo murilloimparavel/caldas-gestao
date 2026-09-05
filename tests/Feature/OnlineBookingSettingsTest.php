@@ -1,28 +1,9 @@
 <?php
 
-use App\Actions\Identity\OnboardTenant;
-use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
-use Illuminate\Support\Str;
-
-/** @return array{0: User, 1: Tenant, 2: Unit, 3: Service, 4: Professional} */
-function onlineBookingWorkspace(): array
-{
-    $owner = User::factory()->create();
-    $tenant = (new OnboardTenant)->handle($owner, [
-        'name' => 'Booking '.Str::random(8),
-        'slug' => 'booking-'.Str::lower(Str::random(8)),
-    ]);
-    $unit = $tenant->units()->firstOrFail();
-    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
-    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
-    $professional->services()->attach($service, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
-
-    return [$owner, $tenant, $unit, $service, $professional];
-}
 
 it('requires authentication and exposes scoped readiness to the owner', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();

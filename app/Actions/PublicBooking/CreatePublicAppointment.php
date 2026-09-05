@@ -47,8 +47,16 @@ final class CreatePublicAppointment
         $startsAt = CarbonImmutable::parse($data['starts_at'], $timezone)->setTimezone($timezone);
         $now = CarbonImmutable::now($timezone);
 
-        if ($startsAt->isBefore($now) || $startsAt->isAfter($now->addDays(31))) {
+        $setting = $unit->onlineBookingSetting;
+        if ($startsAt->isBefore($now->addMinutes((int) ($setting?->minimum_notice_minutes ?? 0))) || $startsAt->isAfter($now->addDays(31))) {
             throw ValidationException::withMessages(['starts_at' => 'The selected time is no longer available.']);
+        }
+        $hours = $setting?->public_hours;
+        if (is_array($hours)) {
+            $window = $hours[(string) $startsAt->dayOfWeek] ?? $hours[$startsAt->dayOfWeek] ?? null;
+            if (! is_array($window) || ($window['enabled'] ?? true) === false || $startsAt->format('H:i') < ($window['starts_at'] ?? '') || $startsAt->addMinutes((int) $service->duration_minutes)->format('H:i') > ($window['ends_at'] ?? '')) {
+                throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
+            }
         }
         $duration = (int) $service->duration_minutes;
         $endsAt = $startsAt->addMinutes($duration);

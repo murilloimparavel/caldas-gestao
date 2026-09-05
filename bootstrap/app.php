@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceSaaSAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveTenantContext;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'tenant.context' => ResolveTenantContext::class,
+            'saas.access' => EnforceSaaSAccess::class,
         ]);
 
         $middleware->web(append: [
@@ -36,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('outbox:pump')->everyMinute()->withoutOverlapping(2)->onOneServer();
         $schedule->command('inbox:reap')->everyMinute()->withoutOverlapping(2)->onOneServer();
         $schedule->command('app:expire-customer-packages')->daily()->withoutOverlapping(10)->onOneServer();
+        $schedule->command('billing:reconcile')->hourly()->withoutOverlapping(2)->onOneServer();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

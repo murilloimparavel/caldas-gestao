@@ -3,6 +3,7 @@
 namespace App\Actions\OnlineBooking;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Unit;
@@ -14,7 +15,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class UpdateOnlineBookingSettings extends OperationalAction
 {
-    /** @param array{online_booking_enabled:bool,service_ids:list<string>,professional_ids:list<string>,lock_version:int} $data */
+    /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, array $data): Unit
     {
         $unit = $this->unit($actor, $context, 'unit.update');
@@ -80,6 +81,17 @@ final class UpdateOnlineBookingSettings extends OperationalAction
             $lockedUnit->forceFill([
                 'online_booking_enabled' => $data['online_booking_enabled'],
                 'lock_version' => $lockedUnit->lock_version + 1,
+            ])->save();
+
+            $setting = OnlineBookingSetting::query()->firstOrNew(['unit_id' => $lockedUnit->getKey()]);
+            $setting->forceFill([
+                'tenant_id' => $context->tenant->getKey(), 'unit_id' => $lockedUnit->getKey(),
+                'public_slug' => $data['public_slug'], 'description' => $data['description'] ?? null,
+                'whatsapp_phone' => $data['whatsapp_phone'] ?? null, 'phone' => $data['phone'] ?? null,
+                'instagram_url' => $data['instagram_url'] ?? null, 'facebook_url' => $data['facebook_url'] ?? null,
+                'website_url' => $data['website_url'] ?? null, 'brand_color' => $data['brand_color'] ?? '#2563eb',
+                'booking_flow' => $data['booking_flow'] ?? 'service_first', 'minimum_notice_minutes' => $data['minimum_notice_minutes'] ?? 0,
+                'public_hours' => $data['public_hours'] ?? null,
             ])->save();
 
             $this->events->record($actor, $context, 'unit.online_booking_updated', $lockedUnit, [

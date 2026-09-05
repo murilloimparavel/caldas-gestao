@@ -3,6 +3,7 @@
 namespace App\Actions\Closing;
 
 use App\Actions\Finance\Commissions\AccrueCommissionsForSale;
+use App\Actions\Marketing\Retention\RecordCustomerActivity;
 use App\Actions\Operational\OperationalAction;
 use App\Models\ClosingSession;
 use App\Models\InventoryMovement;
@@ -29,6 +30,7 @@ final class FinalizeClosingSession extends OperationalAction
         AuthorizationService $authorization = new AuthorizationService,
         IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
         private readonly AccrueCommissionsForSale $accrueCommissions = new AccrueCommissionsForSale,
+        private readonly RecordCustomerActivity $recordCustomerActivity = new RecordCustomerActivity,
     ) {
         parent::__construct($authorization, $events);
     }
@@ -238,6 +240,8 @@ final class FinalizeClosingSession extends OperationalAction
                     'receipt_number' => $receiptNumber,
                     'lock_version' => $lockedSale->lock_version,
                 ]);
+
+                $this->recordCustomerActivity->handle($actor, $context, $lockedSale->customer_id, 'sale.finalized');
 
                 $this->accrueCommissions->handle($actor, $context, $lockedSale);
             }

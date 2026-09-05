@@ -87,6 +87,10 @@ final class OperationalMutation
             $resource = null;
         }
 
+        if (str_starts_with($routeName, 'retention.campaigns.')) {
+            $resourceType = 'retention_campaign';
+        }
+
         $resource = $route instanceof Route ? $route->parameter($resourceType) : null;
 
         $resourceId = match (true) {

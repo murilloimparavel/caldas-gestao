@@ -2,6 +2,7 @@
 
 use App\Models\Appointment;
 use App\Models\AvailabilityRule;
+use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
@@ -105,4 +106,18 @@ it('reuses a customer by normalized phone across separate public bookings', func
 
     expect(Appointment::query()->count())->toBe(2)
         ->and(Appointment::query()->pluck('customer_id')->unique())->toHaveCount(1);
+});
+
+it('applies public hours and minimum notice to availability', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    OnlineBookingSetting::create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => 'hours-'.Str::random(8),
+        'minimum_notice_minutes' => 120,
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '11:00', 'ends_at' => '12:00']],
+    ]);
+
+    $response = $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString()]));
+    $response->assertSuccessful();
+    expect($response->json('slots'))->each->toHaveKey('starts_at');
+    expect(collect($response->json('slots'))->every(fn (array $slot): bool => str_contains($slot['starts_at'], '11:')))->toBeTrue();
 });

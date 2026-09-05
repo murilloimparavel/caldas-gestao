@@ -20,6 +20,7 @@ final class OwnerPermissionCatalog
         'entitlement.view', 'entitlement.manage',
         'audit.view',
         'customer.view', 'customer.manage',
+        'retention.view', 'retention.manage', 'retention.legal_hold', 'retention.anonymize',
         'professional.view', 'professional.manage',
         'service.view', 'service.manage',
         'category.view', 'category.manage',
@@ -33,7 +34,7 @@ final class OwnerPermissionCatalog
         'commission.view', 'commission.manage', 'commission.settle',
         'financial.view', 'financial.manage', 'financial.settle',
         'package.view', 'package.manage', 'package.sell', 'package.consume',
-        'subscription.view', 'subscription.manage', 'subscription.subscribe', 'subscription.cancel',
+        'subscription.view', 'subscription.manage', 'subscription.subscribe', 'subscription.cancel', 'subscription.usage', 'subscription.renew',
     ];
 
     /**
