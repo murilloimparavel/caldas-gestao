@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('outbox:pump')->everyMinute()->withoutOverlapping(2)->onOneServer();
         $schedule->command('inbox:reap')->everyMinute()->withoutOverlapping(2)->onOneServer();
+        $schedule->command('app:expire-customer-packages')->daily()->withoutOverlapping(10)->onOneServer();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

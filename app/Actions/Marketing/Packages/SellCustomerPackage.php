@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\CustomerPackage;
 use App\Models\PackageTemplate;
 use App\Models\Sale;
+use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
 use Carbon\Carbon;
@@ -39,6 +40,7 @@ final class SellCustomerPackage extends OperationalAction
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $unit->getKey())
             ->whereKey($templateId)
+            ->with('services:id,name')
             ->first();
 
         if ($template === null) {
@@ -53,6 +55,7 @@ final class SellCustomerPackage extends OperationalAction
             $saleExists = Sale::query()
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $unit->getKey())
+                ->where('customer_id', $customer->getKey())
                 ->whereKey($saleId)
                 ->exists();
 
@@ -72,7 +75,15 @@ final class SellCustomerPackage extends OperationalAction
             $expiresAt = now()->addDays($template->validity_days)->toDateString();
         }
 
-        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt): CustomerPackage {
+        $eligibleServicesSnapshot = $template->services
+            ->map(static fn (Service $service): array => [
+                'id' => (string) $service->getKey(),
+                'name' => (string) $service->name,
+            ])
+            ->values()
+            ->all();
+
+        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt, $eligibleServicesSnapshot): CustomerPackage {
             $customerPackage = CustomerPackage::query()->create([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $context->tenant->getKey(),
@@ -80,6 +91,11 @@ final class SellCustomerPackage extends OperationalAction
                 'customer_id' => $customer->getKey(),
                 'package_template_id' => $template->getKey(),
                 'sale_id' => $saleId,
+                'name_snapshot' => $template->name,
+                'price_cents_snapshot' => $template->price_cents,
+                'total_sessions_snapshot' => $totalSessions,
+                'validity_days_snapshot' => $template->validity_days,
+                'eligible_services_snapshot' => $eligibleServicesSnapshot,
                 'total_sessions' => $totalSessions,
                 'remaining_sessions' => $totalSessions,
                 'expires_at' => $expiresAt,
@@ -91,7 +107,10 @@ final class SellCustomerPackage extends OperationalAction
                 'customer_id' => $customer->getKey(),
                 'package_template_id' => $template->getKey(),
                 'sale_id' => $saleId,
+                'price_cents' => $template->price_cents,
+                'service_ids' => $template->services->modelKeys(),
                 'total_sessions' => $totalSessions,
+                'validity_days' => $template->validity_days,
                 'remaining_sessions' => $totalSessions,
                 'expires_at' => $expiresAt,
                 'status' => 'active',

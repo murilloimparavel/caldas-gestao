@@ -17,7 +17,7 @@ final class CreateCustomer extends OperationalAction
         $unit = $this->unit($actor, $context, 'customer.manage');
 
         return DB::transaction(function () use ($actor, $context, $data, $unit): Customer {
-            $customer = Customer::query()->create([...$data, 'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'lock_version' => 0]);
+            $customer = Customer::query()->create([...$data, 'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'last_activity_at' => now(), 'lock_version' => 0]);
             $this->events->record($actor, $context, 'customer.created', $customer, ['status' => $customer->status]);
 
             return $customer;

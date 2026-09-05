@@ -42,6 +42,16 @@ final class CustomerSubscriptionPolicy
         return $this->allows($user, 'subscription.manage', $subscription);
     }
 
+    public function consumeUsage(User $user, CustomerSubscription $subscription): bool
+    {
+        return $this->allows($user, 'subscription.usage', $subscription);
+    }
+
+    public function renew(User $user, CustomerSubscription $subscription): bool
+    {
+        return $this->allows($user, 'subscription.renew', $subscription);
+    }
+
     private function allows(User $user, string $permission, ?CustomerSubscription $subscription = null): bool
     {
         try {

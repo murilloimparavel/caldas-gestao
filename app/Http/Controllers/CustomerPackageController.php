@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Marketing\Packages\ConsumePackageSession;
+use App\Actions\Marketing\Packages\ReversePackageUsage;
 use App\Actions\Marketing\Packages\SellCustomerPackage;
 use App\Http\Requests\ConsumePackageSessionRequest;
+use App\Http\Requests\ReversePackageUsageRequest;
 use App\Http\Requests\SellCustomerPackageRequest;
 use App\Models\CustomerPackage;
+use App\Models\PackageUsage;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -39,5 +42,17 @@ final class CustomerPackageController extends Controller
         });
 
         return back()->with('success', 'Sessão consumida com sucesso.');
+    }
+
+    public function reverseUsage(ReversePackageUsageRequest $request, TenantContext $context, CustomerPackage $customerPackage, PackageUsage $packageUsage, ReversePackageUsage $reversePackageUsage): RedirectResponse
+    {
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reversePackageUsage, $request, $context, $packageUsage, $data): array {
+            $usage = $reversePackageUsage->handle($request->user(), $context, $packageUsage, $data);
+
+            return ['resource_id' => $usage->getKey(), 'resource_type' => 'package_usage'];
+        });
+
+        return back()->with('success', 'Consumo revertido com sucesso.');
     }
 }

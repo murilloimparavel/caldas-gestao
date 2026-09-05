@@ -18,6 +18,7 @@ import {
     UserRound,
 } from 'lucide-react';
 import { useState } from 'react';
+import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { statusLabels } from '@/components/calendar';
 import {
     createIdempotencyKey,
@@ -88,12 +89,15 @@ type CustomerSale = {
 type CustomerPackageUsage = {
     created_at: string;
     id: string;
+    reversed_at?: string | null;
+    reversal_reason?: string | null;
     sessions_consumed: number;
     user?: { id: string; name: string } | null;
 };
 
 type CustomerPackageItem = {
     created_at: string;
+    eligible_services_snapshot?: Array<{ id: string; name: string }> | null;
     expires_at: string | null;
     id: string;
     lock_version: number;
@@ -107,9 +111,13 @@ type CustomerPackageItem = {
         validity_days: number;
     } | null;
     package_template_id: string;
+    name_snapshot?: string | null;
+    price_cents_snapshot?: number | null;
     remaining_sessions: number;
     status: ResourceStatus;
     total_sessions: number;
+    total_sessions_snapshot?: number | null;
+    validity_days_snapshot?: number | null;
     usages?: CustomerPackageUsage[];
 };
 
@@ -312,6 +320,10 @@ export default function CustomerShow({
     const [consumePackageOpen, setConsumePackageOpen] = useState(false);
     const [selectedPackageForConsume, setSelectedPackageForConsume] =
         useState<CustomerPackageItem | null>(null);
+    const [usageToReverse, setUsageToReverse] = useState<{
+        customerPackageId: string;
+        usage: CustomerPackageUsage;
+    } | null>(null);
 
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('customer.manage');
@@ -808,9 +820,19 @@ export default function CustomerShow({
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <h3 className="font-semibold text-foreground text-base">
-                                                                {cp.package_template?.name ?? 'Pacote de Serviços'}
+                                                                {cp.name_snapshot ?? cp.package_template?.name ?? 'Pacote de Serviços'}
                                                             </h3>
                                                             <StatusBadge status={cp.status} />
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                                            <span className="rounded-md bg-muted px-2 py-1">
+                                                                {cp.validity_days_snapshot ?? cp.package_template?.validity_days ?? '—'} dias de validade
+                                                            </span>
+                                                            {cp.price_cents_snapshot != null && (
+                                                                <span className="rounded-md bg-muted px-2 py-1">
+                                                                    Venda: {formatMoney(cp.price_cents_snapshot)}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                                             <span>Adquirido em {new Date(cp.created_at).toLocaleDateString('pt-BR')}</span>
@@ -848,17 +870,17 @@ export default function CustomerShow({
                                                     </div>
                                                 </div>
 
-                                                {cp.package_template?.services && cp.package_template.services.length > 0 && (
+                                                {(cp.eligible_services_snapshot ?? cp.package_template?.services)?.length ? (
                                                     <div className="flex flex-wrap gap-1.5 pt-2 border-t">
                                                         <span className="text-xs text-muted-foreground self-center mr-1">Serviços inclusos:</span>
-                                                        {cp.package_template.services.map((srv) => (
+                                                        {(cp.eligible_services_snapshot ?? cp.package_template?.services ?? []).map((srv) => (
                                                             <Badge key={srv.id} variant="secondary" className="text-xs">
                                                                 <Scissors className="mr-1 h-3 w-3" />
                                                                 {srv.name}
                                                             </Badge>
                                                         ))}
                                                     </div>
-                                                )}
+                                                ) : null}
 
                                                 {cp.usages && cp.usages.length > 0 && (
                                                     <div className="pt-2 border-t">
@@ -867,12 +889,26 @@ export default function CustomerShow({
                                                         </p>
                                                         <div className="space-y-1">
                                                             {cp.usages.map((u) => (
-                                                                <div key={u.id} className="text-xs text-muted-foreground flex justify-between">
+                                                                <div key={u.id} className="text-xs text-muted-foreground flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                                                     <span>
                                                                         {u.sessions_consumed} {u.sessions_consumed === 1 ? 'sessão consumida' : 'sessões consumidas'}
                                                                         {u.user ? ` por ${u.user.name}` : ''}
+                                                                        {u.reversed_at ? ' · revertido' : ''}
                                                                     </span>
-                                                                    <span>{new Date(u.created_at).toLocaleString('pt-BR')}</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span>{new Date(u.created_at).toLocaleString('pt-BR')}</span>
+                                                                        {canConsumePackage && !u.reversed_at && (
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                variant="ghost"
+                                                                                className="h-7 px-2 text-destructive hover:text-destructive"
+                                                                                onClick={() => setUsageToReverse({ customerPackageId: cp.id, usage: u })}
+                                                                            >
+                                                                                Reverter
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -1446,6 +1482,42 @@ export default function CustomerShow({
                         </DialogContent>
                     </Dialog>
                 )}
+
+                <Dialog open={usageToReverse !== null} onOpenChange={(open) => !open && setUsageToReverse(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reverter consumo?</DialogTitle>
+                            <DialogDescription>
+                                As sessões serão devolvidas ao saldo do pacote e a reversão ficará registrada.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {usageToReverse && (
+                            <Form
+                                method="post"
+                                action={customerPackageActions.reverseUsage({
+                                    customer_package: usageToReverse.customerPackageId,
+                                    package_usage: usageToReverse.usage.id,
+                                }).url}
+                                headers={{ 'X-Idempotency-Key': createIdempotencyKey('customer-package-usage-reverse', usageToReverse.usage.id) }}
+                                onSuccess={() => setUsageToReverse(null)}
+                            >
+                                {({ processing, errors }) => (
+                                    <>
+                                        <FormErrorSummary errors={errors} />
+                                        <DialogFooter>
+                                            <Button type="button" variant="outline" onClick={() => setUsageToReverse(null)}>
+                                                Cancelar
+                                            </Button>
+                                            <Button type="submit" variant="destructive" disabled={processing}>
+                                                {processing ? 'Revertendo…' : 'Confirmar reversão'}
+                                            </Button>
+                                        </DialogFooter>
+                                    </>
+                                )}
+                            </Form>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </PageCanvas>
         </>
     );

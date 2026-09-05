@@ -34,52 +34,78 @@ final class ConsumePackageSession extends OperationalAction
         $saleId = isset($data['sale_id']) && $data['sale_id'] !== '' ? (string) $data['sale_id'] : null;
         $saleItemId = isset($data['sale_item_id']) && $data['sale_item_id'] !== '' ? (string) $data['sale_item_id'] : null;
 
-        if ($saleId !== null) {
-            $saleExists = Sale::query()
-                ->where('tenant_id', $context->tenant->getKey())
-                ->where('unit_id', $unit->getKey())
-                ->whereKey($saleId)
-                ->exists();
-
-            if (! $saleExists) {
-                throw new InvalidArgumentException('The associated sale was not found.');
-            }
+        if ($saleItemId !== null && $saleId === null) {
+            throw new InvalidArgumentException('A sale item requires an associated sale.');
         }
 
-        if ($saleItemId !== null) {
-            $saleItemExists = SaleItem::query()
-                ->where('tenant_id', $context->tenant->getKey())
-                ->where('unit_id', $unit->getKey())
-                ->whereKey($saleItemId)
-                ->exists();
-
-            if (! $saleItemExists) {
-                throw new InvalidArgumentException('The associated sale item was not found.');
-            }
-        }
-
-        $current = CustomerPackage::query()->whereKey($customerPackage->getKey())->firstOrFail();
-
-        if ($current->expires_at !== null && $current->expires_at->endOfDay()->isPast()) {
-            if ($current->status !== 'expired') {
-                $current->forceFill([
-                    'status' => 'expired',
-                    'lock_version' => $current->lock_version + 1,
-                ])->save();
-            }
-
-            throw new ConflictHttpException('Package has expired.');
-        }
-
-        return DB::transaction(function () use ($actor, $context, $unit, $customerPackage, $sessionsToConsume, $saleId, $saleItemId): CustomerPackage {
+        $package = DB::transaction(function () use ($actor, $context, $unit, $customerPackage, $sessionsToConsume, $saleId, $saleItemId): ?CustomerPackage {
             /** @var CustomerPackage $locked */
             $locked = CustomerPackage::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $unit->getKey())
                 ->whereKey($customerPackage->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            if ($locked->expires_at !== null && $locked->expires_at->endOfDay()->isPast()) {
+                if ($locked->status !== 'expired') {
+                    $locked->forceFill([
+                        'status' => 'expired',
+                        'lock_version' => $locked->lock_version + 1,
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'customer_package.expired', $locked, [
+                        'customer_package_id' => $locked->getKey(),
+                        'remaining_sessions' => $locked->remaining_sessions,
+                        'expires_at' => $locked->expires_at?->toDateString(),
+                        'status' => 'expired',
+                    ]);
+                }
+
+                return null;
+            }
+
             if ($locked->status !== 'active') {
                 throw new ConflictHttpException("Package is not active (current status: {$locked->status}).");
+            }
+
+            if ($saleId !== null) {
+                $saleExists = Sale::query()
+                    ->where('tenant_id', $context->tenant->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->where('customer_id', $locked->customer_id)
+                    ->whereKey($saleId)
+                    ->exists();
+
+                if (! $saleExists) {
+                    throw new InvalidArgumentException('The associated sale was not found for this customer.');
+                }
+            }
+
+            if ($saleItemId !== null) {
+                $saleItem = SaleItem::query()
+                    ->where('tenant_id', $context->tenant->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->where('sale_id', $saleId)
+                    ->whereKey($saleItemId)
+                    ->first();
+
+                if ($saleItem === null) {
+                    throw new InvalidArgumentException('The associated sale item does not belong to the associated sale.');
+                }
+
+                if ($saleItem->service_id === null) {
+                    throw new InvalidArgumentException('Package consumption requires a service sale item.');
+                }
+
+                $eligibleServiceIds = collect($locked->eligible_services_snapshot ?? [])
+                    ->pluck('id')
+                    ->map(static fn (mixed $serviceId): string => (string) $serviceId)
+                    ->all();
+
+                if (! in_array((string) $saleItem->service_id, $eligibleServiceIds, true)) {
+                    throw new InvalidArgumentException('The sale item service is not eligible for this package.');
+                }
             }
 
             if ($locked->remaining_sessions < $sessionsToConsume) {
@@ -118,5 +144,11 @@ final class ConsumePackageSession extends OperationalAction
 
             return $locked->fresh()->load(['packageTemplate.services', 'customer', 'usages.user']);
         }, 5);
+
+        if ($package === null) {
+            throw new ConflictHttpException('Package has expired.');
+        }
+
+        return $package;
     }
 }

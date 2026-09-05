@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Policies\PackageUsagePolicy;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Database\Factories\PackageUsageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +22,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $sale_item_id
  * @property int $sessions_consumed
  * @property string $user_id
+ * @property CarbonImmutable|Carbon|null $reversed_at
+ * @property string|null $reversed_by_user_id
+ * @property string|null $reversal_reason
  */
 #[Fillable([
     'tenant_id',
@@ -27,7 +34,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'sale_item_id',
     'sessions_consumed',
     'user_id',
+    'reversed_at',
+    'reversed_by_user_id',
+    'reversal_reason',
 ])]
+#[UsePolicy(PackageUsagePolicy::class)]
 class PackageUsage extends Model
 {
     /** @use HasFactory<PackageUsageFactory> */
@@ -41,6 +52,7 @@ class PackageUsage extends Model
     {
         return [
             'sessions_consumed' => 'integer',
+            'reversed_at' => 'datetime',
         ];
     }
 

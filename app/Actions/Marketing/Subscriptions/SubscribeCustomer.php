@@ -80,6 +80,8 @@ final class SubscribeCustomer extends OperationalAction
                 'lock_version' => 0,
             ]);
 
+            (new EnsureSubscriptionCycle)->handle($actor, $context, $subscription, permission: 'subscription.subscribe');
+
             $this->events->record($actor, $context, 'customer_subscription.created', $subscription, [
                 'customer_id' => $customer->getKey(),
                 'subscription_plan_id' => $plan->getKey(),

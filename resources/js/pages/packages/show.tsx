@@ -45,6 +45,8 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
+import customers from '@/routes/customers';
 import packagesRoutes from '@/routes/packages';
 import type { SharedPageProps } from '@/types';
 
@@ -58,6 +60,8 @@ type ServiceSummary = {
 type PackageUsageRecord = {
     created_at: string;
     id: string;
+    reversal_reason?: string | null;
+    reversed_at?: string | null;
     sessions_consumed: number;
     user?: { id: string; name: string } | null;
 };
@@ -67,9 +71,14 @@ type CustomerPackageRecord = {
     customer: { email?: string | null; id: string; name: string; phone?: string | null };
     expires_at: string | null;
     id: string;
+    name_snapshot?: string | null;
+    eligible_services_snapshot?: Array<{ id: string; name: string }> | null;
+    price_cents_snapshot?: number | null;
     remaining_sessions: number;
     status: ResourceStatus;
     total_sessions: number;
+    total_sessions_snapshot?: number | null;
+    validity_days_snapshot?: number | null;
     usages: PackageUsageRecord[];
 };
 
@@ -130,6 +139,10 @@ export default function PackageShow({
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deactivateOpen, setDeactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [usageToReverse, setUsageToReverse] = useState<{
+        customerPackageId: string;
+        usage: PackageUsageRecord;
+    } | null>(null);
 
     const [updateKey] = useState(() => createIdempotencyKey('package-update'));
     const [deactivateKey] = useState(() => createIdempotencyKey('package-deactivate'));
@@ -138,6 +151,7 @@ export default function PackageShow({
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('package.manage');
+    const canConsume = canManage || permissions.has('package.consume');
 
     const unitPriceCents = pkg.total_sessions > 0 ? Math.round(pkg.price_cents / pkg.total_sessions) : 0;
     const selectedServiceIds = pkg.services.map((s) => s.id);
@@ -446,7 +460,7 @@ export default function PackageShow({
                                             <div className="flex items-center gap-2">
                                                 <User className="h-4 w-4 text-muted-foreground" />
                                                 <Link
-                                                    href={`/customers/${cp.customer.id}`}
+                                                    href={customers.show(cp.customer.id).url}
                                                     className="font-medium text-foreground hover:underline"
                                                 >
                                                     {cp.customer.name}
@@ -458,6 +472,19 @@ export default function PackageShow({
                                                 <span>Vendido em {new Date(cp.created_at).toLocaleDateString('pt-BR')}</span>
                                                 {cp.expires_at && (
                                                     <span>Validade até {new Date(cp.expires_at).toLocaleDateString('pt-BR')}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                                <span className="rounded-md bg-muted px-2 py-1">
+                                                    Snapshot: {cp.name_snapshot ?? pkg.name}
+                                                </span>
+                                                <span className="rounded-md bg-muted px-2 py-1">
+                                                    {cp.validity_days_snapshot ?? pkg.validity_days} dias de validade
+                                                </span>
+                                                {cp.price_cents_snapshot != null && (
+                                                    <span className="rounded-md bg-muted px-2 py-1">
+                                                        Venda: {formatMoney(cp.price_cents_snapshot)}
+                                                    </span>
                                                 )}
                                             </div>
                                         </div>
@@ -481,12 +508,26 @@ export default function PackageShow({
                                             </p>
                                             <div className="space-y-1">
                                                 {cp.usages.map((usage) => (
-                                                    <div key={usage.id} className="text-xs text-muted-foreground flex items-center justify-between">
+                                                    <div key={usage.id} className="text-xs text-muted-foreground flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                                         <span>
                                                             {usage.sessions_consumed} {usage.sessions_consumed === 1 ? 'sessão consumida' : 'sessões consumidas'}
                                                             {usage.user ? ` por ${usage.user.name}` : ''}
+                                                            {usage.reversed_at ? ' · revertido' : ''}
                                                         </span>
-                                                        <span>{new Date(usage.created_at).toLocaleString('pt-BR')}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{new Date(usage.created_at).toLocaleString('pt-BR')}</span>
+                                                            {canConsume && !usage.reversed_at && (
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-7 px-2 text-destructive hover:text-destructive"
+                                                                    onClick={() => setUsageToReverse({ customerPackageId: cp.id, usage })}
+                                                                >
+                                                                    Reverter
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -500,6 +541,42 @@ export default function PackageShow({
                     </div>
                 )}
             </div>
+
+            <Dialog open={usageToReverse !== null} onOpenChange={(open) => !open && setUsageToReverse(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Reverter consumo?</DialogTitle>
+                        <DialogDescription>
+                            Esta ação devolverá as sessões ao saldo do cliente e ficará registrada no histórico operacional.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {usageToReverse && (
+                        <Form
+                            method="post"
+                            action={customerPackageActions.reverseUsage({
+                                customer_package: usageToReverse.customerPackageId,
+                                package_usage: usageToReverse.usage.id,
+                            }).url}
+                            headers={{ 'X-Idempotency-Key': createIdempotencyKey('package-usage-reverse', usageToReverse.usage.id) }}
+                            onSuccess={() => setUsageToReverse(null)}
+                        >
+                            {({ processing, errors }) => (
+                                <>
+                                    <FormErrorSummary errors={errors} />
+                                    <DialogFooter>
+                                        <Button type="button" variant="outline" onClick={() => setUsageToReverse(null)}>
+                                            Cancelar
+                                        </Button>
+                                        <Button type="submit" variant="destructive" disabled={processing}>
+                                            {processing ? 'Revertendo…' : 'Confirmar reversão'}
+                                        </Button>
+                                    </DialogFooter>
+                                </>
+                            )}
+                        </Form>
+                    )}
+                </DialogContent>
+            </Dialog>
         </PageCanvas>
     );
 }

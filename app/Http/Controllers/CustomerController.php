@@ -6,12 +6,19 @@ use App\Actions\Customers\CreateCustomer;
 use App\Actions\Customers\DeactivateCustomer;
 use App\Actions\Customers\ReactivateCustomer;
 use App\Actions\Customers\UpdateCustomer;
+use App\Actions\Marketing\Retention\MarkCustomerAtRisk;
+use App\Actions\Marketing\Retention\ReactivateCustomerRetention;
+use App\Actions\Marketing\Retention\UpdateCustomerCommunicationPreference;
 use App\Http\Requests\CustomerRequest;
+use App\Http\Requests\RetentionCustomerRequest;
+use App\Http\Requests\UpdateCustomerCommunicationPreferenceRequest;
 use App\Models\Customer;
+use App\Models\CustomerCommunicationPreference;
 use App\Models\PackageTemplate;
 use App\Models\SubscriptionPlan;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -168,5 +175,95 @@ final class CustomerController extends Controller
         });
 
         return to_route('customers.show', $customer)->with('success', 'Cliente reativado.');
+    }
+
+    public function inactive(RetentionCustomerRequest $request, TenantContext $context): JsonResponse
+    {
+        $days = (int) $request->validated('days', 90);
+
+        return response()->json([
+            'days' => $days,
+            'customers' => $this->inactiveCustomers($context, $days),
+        ]);
+    }
+
+    public function retentionIndex(RetentionCustomerRequest $request, TenantContext $context): Response
+    {
+        $days = (int) $request->validated('days', 90);
+
+        return Inertia::render('retention/inactive', [
+            'days' => $days,
+            'customers' => $this->inactiveCustomers($context, $days),
+        ]);
+    }
+
+    public function updateCommunicationPreference(UpdateCustomerCommunicationPreferenceRequest $request, TenantContext $context, Customer $customer, UpdateCustomerCommunicationPreference $update): RedirectResponse|JsonResponse
+    {
+        $data = $request->validated();
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($update, $request, $context, $customer, $data): array {
+            $preference = $update->handle($request->user(), $context, $customer, $data);
+
+            return ['resource_id' => $preference->getKey(), 'resource_type' => 'customer_communication_preference'];
+        });
+        $preference = CustomerCommunicationPreference::query()->findOrFail($reference['resource_id']);
+        if ($request->wantsJson()) {
+            return response()->json(['preference' => $preference]);
+        }
+
+        return back()->with('success', 'Preferência de comunicação atualizada.');
+    }
+
+    public function markAtRisk(RetentionCustomerRequest $request, TenantContext $context, Customer $customer, MarkCustomerAtRisk $mark): RedirectResponse|JsonResponse
+    {
+        $data = $request->validated();
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($mark, $request, $context, $customer, $data): array {
+            $updated = $mark->handle($request->user(), $context, $customer, $data);
+
+            return ['resource_id' => $updated->getKey(), 'resource_type' => 'customer'];
+        });
+        $updated = Customer::query()->findOrFail($reference['resource_id']);
+
+        return $request->wantsJson() ? response()->json(['customer' => $updated]) : back()->with('success', 'Cliente marcado para retenção.');
+    }
+
+    public function reactivateRetention(RetentionCustomerRequest $request, TenantContext $context, Customer $customer, ReactivateCustomerRetention $reactivate): RedirectResponse|JsonResponse
+    {
+        $reference = $this->mutation->execute($request, $context, $request->user(), $request->validated(), function () use ($reactivate, $request, $context, $customer): array {
+            $updated = $reactivate->handle($request->user(), $context, $customer);
+
+            return ['resource_id' => $updated->getKey(), 'resource_type' => 'customer'];
+        });
+        $updated = Customer::query()->findOrFail($reference['resource_id']);
+
+        return $request->wantsJson() ? response()->json(['customer' => $updated]) : back()->with('success', 'Cliente reativado na retenção.');
+    }
+
+    /** @return Collection<int, Customer> */
+    private function inactiveCustomers(TenantContext $context, int $days): Collection
+    {
+        return Customer::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $context->unit?->getKey())
+            ->where('status', 'active')
+            ->inactiveFor($days)
+            ->with([
+                'communicationPreferences' => fn ($query) => $query->select([
+                    'id',
+                    'customer_id',
+                    'channel',
+                    'opted_in',
+                    'consented_at',
+                    'revoked_at',
+                ]),
+            ])
+            ->orderBy('last_activity_at')
+            ->get([
+                'id',
+                'name',
+                'email',
+                'phone',
+                'last_activity_at',
+                'retention_status',
+            ]);
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class SellCustomerPackageRequest extends FormRequest
 {
@@ -57,5 +58,34 @@ final class SellCustomerPackageRequest extends FormRequest
             'package_template_id.exists' => 'O modelo de pacote não pertence à unidade ativa.',
             'sale_id.exists' => 'A comanda selecionada não pertence à unidade ativa.',
         ];
+    }
+
+    /** @return array<int, callable(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            if (! $this->filled('sale_id') || ! $this->filled('customer_id')) {
+                return;
+            }
+
+            $query = Sale::query()
+                ->whereKey($this->string('sale_id')->toString())
+                ->where('customer_id', $this->string('customer_id')->toString());
+
+            $context = $this->attributes->get(TenantContext::class);
+            if ($context instanceof TenantContext) {
+                $query->where('tenant_id', $context->tenant->getKey());
+
+                if ($context->unit !== null) {
+                    $query->where('unit_id', $context->unit->getKey());
+                }
+            }
+
+            $belongsToCustomer = $query->exists();
+
+            if (! $belongsToCustomer) {
+                $validator->errors()->add('sale_id', 'A comanda deve pertencer ao cliente selecionado.');
+            }
+        }];
     }
 }

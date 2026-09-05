@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -91,6 +92,24 @@ class CustomerSubscription extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /** @return HasMany<SubscriptionCycle, $this> */
+    public function cycles(): HasMany
+    {
+        return $this->hasMany(SubscriptionCycle::class);
+    }
+
+    /** @return HasMany<SubscriptionUsageEntry, $this> */
+    public function usageEntries(): HasMany
+    {
+        return $this->hasMany(SubscriptionUsageEntry::class);
+    }
+
+    /** @return HasMany<SubscriptionRenewalAttempt, $this> */
+    public function renewalAttempts(): HasMany
+    {
+        return $this->hasMany(SubscriptionRenewalAttempt::class);
     }
 
     /** @param Builder<CustomerSubscription> $query */

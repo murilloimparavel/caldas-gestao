@@ -13,11 +13,13 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\LegalRetentionController;
 use App\Http\Controllers\OnlineBookingSettingsController;
 use App\Http\Controllers\PackageTemplateController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfessionalController;
 use App\Http\Controllers\PublicBookingController;
+use App\Http\Controllers\RetentionCampaignController;
 use App\Http\Controllers\SaleCategoryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleItemController;
@@ -64,6 +66,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('customers', CustomerController::class)
             ->except(['create', 'edit']);
         Route::patch('customers/{customer}/reactivate', [CustomerController::class, 'reactivate'])->name('customers.reactivate');
+        Route::get('retention/inactive', [CustomerController::class, 'retentionIndex'])->name('retention.inactive');
+        Route::get('retention/customers/inactive', [CustomerController::class, 'inactive'])->name('retention.customers.inactive');
+        Route::patch('customers/{customer}/communication-preferences', [CustomerController::class, 'updateCommunicationPreference'])->name('customers.communication_preferences.update');
+        Route::post('customers/{customer}/retention/mark', [CustomerController::class, 'markAtRisk'])->name('customers.retention.mark');
+        Route::post('customers/{customer}/retention/reactivate', [CustomerController::class, 'reactivateRetention'])->name('customers.retention.reactivate');
+        Route::get('retention/campaigns', [RetentionCampaignController::class, 'index'])->name('retention.campaigns.index');
+        Route::post('retention/campaigns', [RetentionCampaignController::class, 'store'])->name('retention.campaigns.store');
+        Route::patch('retention/campaigns/{retention_campaign}/status', [RetentionCampaignController::class, 'status'])->name('retention.campaigns.status');
+        Route::post('retention/campaigns/{retention_campaign}/audience', [RetentionCampaignController::class, 'audience'])->name('retention.campaigns.audience');
+        Route::post('retention/campaigns/{retention_campaign}/dispatch', [RetentionCampaignController::class, 'dispatch'])->name('retention.campaigns.dispatch');
+        Route::post('retention/campaigns/{retention_campaign}/process', [RetentionCampaignController::class, 'process'])->name('retention.campaigns.process');
+        Route::post('customers/{customer}/legal-holds', [LegalRetentionController::class, 'store'])->name('legal_holds.store');
+        Route::post('legal-holds/{legal_hold}/release', [LegalRetentionController::class, 'release'])->name('legal_holds.release');
         Route::resource('products', ProductController::class)
             ->except(['create', 'edit']);
         Route::patch('products/{product}/reactivate', [ProductController::class, 'reactivate'])->name('products.reactivate');
@@ -85,6 +100,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('packages/{package_template}/reactivate', [PackageTemplateController::class, 'reactivate'])->name('packages.reactivate');
         Route::post('customer-packages', [CustomerPackageController::class, 'store'])->name('customer-packages.store');
         Route::post('customer-packages/{customer_package}/consume', [CustomerPackageController::class, 'consume'])->name('customer-packages.consume');
+        Route::post('customer-packages/{customer_package}/usages/{package_usage}/reverse', [CustomerPackageController::class, 'reverseUsage'])
+            ->scopeBindings()
+            ->name('customer-packages.usages.reverse');
         Route::resource('sales', SaleController::class)
             ->only(['index', 'show', 'store']);
         Route::resource('closing-sessions', ClosingSessionController::class)
@@ -123,6 +141,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('customer-subscriptions/{customer_subscription}/cancel', [CustomerSubscriptionController::class, 'cancel'])->name('customer-subscriptions.cancel');
         Route::post('customer-subscriptions/{customer_subscription}/pause', [CustomerSubscriptionController::class, 'pause'])->name('customer-subscriptions.pause');
         Route::post('customer-subscriptions/{customer_subscription}/resume', [CustomerSubscriptionController::class, 'resume'])->name('customer-subscriptions.resume');
+        Route::post('customer-subscriptions/{customer_subscription}/consume', [CustomerSubscriptionController::class, 'consume'])->name('customer-subscriptions.consume');
+        Route::post('customer-subscriptions/{customer_subscription}/renew', [CustomerSubscriptionController::class, 'renew'])->name('customer-subscriptions.renew');
     });
 });
 

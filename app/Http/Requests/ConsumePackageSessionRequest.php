@@ -10,6 +10,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class ConsumePackageSessionRequest extends FormRequest
 {
@@ -55,5 +56,15 @@ final class ConsumePackageSessionRequest extends FormRequest
             'sale_id.exists' => 'A comanda selecionada não pertence à unidade ativa.',
             'sale_item_id.exists' => 'O item de comanda selecionado não pertence à unidade ativa.',
         ];
+    }
+
+    /** @return array<int, callable(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            if ($this->filled('sale_item_id') && ! $this->filled('sale_id')) {
+                $validator->errors()->add('sale_item_id', 'O item de comanda exige uma comanda associada.');
+            }
+        }];
     }
 }

@@ -21,6 +21,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $unit_id
  * @property string $customer_id
  * @property string $package_template_id
+ * @property string|null $name_snapshot
+ * @property int|null $price_cents_snapshot
+ * @property int|null $total_sessions_snapshot
+ * @property int|null $validity_days_snapshot
+ * @property array<int, array{id:string,name:string}>|null $eligible_services_snapshot
  * @property string|null $sale_id
  * @property int $total_sessions
  * @property int $remaining_sessions
@@ -33,6 +38,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'unit_id',
     'customer_id',
     'package_template_id',
+    'name_snapshot',
+    'price_cents_snapshot',
+    'total_sessions_snapshot',
+    'validity_days_snapshot',
+    'eligible_services_snapshot',
     'sale_id',
     'total_sessions',
     'remaining_sessions',
@@ -56,6 +66,10 @@ class CustomerPackage extends Model
         return [
             'total_sessions' => 'integer',
             'remaining_sessions' => 'integer',
+            'price_cents_snapshot' => 'integer',
+            'total_sessions_snapshot' => 'integer',
+            'validity_days_snapshot' => 'integer',
+            'eligible_services_snapshot' => 'array',
             'expires_at' => 'date',
             'lock_version' => 'integer',
         ];
@@ -93,6 +107,12 @@ class CustomerPackage extends Model
 
     /** @return HasMany<PackageUsage, $this> */
     public function usages(): HasMany
+    {
+        return $this->hasMany(PackageUsage::class);
+    }
+
+    /** @return HasMany<PackageUsage, $this> */
+    public function packageUsages(): HasMany
     {
         return $this->hasMany(PackageUsage::class);
     }

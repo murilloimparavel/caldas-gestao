@@ -3,14 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Marketing\Subscriptions\CancelSubscription;
+use App\Actions\Marketing\Subscriptions\ConsumeSubscriptionUsage;
 use App\Actions\Marketing\Subscriptions\PauseSubscription;
+use App\Actions\Marketing\Subscriptions\RenewSubscriptionCycle;
 use App\Actions\Marketing\Subscriptions\ResumeSubscription;
 use App\Actions\Marketing\Subscriptions\SubscribeCustomer;
+use App\Http\Requests\ConsumeSubscriptionUsageRequest;
 use App\Http\Requests\CustomerSubscriptionRequest;
+use App\Http\Requests\RenewSubscriptionCycleRequest;
 use App\Models\Customer;
 use App\Models\CustomerSubscription;
+use App\Models\SubscriptionCycle;
+use App\Models\SubscriptionUsageEntry;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -87,5 +95,75 @@ final class CustomerSubscriptionController extends Controller
         });
 
         return back()->with('success', 'Assinatura retomada.');
+    }
+
+    public function consume(
+        ConsumeSubscriptionUsageRequest $request,
+        TenantContext $context,
+        CustomerSubscription $customerSubscription,
+        ConsumeSubscriptionUsage $consumeSubscriptionUsage,
+    ): RedirectResponse|JsonResponse {
+        $data = $request->validated();
+        $data['subscription_id'] = $customerSubscription->getKey();
+        $idempotencyKey = trim((string) $request->header('X-Idempotency-Key', ''));
+        if ($idempotencyKey !== '') {
+            $data['idempotency_key'] = $idempotencyKey;
+        }
+
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($consumeSubscriptionUsage, $request, $context, $customerSubscription, $data): array {
+            $entry = $consumeSubscriptionUsage->handle($request->user(), $context, $customerSubscription, $data);
+
+            return ['resource_id' => $entry->getKey(), 'resource_type' => 'subscription_usage_entry'];
+        });
+
+        $entry = SubscriptionUsageEntry::query()
+            ->with(['service:id,name', 'cycle:id,cycle_number,starts_on,ends_on,status'])
+            ->whereKey($reference['resource_id'])
+            ->firstOrFail();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'entry' => $entry,
+                'subscription' => $customerSubscription->fresh(['plan:id,name,billing_cycle']),
+                'cycle' => $entry->cycle,
+            ]);
+        }
+
+        return back()->with('success', 'Uso da assinatura registrado com sucesso.');
+    }
+
+    public function renew(
+        RenewSubscriptionCycleRequest $request,
+        TenantContext $context,
+        CustomerSubscription $customerSubscription,
+        RenewSubscriptionCycle $renewSubscriptionCycle,
+    ): RedirectResponse|JsonResponse {
+        $data = $request->validated();
+        $data['subscription_id'] = $customerSubscription->getKey();
+        $asOf = CarbonImmutable::parse($data['as_of'] ?? today()->toDateString());
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($renewSubscriptionCycle, $request, $context, $customerSubscription, $asOf): array {
+            $cycle = $renewSubscriptionCycle->handle($request->user(), $context, $customerSubscription, $asOf);
+
+            if ($cycle === null) {
+                return ['resource_id' => $customerSubscription->getKey(), 'resource_type' => 'customer_subscription'];
+            }
+
+            return ['resource_id' => $cycle->getKey(), 'resource_type' => 'subscription_cycle'];
+        });
+
+        $cycle = SubscriptionCycle::query()
+            ->with(['usages.service:id,name'])
+            ->whereKey($reference['resource_id'])
+            ->first();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'subscription' => $customerSubscription->fresh(['plan:id,name,billing_cycle']),
+                'cycle' => $cycle,
+                'renewed' => $cycle?->cycle_number > 1,
+            ]);
+        }
+
+        return back()->with('success', 'Ciclo da assinatura processado com sucesso.');
     }
 }

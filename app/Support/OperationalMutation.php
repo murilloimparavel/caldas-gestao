@@ -68,7 +68,25 @@ final class OperationalMutation
         $route = $request->route();
         $routeName = $route instanceof Route ? (string) ($route->getName() ?? '') : '';
         $routeUri = $route instanceof Route ? $route->uri() : $request->path();
-        $resourceType = Str::singular(Str::before($routeName, '.'));
+        $resourceType = Str::snake(Str::singular(Str::before($routeName, '.')));
+
+        // Nested package usage routes mutate the child resource returned by the
+        // controller, not the parent customer package.
+        if ($routeName === 'customer-packages.usages.reverse') {
+            $resourceType = 'package_usage';
+        }
+
+        // Subscription cycle commands return a child resource while their
+        // route is scoped to the customer subscription. The request payload
+        // carries the parent id so idempotency remains tenant and resource
+        // specific without rejecting a valid child-resource replay.
+        if (in_array($routeName, ['customer-subscriptions.consume', 'customer-subscriptions.renew'], true)) {
+            $resourceType = $routeName === 'customer-subscriptions.consume'
+                ? 'subscription_usage_entry'
+                : 'subscription_cycle';
+            $resource = null;
+        }
+
         $resource = $route instanceof Route ? $route->parameter($resourceType) : null;
 
         $resourceId = match (true) {
