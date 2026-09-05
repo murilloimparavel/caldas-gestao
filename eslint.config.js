@@ -70,20 +70,7 @@ export default [
                     fixStyle: 'separate-type-imports',
                 },
             ],
-            'import/order': [
-                'error',
-                {
-                    groups: [
-                        'builtin',
-                        'external',
-                        'internal',
-                        'parent',
-                        'sibling',
-                        'index',
-                    ],
-                    alphabetize: { order: 'ignore' },
-                },
-            ],
+            'import/order': 'off',
             'import/consistent-type-specifier-style': [
                 'error',
                 'prefer-top-level',
