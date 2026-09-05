@@ -98,6 +98,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup PHP for Wayfinder
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql, pgsql, redis
+          coverage: none
+
+      - name: Install PHP dependencies for Wayfinder
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Generate Wayfinder routes
+        run: php artisan wayfinder:generate --with-form
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
