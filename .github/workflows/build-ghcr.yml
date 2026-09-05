@@ -74,7 +74,12 @@ jobs:
         run: php artisan wayfinder:generate --with-form
 
       - name: Run quality checks
-        run: composer ci:check
+        run: |
+          composer run lint:check
+          npm run format:check
+          npm run types:check
+          npm run build
+          php artisan test --compact
 
   publish:
     name: Publish image to GHCR
