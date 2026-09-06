@@ -135,5 +135,3 @@ export type CalendarProps = {
     schedule_blocks?: ScheduleBlock[];
     services?: CalendarOption[];
 };
-
-

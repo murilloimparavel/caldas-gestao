@@ -1,5 +1,11 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { AlertCircle, ArrowLeft, RefreshCw, ShieldAlert, UserRound } from 'lucide-react';
+import {
+    AlertCircle,
+    ArrowLeft,
+    RefreshCw,
+    ShieldAlert,
+    UserRound,
+} from 'lucide-react';
 import {
     createIdempotencyKey,
     EmptyState,
@@ -75,7 +81,9 @@ function consentSummary(preferences: CommunicationPreference[]): string {
     return 'Sem consentimento registrado';
 }
 
-function retentionStatusLabel(status: InactiveCustomer['retention_status']): string {
+function retentionStatusLabel(
+    status: InactiveCustomer['retention_status'],
+): string {
     return {
         none: 'Pendente',
         at_risk: 'Em retenção',
@@ -83,14 +91,21 @@ function retentionStatusLabel(status: InactiveCustomer['retention_status']): str
     }[status];
 }
 
-export default function RetentionInactive({ customers: inactiveCustomers, days }: Props) {
+export default function RetentionInactive({
+    customers: inactiveCustomers,
+    days,
+}: Props) {
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('retention.manage');
 
     function changeWindow(value: string): void {
         const parsedDays = Number.parseInt(value, 10);
 
-        if (!Number.isInteger(parsedDays) || parsedDays < 1 || parsedDays > 3650) {
+        if (
+            !Number.isInteger(parsedDays) ||
+            parsedDays < 1 ||
+            parsedDays > 3650
+        ) {
             return;
         }
 
@@ -131,9 +146,12 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
 
                 <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
                     <div>
-                        <p className="text-sm font-medium">Janela de inatividade</p>
+                        <p className="text-sm font-medium">
+                            Janela de inatividade
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                            Mostrando clientes sem atividade há pelo menos {days} dias.
+                            Mostrando clientes sem atividade há pelo menos{' '}
+                            {days} dias.
                         </p>
                     </div>
                     <label className="grid gap-1 text-sm font-medium">
@@ -159,9 +177,10 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                         <div className="divide-y divide-border">
                             {inactiveCustomers.map((customer) => {
-                                const isOptedIn = customer.communication_preferences.some(
-                                    (preference) => preference.opted_in,
-                                );
+                                const isOptedIn =
+                                    customer.communication_preferences.some(
+                                        (preference) => preference.opted_in,
+                                    );
 
                                 return (
                                     <article
@@ -171,14 +190,17 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                                         <div className="min-w-0 space-y-2">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Link
-                                                    href={customers.show.url(customer.id)}
+                                                    href={customers.show.url(
+                                                        customer.id,
+                                                    )}
                                                     className="truncate font-semibold hover:underline"
                                                 >
                                                     {customer.name}
                                                 </Link>
                                                 <Badge
                                                     variant={
-                                                        customer.retention_status === 'at_risk'
+                                                        customer.retention_status ===
+                                                        'at_risk'
                                                             ? 'destructive'
                                                             : 'secondary'
                                                     }
@@ -189,7 +211,9 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                                                 </Badge>
                                                 <Badge
                                                     variant={
-                                                        isOptedIn ? 'default' : 'outline'
+                                                        isOptedIn
+                                                            ? 'default'
+                                                            : 'outline'
                                                     }
                                                 >
                                                     {consentSummary(
@@ -198,8 +222,16 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                                                 </Badge>
                                             </div>
                                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                                {customer.email && <span>{customer.email}</span>}
-                                                {customer.phone && <span>{customer.phone}</span>}
+                                                {customer.email && (
+                                                    <span>
+                                                        {customer.email}
+                                                    </span>
+                                                )}
+                                                {customer.phone && (
+                                                    <span>
+                                                        {customer.phone}
+                                                    </span>
+                                                )}
                                                 <span>
                                                     Última atividade:{' '}
                                                     {formatDateTime(
@@ -211,7 +243,8 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
 
                                         {canManage && (
                                             <div className="flex flex-wrap gap-2 sm:justify-end">
-                                                {customer.retention_status !== 'at_risk' && (
+                                                {customer.retention_status !==
+                                                    'at_risk' && (
                                                     <Form
                                                         {...customerRetention.mark.form(
                                                             customer.id,
@@ -235,7 +268,9 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                                                                     type="submit"
                                                                     size="sm"
                                                                     variant="outline"
-                                                                    disabled={processing}
+                                                                    disabled={
+                                                                        processing
+                                                                    }
                                                                 >
                                                                     <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
                                                                     {processing
@@ -246,7 +281,8 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                                                         )}
                                                     </Form>
                                                 )}
-                                                {customer.retention_status !== 'reactivated' && (
+                                                {customer.retention_status !==
+                                                    'reactivated' && (
                                                     <Form
                                                         {...customerRetention.reactivate.form(
                                                             customer.id,
@@ -263,7 +299,9 @@ export default function RetentionInactive({ customers: inactiveCustomers, days }
                                                             <Button
                                                                 type="submit"
                                                                 size="sm"
-                                                                disabled={processing}
+                                                                disabled={
+                                                                    processing
+                                                                }
                                                             >
                                                                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
                                                                 {processing

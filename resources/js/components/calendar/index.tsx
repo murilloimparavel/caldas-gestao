@@ -228,9 +228,12 @@ export function ProfessionalAvatarHeader({
         <div className="flex items-center gap-2 px-2 py-2">
             <Avatar className="size-8 shrink-0 border border-border">
                 {professional.avatar_url ? (
-                    <AvatarImage src={professional.avatar_url} alt={professional.name} />
+                    <AvatarImage
+                        src={professional.avatar_url}
+                        alt={professional.name}
+                    />
                 ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                     {getInitials(professional.name)}
                 </AvatarFallback>
             </Avatar>
@@ -295,7 +298,10 @@ export function CalendarToolbar({
                                 },
                             })}
                         >
-                            <ChevronLeft className="size-5" aria-hidden="true" />
+                            <ChevronLeft
+                                className="size-5"
+                                aria-hidden="true"
+                            />
                         </Link>
                     </Button>
                     <div className="min-w-0 px-1 text-center sm:text-left">
@@ -325,7 +331,10 @@ export function CalendarToolbar({
                                 },
                             })}
                         >
-                            <ChevronRight className="size-5" aria-hidden="true" />
+                            <ChevronRight
+                                className="size-5"
+                                aria-hidden="true"
+                            />
                         </Link>
                     </Button>
                 </div>
@@ -398,16 +407,26 @@ export function CalendarToolbar({
                                     onClick={onCreateBlock}
                                     className="h-11 min-h-[44px] flex-1 sm:h-9 sm:min-h-0 sm:flex-none"
                                 >
-                                    <Lock className="size-4" aria-hidden="true" />
-                                    <span className="hidden xs:inline sm:inline">Bloqueio</span>
-                                    <span className="xs:hidden sm:hidden">Bloquear</span>
+                                    <Lock
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    <span className="xs:inline hidden sm:inline">
+                                        Bloqueio
+                                    </span>
+                                    <span className="xs:hidden sm:hidden">
+                                        Bloquear
+                                    </span>
                                 </Button>
                             ) : null}
                             <Button
                                 onClick={onCreate}
                                 className="h-11 min-h-[44px] flex-1 sm:h-9 sm:min-h-0 sm:flex-none"
                             >
-                                <CalendarDays className="size-4" aria-hidden="true" />
+                                <CalendarDays
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
                                 <span>Agendar</span>
                             </Button>
                         </>
@@ -451,18 +470,18 @@ export function AppointmentCard({
             aria-label={`${formatTime(appointment.starts_at, timeZone)}, ${customerName}, ${serviceName}, ${statusLabel(appointment.status)}`}
         >
             <div className="flex items-start justify-between gap-1">
-                <span className="text-[11px] font-semibold leading-none">
+                <span className="text-[11px] leading-none font-semibold">
                     {formatTime(appointment.starts_at, timeZone)}
                     {appointment.ends_at
                         ? `–${formatTime(appointment.ends_at, timeZone)}`
                         : null}
                 </span>
                 <MoreHorizontal
-                    className="size-3.5 opacity-60 transition group-hover:opacity-100 shrink-0"
+                    className="size-3.5 shrink-0 opacity-60 transition group-hover:opacity-100"
                     aria-hidden="true"
                 />
             </div>
-            <p className="mt-1 truncate text-xs font-bold leading-snug">
+            <p className="mt-1 truncate text-xs leading-snug font-bold">
                 {customerName}
             </p>
             <p className="truncate text-[11px] opacity-90">{serviceName}</p>
@@ -637,10 +656,17 @@ export function WeekCalendar({
     timeZone,
 }: {
     appointments: CalendarAppointment[];
-    onDragSelect?: (action: 'appointment' | 'block', selection: DragSelection) => void;
+    onDragSelect?: (
+        action: 'appointment' | 'block',
+        selection: DragSelection,
+    ) => void;
     onOpen: (appointment: CalendarAppointment) => void;
     onOpenBlock?: (block: ScheduleBlock) => void;
-    onSlotClick?: (params: { date: string; time: string; professionalId?: string }) => void;
+    onSlotClick?: (params: {
+        date: string;
+        time: string;
+        professionalId?: string;
+    }) => void;
     professionals?: CalendarOption[];
     range: CalendarRange;
     scheduleBlocks?: ScheduleBlock[];
@@ -657,21 +683,33 @@ export function WeekCalendar({
     );
 
     const [dragging, setDragging] = useState<DragSelection | null>(null);
-    const [completedSelection, setCompletedSelection] = useState<DragSelection | null>(null);
+    const [completedSelection, setCompletedSelection] =
+        useState<DragSelection | null>(null);
     const isMouseDownRef = useRef(false);
 
     // Se houver profissionais selecionados/disponíveis e for visualização por profissionais (ou exibição na semana)
-    const showProfessionalColumns = professionals.length > 0 && dates.length === 1;
+    const showProfessionalColumns =
+        professionals.length > 0 && dates.length === 1;
     const columns = showProfessionalColumns
-        ? professionals.map((p) => ({ id: p.id, title: p.name, professional: p, date: dates[0] }))
-        : dates.map((d) => ({ id: d, title: formatDay(d, timeZone), professional: null, date: d }));
+        ? professionals.map((p) => ({
+              id: p.id,
+              title: p.name,
+              professional: p,
+              date: dates[0],
+          }))
+        : dates.map((d) => ({
+              id: d,
+              title: formatDay(d, timeZone),
+              professional: null,
+              date: d,
+          }));
 
     const getMinutesFromY = (y: number) => {
         const clampedY = Math.max(0, Math.min(y, timelineHeight - 1));
         const slot15 = Math.floor(clampedY / (slotHeight / 2));
         const minutes = startHour * 60 + slot15 * 15;
 
-        return Math.min(minutes, (endHour * 60) - 15);
+        return Math.min(minutes, endHour * 60 - 15);
     };
 
     const handlePointerDown = (
@@ -693,7 +731,10 @@ export function WeekCalendar({
         });
     };
 
-    const handlePointerMove = (clientY: number, currentTarget: HTMLDivElement) => {
+    const handlePointerMove = (
+        clientY: number,
+        currentTarget: HTMLDivElement,
+    ) => {
         if (!isMouseDownRef.current || !dragging) {
             return;
         }
@@ -703,7 +744,9 @@ export function WeekCalendar({
         const minutes = getMinutesFromY(y);
 
         if (minutes !== dragging.endMinutes) {
-            setDragging((prev) => (prev ? { ...prev, endMinutes: minutes } : null));
+            setDragging((prev) =>
+                prev ? { ...prev, endMinutes: minutes } : null,
+            );
         }
     };
 
@@ -734,7 +777,11 @@ export function WeekCalendar({
     return (
         <div className="surface-panel overflow-hidden select-none">
             <div className="overflow-x-auto">
-                <div style={{ minWidth: `${Math.max(920, columns.length * 140 + 80)}px` }}>
+                <div
+                    style={{
+                        minWidth: `${Math.max(920, columns.length * 140 + 80)}px`,
+                    }}
+                >
                     <div
                         className="grid border-b border-border bg-muted/25"
                         style={{
@@ -794,35 +841,49 @@ export function WeekCalendar({
                             ))}
                         </div>
                         {columns.map((col) => {
-                            const dayAppointments = appointments.filter((appointment) => {
-                                const matchDate = dateKey(appointment.starts_at, timeZone) === col.date;
+                            const dayAppointments = appointments.filter(
+                                (appointment) => {
+                                    const matchDate =
+                                        dateKey(
+                                            appointment.starts_at,
+                                            timeZone,
+                                        ) === col.date;
 
-                                if (!matchDate) {
-                                    return false;
-                                }
+                                    if (!matchDate) {
+                                        return false;
+                                    }
 
-                                if (col.professional) {
-                                    const profId = appointment.professional_id ?? appointment.professional?.id;
+                                    if (col.professional) {
+                                        const profId =
+                                            appointment.professional_id ??
+                                            appointment.professional?.id;
 
-                                    return profId === col.professional.id;
-                                }
+                                        return profId === col.professional.id;
+                                    }
 
-                                return true;
-                            });
+                                    return true;
+                                },
+                            );
 
                             const dayBlocks = scheduleBlocks.filter((block) => {
                                 if (block.status === 'cancelled') {
                                     return false;
                                 }
 
-                                const matchDate = dateKey(block.starts_at, timeZone) === col.date;
+                                const matchDate =
+                                    dateKey(block.starts_at, timeZone) ===
+                                    col.date;
 
                                 if (!matchDate) {
                                     return false;
                                 }
 
                                 if (col.professional) {
-                                    return !block.professional_id || block.professional_id === col.professional.id;
+                                    return (
+                                        !block.professional_id ||
+                                        block.professional_id ===
+                                            col.professional.id
+                                    );
                                 }
 
                                 return true;
@@ -831,17 +892,25 @@ export function WeekCalendar({
                             const isCurrentColDragging =
                                 dragging &&
                                 dragging.date === col.date &&
-                                dragging.professionalId === col.professional?.id;
+                                dragging.professionalId ===
+                                    col.professional?.id;
 
                             const dragMinMins = isCurrentColDragging
-                                ? Math.min(dragging.startMinutes, dragging.endMinutes)
+                                ? Math.min(
+                                      dragging.startMinutes,
+                                      dragging.endMinutes,
+                                  )
                                 : 0;
                             const dragMaxMins = isCurrentColDragging
-                                ? Math.max(dragging.startMinutes, dragging.endMinutes) + 15
+                                ? Math.max(
+                                      dragging.startMinutes,
+                                      dragging.endMinutes,
+                                  ) + 15
                                 : 0;
                             const dragDuration = dragMaxMins - dragMinMins;
                             const dragTop = isCurrentColDragging
-                                ? ((dragMinMins - startHour * 60) / 30) * slotHeight
+                                ? ((dragMinMins - startHour * 60) / 30) *
+                                  slotHeight
                                 : 0;
                             const dragHeight = isCurrentColDragging
                                 ? (dragDuration / 30) * slotHeight
@@ -850,29 +919,45 @@ export function WeekCalendar({
                             return (
                                 <div
                                     key={col.id}
-                                    className="relative cursor-pointer border-r border-border bg-[linear-gradient(to_bottom,transparent_47px,var(--border)_48px)] bg-size-[100%_48px] last:border-r-0 touch-none"
+                                    className="relative cursor-pointer touch-none border-r border-border bg-[linear-gradient(to_bottom,transparent_47px,var(--border)_48px)] bg-size-[100%_48px] last:border-r-0"
                                     style={{ height: timelineHeight }}
                                     onMouseDown={(e) => {
                                         if (e.button !== 0) {
-return;
-}
+                                            return;
+                                        }
 
-                                        handlePointerDown(col.date, col.professional?.id, e.clientY, e.currentTarget);
+                                        handlePointerDown(
+                                            col.date,
+                                            col.professional?.id,
+                                            e.clientY,
+                                            e.currentTarget,
+                                        );
                                     }}
                                     onMouseMove={(e) => {
-                                        handlePointerMove(e.clientY, e.currentTarget);
+                                        handlePointerMove(
+                                            e.clientY,
+                                            e.currentTarget,
+                                        );
                                     }}
                                     onMouseUp={() => {
                                         handlePointerUp();
                                     }}
                                     onTouchStart={(e) => {
                                         if (e.touches[0]) {
-                                            handlePointerDown(col.date, col.professional?.id, e.touches[0].clientY, e.currentTarget);
+                                            handlePointerDown(
+                                                col.date,
+                                                col.professional?.id,
+                                                e.touches[0].clientY,
+                                                e.currentTarget,
+                                            );
                                         }
                                     }}
                                     onTouchMove={(e) => {
                                         if (e.touches[0]) {
-                                            handlePointerMove(e.touches[0].clientY, e.currentTarget);
+                                            handlePointerMove(
+                                                e.touches[0].clientY,
+                                                e.currentTarget,
+                                            );
                                         }
                                     }}
                                     onTouchEnd={() => {
@@ -882,20 +967,24 @@ return;
                                     {/* Overlay Visual durante o arraste */}
                                     {isCurrentColDragging ? (
                                         <div
-                                            className="absolute inset-x-1 z-20 flex flex-col justify-between rounded-md border-2 border-primary/50 bg-primary/20 p-1.5 shadow-sm pointer-events-none"
+                                            className="pointer-events-none absolute inset-x-1 z-20 flex flex-col justify-between rounded-md border-2 border-primary/50 bg-primary/20 p-1.5 shadow-sm"
                                             style={{
                                                 height: `${dragHeight}px`,
                                                 top: `${dragTop}px`,
                                             }}
                                         >
-                                            <span className="text-[11px] font-bold text-primary dark:text-primary-foreground drop-shadow-xs">
-                                                {formatMinutes(dragMinMins)} - {formatMinutes(dragMaxMins)} • {formatDuration(dragDuration)}
+                                            <span className="text-[11px] font-bold text-primary drop-shadow-xs dark:text-primary-foreground">
+                                                {formatMinutes(dragMinMins)} -{' '}
+                                                {formatMinutes(dragMaxMins)} •{' '}
+                                                {formatDuration(dragDuration)}
                                             </span>
                                         </div>
                                     ) : null}
 
                                     {dayBlocks.map((block) => {
-                                        const start = asInstant(block.starts_at);
+                                        const start = asInstant(
+                                            block.starts_at,
+                                        );
                                         const end = asInstant(block.ends_at);
                                         const { hour, minute } = zonedTimeParts(
                                             block.starts_at,
@@ -905,7 +994,8 @@ return;
                                         const duration = Math.max(
                                             15,
                                             Math.round(
-                                                (end.getTime() - start.getTime()) /
+                                                (end.getTime() -
+                                                    start.getTime()) /
                                                     60000,
                                             ),
                                         );
@@ -922,14 +1012,14 @@ return;
                                                     e.stopPropagation();
                                                     onOpenBlock?.(block);
                                                 }}
-                                                className="group absolute inset-x-1 z-10 flex flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800 min-h-[44px]"
+                                                className="group absolute inset-x-1 z-10 flex min-h-[44px] flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
                                                 style={style}
                                                 title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
                                             >
                                                 <div className="flex items-center justify-between gap-1">
                                                     <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
                                                         <Lock
-                                                            className="size-3 text-slate-500 dark:text-slate-400 shrink-0"
+                                                            className="size-3 shrink-0 text-slate-500 dark:text-slate-400"
                                                             aria-hidden="true"
                                                         />
                                                         {formatTime(
@@ -942,17 +1032,20 @@ return;
                                                             timeZone,
                                                         )}
                                                     </span>
-                                                    <span className="rounded bg-slate-200 px-1 py-0.2 text-[9px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                    <span className="py-0.2 rounded bg-slate-200 px-1 text-[9px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                                         Ocupado
                                                     </span>
                                                 </div>
                                                 <p className="truncate text-[11px] font-medium text-slate-900 dark:text-slate-100">
-                                                    {block.reason ||
-                                                        'Ocupado'}
+                                                    {block.reason || 'Ocupado'}
                                                 </p>
-                                                {block.professional?.name && !col.professional ? (
+                                                {block.professional?.name &&
+                                                !col.professional ? (
                                                     <p className="truncate text-[10px] text-slate-600 dark:text-slate-400">
-                                                        {block.professional.name}
+                                                        {
+                                                            block.professional
+                                                                .name
+                                                        }
                                                     </p>
                                                 ) : null}
                                             </button>
@@ -1040,10 +1133,17 @@ export function DayAgenda({
 }: {
     appointments: CalendarAppointment[];
     date: string;
-    onDragSelect?: (action: 'appointment' | 'block', selection: DragSelection) => void;
+    onDragSelect?: (
+        action: 'appointment' | 'block',
+        selection: DragSelection,
+    ) => void;
     onOpen: (appointment: CalendarAppointment) => void;
     onOpenBlock?: (block: ScheduleBlock) => void;
-    onSlotClick?: (params: { date: string; time: string; professionalId?: string }) => void;
+    onSlotClick?: (params: {
+        date: string;
+        time: string;
+        professionalId?: string;
+    }) => void;
     professionals?: CalendarOption[];
     selectedProfessionalId?: string;
     onSelectProfessional?: (id: string | null) => void;
@@ -1062,7 +1162,8 @@ export function DayAgenda({
     );
 
     const [dragging, setDragging] = useState<DragSelection | null>(null);
-    const [completedSelection, setCompletedSelection] = useState<DragSelection | null>(null);
+    const [completedSelection, setCompletedSelection] =
+        useState<DragSelection | null>(null);
     const isMouseDownRef = useRef(false);
 
     const getMinutesFromY = (y: number) => {
@@ -1070,10 +1171,13 @@ export function DayAgenda({
         const slot15 = Math.floor(clampedY / (slotHeight / 2));
         const minutes = startHour * 60 + slot15 * 15;
 
-        return Math.min(minutes, (endHour * 60) - 15);
+        return Math.min(minutes, endHour * 60 - 15);
     };
 
-    const handlePointerDown = (clientY: number, currentTarget: HTMLDivElement) => {
+    const handlePointerDown = (
+        clientY: number,
+        currentTarget: HTMLDivElement,
+    ) => {
         const rect = currentTarget.getBoundingClientRect();
         const y = clientY - rect.top;
         const minutes = getMinutesFromY(y);
@@ -1087,7 +1191,10 @@ export function DayAgenda({
         });
     };
 
-    const handlePointerMove = (clientY: number, currentTarget: HTMLDivElement) => {
+    const handlePointerMove = (
+        clientY: number,
+        currentTarget: HTMLDivElement,
+    ) => {
         if (!isMouseDownRef.current || !dragging) {
             return;
         }
@@ -1097,7 +1204,9 @@ export function DayAgenda({
         const minutes = getMinutesFromY(y);
 
         if (minutes !== dragging.endMinutes) {
-            setDragging((prev) => (prev ? { ...prev, endMinutes: minutes } : null));
+            setDragging((prev) =>
+                prev ? { ...prev, endMinutes: minutes } : null,
+            );
         }
     };
 
@@ -1126,63 +1235,69 @@ export function DayAgenda({
     };
 
     const dayAppointments = appointments
-        .filter(
-            (appointment) => {
-                const matchDate = dateKey(appointment.starts_at, timeZone) === date;
+        .filter((appointment) => {
+            const matchDate = dateKey(appointment.starts_at, timeZone) === date;
 
-                if (!matchDate) {
-                    return false;
-                }
+            if (!matchDate) {
+                return false;
+            }
 
-                if (selectedProfessionalId) {
-                    const profId = appointment.professional_id ?? appointment.professional?.id;
+            if (selectedProfessionalId) {
+                const profId =
+                    appointment.professional_id ?? appointment.professional?.id;
 
-                    return profId === selectedProfessionalId;
-                }
+                return profId === selectedProfessionalId;
+            }
 
-                return true;
-            },
-        )
+            return true;
+        })
         .sort((left, right) => left.starts_at.localeCompare(right.starts_at));
 
     const dayBlocks = scheduleBlocks
-        .filter(
-            (block) => {
-                if (block.status === 'cancelled') {
-                    return false;
-                }
+        .filter((block) => {
+            if (block.status === 'cancelled') {
+                return false;
+            }
 
-                const matchDate = dateKey(block.starts_at, timeZone) === date;
+            const matchDate = dateKey(block.starts_at, timeZone) === date;
 
-                if (!matchDate) {
-                    return false;
-                }
+            if (!matchDate) {
+                return false;
+            }
 
-                if (selectedProfessionalId) {
-                    return !block.professional_id || block.professional_id === selectedProfessionalId;
-                }
+            if (selectedProfessionalId) {
+                return (
+                    !block.professional_id ||
+                    block.professional_id === selectedProfessionalId
+                );
+            }
 
-                return true;
-            },
-        )
+            return true;
+        })
         .sort((left, right) => left.starts_at.localeCompare(right.starts_at));
 
     const isDragging = dragging && dragging.date === date;
-    const dragMinMins = isDragging ? Math.min(dragging.startMinutes, dragging.endMinutes) : 0;
-    const dragMaxMins = isDragging ? Math.max(dragging.startMinutes, dragging.endMinutes) + 15 : 0;
+    const dragMinMins = isDragging
+        ? Math.min(dragging.startMinutes, dragging.endMinutes)
+        : 0;
+    const dragMaxMins = isDragging
+        ? Math.max(dragging.startMinutes, dragging.endMinutes) + 15
+        : 0;
     const dragDuration = dragMaxMins - dragMinMins;
-    const dragTop = isDragging ? ((dragMinMins - startHour * 60) / 30) * slotHeight : 0;
+    const dragTop = isDragging
+        ? ((dragMinMins - startHour * 60) / 30) * slotHeight
+        : 0;
     const dragHeight = isDragging ? (dragDuration / 30) * slotHeight : 0;
 
     return (
         <section
-            className="surface-panel p-3.5 sm:p-5 select-none"
+            className="surface-panel p-3.5 select-none sm:p-5"
             aria-labelledby="day-agenda-title"
         >
             {/* Seletor de dias da semana para mobile */}
             {weekDates.length > 0 && onSelectDate ? (
-                <div className="mb-4 overflow-x-auto pb-1 scrollbar-none md:hidden">
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="mb-4 scrollbar-none overflow-x-auto pb-1 md:hidden">
+                    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                         Dias da semana
                     </p>
                     <div className="flex items-center gap-1.5">
@@ -1197,7 +1312,7 @@ export function DayAgenda({
                                     className={cn(
                                         'flex min-h-[44px] min-w-[3.25rem] flex-1 flex-col items-center justify-center rounded-lg border px-2 py-1 text-center transition',
                                         isSelected
-                                            ? 'border-primary bg-primary text-primary-foreground font-bold shadow-xs'
+                                            ? 'border-primary bg-primary font-bold text-primary-foreground shadow-xs'
                                             : 'border-border bg-card text-foreground hover:bg-muted/50',
                                     )}
                                 >
@@ -1216,8 +1331,8 @@ export function DayAgenda({
 
             {/* Seletor/tabs de profissionais para mobile */}
             {professionals.length > 1 && onSelectProfessional ? (
-                <div className="mb-4 overflow-x-auto pb-1 scrollbar-none md:hidden">
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="mb-4 scrollbar-none overflow-x-auto pb-1 md:hidden">
+                    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                         Filtrar Profissional
                     </p>
                     <div className="flex items-center gap-1.5">
@@ -1250,7 +1365,10 @@ export function DayAgenda({
                                 >
                                     <Avatar className="size-6 border border-border">
                                         {p.avatar_url ? (
-                                            <AvatarImage src={p.avatar_url} alt={p.name} />
+                                            <AvatarImage
+                                                src={p.avatar_url}
+                                                alt={p.name}
+                                            />
                                         ) : null}
                                         <AvatarFallback className="bg-primary/20 text-[10px]">
                                             {getInitials(p.name)}
@@ -1277,13 +1395,13 @@ export function DayAgenda({
                     </p>
                 </div>
                 <Clock3
-                    className="size-5 text-muted-foreground shrink-0"
+                    className="size-5 shrink-0 text-muted-foreground"
                     aria-hidden="true"
                 />
             </div>
 
             {/* Grade Temporal Diária Interativa (Drag to select e clique) */}
-            <div className="overflow-x-auto rounded-lg border border-border bg-muted/10 p-2 mb-4">
+            <div className="mb-4 overflow-x-auto rounded-lg border border-border bg-muted/10 p-2">
                 <div
                     className="grid"
                     style={{
@@ -1313,12 +1431,12 @@ export function DayAgenda({
                         ))}
                     </div>
                     <div
-                        className="relative cursor-pointer bg-[linear-gradient(to_bottom,transparent_47px,var(--border)_48px)] bg-size-[100%_48px] touch-none"
+                        className="relative cursor-pointer touch-none bg-[linear-gradient(to_bottom,transparent_47px,var(--border)_48px)] bg-size-[100%_48px]"
                         style={{ height: timelineHeight }}
                         onMouseDown={(e) => {
                             if (e.button !== 0) {
-return;
-}
+                                return;
+                            }
 
                             handlePointerDown(e.clientY, e.currentTarget);
                         }}
@@ -1330,12 +1448,18 @@ return;
                         }}
                         onTouchStart={(e) => {
                             if (e.touches[0]) {
-                                handlePointerDown(e.touches[0].clientY, e.currentTarget);
+                                handlePointerDown(
+                                    e.touches[0].clientY,
+                                    e.currentTarget,
+                                );
                             }
                         }}
                         onTouchMove={(e) => {
                             if (e.touches[0]) {
-                                handlePointerMove(e.touches[0].clientY, e.currentTarget);
+                                handlePointerMove(
+                                    e.touches[0].clientY,
+                                    e.currentTarget,
+                                );
                             }
                         }}
                         onTouchEnd={() => {
@@ -1345,14 +1469,16 @@ return;
                         {/* Overlay Visual durante o arraste */}
                         {isDragging ? (
                             <div
-                                className="absolute inset-x-1 z-20 flex flex-col justify-between rounded-md border-2 border-primary/50 bg-primary/20 p-1.5 shadow-sm pointer-events-none"
+                                className="pointer-events-none absolute inset-x-1 z-20 flex flex-col justify-between rounded-md border-2 border-primary/50 bg-primary/20 p-1.5 shadow-sm"
                                 style={{
                                     height: `${dragHeight}px`,
                                     top: `${dragTop}px`,
                                 }}
                             >
-                                <span className="text-[11px] font-bold text-primary dark:text-primary-foreground drop-shadow-xs">
-                                    {formatMinutes(dragMinMins)} - {formatMinutes(dragMaxMins)} • {formatDuration(dragDuration)}
+                                <span className="text-[11px] font-bold text-primary drop-shadow-xs dark:text-primary-foreground">
+                                    {formatMinutes(dragMinMins)} -{' '}
+                                    {formatMinutes(dragMaxMins)} •{' '}
+                                    {formatDuration(dragDuration)}
                                 </span>
                             </div>
                         ) : null}
@@ -1368,8 +1494,7 @@ return;
                             const duration = Math.max(
                                 15,
                                 Math.round(
-                                    (end.getTime() - start.getTime()) /
-                                        60000,
+                                    (end.getTime() - start.getTime()) / 60000,
                                 ),
                             );
                             const style: CSSProperties = {
@@ -1385,14 +1510,14 @@ return;
                                         e.stopPropagation();
                                         onOpenBlock?.(block);
                                     }}
-                                    className="group absolute inset-x-1 z-10 flex flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800 min-h-[44px]"
+                                    className="group absolute inset-x-1 z-10 flex min-h-[44px] flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
                                     style={style}
                                     title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
                                 >
                                     <div className="flex items-center justify-between gap-1">
                                         <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
                                             <Lock
-                                                className="size-3 text-slate-500 dark:text-slate-400 shrink-0"
+                                                className="size-3 shrink-0 text-slate-500 dark:text-slate-400"
                                                 aria-hidden="true"
                                             />
                                             {formatTime(
@@ -1405,13 +1530,12 @@ return;
                                                 timeZone,
                                             )}
                                         </span>
-                                        <span className="rounded bg-slate-200 px-1 py-0.2 text-[9px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                        <span className="py-0.2 rounded bg-slate-200 px-1 text-[9px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                             Ocupado
                                         </span>
                                     </div>
                                     <p className="truncate text-[11px] font-medium text-slate-900 dark:text-slate-100">
-                                        {block.reason ||
-                                            'Ocupado'}
+                                        {block.reason || 'Ocupado'}
                                     </p>
                                     {block.professional?.name ? (
                                         <p className="truncate text-[10px] text-slate-600 dark:text-slate-400">
@@ -1423,12 +1547,8 @@ return;
                         })}
 
                         {dayAppointments.map((appointment) => {
-                            const start = asInstant(
-                                appointment.starts_at,
-                            );
-                            const end = asInstant(
-                                appointment.ends_at,
-                            );
+                            const start = asInstant(appointment.starts_at);
+                            const end = asInstant(appointment.ends_at);
                             const { hour, minute } = zonedTimeParts(
                                 appointment.starts_at,
                                 timeZone,
@@ -1437,9 +1557,7 @@ return;
                             const duration = Math.max(
                                 30,
                                 Math.round(
-                                    (end.getTime() -
-                                        start.getTime()) /
-                                        60000,
+                                    (end.getTime() - start.getTime()) / 60000,
                                 ),
                             );
                             const style: CSSProperties = {

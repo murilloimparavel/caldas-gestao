@@ -68,7 +68,9 @@ const categoryTypeLabels: Record<CategoryType, string> = {
 
 export default function CategoryShow({ category }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('category-update'));
-    const [destroyKey] = useState(() => createIdempotencyKey('category-destroy'));
+    const [destroyKey] = useState(() =>
+        createIdempotencyKey('category-destroy'),
+    );
     const [reactivateKey] = useState(() =>
         createIdempotencyKey('category-reactivate'),
     );
@@ -92,30 +94,45 @@ export default function CategoryShow({ category }: Props) {
                         eyebrow="Cadastro de categoria"
                         title={category.name}
                         description="Atualize o escopo, nome e descrição desta categoria no catálogo."
-                        action={<StatusBadge status={category.is_active ? 'active' : 'inactive'} />}
+                        action={
+                            <StatusBadge
+                                status={
+                                    category.is_active ? 'active' : 'inactive'
+                                }
+                            />
+                        }
                     />
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
                     <section className="surface-panel p-5 sm:p-6">
                         <div className="mb-6 space-y-1">
-                            <h2 className="text-base font-semibold">Dados da categoria</h2>
+                            <h2 className="text-base font-semibold">
+                                Dados da categoria
+                            </h2>
                             <p className="text-sm text-muted-foreground">
-                                Categorias ativas organizam serviços e produtos para agenda e comanda.
+                                Categorias ativas organizam serviços e produtos
+                                para agenda e comanda.
                             </p>
                         </div>
                         {!category.is_active ? (
-                            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 sm:flex-row sm:items-center sm:justify-between dark:bg-emerald-950/20 dark:text-emerald-200">
                                 <div>
-                                    <p className="font-semibold text-sm">Esta categoria está inativa</p>
-                                    <p className="text-xs text-muted-foreground">Ela não pode ser selecionada em novos cadastros de serviços ou produtos até que seja reativada.</p>
+                                    <p className="text-sm font-semibold">
+                                        Esta categoria está inativa
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Ela não pode ser selecionada em novos
+                                        cadastros de serviços ou produtos até
+                                        que seja reativada.
+                                    </p>
                                 </div>
                                 {canManage ? (
                                     <Button
                                         type="button"
                                         size="sm"
                                         onClick={() => setReactivateOpen(true)}
-                                        className="bg-emerald-600 text-white hover:bg-emerald-700 shrink-0"
+                                        className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
                                     >
                                         Reativar cadastro
                                     </Button>
@@ -162,11 +179,18 @@ export default function CategoryShow({ category }: Props) {
                                                     name="type"
                                                     defaultValue={category.type}
                                                     disabled={!canManage}
-                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 >
-                                                    <option value="general">Geral (Serviços e Produtos)</option>
-                                                    <option value="service">Apenas Serviços</option>
-                                                    <option value="product">Apenas Produtos</option>
+                                                    <option value="general">
+                                                        Geral (Serviços e
+                                                        Produtos)
+                                                    </option>
+                                                    <option value="service">
+                                                        Apenas Serviços
+                                                    </option>
+                                                    <option value="product">
+                                                        Apenas Produtos
+                                                    </option>
                                                 </select>
                                             </FormField>
                                         </div>
@@ -180,9 +204,12 @@ export default function CategoryShow({ category }: Props) {
                                                     id="description"
                                                     name="description"
                                                     rows={3}
-                                                    defaultValue={category.description ?? ''}
+                                                    defaultValue={
+                                                        category.description ??
+                                                        ''
+                                                    }
                                                     disabled={!canManage}
-                                                    className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 />
                                             </FormField>
                                         </div>
@@ -192,7 +219,9 @@ export default function CategoryShow({ category }: Props) {
                                             {category.is_active ? (
                                                 <Dialog
                                                     open={inactivateOpen}
-                                                    onOpenChange={setInactivateOpen}
+                                                    onOpenChange={
+                                                        setInactivateOpen
+                                                    }
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -205,41 +234,69 @@ export default function CategoryShow({ category }: Props) {
                                                     <DialogContent>
                                                         <DialogHeader>
                                                             <DialogTitle>
-                                                                Inativar categoria?
+                                                                Inativar
+                                                                categoria?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                Itens já vinculados permanecerão intactos, mas a categoria não poderá ser selecionada para novos cadastros.
+                                                                Itens já
+                                                                vinculados
+                                                                permanecerão
+                                                                intactos, mas a
+                                                                categoria não
+                                                                poderá ser
+                                                                selecionada para
+                                                                novos cadastros.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
-                                                            {...categories.destroy.form(category.id)}
+                                                            {...categories.destroy.form(
+                                                                category.id,
+                                                            )}
                                                             headers={{
-                                                                'X-Idempotency-Key': destroyKey,
+                                                                'X-Idempotency-Key':
+                                                                    destroyKey,
                                                             }}
                                                             method="delete"
-                                                            onSuccess={() => setInactivateOpen(false)}
+                                                            onSuccess={() =>
+                                                                setInactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
-                                                            {({ processing: inactivating }) => (
+                                                            {({
+                                                                processing:
+                                                                    inactivating,
+                                                            }) => (
                                                                 <>
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
-                                                                        value={category.lock_version}
+                                                                        value={
+                                                                            category.lock_version
+                                                                        }
                                                                     />
                                                                     <DialogFooter className="mt-4">
                                                                         <Button
                                                                             type="button"
                                                                             variant="outline"
-                                                                            onClick={() => setInactivateOpen(false)}
+                                                                            onClick={() =>
+                                                                                setInactivateOpen(
+                                                                                    false,
+                                                                                )
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
                                                                         <Button
                                                                             type="submit"
                                                                             variant="destructive"
-                                                                            disabled={inactivating}
+                                                                            disabled={
+                                                                                inactivating
+                                                                            }
                                                                         >
-                                                                            {inactivating ? 'Inativando...' : 'Confirmar inativação'}
+                                                                            {inactivating
+                                                                                ? 'Inativando...'
+                                                                                : 'Confirmar inativação'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -250,7 +307,9 @@ export default function CategoryShow({ category }: Props) {
                                             ) : (
                                                 <Dialog
                                                     open={reactivateOpen}
-                                                    onOpenChange={setReactivateOpen}
+                                                    onOpenChange={
+                                                        setReactivateOpen
+                                                    }
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -263,41 +322,67 @@ export default function CategoryShow({ category }: Props) {
                                                     <DialogContent>
                                                         <DialogHeader>
                                                             <DialogTitle>
-                                                                Reativar categoria?
+                                                                Reativar
+                                                                categoria?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                A categoria voltará a ficar ativa e poderá ser vinculada a produtos e serviços.
+                                                                A categoria
+                                                                voltará a ficar
+                                                                ativa e poderá
+                                                                ser vinculada a
+                                                                produtos e
+                                                                serviços.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
-                                                            {...categories.reactivate.form(category.id)}
+                                                            {...categories.reactivate.form(
+                                                                category.id,
+                                                            )}
                                                             headers={{
-                                                                'X-Idempotency-Key': reactivateKey,
+                                                                'X-Idempotency-Key':
+                                                                    reactivateKey,
                                                             }}
                                                             method="patch"
-                                                            onSuccess={() => setReactivateOpen(false)}
+                                                            onSuccess={() =>
+                                                                setReactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
-                                                            {({ processing: reactivating }) => (
+                                                            {({
+                                                                processing:
+                                                                    reactivating,
+                                                            }) => (
                                                                 <>
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
-                                                                        value={category.lock_version}
+                                                                        value={
+                                                                            category.lock_version
+                                                                        }
                                                                     />
                                                                     <DialogFooter className="mt-4">
                                                                         <Button
                                                                             type="button"
                                                                             variant="outline"
-                                                                            onClick={() => setReactivateOpen(false)}
+                                                                            onClick={() =>
+                                                                                setReactivateOpen(
+                                                                                    false,
+                                                                                )
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
                                                                         <Button
                                                                             type="submit"
-                                                                            disabled={reactivating}
+                                                                            disabled={
+                                                                                reactivating
+                                                                            }
                                                                             className="bg-emerald-600 text-white hover:bg-emerald-700"
                                                                         >
-                                                                            {reactivating ? 'Reativando...' : 'Confirmar reativação'}
+                                                                            {reactivating
+                                                                                ? 'Reativando...'
+                                                                                : 'Confirmar reativação'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -329,7 +414,8 @@ export default function CategoryShow({ category }: Props) {
                                         Aplicação
                                     </span>
                                     <span className="font-medium text-foreground">
-                                        {categoryTypeLabels[category.type] ?? category.type}
+                                        {categoryTypeLabels[category.type] ??
+                                            category.type}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -360,11 +446,17 @@ export default function CategoryShow({ category }: Props) {
                                 </h2>
                                 <div className="space-y-2">
                                     {category.services.map((svc) => (
-                                        <div key={svc.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
-                                            <Link href={services.show(svc.id)} className="font-medium text-foreground hover:underline truncate">
+                                        <div
+                                            key={svc.id}
+                                            className="flex items-center justify-between border-b border-border/50 py-1.5 text-sm last:border-0"
+                                        >
+                                            <Link
+                                                href={services.show(svc.id)}
+                                                className="truncate font-medium text-foreground hover:underline"
+                                            >
                                                 {svc.name}
                                             </Link>
-                                            <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                                            <span className="ml-2 shrink-0 text-xs text-muted-foreground">
                                                 {svc.duration_minutes} min
                                             </span>
                                         </div>
@@ -380,11 +472,17 @@ export default function CategoryShow({ category }: Props) {
                                 </h2>
                                 <div className="space-y-2">
                                     {category.products.map((prd) => (
-                                        <div key={prd.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
-                                            <Link href={products.show(prd.id)} className="font-medium text-foreground hover:underline truncate">
+                                        <div
+                                            key={prd.id}
+                                            className="flex items-center justify-between border-b border-border/50 py-1.5 text-sm last:border-0"
+                                        >
+                                            <Link
+                                                href={products.show(prd.id)}
+                                                className="truncate font-medium text-foreground hover:underline"
+                                            >
                                                 {prd.name}
                                             </Link>
-                                            <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                                            <span className="ml-2 shrink-0 text-xs text-muted-foreground">
                                                 Estoque: {prd.current_stock}
                                             </span>
                                         </div>

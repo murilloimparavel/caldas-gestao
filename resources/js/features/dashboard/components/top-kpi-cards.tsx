@@ -1,4 +1,11 @@
-import { TrendingUp, TrendingDown, Minus, DollarSign, CalendarCheck, Receipt } from 'lucide-react';
+import {
+    TrendingUp,
+    TrendingDown,
+    Minus,
+    DollarSign,
+    CalendarCheck,
+    Receipt,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { KpiCardData } from '../types';
 
@@ -8,7 +15,13 @@ type TopKpiCardsProps = {
     tickets?: KpiCardData;
 };
 
-function Sparkline({ data, trend }: { data: number[]; trend: 'up' | 'down' | 'neutral' }) {
+function Sparkline({
+    data,
+    trend,
+}: {
+    data: number[];
+    trend: 'up' | 'down' | 'neutral';
+}) {
     if (!data || data.length < 2) {
         return null;
     }
@@ -37,7 +50,10 @@ function Sparkline({ data, trend }: { data: number[]; trend: 'up' | 'down' | 'ne
               : '#9ca3af'; // gray-400
 
     return (
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-8 w-24 overflow-visible">
+        <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="h-8 w-24 overflow-visible"
+        >
             <polyline
                 fill="none"
                 stroke={strokeColor}
@@ -102,14 +118,21 @@ export function TopKpiCards({
                 const isDown = kpi.trend === 'down';
 
                 return (
-                    <Card key={kpi.id} className="relative overflow-hidden border-border/60 transition-all hover:shadow-sm">
+                    <Card
+                        key={kpi.id}
+                        className="relative overflow-hidden border-border/60 transition-all hover:shadow-sm"
+                    >
                         <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className={`flex size-10 items-center justify-center rounded-lg ${kpi.iconBg}`}>
+                                    <div
+                                        className={`flex size-10 items-center justify-center rounded-lg ${kpi.iconBg}`}
+                                    >
                                         <Icon className="size-5" />
                                     </div>
-                                    <span className="text-sm font-medium text-muted-foreground">{kpi.title}</span>
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        {kpi.title}
+                                    </span>
                                 </div>
                                 <div
                                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
@@ -121,8 +144,12 @@ export function TopKpiCards({
                                     }`}
                                 >
                                     {isUp && <TrendingUp className="size-3" />}
-                                    {isDown && <TrendingDown className="size-3" />}
-                                    {!isUp && !isDown && <Minus className="size-3" />}
+                                    {isDown && (
+                                        <TrendingDown className="size-3" />
+                                    )}
+                                    {!isUp && !isDown && (
+                                        <Minus className="size-3" />
+                                    )}
                                     <span>
                                         {kpi.changePercentage > 0 ? '+' : ''}
                                         {kpi.changePercentage}%
@@ -135,9 +162,14 @@ export function TopKpiCards({
                                     <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                                         {kpi.value}
                                     </p>
-                                    <p className="mt-0.5 text-xs text-muted-foreground">vs. período anterior</p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        vs. período anterior
+                                    </p>
                                 </div>
-                                <Sparkline data={kpi.sparklineData} trend={kpi.trend} />
+                                <Sparkline
+                                    data={kpi.sparklineData}
+                                    trend={kpi.trend}
+                                />
                             </div>
                         </CardContent>
                     </Card>

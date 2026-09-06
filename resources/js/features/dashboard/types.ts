@@ -152,4 +152,3 @@ export type DashboardSnapshot = {
     attentionItems?: AttentionItem[];
     attention_items?: AttentionItem[];
 };
-
