@@ -19,15 +19,13 @@ return new class extends Migration
             $table->unique(['tenant_id', 'unit_id', 'package_template_id', 'service_id']);
             $table->index(['tenant_id', 'unit_id', 'service_id']);
 
-            $table->foreign(['tenant_id', 'unit_id', 'package_template_id'])
+            $table->foreign(['tenant_id', 'unit_id', 'package_template_id'], 'pts_services_template_fk')
                 ->references(['tenant_id', 'unit_id', 'id'])
                 ->on('package_templates')
-                ->name('pts_services_template_fk')
                 ->cascadeOnDelete();
-            $table->foreign(['tenant_id', 'unit_id', 'service_id'])
+            $table->foreign(['tenant_id', 'unit_id', 'service_id'], 'pts_services_service_fk')
                 ->references(['tenant_id', 'unit_id', 'id'])
                 ->on('services')
-                ->name('pts_services_service_fk')
                 ->cascadeOnDelete();
         });
     }

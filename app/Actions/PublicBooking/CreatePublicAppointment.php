@@ -5,6 +5,7 @@ namespace App\Actions\PublicBooking;
 use App\Models\Appointment;
 use App\Models\AppointmentItem;
 use App\Models\Customer;
+use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -48,10 +49,11 @@ final class CreatePublicAppointment
         $now = CarbonImmutable::now($timezone);
 
         $setting = $unit->onlineBookingSetting;
-        if ($startsAt->isBefore($now->addMinutes((int) ($setting?->minimum_notice_minutes ?? 0))) || $startsAt->isAfter($now->addDays(31))) {
+        $minimumNoticeMinutes = $setting instanceof OnlineBookingSetting ? $setting->minimum_notice_minutes : 0;
+        if ($startsAt->isBefore($now->addMinutes((int) $minimumNoticeMinutes)) || $startsAt->isAfter($now->addDays(31))) {
             throw ValidationException::withMessages(['starts_at' => 'The selected time is no longer available.']);
         }
-        $hours = $setting?->public_hours;
+        $hours = $setting instanceof OnlineBookingSetting ? $setting->getAttribute('public_hours') : null;
         if (is_array($hours)) {
             $window = $hours[(string) $startsAt->dayOfWeek] ?? $hours[$startsAt->dayOfWeek] ?? null;
             if (! is_array($window) || ($window['enabled'] ?? true) === false || $startsAt->format('H:i') < ($window['starts_at'] ?? '') || $startsAt->addMinutes((int) $service->duration_minutes)->format('H:i') > ($window['ends_at'] ?? '')) {

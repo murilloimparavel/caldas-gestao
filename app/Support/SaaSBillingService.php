@@ -30,6 +30,7 @@ final class SaaSBillingService
         }, 5);
     }
 
+    /** @param array<string, mixed> $payload */
     public function processLastlink(array $payload): BillingWebhookEvent
     {
         $eventId = trim((string) ($payload['Id'] ?? ''));

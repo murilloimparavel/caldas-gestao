@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Appointment;
 use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarEvent;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -144,6 +145,7 @@ final class SyncGoogleCalendarAppointment implements ShouldQueue
         return $token;
     }
 
+    /** @param array<string, mixed>|null $payload */
     private function request(string $accessToken, string $method, string $url, ?array $payload = null): Response
     {
         $request = Http::withToken($accessToken)->acceptJson()->timeout((int) config('services.google_calendar.timeout', 10))->connectTimeout((int) config('services.google_calendar.connect_timeout', 3));
@@ -165,8 +167,8 @@ final class SyncGoogleCalendarAppointment implements ShouldQueue
         return [
             'summary' => $customer ? $summary.' - '.$customer : $summary,
             'description' => (string) ($appointment->notes ?? ''),
-            'start' => ['dateTime' => $appointment->starts_at->toIso8601String(), 'timeZone' => $appointment->timezone],
-            'end' => ['dateTime' => $appointment->ends_at->toIso8601String(), 'timeZone' => $appointment->timezone],
+            'start' => ['dateTime' => CarbonImmutable::parse($appointment->starts_at)->toIso8601String(), 'timeZone' => $appointment->timezone],
+            'end' => ['dateTime' => CarbonImmutable::parse($appointment->ends_at)->toIso8601String(), 'timeZone' => $appointment->timezone],
         ];
     }
 }
