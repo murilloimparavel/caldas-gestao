@@ -138,3 +138,12 @@ jobs:
           cache-to: type=gha,mode=max,scope=caldas-gestao
           sbom: true
           provenance: mode=max
+
+      - name: Trigger Coolify deployment
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 5 --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${COOLIFY_DEPLOY_TOKEN}" \
+            "https://cy.caldasindica.com/api/v1/deploy?uuid=svurav3cvfovuz8adtv1fuwv"
