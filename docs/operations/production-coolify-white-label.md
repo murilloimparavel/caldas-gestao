@@ -109,7 +109,10 @@ php artisan schedule:work
 ```
 
 O worker e o scheduler estão configurados como aplicações independentes no
-Coolify e usam a mesma tag imutável da aplicação web. O scheduler carrega a
+Coolify e usam a mesma tag imutável da aplicação web. A imagem possui um
+health check Docker de liveness comum aos três processos, que verifica a
+existência do processo principal sem exigir endpoint HTTP no worker/scheduler.
+O scheduler carrega a
 tarefa `app:reconcile-tenant-domains` a cada cinco minutos. Sem o worker,
 e-mails e jobs ficam pendentes; sem o scheduler, a reconciliação automática de
 domínios não ocorre.
