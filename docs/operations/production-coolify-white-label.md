@@ -8,8 +8,12 @@ Coolify ou no arquivo de ambiente operacional fora do repositório.
 
 - Coolify: `https://cy.caldasindica.com`
 - Aplicação: `caldas-gestao`
+- Worker: `caldas-gestao-worker`
+- Scheduler: `caldas-gestao-scheduler`
 - Build pack: imagem Docker publicada no GHCR
 - Aplicação Coolify: `svurav3cvfovuz8adtv1fuwv`
+- Worker Coolify: `nbhjuwa4qhs5brnwnbqg1ea2`
+- Scheduler Coolify: `ni3lxtnuyk26jh3pwpfzbdiu`
 - Banco PostgreSQL dedicado: `zj6ryjlxbvb237rncuxpxhuo`
 - Proxy: Traefik gerenciado pelo Coolify
 - Hostnames ativos:
@@ -104,9 +108,11 @@ php artisan queue:work --sleep=1 --tries=3 --max-time=3600
 php artisan schedule:work
 ```
 
-O scheduler deve estar configurado no Coolify para sobreviver a reinícios.
-Sem worker, e-mails e jobs de provisionamento ficam pendentes; sem scheduler,
-a reconciliação automática de domínios não ocorre.
+O worker e o scheduler estão configurados como aplicações independentes no
+Coolify e usam a mesma tag imutável da aplicação web. O scheduler carrega a
+tarefa `app:reconcile-tenant-domains` a cada cinco minutos. Sem o worker,
+e-mails e jobs ficam pendentes; sem o scheduler, a reconciliação automática de
+domínios não ocorre.
 
 ## Rollback
 
@@ -135,7 +141,6 @@ a reconciliação automática de domínios não ocorre.
 
 ## Itens ainda dependentes de configuração operacional
 
-- validar worker e scheduler persistentes no Coolify;
 - validar PostgreSQL TLS com certificado/CA do ambiente;
 - validar bucket MinIO/S3 com um upload real;
 - configurar mail transacional;
