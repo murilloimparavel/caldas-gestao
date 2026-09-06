@@ -83,7 +83,7 @@ final class SaaSBillingService
             $q->whereNotNull('ends_at')->where('ends_at', '<=', now())->orWhere('status', 'grace')->whereNotNull('grace_ends_at')->where('grace_ends_at', '<=', now());
         })->each(function (TenantSubscription $subscription) use (&$count): void {
             $subscription->update(['status' => 'expired']);
-            Entitlement::query()->where('tenant_id', $subscription->tenant_id)->where('key', 'saas.access')->update(['status' => 'expired', 'ends_at' => now()]);
+            Entitlement::query()->where('tenant_id', $subscription->tenant_id)->where('key', 'saas.access')->update(['status' => 'expired', 'ends_at' => now()->subSecond()]);
             $count++;
         });
 

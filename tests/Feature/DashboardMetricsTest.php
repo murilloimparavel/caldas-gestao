@@ -44,6 +44,7 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
         'unit_id' => $unit->id,
         'professional_id' => $professional->id,
         'starts_at' => Carbon::parse('2026-08-25 10:00:00'),
+        'ends_at' => Carbon::parse('2026-08-25 11:00:00'),
         'status' => 'confirmed',
     ]);
 
@@ -52,7 +53,8 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
         'unit_id' => $unit->id,
         'professional_id' => $professional->id,
         'starts_at' => Carbon::parse('2026-08-26 14:00:00'),
-        'status' => 'completed',
+        'ends_at' => Carbon::parse('2026-08-26 15:00:00'),
+        'status' => 'finalized',
     ]);
 
     // Completed sale in current period
