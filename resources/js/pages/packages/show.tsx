@@ -8,6 +8,7 @@ import {
     User,
 } from 'lucide-react';
 import { useState } from 'react';
+import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import {
     createIdempotencyKey,
     FormActions,
@@ -45,7 +46,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import customers from '@/routes/customers';
 import packagesRoutes from '@/routes/packages';
 import type { SharedPageProps } from '@/types';

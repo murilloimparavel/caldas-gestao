@@ -9,7 +9,8 @@ import {
     Receipt,
     SlidersHorizontal,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactElement } from 'react';
 import {
     CalendarError,
     CalendarLoading,
@@ -139,7 +140,13 @@ function GoogleCalendarPanel(): ReactElement {
     };
 
     useEffect(() => {
-        void loadStatus();
+        const timeoutId = window.setTimeout(() => {
+            void loadStatus();
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
     }, []);
 
     const connected = state?.status === 'connected';

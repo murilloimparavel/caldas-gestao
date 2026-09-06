@@ -10,8 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import customerRetention from '@/routes/customers/retention';
 import customers from '@/routes/customers';
+import customerRetention from '@/routes/customers/retention';
 import { inactive as retentionInactive } from '@/routes/retention';
 import type { SharedPageProps } from '@/types';
 
