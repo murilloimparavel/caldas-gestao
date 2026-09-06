@@ -24,16 +24,16 @@ class RetentionCampaignRecipientFactory extends Factory
             'id' => (string) Str::uuid7(),
             'retention_campaign_id' => RetentionCampaign::factory(),
             'customer_id' => function (array $attributes): string {
-                $campaign = RetentionCampaign::query()->findOrFail($attributes['retention_campaign_id']);
+                $campaign = RetentionCampaign::query()->whereKey((string) $attributes['retention_campaign_id'])->firstOrFail();
 
                 return (string) Customer::factory()->create([
                     'tenant_id' => $campaign->tenant_id,
                     'unit_id' => $campaign->unit_id,
                 ])->getKey();
             },
-            'tenant_id' => fn (array $attributes): string => (string) RetentionCampaign::query()->whereKey($attributes['retention_campaign_id'])->value('tenant_id'),
-            'unit_id' => fn (array $attributes): string => (string) RetentionCampaign::query()->whereKey($attributes['retention_campaign_id'])->value('unit_id'),
-            'channel' => fn (array $attributes): string => (string) RetentionCampaign::query()->whereKey($attributes['retention_campaign_id'])->value('channel'),
+            'tenant_id' => fn (array $attributes): string => (string) RetentionCampaign::query()->whereKey((string) $attributes['retention_campaign_id'])->value('tenant_id'),
+            'unit_id' => fn (array $attributes): string => (string) RetentionCampaign::query()->whereKey((string) $attributes['retention_campaign_id'])->value('unit_id'),
+            'channel' => fn (array $attributes): string => (string) RetentionCampaign::query()->whereKey((string) $attributes['retention_campaign_id'])->value('channel'),
             'status' => 'selected',
             'selected_at' => now(),
         ];

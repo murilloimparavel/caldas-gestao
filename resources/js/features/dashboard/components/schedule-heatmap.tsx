@@ -1,4 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from '@/components/ui/card';
 import type { ScheduleHeatmapCell, ScheduleHeatmapDay } from '../types';
 
 type ScheduleHeatmapProps = {
@@ -52,7 +58,9 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
         }
 
         if ('hours' in data[0]) {
-            const dayData = (data as ScheduleHeatmapDay[]).find((d) => d.day_of_week === dayId);
+            const dayData = (data as ScheduleHeatmapDay[]).find(
+                (d) => d.day_of_week === dayId,
+            );
 
             if (!dayData) {
                 return 0;
@@ -64,10 +72,14 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                 return 0;
             }
 
-            return maxCount > 0 ? Math.round((hourData.count / maxCount) * 100) : 0;
+            return maxCount > 0
+                ? Math.round((hourData.count / maxCount) * 100)
+                : 0;
         }
 
-        const cell = (data as ScheduleHeatmapCell[]).find((c) => c.dayOfWeek === dayId && c.hour === hour);
+        const cell = (data as ScheduleHeatmapCell[]).find(
+            (c) => c.dayOfWeek === dayId && c.hour === hour,
+        );
 
         return cell ? cell.occupancyPercentage : 0;
     };
@@ -75,10 +87,14 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
     return (
         <Card className="border-border/60">
             <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <CardTitle className="text-base font-semibold">Ocupação de Horários</CardTitle>
-                        <CardDescription className="text-xs">Mapa de calor dos horários de pico (8h às 19h)</CardDescription>
+                        <CardTitle className="text-base font-semibold">
+                            Ocupação de Horários
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                            Mapa de calor dos horários de pico (8h às 19h)
+                        </CardDescription>
                     </div>
                     {/* Legend scale */}
                     <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -97,7 +113,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                 <div className="overflow-x-auto">
                     <div className="min-w-[500px]">
                         {/* Header Hours */}
-                        <div className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 text-center text-[10px] font-medium text-muted-foreground pb-1.5">
+                        <div className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 pb-1.5 text-center text-[10px] font-medium text-muted-foreground">
                             <div />
                             {HOURS.map((h) => (
                                 <div key={h}>{h}h</div>
@@ -107,22 +123,31 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                         {/* Rows per Day */}
                         <div className="grid gap-1">
                             {DAYS.map((day) => (
-                                <div key={day.id} className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 items-center">
-                                    <span className="text-xs font-medium text-muted-foreground">{day.label}</span>
+                                <div
+                                    key={day.id}
+                                    className="grid grid-cols-[48px_repeat(12,1fr)] items-center gap-1"
+                                >
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        {day.label}
+                                    </span>
                                     {HOURS.map((hour) => {
-                                        const pct = getOccupancyPercentage(day.id, hour);
+                                        const pct = getOccupancyPercentage(
+                                            day.id,
+                                            hour,
+                                        );
 
                                         return (
                                             <div
                                                 key={hour}
-                                                className={`group relative flex h-7 items-center justify-center rounded text-[10px] transition-all hover:scale-105 hover:z-10 ${getIntensityClass(
-                                                    pct
+                                                className={`group relative flex h-7 items-center justify-center rounded text-[10px] transition-all hover:z-10 hover:scale-105 ${getIntensityClass(
+                                                    pct,
                                                 )}`}
                                             >
                                                 {pct > 0 ? `${pct}%` : '-'}
                                                 {/* Tooltip */}
-                                                <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-[11px] font-medium text-popover-foreground shadow-md group-hover:block whitespace-nowrap">
-                                                    {day.label} às {hour}h: {pct}% de ocupação
+                                                <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-[11px] font-medium whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
+                                                    {day.label} às {hour}h:{' '}
+                                                    {pct}% de ocupação
                                                 </div>
                                             </div>
                                         );

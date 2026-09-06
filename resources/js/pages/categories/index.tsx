@@ -90,9 +90,12 @@ export default function CategoriesIndex({
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
                                     <DialogHeader>
-                                        <DialogTitle>Nova categoria</DialogTitle>
+                                        <DialogTitle>
+                                            Nova categoria
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            Crie grupos para segmentar o catálogo da unidade.
+                                            Crie grupos para segmentar o
+                                            catálogo da unidade.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <Form
@@ -106,7 +109,9 @@ export default function CategoriesIndex({
                                     >
                                         {({ errors, processing }) => (
                                             <>
-                                                <FormErrorSummary errors={errors} />
+                                                <FormErrorSummary
+                                                    errors={errors}
+                                                />
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="sm:col-span-2">
                                                         <FormField
@@ -135,9 +140,19 @@ export default function CategoriesIndex({
                                                                 defaultValue="general"
                                                                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
-                                                                <option value="general">Geral (Serviços e Produtos)</option>
-                                                                <option value="service">Apenas Serviços</option>
-                                                                <option value="product">Apenas Produtos</option>
+                                                                <option value="general">
+                                                                    Geral
+                                                                    (Serviços e
+                                                                    Produtos)
+                                                                </option>
+                                                                <option value="service">
+                                                                    Apenas
+                                                                    Serviços
+                                                                </option>
+                                                                <option value="product">
+                                                                    Apenas
+                                                                    Produtos
+                                                                </option>
                                                             </select>
                                                         </FormField>
                                                     </div>
@@ -145,7 +160,9 @@ export default function CategoriesIndex({
                                                         <FormField
                                                             label="Descrição"
                                                             name="description"
-                                                            error={errors.description}
+                                                            error={
+                                                                errors.description
+                                                            }
                                                         >
                                                             <textarea
                                                                 id="description"
@@ -164,7 +181,9 @@ export default function CategoriesIndex({
                                                 />
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() => setCreateOpen(false)}
+                                                    onCancel={() =>
+                                                        setCreateOpen(false)
+                                                    }
                                                     label="Cadastrar categoria"
                                                 />
                                             </>
@@ -231,25 +250,43 @@ export default function CategoriesIndex({
                                                 {category.name}
                                             </h2>
                                             <p className="truncate text-sm text-muted-foreground">
-                                                {category.description || 'Sem descrição'}
+                                                {category.description ||
+                                                    'Sem descrição'}
                                             </p>
                                         </div>
                                     </div>
-                                    <StatusBadge status={category.is_active ? 'active' : 'inactive'} />
+                                    <StatusBadge
+                                        status={
+                                            category.is_active
+                                                ? 'active'
+                                                : 'inactive'
+                                        }
+                                    />
                                 </div>
                                 <div className="flex items-center justify-between gap-3 border-y border-border py-2 text-sm text-muted-foreground">
                                     <span className="inline-flex items-center gap-1.5 font-medium">
-                                        <Tag aria-hidden="true" className="size-4" />
-                                        {categoryTypeLabels[category.type] ?? category.type}
+                                        <Tag
+                                            aria-hidden="true"
+                                            className="size-4"
+                                        />
+                                        {categoryTypeLabels[category.type] ??
+                                            category.type}
                                     </span>
                                     <span className="inline-flex items-center gap-1.5 text-xs">
-                                        <Layers aria-hidden="true" className="size-3.5" />
-                                        {(category.services_count ?? 0)} serviços • {(category.products_count ?? 0)} produtos
+                                        <Layers
+                                            aria-hidden="true"
+                                            className="size-3.5"
+                                        />
+                                        {category.services_count ?? 0} serviços
+                                        • {category.products_count ?? 0}{' '}
+                                        produtos
                                     </span>
                                 </div>
                                 <div className="mt-auto flex justify-end">
                                     <Button asChild variant="outline" size="sm">
-                                        <Link href={categories.show(category.id)}>
+                                        <Link
+                                            href={categories.show(category.id)}
+                                        >
                                             Ver cadastro
                                         </Link>
                                     </Button>

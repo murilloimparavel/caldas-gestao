@@ -119,9 +119,12 @@ export default function PackagesIndex({
                             </DialogTrigger>
                             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                                 <DialogHeader>
-                                    <DialogTitle>Criar Pacote de Serviços</DialogTitle>
+                                    <DialogTitle>
+                                        Criar Pacote de Serviços
+                                    </DialogTitle>
                                     <DialogDescription>
-                                        Defina o nome, sessões inclusas, preço e validade do pacote.
+                                        Defina o nome, sessões inclusas, preço e
+                                        validade do pacote.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -176,7 +179,9 @@ export default function PackagesIndex({
                                                     id="total_sessions"
                                                     label="Qtd. de Sessões"
                                                     required
-                                                    error={errors.total_sessions}
+                                                    error={
+                                                        errors.total_sessions
+                                                    }
                                                 >
                                                     <Input
                                                         id="total_sessions"
@@ -222,7 +227,9 @@ export default function PackagesIndex({
 
                                             <FormActions
                                                 cancelLabel="Cancelar"
-                                                onCancel={() => setCreateOpen(false)}
+                                                onCancel={() =>
+                                                    setCreateOpen(false)
+                                                }
                                                 submitLabel="Criar Pacote"
                                                 submitting={processing}
                                             />
@@ -265,16 +272,22 @@ export default function PackagesIndex({
                                 <div className="space-y-3">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                                            <h3 className="font-semibold text-foreground transition-colors group-hover:text-primary">
                                                 {pkg.name}
                                             </h3>
                                             {pkg.description && (
-                                                <p className="line-clamp-2 text-xs text-muted-foreground mt-1">
+                                                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                                                     {pkg.description}
                                                 </p>
                                             )}
                                         </div>
-                                        <StatusBadge status={pkg.is_active ? 'active' : 'inactive'} />
+                                        <StatusBadge
+                                            status={
+                                                pkg.is_active
+                                                    ? 'active'
+                                                    : 'inactive'
+                                            }
+                                        />
                                     </div>
 
                                     <div className="flex items-baseline gap-2">
@@ -282,32 +295,50 @@ export default function PackagesIndex({
                                             {formatMoney(pkg.price_cents)}
                                         </span>
                                         <span className="text-xs text-muted-foreground">
-                                            / {pkg.total_sessions} {pkg.total_sessions === 1 ? 'sessão' : 'sessões'}
+                                            / {pkg.total_sessions}{' '}
+                                            {pkg.total_sessions === 1
+                                                ? 'sessão'
+                                                : 'sessões'}
                                         </span>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t text-xs text-muted-foreground">
-                                        <span className="bg-muted px-2 py-0.5 rounded-md font-medium text-foreground">
+                                    <div className="flex flex-wrap items-center gap-2 border-t pt-2 text-xs text-muted-foreground">
+                                        <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground">
                                             {pkg.validity_days} dias de validade
                                         </span>
-                                        {typeof pkg.customer_packages_count === 'number' && (
+                                        {typeof pkg.customer_packages_count ===
+                                            'number' && (
                                             <span>
-                                                {pkg.customer_packages_count} {pkg.customer_packages_count === 1 ? 'vendido' : 'vendidos'}
+                                                {pkg.customer_packages_count}{' '}
+                                                {pkg.customer_packages_count ===
+                                                1
+                                                    ? 'vendido'
+                                                    : 'vendidos'}
                                             </span>
                                         )}
                                     </div>
 
                                     {pkg.services.length > 0 && (
                                         <div className="flex flex-wrap gap-1 pt-1">
-                                            {pkg.services.slice(0, 3).map((srv) => (
-                                                <Badge key={srv.id} variant="secondary" className="text-[11px] font-normal">
-                                                    <Scissors className="mr-1 h-3 w-3" />
-                                                    {srv.name}
-                                                </Badge>
-                                            ))}
+                                            {pkg.services
+                                                .slice(0, 3)
+                                                .map((srv) => (
+                                                    <Badge
+                                                        key={srv.id}
+                                                        variant="secondary"
+                                                        className="text-[11px] font-normal"
+                                                    >
+                                                        <Scissors className="mr-1 h-3 w-3" />
+                                                        {srv.name}
+                                                    </Badge>
+                                                ))}
                                             {pkg.services.length > 3 && (
-                                                <Badge variant="outline" className="text-[11px] font-normal">
-                                                    +{pkg.services.length - 3} mais
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-[11px] font-normal"
+                                                >
+                                                    +{pkg.services.length - 3}{' '}
+                                                    mais
                                                 </Badge>
                                             )}
                                         </div>

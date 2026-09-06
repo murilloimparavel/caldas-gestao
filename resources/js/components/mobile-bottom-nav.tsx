@@ -17,9 +17,8 @@ export function MobileBottomNav() {
     const { props } = usePage<SharedPageProps>();
     const { openMobile, setOpenMobile } = useSidebar();
 
-    const canViewAppointments = props.auth.permissions.includes(
-        'calendar.view',
-    );
+    const canViewAppointments =
+        props.auth.permissions.includes('calendar.view');
     const canViewCustomers = props.auth.permissions.includes('customer.view');
     const dashboardIsActive = isCurrentUrl(dashboard());
     const calendarIsActive = isCurrentUrl(calendar.index());
@@ -66,9 +65,7 @@ export function MobileBottomNav() {
                     <Link
                         href={calendar.index()}
                         prefetch
-                        aria-current={
-                            calendarIsActive ? 'page' : undefined
-                        }
+                        aria-current={calendarIsActive ? 'page' : undefined}
                         aria-label="Ir para a Agenda"
                         className={cn(
                             itemClassName,

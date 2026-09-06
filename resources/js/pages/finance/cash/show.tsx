@@ -91,7 +91,11 @@ export default function CashShow({ shift }: Props) {
                                 Voltar ao Histórico
                             </Link>
                         </Button>
-                        <Button variant="outline" size="sm" onClick={handlePrint}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handlePrint}
+                        >
                             <Printer className="mr-2 h-4 w-4" />
                             Imprimir Resumo
                         </Button>
@@ -102,7 +106,9 @@ export default function CashShow({ shift }: Props) {
             {/* Resumo do Turno */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">Fundo Inicial</span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                        Fundo Inicial
+                    </span>
                     <p className="mt-2 text-2xl font-bold tracking-tight">
                         {formatMoney(shift.initial_amount_cents)}
                     </p>
@@ -112,7 +118,9 @@ export default function CashShow({ shift }: Props) {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">Saldo Esperado em Caixa</span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                        Saldo Esperado em Caixa
+                    </span>
                     <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
                         {formatMoney(shift.expected_amount_cents)}
                     </p>
@@ -122,9 +130,12 @@ export default function CashShow({ shift }: Props) {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">Saldo Final Apurado</span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                        Saldo Final Apurado
+                    </span>
                     <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-                        {shift.final_amount_cents !== null && shift.final_amount_cents !== undefined
+                        {shift.final_amount_cents !== null &&
+                        shift.final_amount_cents !== undefined
                             ? formatMoney(shift.final_amount_cents)
                             : 'Em aberto'}
                     </p>
@@ -134,12 +145,18 @@ export default function CashShow({ shift }: Props) {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">Diferença / Status</span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                        Diferença / Status
+                    </span>
                     <div className="mt-2 flex items-center gap-2">
                         {!isClosed ? (
-                            <Badge className="bg-emerald-600 text-white">Aberto</Badge>
+                            <Badge className="bg-emerald-600 text-white">
+                                Aberto
+                            </Badge>
                         ) : diff === 0 ? (
-                            <Badge className="bg-emerald-600 text-white">Exato</Badge>
+                            <Badge className="bg-emerald-600 text-white">
+                                Exato
+                            </Badge>
                         ) : diff > 0 ? (
                             <Badge className="bg-blue-600 text-white">
                                 +{formatMoney(diff)} (Sobra)
@@ -151,14 +168,18 @@ export default function CashShow({ shift }: Props) {
                         )}
                     </div>
                     <span className="text-xs text-muted-foreground">
-                        {shift.closed_by?.name ? `Fechado por ${shift.closed_by.name}` : 'Em operação'}
+                        {shift.closed_by?.name
+                            ? `Fechado por ${shift.closed_by.name}`
+                            : 'Em operação'}
                     </span>
                 </div>
             </div>
 
             {shift.notes && (
                 <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
-                    <span className="font-semibold text-foreground">Observações do Turno: </span>
+                    <span className="font-semibold text-foreground">
+                        Observações do Turno:{' '}
+                    </span>
                     <span className="text-muted-foreground">{shift.notes}</span>
                 </div>
             )}
@@ -166,7 +187,9 @@ export default function CashShow({ shift }: Props) {
             {/* Listagem de Movimentações */}
             <div className="rounded-xl border border-border bg-card shadow-sm">
                 <div className="border-b border-border px-6 py-4">
-                    <h3 className="text-base font-semibold">Movimentações Registradas</h3>
+                    <h3 className="text-base font-semibold">
+                        Movimentações Registradas
+                    </h3>
                     <p className="text-xs text-muted-foreground">
                         Todas as operações que afetaram o saldo deste turno
                     </p>
@@ -180,13 +203,17 @@ export default function CashShow({ shift }: Props) {
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <thead className="bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 <tr>
                                     <th className="px-6 py-3">Tipo</th>
-                                    <th className="px-6 py-3">Motivo / Descrição</th>
+                                    <th className="px-6 py-3">
+                                        Motivo / Descrição
+                                    </th>
                                     <th className="px-6 py-3">Responsável</th>
                                     <th className="px-6 py-3">Horário</th>
-                                    <th className="px-6 py-3 text-right">Valor</th>
+                                    <th className="px-6 py-3 text-right">
+                                        Valor
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
@@ -196,8 +223,11 @@ export default function CashShow({ shift }: Props) {
                                         movementTypeConfig.supply;
 
                                     return (
-                                        <tr key={movement.id} className="transition-colors hover:bg-muted/30">
-                                            <td className="whitespace-nowrap px-6 py-4">
+                                        <tr
+                                            key={movement.id}
+                                            className="transition-colors hover:bg-muted/30"
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 <Badge
                                                     variant="outline"
                                                     className={`font-semibold ${config.bgClass}`}
@@ -208,13 +238,15 @@ export default function CashShow({ shift }: Props) {
                                             <td className="px-6 py-4 font-medium text-foreground">
                                                 {movement.reason}
                                             </td>
-                                            <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
+                                            <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
                                                 {movement.user?.name ?? '—'}
                                             </td>
-                                            <td className="whitespace-nowrap px-6 py-4 text-xs text-muted-foreground">
-                                                {formatDateTime(movement.created_at)}
+                                            <td className="px-6 py-4 text-xs whitespace-nowrap text-muted-foreground">
+                                                {formatDateTime(
+                                                    movement.created_at,
+                                                )}
                                             </td>
-                                            <td className="whitespace-nowrap px-6 py-4 text-right font-bold">
+                                            <td className="px-6 py-4 text-right font-bold whitespace-nowrap">
                                                 <span
                                                     className={
                                                         config.isCredit
@@ -222,8 +254,12 @@ export default function CashShow({ shift }: Props) {
                                                             : 'text-rose-600 dark:text-rose-400'
                                                     }
                                                 >
-                                                    {config.isCredit ? '+' : '-'}
-                                                    {formatMoney(movement.amount_cents)}
+                                                    {config.isCredit
+                                                        ? '+'
+                                                        : '-'}
+                                                    {formatMoney(
+                                                        movement.amount_cents,
+                                                    )}
                                                 </span>
                                             </td>
                                         </tr>

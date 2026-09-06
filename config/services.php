@@ -40,4 +40,18 @@ return [
         'checkout_url' => env('LASTLINK_CHECKOUT_URL'),
     ],
 
+    'google_calendar' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
+        'authorization_url' => env('GOOGLE_AUTHORIZATION_URL', 'https://accounts.google.com/o/oauth2/v2/auth'),
+        'token_url' => env('GOOGLE_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
+        'userinfo_url' => env('GOOGLE_USERINFO_URL', 'https://openidconnect.googleapis.com/v1/userinfo'),
+        'calendar_url' => env('GOOGLE_CALENDAR_URL', 'https://www.googleapis.com/calendar/v3'),
+        'scope' => env('GOOGLE_CALENDAR_SCOPE', 'https://www.googleapis.com/auth/calendar'),
+        'state_ttl_minutes' => (int) env('GOOGLE_OAUTH_STATE_TTL_MINUTES', 10),
+        'timeout' => (int) env('GOOGLE_HTTP_TIMEOUT', 10),
+        'connect_timeout' => (int) env('GOOGLE_HTTP_CONNECT_TIMEOUT', 3),
+    ],
+
 ];

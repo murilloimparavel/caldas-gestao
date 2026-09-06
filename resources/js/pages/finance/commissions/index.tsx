@@ -72,8 +72,12 @@ export default function CommissionsIndex({
     const canManage = auth.permissions.includes('commission.manage');
     const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<CommissionRule | null>(null);
-    const [itemTargetType, setItemTargetType] = useState<'all' | 'service' | 'product'>('all');
-    const [ruleRateType, setRuleRateType] = useState<'percentage' | 'fixed'>('percentage');
+    const [itemTargetType, setItemTargetType] = useState<
+        'all' | 'service' | 'product'
+    >('all');
+    const [ruleRateType, setRuleRateType] = useState<'percentage' | 'fixed'>(
+        'percentage',
+    );
 
     const openCreateModal = () => {
         setEditingRule(null);
@@ -183,7 +187,8 @@ export default function CommissionsIndex({
                                 Apuração por Profissional
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Saldo acumulado e histórico de repasses de cada profissional.
+                                Saldo acumulado e histórico de repasses de cada
+                                profissional.
                             </p>
                         </div>
                     </div>
@@ -198,14 +203,26 @@ export default function CommissionsIndex({
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                         <tr>
-                                            <th className="px-6 py-3.5">Profissional</th>
-                                            <th className="px-6 py-3.5">Contato</th>
-                                            <th className="px-6 py-3.5">Atendimentos Pendentes</th>
-                                            <th className="px-6 py-3.5 text-right">Comissão Pendente</th>
-                                            <th className="px-6 py-3.5 text-right">Total Liquidado</th>
-                                            <th className="px-6 py-3.5 text-right">Ações</th>
+                                            <th className="px-6 py-3.5">
+                                                Profissional
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Contato
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Atendimentos Pendentes
+                                            </th>
+                                            <th className="px-6 py-3.5 text-right">
+                                                Comissão Pendente
+                                            </th>
+                                            <th className="px-6 py-3.5 text-right">
+                                                Total Liquidado
+                                            </th>
+                                            <th className="px-6 py-3.5 text-right">
+                                                Ações
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -220,15 +237,26 @@ export default function CommissionsIndex({
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-muted-foreground">
-                                                    <div>{prof.phone || '—'}</div>
+                                                    <div>
+                                                        {prof.phone || '—'}
+                                                    </div>
                                                     {prof.email && (
-                                                        <div className="text-xs">{prof.email}</div>
+                                                        <div className="text-xs">
+                                                            {prof.email}
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {prof.pending_count > 0 ? (
-                                                        <Badge variant="outline" className="gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-                                                            {prof.pending_count} {prof.pending_count === 1 ? 'item' : 'itens'}
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                                        >
+                                                            {prof.pending_count}{' '}
+                                                            {prof.pending_count ===
+                                                            1
+                                                                ? 'item'
+                                                                : 'itens'}
                                                         </Badge>
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">
@@ -239,20 +267,32 @@ export default function CommissionsIndex({
                                                 <td className="px-6 py-4 text-right font-semibold">
                                                     <span
                                                         className={
-                                                            prof.pending_amount_cents > 0
+                                                            prof.pending_amount_cents >
+                                                            0
                                                                 ? 'text-amber-600 dark:text-amber-400'
                                                                 : 'text-muted-foreground'
                                                         }
                                                     >
-                                                        {formatMoney(prof.pending_amount_cents)}
+                                                        {formatMoney(
+                                                            prof.pending_amount_cents,
+                                                        )}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right text-muted-foreground">
-                                                    {formatMoney(prof.settled_amount_cents)}
+                                                    {formatMoney(
+                                                        prof.settled_amount_cents,
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <Button asChild size="sm" variant="outline" className="gap-1">
-                                                        <Link href={`/finance/commissions/professionals/${prof.id}`}>
+                                                    <Button
+                                                        asChild
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="gap-1"
+                                                    >
+                                                        <Link
+                                                            href={`/finance/commissions/professionals/${prof.id}`}
+                                                        >
                                                             Extrato
                                                             <ArrowRight className="h-3.5 w-3.5" />
                                                         </Link>
@@ -275,7 +315,8 @@ export default function CommissionsIndex({
                                 Regras de Comissionamento
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Defina regras gerais ou específicas por profissional, serviço e produto.
+                                Defina regras gerais ou específicas por
+                                profissional, serviço e produto.
                             </p>
                         </div>
                     </div>
@@ -287,7 +328,10 @@ export default function CommissionsIndex({
                             description="Crie sua primeira regra de comissão para que os atendimentos sejam apurados automaticamente."
                             action={
                                 canManage && (
-                                    <Button onClick={openCreateModal} className="gap-2">
+                                    <Button
+                                        onClick={openCreateModal}
+                                        className="gap-2"
+                                    >
                                         <Plus className="h-4 w-4" />
                                         Criar Regra
                                     </Button>
@@ -298,15 +342,27 @@ export default function CommissionsIndex({
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                         <tr>
-                                            <th className="px-6 py-3.5">Profissional</th>
-                                            <th className="px-6 py-3.5">Escopo (Serviço / Produto)</th>
-                                            <th className="px-6 py-3.5">Tipo</th>
-                                            <th className="px-6 py-3.5">Taxa / Valor</th>
-                                            <th className="px-6 py-3.5">Status</th>
+                                            <th className="px-6 py-3.5">
+                                                Profissional
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Escopo (Serviço / Produto)
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Tipo
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Taxa / Valor
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Status
+                                            </th>
                                             {canManage && (
-                                                <th className="px-6 py-3.5 text-right">Ações</th>
+                                                <th className="px-6 py-3.5 text-right">
+                                                    Ações
+                                                </th>
                                             )}
                                         </tr>
                                     </thead>
@@ -320,36 +376,56 @@ export default function CommissionsIndex({
                                                     {rule.professional ? (
                                                         <div className="flex items-center gap-1.5">
                                                             <UserCheck className="h-4 w-4 text-primary" />
-                                                            <span>{rule.professional.name}</span>
+                                                            <span>
+                                                                {
+                                                                    rule
+                                                                        .professional
+                                                                        .name
+                                                                }
+                                                            </span>
                                                         </div>
                                                     ) : (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            Todos os Profissionais
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-xs"
+                                                        >
+                                                            Todos os
+                                                            Profissionais
                                                         </Badge>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-muted-foreground">
                                                     {rule.service ? (
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            Serviço: {rule.service.name}
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="text-xs"
+                                                        >
+                                                            Serviço:{' '}
+                                                            {rule.service.name}
                                                         </Badge>
                                                     ) : rule.product ? (
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            Produto: {rule.product.name}
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="text-xs"
+                                                        >
+                                                            Produto:{' '}
+                                                            {rule.product.name}
                                                         </Badge>
                                                     ) : (
                                                         <span className="text-xs text-muted-foreground">
-                                                            Geral (Todos os Itens)
+                                                            Geral (Todos os
+                                                            Itens)
                                                         </span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {rule.type === 'percentage' ? (
-                                                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300">
+                                                    {rule.type ===
+                                                    'percentage' ? (
+                                                        <Badge className="border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                                                             Percentual
                                                         </Badge>
                                                     ) : (
-                                                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                                        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                                                             Valor Fixo
                                                         </Badge>
                                                     )}
@@ -357,15 +433,23 @@ export default function CommissionsIndex({
                                                 <td className="px-6 py-4 font-semibold text-foreground">
                                                     {rule.type === 'percentage'
                                                         ? `${rule.value_rate}%`
-                                                        : formatMoney(rule.value_rate)}
+                                                        : formatMoney(
+                                                              rule.value_rate,
+                                                          )}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {rule.is_active ? (
-                                                        <Badge variant="outline" className="border-emerald-300 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-emerald-300 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400"
+                                                        >
                                                             Ativa
                                                         </Badge>
                                                     ) : (
-                                                        <Badge variant="outline" className="text-muted-foreground">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-muted-foreground"
+                                                        >
                                                             Inativa
                                                         </Badge>
                                                     )}
@@ -376,15 +460,25 @@ export default function CommissionsIndex({
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                onClick={() => openEditModal(rule)}
+                                                                onClick={() =>
+                                                                    openEditModal(
+                                                                        rule,
+                                                                    )
+                                                                }
                                                             >
                                                                 Editar
                                                             </Button>
                                                             <Form
                                                                 action={`/finance/commissions/rules/${rule.id}`}
                                                                 method="delete"
-                                                                onSubmit={(e) => {
-                                                                    if (!confirm('Deseja realmente excluir esta regra de comissão?')) {
+                                                                onSubmit={(
+                                                                    e,
+                                                                ) => {
+                                                                    if (
+                                                                        !confirm(
+                                                                            'Deseja realmente excluir esta regra de comissão?',
+                                                                        )
+                                                                    ) {
                                                                         e.preventDefault();
                                                                     }
                                                                 }}
@@ -416,10 +510,13 @@ export default function CommissionsIndex({
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>
-                            {editingRule ? 'Editar Regra de Comissão' : 'Nova Regra de Comissão'}
+                            {editingRule
+                                ? 'Editar Regra de Comissão'
+                                : 'Nova Regra de Comissão'}
                         </DialogTitle>
                         <DialogDescription>
-                            Configure a porcentagem ou o valor fixo a ser repassado ao profissional.
+                            Configure a porcentagem ou o valor fixo a ser
+                            repassado ao profissional.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -431,7 +528,8 @@ export default function CommissionsIndex({
                         }
                         method={editingRule ? 'put' : 'post'}
                         headers={{
-                            'X-Idempotency-Key': createIdempotencyKey('save-rule'),
+                            'X-Idempotency-Key':
+                                createIdempotencyKey('save-rule'),
                         }}
                         onSuccess={() => setIsRuleModalOpen(false)}
                         className="space-y-4 pt-2"
@@ -448,15 +546,25 @@ export default function CommissionsIndex({
                                     />
                                 )}
 
-                                <FormField label="Profissional" error={errors.professional_id}>
+                                <FormField
+                                    label="Profissional"
+                                    error={errors.professional_id}
+                                >
                                     <select
                                         name="professional_id"
-                                        defaultValue={editingRule?.professional_id ?? ''}
-                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        defaultValue={
+                                            editingRule?.professional_id ?? ''
+                                        }
+                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     >
-                                        <option value="">Todos os Profissionais (Regra Geral)</option>
+                                        <option value="">
+                                            Todos os Profissionais (Regra Geral)
+                                        </option>
                                         {professionals.map((prof) => (
-                                            <option key={prof.id} value={prof.id}>
+                                            <option
+                                                key={prof.id}
+                                                value={prof.id}
+                                            >
                                                 {prof.name}
                                             </option>
                                         ))}
@@ -464,29 +572,49 @@ export default function CommissionsIndex({
                                 </FormField>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Aplicar a:</label>
+                                    <label className="text-sm font-medium">
+                                        Aplicar a:
+                                    </label>
                                     <div className="grid grid-cols-3 gap-2">
                                         <Button
                                             type="button"
-                                            variant={itemTargetType === 'all' ? 'default' : 'outline'}
+                                            variant={
+                                                itemTargetType === 'all'
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
                                             size="sm"
-                                            onClick={() => setItemTargetType('all')}
+                                            onClick={() =>
+                                                setItemTargetType('all')
+                                            }
                                         >
                                             Todos os itens
                                         </Button>
                                         <Button
                                             type="button"
-                                            variant={itemTargetType === 'service' ? 'default' : 'outline'}
+                                            variant={
+                                                itemTargetType === 'service'
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
                                             size="sm"
-                                            onClick={() => setItemTargetType('service')}
+                                            onClick={() =>
+                                                setItemTargetType('service')
+                                            }
                                         >
                                             Serviço
                                         </Button>
                                         <Button
                                             type="button"
-                                            variant={itemTargetType === 'product' ? 'default' : 'outline'}
+                                            variant={
+                                                itemTargetType === 'product'
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
                                             size="sm"
-                                            onClick={() => setItemTargetType('product')}
+                                            onClick={() =>
+                                                setItemTargetType('product')
+                                            }
                                         >
                                             Produto
                                         </Button>
@@ -494,17 +622,26 @@ export default function CommissionsIndex({
                                 </div>
 
                                 {itemTargetType === 'service' && (
-                                    <FormField label="Serviço Específico" error={errors.service_id}>
+                                    <FormField
+                                        label="Serviço Específico"
+                                        error={errors.service_id}
+                                    >
                                         <select
                                             name="service_id"
-                                            defaultValue={editingRule?.service_id ?? ''}
+                                            defaultValue={
+                                                editingRule?.service_id ?? ''
+                                            }
                                             required
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         >
-                                            <option value="">Selecione um serviço...</option>
+                                            <option value="">
+                                                Selecione um serviço...
+                                            </option>
                                             {services.map((s) => (
                                                 <option key={s.id} value={s.id}>
-                                                    {s.name} ({formatMoney(s.price_cents)})
+                                                    {s.name} (
+                                                    {formatMoney(s.price_cents)}
+                                                    )
                                                 </option>
                                             ))}
                                         </select>
@@ -512,17 +649,28 @@ export default function CommissionsIndex({
                                 )}
 
                                 {itemTargetType === 'product' && (
-                                    <FormField label="Produto Específico" error={errors.product_id}>
+                                    <FormField
+                                        label="Produto Específico"
+                                        error={errors.product_id}
+                                    >
                                         <select
                                             name="product_id"
-                                            defaultValue={editingRule?.product_id ?? ''}
+                                            defaultValue={
+                                                editingRule?.product_id ?? ''
+                                            }
                                             required
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         >
-                                            <option value="">Selecione um produto...</option>
+                                            <option value="">
+                                                Selecione um produto...
+                                            </option>
                                             {products.map((p) => (
                                                 <option key={p.id} value={p.id}>
-                                                    {p.name} ({formatMoney(p.sale_price_cents)})
+                                                    {p.name} (
+                                                    {formatMoney(
+                                                        p.sale_price_cents,
+                                                    )}
+                                                    )
                                                 </option>
                                             ))}
                                         </select>
@@ -530,29 +678,55 @@ export default function CommissionsIndex({
                                 )}
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField label="Tipo de Comissão" error={errors.type}>
+                                    <FormField
+                                        label="Tipo de Comissão"
+                                        error={errors.type}
+                                    >
                                         <select
                                             name="type"
                                             value={ruleRateType}
-                                            onChange={(e) => setRuleRateType(e.target.value as 'percentage' | 'fixed')}
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            onChange={(e) =>
+                                                setRuleRateType(
+                                                    e.target.value as
+                                                        'percentage' | 'fixed',
+                                                )
+                                            }
+                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         >
-                                            <option value="percentage">Percentual (%)</option>
-                                            <option value="fixed">Valor Fixo (Centavos)</option>
+                                            <option value="percentage">
+                                                Percentual (%)
+                                            </option>
+                                            <option value="fixed">
+                                                Valor Fixo (Centavos)
+                                            </option>
                                         </select>
                                     </FormField>
 
                                     <FormField
-                                        label={ruleRateType === 'percentage' ? 'Percentual (%)' : 'Valor Fixo (em centavos)'}
-                                        description={ruleRateType === 'fixed' ? 'Ex: 1500 para R$ 15,00' : 'Ex: 20 para 20%'}
+                                        label={
+                                            ruleRateType === 'percentage'
+                                                ? 'Percentual (%)'
+                                                : 'Valor Fixo (em centavos)'
+                                        }
+                                        description={
+                                            ruleRateType === 'fixed'
+                                                ? 'Ex: 1500 para R$ 15,00'
+                                                : 'Ex: 20 para 20%'
+                                        }
                                         error={errors.value_rate}
                                     >
                                         <Input
                                             type="number"
                                             name="value_rate"
                                             min="0"
-                                            max={ruleRateType === 'percentage' ? 100 : undefined}
-                                            defaultValue={editingRule?.value_rate ?? 10}
+                                            max={
+                                                ruleRateType === 'percentage'
+                                                    ? 100
+                                                    : undefined
+                                            }
+                                            defaultValue={
+                                                editingRule?.value_rate ?? 10
+                                            }
                                             required
                                         />
                                     </FormField>
@@ -564,17 +738,28 @@ export default function CommissionsIndex({
                                         id="is_active"
                                         name="is_active"
                                         value="1"
-                                        defaultChecked={editingRule ? editingRule.is_active : true}
+                                        defaultChecked={
+                                            editingRule
+                                                ? editingRule.is_active
+                                                : true
+                                        }
                                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                     />
-                                    <label htmlFor="is_active" className="text-sm font-medium">
+                                    <label
+                                        htmlFor="is_active"
+                                        className="text-sm font-medium"
+                                    >
                                         Regra ativa
                                     </label>
                                 </div>
 
                                 <FormActions
                                     onCancel={() => setIsRuleModalOpen(false)}
-                                    submitLabel={editingRule ? 'Atualizar Regra' : 'Salvar Regra'}
+                                    submitLabel={
+                                        editingRule
+                                            ? 'Atualizar Regra'
+                                            : 'Salvar Regra'
+                                    }
                                     isSubmitting={processing}
                                 />
                             </>

@@ -116,7 +116,10 @@ export default function ProfessionalCommissionShow({
                 { title: 'Painel', href: '/dashboard' },
                 { title: 'Financeiro', href: '/finance/cash' },
                 { title: 'Comissões', href: '/finance/commissions' },
-                { title: professional.name, href: `/finance/commissions/professionals/${professional.id}` },
+                {
+                    title: professional.name,
+                    href: `/finance/commissions/professionals/${professional.id}`,
+                },
             ]}
         >
             <Head title={`Extrato de Comissões - ${professional.name}`} />
@@ -127,7 +130,12 @@ export default function ProfessionalCommissionShow({
                     description={`Visualização detalhada dos atendimentos, apuração e liquidação de comissões.`}
                     actions={
                         <div className="flex items-center gap-2">
-                            <Button asChild variant="outline" size="sm" className="gap-1.5">
+                            <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5"
+                            >
                                 <Link href="/finance/commissions">
                                     <ArrowLeft className="h-4 w-4" />
                                     Voltar
@@ -136,10 +144,11 @@ export default function ProfessionalCommissionShow({
                             {canSettle && metrics.pending_amount_cents > 0 && (
                                 <Button
                                     onClick={() => setIsSettleModalOpen(true)}
-                                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
                                 >
                                     <Wallet className="h-4 w-4" />
-                                    Liquidar Comissões ({formatMoney(metrics.pending_amount_cents)})
+                                    Liquidar Comissões (
+                                    {formatMoney(metrics.pending_amount_cents)})
                                 </Button>
                             )}
                         </div>
@@ -202,7 +211,10 @@ export default function ProfessionalCommissionShow({
 
                 {/* Filtros */}
                 <div className="rounded-xl border bg-card p-4 shadow-sm">
-                    <form method="get" className="flex flex-wrap items-end gap-3">
+                    <form
+                        method="get"
+                        className="flex flex-wrap items-end gap-3"
+                    >
                         <div className="space-y-1">
                             <label className="text-xs font-medium text-muted-foreground">
                                 Status
@@ -210,11 +222,15 @@ export default function ProfessionalCommissionShow({
                             <select
                                 name="status"
                                 defaultValue={filters.status}
-                                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                             >
                                 <option value="">Todos os status</option>
-                                <option value="accrued">Pendente (Apurado)</option>
-                                <option value="settled">Liquidado (Pago)</option>
+                                <option value="accrued">
+                                    Pendente (Apurado)
+                                </option>
+                                <option value="settled">
+                                    Liquidado (Pago)
+                                </option>
                                 <option value="cancelled">Cancelado</option>
                             </select>
                         </div>
@@ -244,13 +260,27 @@ export default function ProfessionalCommissionShow({
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <Button type="submit" size="sm" variant="secondary" className="gap-1.5 h-9">
+                            <Button
+                                type="submit"
+                                size="sm"
+                                variant="secondary"
+                                className="h-9 gap-1.5"
+                            >
                                 <Filter className="h-3.5 w-3.5" />
                                 Filtrar
                             </Button>
-                            {(filters.status || filters.date_start || filters.date_end) && (
-                                <Button asChild size="sm" variant="ghost" className="h-9">
-                                    <Link href={`/finance/commissions/professionals/${professional.id}`}>
+                            {(filters.status ||
+                                filters.date_start ||
+                                filters.date_end) && (
+                                <Button
+                                    asChild
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-9"
+                                >
+                                    <Link
+                                        href={`/finance/commissions/professionals/${professional.id}`}
+                                    >
                                         Limpar
                                     </Link>
                                 </Button>
@@ -277,15 +307,29 @@ export default function ProfessionalCommissionShow({
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                         <tr>
-                                            <th className="px-6 py-3.5">Data / Hora</th>
-                                            <th className="px-6 py-3.5">Item / Serviço</th>
-                                            <th className="px-6 py-3.5">Valor Bruto</th>
-                                            <th className="px-6 py-3.5">Regra Aplicada</th>
-                                            <th className="px-6 py-3.5 text-right">Comissão</th>
-                                            <th className="px-6 py-3.5">Status</th>
-                                            <th className="px-6 py-3.5">Liquidado Em</th>
+                                            <th className="px-6 py-3.5">
+                                                Data / Hora
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Item / Serviço
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Valor Bruto
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Regra Aplicada
+                                            </th>
+                                            <th className="px-6 py-3.5 text-right">
+                                                Comissão
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Status
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Liquidado Em
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -295,54 +339,89 @@ export default function ProfessionalCommissionShow({
                                                 className="transition-colors hover:bg-muted/30"
                                             >
                                                 <td className="px-6 py-4 text-xs text-muted-foreground">
-                                                    {formatDateTime(accrual.created_at)}
+                                                    {formatDateTime(
+                                                        accrual.created_at,
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 font-medium text-foreground">
-                                                    <div>{accrual.item_name_snapshot}</div>
-                                                    {accrual.sale?.reference_label && (
+                                                    <div>
+                                                        {
+                                                            accrual.item_name_snapshot
+                                                        }
+                                                    </div>
+                                                    {accrual.sale
+                                                        ?.reference_label && (
                                                         <div className="text-xs text-muted-foreground">
-                                                            Ref: {accrual.sale.reference_label}
+                                                            Ref:{' '}
+                                                            {
+                                                                accrual.sale
+                                                                    .reference_label
+                                                            }
                                                         </div>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-muted-foreground">
-                                                    {formatMoney(accrual.gross_amount_cents)}
+                                                    {formatMoney(
+                                                        accrual.gross_amount_cents,
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-xs text-muted-foreground">
-                                                    {accrual.rate_type === 'percentage'
+                                                    {accrual.rate_type ===
+                                                    'percentage'
                                                         ? `${accrual.rate_value}%`
-                                                        : formatMoney(accrual.rate_value)}
+                                                        : formatMoney(
+                                                              accrual.rate_value,
+                                                          )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-semibold">
                                                     <span
                                                         className={
-                                                            accrual.status === 'accrued'
+                                                            accrual.status ===
+                                                            'accrued'
                                                                 ? 'text-amber-600 dark:text-amber-400'
                                                                 : 'text-foreground'
                                                         }
                                                     >
-                                                        {formatMoney(accrual.commission_amount_cents)}
+                                                        {formatMoney(
+                                                            accrual.commission_amount_cents,
+                                                        )}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {accrual.status === 'accrued' && (
-                                                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                                                    {accrual.status ===
+                                                        'accrued' && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                                        >
                                                             Pendente
                                                         </Badge>
                                                     )}
-                                                    {accrual.status === 'settled' && (
-                                                        <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+                                                    {accrual.status ===
+                                                        'settled' && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                                        >
                                                             Liquidado
                                                         </Badge>
                                                     )}
-                                                    {accrual.status === 'cancelled' && (
-                                                        <Badge variant="outline" className="text-muted-foreground">
+                                                    {accrual.status ===
+                                                        'cancelled' && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-muted-foreground"
+                                                        >
                                                             Cancelado
                                                         </Badge>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-xs text-muted-foreground">
-                                                    {accrual.settled_at ? formatDateTime(accrual.settled_at) : '—'}
+                                                    {accrual.settled_at
+                                                        ? formatDateTime(
+                                                              accrual.settled_at,
+                                                          )
+                                                        : '—'}
                                                 </td>
                                             </tr>
                                         ))}
@@ -369,29 +448,53 @@ export default function ProfessionalCommissionShow({
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <thead className="border-b bg-muted/40 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                         <tr>
-                                            <th className="px-6 py-3.5">Data de Pagamento</th>
-                                            <th className="px-6 py-3.5">Valor Liquidado</th>
-                                            <th className="px-6 py-3.5">Período</th>
-                                            <th className="px-6 py-3.5">Operador</th>
-                                            <th className="px-6 py-3.5">Observações</th>
+                                            <th className="px-6 py-3.5">
+                                                Data de Pagamento
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Valor Liquidado
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Período
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Operador
+                                            </th>
+                                            <th className="px-6 py-3.5">
+                                                Observações
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {settlements.map((settlement) => (
-                                            <tr key={settlement.id} className="hover:bg-muted/30">
+                                            <tr
+                                                key={settlement.id}
+                                                className="hover:bg-muted/30"
+                                            >
                                                 <td className="px-6 py-4 font-medium text-foreground">
-                                                    {formatDateTime(settlement.paid_at)}
+                                                    {formatDateTime(
+                                                        settlement.paid_at,
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">
-                                                    {formatMoney(settlement.total_amount_cents)}
+                                                    {formatMoney(
+                                                        settlement.total_amount_cents,
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-xs text-muted-foreground">
-                                                    {formatDate(settlement.period_start)} até {formatDate(settlement.period_end)}
+                                                    {formatDate(
+                                                        settlement.period_start,
+                                                    )}{' '}
+                                                    até{' '}
+                                                    {formatDate(
+                                                        settlement.period_end,
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-xs text-muted-foreground">
-                                                    {settlement.user?.name ?? '—'}
+                                                    {settlement.user?.name ??
+                                                        '—'}
                                                 </td>
                                                 <td className="px-6 py-4 text-xs text-muted-foreground">
                                                     {settlement.notes || '—'}
@@ -407,12 +510,16 @@ export default function ProfessionalCommissionShow({
             </div>
 
             {/* Modal de Liquidação */}
-            <Dialog open={isSettleModalOpen} onOpenChange={setIsSettleModalOpen}>
+            <Dialog
+                open={isSettleModalOpen}
+                onOpenChange={setIsSettleModalOpen}
+            >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Liquidar Comissões Pendentes</DialogTitle>
                         <DialogDescription>
-                            Confirmar pagamento e baixa das comissões acumuladas de {professional.name}.
+                            Confirmar pagamento e baixa das comissões acumuladas
+                            de {professional.name}.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -420,7 +527,8 @@ export default function ProfessionalCommissionShow({
                         action="/finance/commissions/settle"
                         method="post"
                         headers={{
-                            'X-Idempotency-Key': createIdempotencyKey('settle-commissions'),
+                            'X-Idempotency-Key':
+                                createIdempotencyKey('settle-commissions'),
                         }}
                         onSuccess={() => setIsSettleModalOpen(false)}
                         className="space-y-4 pt-2"
@@ -435,25 +543,37 @@ export default function ProfessionalCommissionShow({
                                     value={professional.id}
                                 />
 
-                                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 text-center">
-                                    <div className="text-xs uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-300">
+                                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4 text-center">
+                                    <div className="text-xs font-semibold tracking-wider text-emerald-700 uppercase dark:text-emerald-300">
                                         Total a Liquidar
                                     </div>
                                     <div className="mt-1 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                                        {formatMoney(metrics.pending_amount_cents)}
+                                        {formatMoney(
+                                            metrics.pending_amount_cents,
+                                        )}
                                     </div>
                                 </div>
 
-                                <FormField label="Data do Pagamento" error={errors.paid_at}>
+                                <FormField
+                                    label="Data do Pagamento"
+                                    error={errors.paid_at}
+                                >
                                     <Input
                                         type="date"
                                         name="paid_at"
-                                        defaultValue={new Date().toISOString().split('T')[0]}
+                                        defaultValue={
+                                            new Date()
+                                                .toISOString()
+                                                .split('T')[0]
+                                        }
                                         required
                                     />
                                 </FormField>
 
-                                <FormField label="Observações / Comprovante" error={errors.notes}>
+                                <FormField
+                                    label="Observações / Comprovante"
+                                    error={errors.notes}
+                                >
                                     <Input
                                         name="notes"
                                         placeholder="Ex: Pago via PIX, ref. semana 34"

@@ -20,8 +20,14 @@ final class LegalRetentionController extends Controller
     public function store(CreateLegalHoldRequest $request, TenantContext $context, Customer $customer, CreateLegalHold $create): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
-        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($create, $request, $context, $customer, $data): array {
-            $hold = $create->handle($request->user(), $context, $customer, $data);
+        $holdData = [
+            'reason' => (string) $data['reason'],
+            'reference' => $data['reference'] ?? null,
+            'resource_type' => $data['resource_type'] ?? null,
+            'resource_id' => $data['resource_id'] ?? null,
+        ];
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($create, $request, $context, $customer, $holdData): array {
+            $hold = $create->handle($request->user(), $context, $customer, $holdData);
 
             return ['resource_id' => $hold->getKey(), 'resource_type' => 'legal_hold'];
         });

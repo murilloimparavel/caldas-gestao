@@ -13,6 +13,7 @@ use App\Http\Controllers\CustomerSubscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
@@ -67,6 +68,8 @@ Route::prefix('book/{tenant:slug}/{unit:slug}')
     });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google_calendar.callback');
+
     Route::get('dashboard', DashboardController::class)
         ->middleware(['tenant.context', 'saas.access'])
         ->name('dashboard');
@@ -81,6 +84,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'destroyGallery'])->name('online_booking.gallery.destroy');
         Route::post('online-booking/gallery/reorder', [OnlineBookingSettingsController::class, 'reorderGallery'])->name('online_booking.gallery.reorder');
         Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+        Route::get('google-calendar/status', [GoogleCalendarController::class, 'status'])->name('google_calendar.status');
+        Route::get('google-calendar/connect', [GoogleCalendarController::class, 'connect'])->name('google_calendar.connect');
+        Route::delete('google-calendar/disconnect', [GoogleCalendarController::class, 'disconnect'])->name('google_calendar.disconnect');
         Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
         Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');
         Route::post('appointments/{appointment}/cancel', [CalendarController::class, 'cancel'])->name('appointments.cancel');

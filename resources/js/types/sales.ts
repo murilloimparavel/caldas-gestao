@@ -1,10 +1,5 @@
 export type SaleStatus =
-    | 'draft'
-    | 'open'
-    | 'ready_to_bill'
-    | 'finalized'
-    | 'cancelled'
-    | 'adjusted';
+    'draft' | 'open' | 'ready_to_bill' | 'finalized' | 'cancelled' | 'adjusted';
 
 export type SaleCategoryType = 'service' | 'product' | 'mixed';
 export type UniquenessScope = 'customer' | 'appointment' | 'reference' | 'none';
@@ -119,12 +114,7 @@ export type SaleMetrics = {
 };
 
 export type ClosingSessionStatus =
-    | 'draft'
-    | 'ready'
-    | 'processing'
-    | 'completed'
-    | 'cancelled'
-    | 'failed';
+    'draft' | 'ready' | 'processing' | 'completed' | 'cancelled' | 'failed';
 
 export type ReceiptPayload = {
     receipt_number: string;

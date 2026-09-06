@@ -15,7 +15,6 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 /** @return array{0: User, 1: Tenant, 2: Unit, 3: TenantContext} */
 function packageIntegrityWorkspace(): array

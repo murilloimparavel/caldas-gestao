@@ -43,9 +43,9 @@ final class PublicBookingController extends Controller
                 'description' => $unit->onlineBookingSetting?->description,
                 'cover_image_url' => $unit->onlineBookingSetting?->cover_image_url,
                 'brand_color' => $unit->onlineBookingSetting?->brand_color,
-                'booking_flow' => $unit->onlineBookingSetting?->booking_flow ?? 'service_first',
+                'booking_flow' => $unit->onlineBookingSetting instanceof OnlineBookingSetting ? ($unit->onlineBookingSetting->booking_flow ?? 'service_first') : 'service_first',
                 'public_hours' => $unit->onlineBookingSetting?->public_hours,
-                'minimum_notice_minutes' => $unit->onlineBookingSetting?->minimum_notice_minutes ?? 0,
+                'minimum_notice_minutes' => $unit->onlineBookingSetting instanceof OnlineBookingSetting ? ($unit->onlineBookingSetting->minimum_notice_minutes ?? 0) : 0,
                 'contacts' => ['whatsapp' => $unit->onlineBookingSetting?->whatsapp_phone, 'phone' => $unit->onlineBookingSetting?->phone, 'instagram_url' => $unit->onlineBookingSetting?->instagram_url, 'facebook_url' => $unit->onlineBookingSetting?->facebook_url, 'website_url' => $unit->onlineBookingSetting?->website_url],
                 'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => Storage::disk('public')->url($image->path), 'alt_text' => $image->alt_text])->values()->all(),
             ],
@@ -80,11 +80,11 @@ final class PublicBookingController extends Controller
         $from = CarbonImmutable::parse($date->toDateString().' '.($data['from'] ?? '00:00'), $timezone);
         $to = CarbonImmutable::parse($date->toDateString().' '.($data['to'] ?? '23:59'), $timezone);
         $setting = $unit->onlineBookingSetting;
-        $minimumStart = CarbonImmutable::now($timezone)->addMinutes((int) ($setting?->minimum_notice_minutes ?? 0));
+        $minimumStart = CarbonImmutable::now($timezone)->addMinutes((int) ($setting instanceof OnlineBookingSetting ? ($setting->minimum_notice_minutes ?? 0) : 0));
         if ($from->lt($minimumStart)) {
             $from = $minimumStart->second(0);
         }
-        $publicWindow = $this->publicWindow($setting?->public_hours, $date->dayOfWeek);
+        $publicWindow = $this->publicWindow($setting instanceof OnlineBookingSetting ? (array) ($setting->public_hours ?? []) : [], $date->dayOfWeek);
         if ($publicWindow === null) {
             return response()->json(['date' => $date->toDateString(), 'timezone' => $timezone, 'slots' => []]);
         }
@@ -156,12 +156,12 @@ final class PublicBookingController extends Controller
         return (string) preg_replace('/\D+/', '', (string) $phone);
     }
 
-    /** @return array{starts_at: string, ends_at: string}|null */
-    private function publicWindow(?array $hours, int $weekday): ?array
+    /**
+     * @param  array<int|string, mixed>  $hours
+     * @return array{starts_at: string, ends_at: string}|null
+     */
+    private function publicWindow(array $hours, int $weekday): ?array
     {
-        if ($hours === null) {
-            return ['starts_at' => '00:00', 'ends_at' => '23:59'];
-        }
         $window = $hours[(string) $weekday] ?? $hours[$weekday] ?? null;
         if (! is_array($window) || ($window['enabled'] ?? true) === false) {
             return null;

@@ -47,7 +47,7 @@ return new class extends Migration
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('draft', 'open', 'ready_to_bill', 'finalized', 'cancelled', 'adjusted'))");
+            DB::statement("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('draft', 'open', 'ready_to_bill', 'completed', 'finalized', 'cancelled', 'adjusted'))");
             DB::statement('ALTER TABLE sales ADD CONSTRAINT sales_total_amount_check CHECK (total_amount_cents >= 0)');
             DB::statement('ALTER TABLE sales ADD CONSTRAINT sales_discount_amount_check CHECK (discount_amount_cents >= 0)');
             DB::statement('ALTER TABLE sales ADD CONSTRAINT sales_final_amount_check CHECK (final_amount_cents >= 0)');

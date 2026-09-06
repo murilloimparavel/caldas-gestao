@@ -368,5 +368,5 @@ test('keeps aggregate, audit and outbox writes atomic and idempotency failures d
             throw new RuntimeException('Expected rollback.');
         }))->toThrow(RuntimeException::class, 'Expected rollback.')
         ->and($service->execute($tenant, null, 'postgres-failure', ['a' => 1], fn (): array => ['value' => []])->replayed)->toBeTrue()
-        ->and(fn () => $service->execute($tenant, null, 'postgres-failure', ['a' => 2], fn (): array => ['value' => []]))->toThrow(LogicException::class);
+        ->and(fn () => $service->execute($tenant, null, 'postgres-failure', ['a' => 2], fn (): array => ['value' => []]))->toThrow(ConflictHttpException::class);
 });

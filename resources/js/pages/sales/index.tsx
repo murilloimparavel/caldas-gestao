@@ -24,11 +24,8 @@ import {
     ResourceHeader,
 } from '@/components/operational';
 import type { Paginated, ResourceFilters } from '@/components/operational';
-import {
-    QuickCreateCustomerModal
-    
-} from '@/components/operational/quick-create-dialogs';
-import type {CreatedEntity} from '@/components/operational/quick-create-dialogs';
+import { QuickCreateCustomerModal } from '@/components/operational/quick-create-dialogs';
+import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -147,15 +144,19 @@ export default function SalesIndex({
     const [createOpen, setCreateOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
     const [createKey] = useState(() => createIdempotencyKey('sale-open'));
-    const [closeKey, setCloseKey] = useState(() => createIdempotencyKey('closing-session'));
+    const [closeKey, setCloseKey] = useState(() =>
+        createIdempotencyKey('closing-session'),
+    );
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale.manage');
     const canClosePermission =
-        props.auth.permissions.includes('sale.close') || props.auth.permissions.includes('sale.manage');
+        props.auth.permissions.includes('sale.close') ||
+        props.auth.permissions.includes('sale.manage');
 
-    const [customerList, setCustomerList] = useState<CustomerOption[]>(initialCustomers);
+    const [customerList, setCustomerList] =
+        useState<CustomerOption[]>(initialCustomers);
     const [selectedCustomer, setSelectedCustomer] = useState<string>('');
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
 
@@ -165,19 +166,28 @@ export default function SalesIndex({
             name: created.name,
             phone: created.phone ?? null,
         };
-        setCustomerList((prev) => [...prev.filter((c) => c.id !== created.id), newCust]);
+        setCustomerList((prev) => [
+            ...prev.filter((c) => c.id !== created.id),
+            newCust,
+        ]);
         setSelectedCustomer(created.id);
     };
 
-    const selectedCategoryObj = categories.find((c) => c.id === selectedCategory);
+    const selectedCategoryObj = categories.find(
+        (c) => c.id === selectedCategory,
+    );
 
     const toggleSelect = (id: string) => {
         setSelectedIds((prev) =>
-            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+            prev.includes(id)
+                ? prev.filter((item) => item !== id)
+                : [...prev, id],
         );
     };
 
-    const selectedSales = paginator.data.filter((s) => selectedIds.includes(s.id));
+    const selectedSales = paginator.data.filter((s) =>
+        selectedIds.includes(s.id),
+    );
     const selectedTotal = selectedSales.reduce(
         (sum, s) => sum + (s.final_amount_cents || 0),
         0,
@@ -192,7 +202,10 @@ export default function SalesIndex({
 
     const isSameCustomer =
         selectedSales.length > 0 &&
-        selectedSales.every((s) => s.customer_id && s.customer_id === selectedSales[0].customer_id);
+        selectedSales.every(
+            (s) =>
+                s.customer_id && s.customer_id === selectedSales[0].customer_id,
+        );
 
     const isSameReference =
         selectedSales.length > 0 &&
@@ -200,17 +213,24 @@ export default function SalesIndex({
             (s) =>
                 !s.customer_id &&
                 s.reference_label &&
-                s.reference_label.trim() === selectedSales[0].reference_label?.trim(),
+                s.reference_label.trim() ===
+                    selectedSales[0].reference_label?.trim(),
         );
 
     const isSingleAnonymous =
-        selectedSales.length === 1 && !selectedSales[0].customer_id && !selectedSales[0].reference_label;
+        selectedSales.length === 1 &&
+        !selectedSales[0].customer_id &&
+        !selectedSales[0].reference_label;
 
-    const canConsolidateSubject = isSameCustomer || isSameReference || isSingleAnonymous;
+    const canConsolidateSubject =
+        isSameCustomer || isSameReference || isSingleAnonymous;
     const allActive =
         selectedSales.length > 0 &&
         selectedSales.every(
-            (s) => s.status === 'open' || s.status === 'ready_to_bill' || s.status === 'draft',
+            (s) =>
+                s.status === 'open' ||
+                s.status === 'ready_to_bill' ||
+                s.status === 'draft',
         );
     const canClose = canClosePermission && allActive && canConsolidateSubject;
 
@@ -224,7 +244,10 @@ export default function SalesIndex({
                     description="Controle o atendimento, consumo e faturamento de clientes e mesas em tempo real."
                     action={
                         canManage ? (
-                            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                            <Dialog
+                                open={createOpen}
+                                onOpenChange={setCreateOpen}
+                            >
                                 <DialogTrigger asChild>
                                     <Button className="w-full sm:w-auto">
                                         <Plus aria-hidden="true" />
@@ -233,10 +256,13 @@ export default function SalesIndex({
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
                                     <DialogHeader>
-                                        <DialogTitle>Abrir nova comanda</DialogTitle>
+                                        <DialogTitle>
+                                            Abrir nova comanda
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            Inicie um atendimento ou consumo selecionando a
-                                            categoria e o cliente ou referência.
+                                            Inicie um atendimento ou consumo
+                                            selecionando a categoria e o cliente
+                                            ou referência.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <Form
@@ -250,37 +276,53 @@ export default function SalesIndex({
                                     >
                                         {({ errors, processing }) => (
                                             <>
-                                                <FormErrorSummary errors={errors} />
+                                                <FormErrorSummary
+                                                    errors={errors}
+                                                />
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="sm:col-span-2">
                                                         <FormField
                                                             label="Categoria de comanda"
                                                             name="sale_category_id"
-                                                            error={errors.sale_category_id}
+                                                            error={
+                                                                errors.sale_category_id
+                                                            }
                                                         >
                                                             <select
                                                                 id="sale_category_id"
                                                                 name="sale_category_id"
                                                                 required
-                                                                value={selectedCategory}
+                                                                value={
+                                                                    selectedCategory
+                                                                }
                                                                 onChange={(e) =>
                                                                     setSelectedCategory(
-                                                                        e.target.value,
+                                                                        e.target
+                                                                            .value,
                                                                     )
                                                                 }
                                                                 className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
                                                                 <option value="">
-                                                                    Selecione a categoria
+                                                                    Selecione a
+                                                                    categoria
                                                                 </option>
-                                                                {categories.map((cat) => (
-                                                                    <option
-                                                                        key={cat.id}
-                                                                        value={cat.id}
-                                                                    >
-                                                                        {cat.name}
-                                                                    </option>
-                                                                ))}
+                                                                {categories.map(
+                                                                    (cat) => (
+                                                                        <option
+                                                                            key={
+                                                                                cat.id
+                                                                            }
+                                                                            value={
+                                                                                cat.id
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                cat.name
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
                                                             </select>
                                                         </FormField>
                                                         {selectedCategoryObj ? (
@@ -316,39 +358,62 @@ export default function SalesIndex({
                                                         <FormField
                                                             label="Cliente (opcional)"
                                                             name="customer_id"
-                                                            error={errors.customer_id}
+                                                            error={
+                                                                errors.customer_id
+                                                            }
                                                             description={
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setQuickCustomerOpen(true)}
+                                                                    onClick={() =>
+                                                                        setQuickCustomerOpen(
+                                                                            true,
+                                                                        )
+                                                                    }
                                                                     className="font-medium text-primary hover:underline"
                                                                 >
-                                                                    + Novo Cliente
+                                                                    + Novo
+                                                                    Cliente
                                                                 </button>
                                                             }
                                                         >
                                                             <select
                                                                 id="customer_id"
                                                                 name="customer_id"
-                                                                value={selectedCustomer}
-                                                                onChange={(e) => setSelectedCustomer(e.target.value)}
+                                                                value={
+                                                                    selectedCustomer
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setSelectedCustomer(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
                                                                 className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
                                                                 <option value="">
-                                                                    Cliente avulso / Não
+                                                                    Cliente
+                                                                    avulso / Não
                                                                     identificado
                                                                 </option>
-                                                                {customerList.map((cust) => (
-                                                                    <option
-                                                                        key={cust.id}
-                                                                        value={cust.id}
-                                                                    >
-                                                                        {cust.name}
-                                                                        {cust.phone
-                                                                            ? ` (${cust.phone})`
-                                                                            : ''}
-                                                                    </option>
-                                                                ))}
+                                                                {customerList.map(
+                                                                    (cust) => (
+                                                                        <option
+                                                                            key={
+                                                                                cust.id
+                                                                            }
+                                                                            value={
+                                                                                cust.id
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                cust.name
+                                                                            }
+                                                                            {cust.phone
+                                                                                ? ` (${cust.phone})`
+                                                                                : ''}
+                                                                        </option>
+                                                                    ),
+                                                                )}
                                                             </select>
                                                         </FormField>
                                                     </div>
@@ -357,7 +422,9 @@ export default function SalesIndex({
                                                         <FormField
                                                             label="Identificador / Mesa / Referência (opcional)"
                                                             name="reference_label"
-                                                            error={errors.reference_label}
+                                                            error={
+                                                                errors.reference_label
+                                                            }
                                                         >
                                                             <Input
                                                                 id="reference_label"
@@ -386,7 +453,9 @@ export default function SalesIndex({
 
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() => setCreateOpen(false)}
+                                                    onCancel={() =>
+                                                        setCreateOpen(false)
+                                                    }
                                                     label="Abrir comanda"
                                                 />
                                             </>
@@ -416,7 +485,10 @@ export default function SalesIndex({
 
                     <div className="surface-panel flex items-center gap-4 p-4 sm:p-5">
                         <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-                            <AlertCircle className="size-6" aria-hidden="true" />
+                            <AlertCircle
+                                className="size-6"
+                                aria-hidden="true"
+                            />
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -430,13 +502,16 @@ export default function SalesIndex({
 
                     <div className="surface-panel flex items-center gap-4 p-4 sm:p-5">
                         <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-                            <WalletCards className="size-6" aria-hidden="true" />
+                            <WalletCards
+                                className="size-6"
+                                aria-hidden="true"
+                            />
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 Faturamento Aberto (Hoje)
                             </p>
-                            <p className="font-display text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
+                            <p className="font-display text-2xl font-bold tracking-tight text-emerald-600 sm:text-3xl dark:text-emerald-400">
                                 {formatMoney(metrics.today_total_cents)}
                             </p>
                         </div>
@@ -473,7 +548,9 @@ export default function SalesIndex({
                             >
                                 <option value="">Todos os status</option>
                                 <option value="open">Abertas</option>
-                                <option value="ready_to_bill">Prontas para Fechamento</option>
+                                <option value="ready_to_bill">
+                                    Prontas para Fechamento
+                                </option>
                                 <option value="finalized">Finalizadas</option>
                                 <option value="cancelled">Canceladas</option>
                                 <option value="draft">Rascunhos</option>
@@ -497,15 +574,26 @@ export default function SalesIndex({
                         </div>
 
                         <div className="flex items-center gap-2 sm:col-span-2 sm:justify-end">
-                            <Button type="submit" variant="secondary" className="h-10 w-full sm:w-auto">
+                            <Button
+                                type="submit"
+                                variant="secondary"
+                                className="h-10 w-full sm:w-auto"
+                            >
                                 Filtrar
                             </Button>
                             {filters.search ||
                             filters.status ||
                             filters.sale_category_id ||
                             filters.customer_id ? (
-                                <Button asChild variant="ghost" className="h-10 px-2.5">
-                                    <Link href={sales.index.url()} title="Limpar filtros">
+                                <Button
+                                    asChild
+                                    variant="ghost"
+                                    className="h-10 px-2.5"
+                                >
+                                    <Link
+                                        href={sales.index.url()}
+                                        title="Limpar filtros"
+                                    >
                                         <X className="size-4" />
                                     </Link>
                                 </Button>
@@ -532,7 +620,7 @@ export default function SalesIndex({
                 {selectedIds.length > 0 ? (
                     <div className="sticky top-4 z-20 flex flex-col items-start justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-lg backdrop-blur-md sm:flex-row sm:items-center">
                         <div className="flex items-center gap-3">
-                            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm">
+                            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
                                 {selectedIds.length}
                             </div>
                             <div>
@@ -562,16 +650,23 @@ export default function SalesIndex({
                                     size="sm"
                                     className="gap-1.5 bg-emerald-600 font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
                                     onClick={() => {
-                                        setCloseKey(createIdempotencyKey('closing-session'));
+                                        setCloseKey(
+                                            createIdempotencyKey(
+                                                'closing-session',
+                                            ),
+                                        );
                                         setCloseOpen(true);
                                     }}
                                 >
                                     <Receipt className="size-4" />
-                                    Fechar selecionadas ({formatMoney(selectedTotal)})
+                                    Fechar selecionadas (
+                                    {formatMoney(selectedTotal)})
                                 </Button>
-                            ) : selectedIds.length > 1 && !canConsolidateSubject ? (
+                            ) : selectedIds.length > 1 &&
+                              !canConsolidateSubject ? (
                                 <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                                    Clientes ou referências diferentes não podem ser consolidados juntos
+                                    Clientes ou referências diferentes não podem
+                                    ser consolidados juntos
                                 </span>
                             ) : null}
                         </div>
@@ -584,7 +679,9 @@ export default function SalesIndex({
                         <DialogHeader>
                             <DialogTitle>Fechamento Consolidado</DialogTitle>
                             <DialogDescription>
-                                Revise as comandas selecionadas antes de encerrar o atendimento e emitir o recibo operacional interno.
+                                Revise as comandas selecionadas antes de
+                                encerrar o atendimento e emitir o recibo
+                                operacional interno.
                             </DialogDescription>
                         </DialogHeader>
                         <Form
@@ -632,11 +729,15 @@ export default function SalesIndex({
                                                     <p className="text-[11px] text-muted-foreground">
                                                         {s.category_name_snapshot ||
                                                             s.category?.name ||
-                                                            'Geral'} • {s.items?.length ?? 0} item(ns)
+                                                            'Geral'}{' '}
+                                                        • {s.items?.length ?? 0}{' '}
+                                                        item(ns)
                                                     </p>
                                                 </div>
                                                 <span className="font-semibold text-foreground">
-                                                    {formatMoney(s.final_amount_cents)}
+                                                    {formatMoney(
+                                                        s.final_amount_cents,
+                                                    )}
                                                 </span>
                                             </div>
                                         ))}
@@ -689,12 +790,16 @@ export default function SalesIndex({
                 {paginator.data.length === 0 ? (
                     <EmptyState
                         title={
-                            filters.search || filters.status || filters.sale_category_id
+                            filters.search ||
+                            filters.status ||
+                            filters.sale_category_id
                                 ? 'Nenhuma comanda encontrada'
                                 : 'Nenhuma comanda aberta nesta unidade'
                         }
                         description={
-                            filters.search || filters.status || filters.sale_category_id
+                            filters.search ||
+                            filters.status ||
+                            filters.sale_category_id
                                 ? 'Tente ajustar os filtros de busca para encontrar as comandas desejadas.'
                                 : 'Abra uma comanda para registrar consumos de clientes, mesas ou atendimentos da agenda.'
                         }
@@ -719,21 +824,25 @@ export default function SalesIndex({
                                 <article
                                     key={sale.id}
                                     className={`surface-panel relative flex flex-col justify-between gap-4 p-5 transition-all hover:border-primary/50 ${
-                                        isSelected ? 'border-primary bg-primary/[0.03]' : ''
+                                        isSelected
+                                            ? 'border-primary bg-primary/[0.03]'
+                                            : ''
                                     }`}
                                 >
                                     {/* Top Row: Select Checkbox, Reference / Identifier, Status */}
                                     <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="flex min-w-0 items-center gap-2.5">
                                             <input
                                                 type="checkbox"
                                                 checked={isSelected}
-                                                onChange={() => toggleSelect(sale.id)}
-                                                className="size-4 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                                                onChange={() =>
+                                                    toggleSelect(sale.id)
+                                                }
+                                                className="size-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label={`Selecionar comanda ${sale.reference_label ?? sale.id}`}
                                             />
                                             <div className="min-w-0">
-                                                <h2 className="truncate font-semibold text-foreground text-base">
+                                                <h2 className="truncate text-base font-semibold text-foreground">
                                                     {sale.reference_label ||
                                                         sale.customer?.name ||
                                                         `Comanda #${sale.id.slice(0, 8)}`}
@@ -741,7 +850,8 @@ export default function SalesIndex({
                                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                     <span className="truncate">
                                                         {sale.category_name_snapshot ||
-                                                            sale.category?.name ||
+                                                            sale.category
+                                                                ?.name ||
                                                             'Geral'}
                                                     </span>
                                                 </div>
@@ -755,7 +865,8 @@ export default function SalesIndex({
                                         <div className="flex items-center gap-2">
                                             <User className="size-3.5 shrink-0 text-muted-foreground" />
                                             <span className="truncate font-medium text-foreground">
-                                                {sale.customer?.name ?? 'Cliente Avulso'}
+                                                {sale.customer?.name ??
+                                                    'Cliente Avulso'}
                                             </span>
                                         </div>
 
@@ -765,7 +876,8 @@ export default function SalesIndex({
                                                 <span className="truncate">
                                                     Agendamento vinculado (
                                                     {formatDateTime(
-                                                        sale.appointment_link.appointment
+                                                        sale.appointment_link
+                                                            .appointment
                                                             .starts_at,
                                                     )}
                                                     )
@@ -782,7 +894,10 @@ export default function SalesIndex({
                                                     : 'itens'}
                                             </span>
                                             <span>
-                                                Aberta às {formatDateTime(sale.created_at)}
+                                                Aberta às{' '}
+                                                {formatDateTime(
+                                                    sale.created_at,
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -790,15 +905,21 @@ export default function SalesIndex({
                                     {/* Bottom Row: Total & Action */}
                                     <div className="flex items-center justify-between gap-2 pt-1">
                                         <div>
-                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                                            <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                                                 Total a Pagar
                                             </span>
                                             <span className="font-display text-lg font-bold text-foreground">
-                                                {formatMoney(sale.final_amount_cents)}
+                                                {formatMoney(
+                                                    sale.final_amount_cents,
+                                                )}
                                             </span>
                                         </div>
 
-                                        <Button asChild size="sm" variant="outline">
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                        >
                                             <Link href={sales.show(sale.id)}>
                                                 Ver comanda
                                             </Link>

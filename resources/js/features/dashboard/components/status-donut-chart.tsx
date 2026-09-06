@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import type { AppointmentStatusCount } from '../types';
 
 type StatusDonutChartProps = {
@@ -18,7 +24,12 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
 
     // Compute donut segment offsets pure calculation using reduce
     const segments = data.reduce<
-        Array<AppointmentStatusCount & { strokeDasharray: string; strokeDashoffset: number }>
+        Array<
+            AppointmentStatusCount & {
+                strokeDasharray: string;
+                strokeDashoffset: number;
+            }
+        >
     >((acc, item) => {
         const currentSum = acc.reduce((sum, prev) => sum + prev.percentage, 0);
         const offset = -((currentSum / 100) * circumference);
@@ -35,8 +46,12 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
     return (
         <Card className="border-border/60">
             <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Status dos Agendamentos</CardTitle>
-                <CardDescription className="text-xs">Distribuição percentual por situação</CardDescription>
+                <CardTitle className="text-base font-semibold">
+                    Status dos Agendamentos
+                </CardTitle>
+                <CardDescription className="text-xs">
+                    Distribuição percentual por situação
+                </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
                 {!hasData ? (
@@ -47,7 +62,11 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                     <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
                         {/* SVG Donut */}
                         <div className="relative flex shrink-0 items-center justify-center">
-                            <svg width={size} height={size} className="rotate-[-90deg]">
+                            <svg
+                                width={size}
+                                height={size}
+                                className="rotate-[-90deg]"
+                            >
                                 <circle
                                     cx={center}
                                     cy={center}
@@ -73,25 +92,40 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                                 ))}
                             </svg>
                             <div className="absolute flex flex-col items-center text-center">
-                                <span className="text-2xl font-bold tracking-tight text-foreground">{totalCount}</span>
-                                <span className="text-[10px] font-medium text-muted-foreground uppercase">Total</span>
+                                <span className="text-2xl font-bold tracking-tight text-foreground">
+                                    {totalCount}
+                                </span>
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                                    Total
+                                </span>
                             </div>
                         </div>
 
                         {/* Legend */}
                         <div className="grid w-full flex-1 gap-2.5">
                             {data.map((item) => (
-                                <div key={item.status} className="flex items-center justify-between text-xs">
+                                <div
+                                    key={item.status}
+                                    className="flex items-center justify-between text-xs"
+                                >
                                     <div className="flex items-center gap-2">
                                         <span
                                             className="size-2.5 shrink-0 rounded-full"
-                                            style={{ backgroundColor: item.color }}
+                                            style={{
+                                                backgroundColor: item.color,
+                                            }}
                                         />
-                                        <span className="font-medium text-foreground">{item.label}</span>
+                                        <span className="font-medium text-foreground">
+                                            {item.label}
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-foreground">{item.count}</span>
-                                        <span className="text-muted-foreground">({item.percentage}%)</span>
+                                        <span className="font-semibold text-foreground">
+                                            {item.count}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            ({item.percentage}%)
+                                        </span>
                                     </div>
                                 </div>
                             ))}

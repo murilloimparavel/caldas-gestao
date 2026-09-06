@@ -403,7 +403,10 @@ export default function ServiceShow({
                                                 Reativar serviço
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                Este serviço está atualmente inativo. Reative o cadastro para disponibilizá-lo novamente para agendamentos e comandas.
+                                                Este serviço está atualmente
+                                                inativo. Reative o cadastro para
+                                                disponibilizá-lo novamente para
+                                                agendamentos e comandas.
                                             </p>
                                         </div>
                                     </div>
@@ -425,7 +428,10 @@ export default function ServiceShow({
                                                     Reativar serviço?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O serviço voltará a ficar ativo e poderá ser selecionado em novos atendimentos e agendamentos.
+                                                    O serviço voltará a ficar
+                                                    ativo e poderá ser
+                                                    selecionado em novos
+                                                    atendimentos e agendamentos.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
@@ -492,9 +498,9 @@ export default function ServiceShow({
                                                 Desativar serviço
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                O serviço deixa de aparecer em novas
-                                                operações, mas o histórico continua
-                                                íntegro.
+                                                O serviço deixa de aparecer em
+                                                novas operações, mas o histórico
+                                                continua íntegro.
                                             </p>
                                         </div>
                                     </div>
@@ -517,7 +523,10 @@ export default function ServiceShow({
                                                     Desativar serviço?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O serviço deixará de aparecer no catálogo de agendamento e novas comandas.
+                                                    O serviço deixará de
+                                                    aparecer no catálogo de
+                                                    agendamento e novas
+                                                    comandas.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
