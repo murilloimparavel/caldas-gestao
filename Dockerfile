@@ -1,5 +1,8 @@
 FROM node:22-bookworm-slim AS assets
 
+ARG WAYFINDER_SKIP_GENERATE=false
+ENV WAYFINDER_SKIP_GENERATE=${WAYFINDER_SKIP_GENERATE}
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci

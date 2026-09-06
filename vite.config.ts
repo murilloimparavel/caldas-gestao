@@ -20,7 +20,10 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
-            command: 'true',
+            command:
+                process.env.WAYFINDER_SKIP_GENERATE === 'true'
+                    ? 'true'
+                    : 'php artisan wayfinder:generate --with-form',
         }),
     ],
     server: {
