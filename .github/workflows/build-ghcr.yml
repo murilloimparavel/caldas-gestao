@@ -144,6 +144,12 @@ jobs:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
         run: |
           curl --fail-with-body --retry 3 --retry-delay 5 --silent --show-error \
+            --request PATCH \
+            --header "Authorization: Bearer ${COOLIFY_DEPLOY_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data '{"docker_registry_image_tag":"sha-'"${GITHUB_SHA}"'"}' \
+            "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv"
+          curl --fail-with-body --retry 3 --retry-delay 5 --silent --show-error \
             --request POST \
             --header "Authorization: Bearer ${COOLIFY_DEPLOY_TOKEN}" \
             "https://cy.caldasindica.com/api/v1/deploy?uuid=svurav3cvfovuz8adtv1fuwv"
