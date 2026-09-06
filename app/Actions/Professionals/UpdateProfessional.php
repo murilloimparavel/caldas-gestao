@@ -44,7 +44,7 @@ final class UpdateProfessional extends OperationalAction
             }
 
             if ($hasAvatarKey) {
-                $diskName = 'public';
+                $diskName = (string) config('filesystems.media_disk', 'public');
                 if ($avatarFile instanceof UploadedFile) {
                     if ($locked->avatar_path) {
                         Storage::disk($diskName)->delete($locked->avatar_path);

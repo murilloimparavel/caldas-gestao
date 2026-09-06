@@ -56,7 +56,7 @@ final class UpdateProduct extends OperationalAction
             }
 
             if ($hasImageKey) {
-                $diskName = 'public';
+                $diskName = (string) config('filesystems.media_disk', 'public');
                 if ($imageFile instanceof UploadedFile) {
                     if ($locked->image_path) {
                         Storage::disk($diskName)->delete($locked->image_path);

@@ -41,7 +41,7 @@ final class CreateProduct extends OperationalAction
             if ($imageFile instanceof UploadedFile) {
                 $hash = Str::random(40);
                 $ext = $imageFile->guessExtension() ?: $imageFile->getClientOriginalExtension();
-                $diskName = 'public';
+                $diskName = (string) config('filesystems.media_disk', 'public');
                 $storedPath = Storage::disk($diskName)->putFileAs(
                     "{$context->tenant->getKey()}/products/{$productId}",
                     $imageFile,

@@ -35,7 +35,7 @@ class Professional extends Model
     {
         return Attribute::make(
             get: fn (): ?string => $this->avatar_path
-                ? Storage::disk(config('filesystems.default', 'public'))->url($this->avatar_path)
+                ? Storage::disk(config('filesystems.media_disk', 'public'))->url($this->avatar_path)
                 : null,
         );
     }

@@ -32,7 +32,7 @@ final class CreateProfessional extends OperationalAction
             if ($avatarFile instanceof UploadedFile) {
                 $hash = Str::random(40);
                 $ext = $avatarFile->guessExtension() ?: $avatarFile->getClientOriginalExtension();
-                $diskName = 'public';
+                $diskName = (string) config('filesystems.media_disk', 'public');
                 $storedPath = Storage::disk($diskName)->putFileAs(
                     "{$context->tenant->getKey()}/professionals/{$professionalId}",
                     $avatarFile,
