@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Actions\Identity\ActivateVerifiedOwnerMemberships;
 use App\Auth\NormalizedEmailUserProvider;
+use App\Contracts\CustomDomainProvisioner;
+use App\Contracts\DnsResolver;
+use App\Contracts\TlsCertificateVerifier;
 use App\Models\Appointment;
 use App\Models\AvailabilityRule;
 use App\Models\Customer;
@@ -34,6 +37,9 @@ use App\Policies\ScheduleBlockPolicy;
 use App\Policies\ServicePolicy;
 use App\Policies\TenantPolicy;
 use App\Policies\UnitPolicy;
+use App\Support\CoolifyCustomDomainProvisioner;
+use App\Support\NativeDnsResolver;
+use App\Support\NativeTlsCertificateVerifier;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Verified;
@@ -58,6 +64,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(DnsResolver::class, NativeDnsResolver::class);
+        $this->app->bind(TlsCertificateVerifier::class, NativeTlsCertificateVerifier::class);
+        $this->app->bind(CustomDomainProvisioner::class, CoolifyCustomDomainProvisioner::class);
+
         $this->app->scoped(TenantContext::class, function (): TenantContext {
             throw new \LogicException('TenantContext must be resolved by tenant.context middleware.');
         });

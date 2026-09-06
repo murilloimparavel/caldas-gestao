@@ -4,6 +4,7 @@ use App\Http\Middleware\EnforceSaaSAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveTenantContext;
+use App\Http\Middleware\ResolveTenantDomain;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,10 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'tenant.context' => ResolveTenantContext::class,
+            'tenant.domain' => ResolveTenantDomain::class,
             'saas.access' => EnforceSaaSAccess::class,
         ]);
 
         $middleware->web(append: [
+            ResolveTenantDomain::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

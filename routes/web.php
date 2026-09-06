@@ -28,6 +28,7 @@ use App\Http\Controllers\SaleItemController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\TenantDomainController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -72,6 +73,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('dashboard');
 
     Route::middleware(['tenant.context', 'saas.access'])->group(function (): void {
+        Route::get('settings/domains', [TenantDomainController::class, 'index'])->name('tenant-domains.index');
+        Route::post('settings/domains', [TenantDomainController::class, 'store'])->name('tenant-domains.store');
+        Route::post('settings/domains/{tenantDomain}/verify', [TenantDomainController::class, 'verify'])->name('tenant-domains.verify');
+        Route::post('settings/domains/{tenantDomain}/provision', [TenantDomainController::class, 'provision'])->name('tenant-domains.provision');
+        Route::post('settings/domains/{tenantDomain}/activate', [TenantDomainController::class, 'activate'])->name('tenant-domains.activate');
         Route::get('online-booking', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.index');
         Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
         Route::post('online-booking/cover', [OnlineBookingSettingsController::class, 'storeCover'])->name('online_booking.cover.store');
