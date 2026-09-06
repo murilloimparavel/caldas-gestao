@@ -2,6 +2,10 @@
 
 return [
 
+    'postmark' => [
+        'key' => env('POSTMARK_API_KEY'),
+    ],
+
     'coolify' => [
         'url' => env('COOLIFY_BASE_URL'),
         'token' => env('COOLIFY_API_KEY'),

@@ -48,7 +48,8 @@ final class RenewSubscriptionCycle extends OperationalAction
                         $current = $ensureCycle->handle($actor, $context, $locked, permission: 'subscription.renew');
                     }
 
-                    if ($current->ends_on->toImmutable()->greaterThanOrEqualTo($asOf)) {
+                    $currentEndsOn = CarbonImmutable::parse($current->ends_on);
+                    if ($currentEndsOn->greaterThanOrEqualTo($asOf)) {
                         return [$current, true];
                     }
 
@@ -87,11 +88,11 @@ final class RenewSubscriptionCycle extends OperationalAction
                         $actor,
                         $context,
                         $locked,
-                        $current->ends_on->toImmutable()->addDay(),
+                        $currentEndsOn->addDay(),
                         permission: 'subscription.renew',
                     );
                     $locked->forceFill([
-                        'next_billing_date' => $next->ends_on->toImmutable()->addDay()->toDateString(),
+                        'next_billing_date' => CarbonImmutable::parse($next->ends_on)->addDay()->toDateString(),
                         'lock_version' => $locked->lock_version + 1,
                     ])->save();
                     $attempt->forceFill([
@@ -102,7 +103,7 @@ final class RenewSubscriptionCycle extends OperationalAction
                     $this->events->record($actor, $context, 'customer_subscription.cycle_renewed', $locked, [
                         'customer_subscription_id' => $locked->getKey(),
                         'status' => 'active',
-                        'next_billing_date' => $next->ends_on->toImmutable()->addDay()->toDateString(),
+                        'next_billing_date' => CarbonImmutable::parse($next->ends_on)->addDay()->toDateString(),
                     ]);
 
                     return [$next, false];

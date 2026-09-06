@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Customer;
 use App\Models\Professional;
 use App\Models\Unit;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -34,7 +35,7 @@ class AppointmentFactory extends Factory
                 'unit_id' => $attributes['unit_id'],
             ])->getKey(),
             'starts_at' => now()->addDay()->setTime(10, 0),
-            'ends_at' => now()->addDay()->setTime(11, 0),
+            'ends_at' => fn (array $attributes): Carbon => Carbon::parse($attributes['starts_at'])->addHour(),
             'timezone' => 'America/Sao_Paulo',
             'status' => 'confirmed',
             'source' => 'internal',
