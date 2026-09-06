@@ -20,7 +20,6 @@ use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
-use Symfony\Component\HttpFoundation\Response;
 
 it('normalizes valid hostnames', function (): void {
     expect(HostnameNormalizer::normalize(' Gestao.Cliente.Example.COM. '))
@@ -56,7 +55,7 @@ it('does not allow a hostname to be claimed twice', function (): void {
         ->toThrow(QueryException::class);
 });
 
-it('resolves an active custom hostname without changing the official domain', function (): void {
+it('redirects unauthenticated visitors on an active management hostname to login', function (): void {
     $domain = TenantDomain::factory()->create([
         'hostname' => 'gestao.cliente.example.com',
         'status' => TenantDomainStatus::Active,
@@ -64,7 +63,7 @@ it('resolves an active custom hostname without changing the official domain', fu
 
     $response = $this->get('http://'.$domain->hostname.'/');
 
-    $response->assertStatus(Response::HTTP_OK);
+    $response->assertRedirect('/login');
 });
 
 it('rejects an unknown custom hostname', function (): void {
