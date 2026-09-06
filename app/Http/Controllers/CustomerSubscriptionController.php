@@ -21,7 +21,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 
 final class CustomerSubscriptionController extends Controller
 {
@@ -36,7 +35,7 @@ final class CustomerSubscriptionController extends Controller
 
                 return ['resource_id' => $subscription->getKey(), 'resource_type' => 'customer_subscription'];
             });
-        } catch (InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['subscription_plan_id' => $exception->getMessage()]);
         }
 

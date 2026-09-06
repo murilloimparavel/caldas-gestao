@@ -30,7 +30,7 @@ it('allows quick creation of a customer returning JSON response with id and name
         ]), [
             'name' => 'Cliente Rapido',
             'phone' => '11999998888',
-            'email' => 'rapido@gmail.com',
+            'email' => 'rapido@example.com',
             'notes' => 'Criado via modal',
         ]);
 

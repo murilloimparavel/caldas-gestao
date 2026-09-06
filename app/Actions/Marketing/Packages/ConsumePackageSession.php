@@ -12,7 +12,6 @@ use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class ConsumePackageSession extends OperationalAction
@@ -28,14 +27,14 @@ final class ConsumePackageSession extends OperationalAction
 
         $sessionsToConsume = isset($data['sessions_consumed']) ? (int) $data['sessions_consumed'] : 1;
         if ($sessionsToConsume <= 0) {
-            throw new InvalidArgumentException('Sessions to consume must be greater than zero.');
+            throw new \InvalidArgumentException('Sessions to consume must be greater than zero.');
         }
 
         $saleId = isset($data['sale_id']) && $data['sale_id'] !== '' ? (string) $data['sale_id'] : null;
         $saleItemId = isset($data['sale_item_id']) && $data['sale_item_id'] !== '' ? (string) $data['sale_item_id'] : null;
 
         if ($saleItemId !== null && $saleId === null) {
-            throw new InvalidArgumentException('A sale item requires an associated sale.');
+            throw new \InvalidArgumentException('A sale item requires an associated sale.');
         }
 
         $package = DB::transaction(function () use ($actor, $context, $unit, $customerPackage, $sessionsToConsume, $saleId, $saleItemId): ?CustomerPackage {
@@ -78,7 +77,7 @@ final class ConsumePackageSession extends OperationalAction
                     ->exists();
 
                 if (! $saleExists) {
-                    throw new InvalidArgumentException('The associated sale was not found for this customer.');
+                    throw new \InvalidArgumentException('The associated sale was not found for this customer.');
                 }
             }
 
@@ -91,11 +90,11 @@ final class ConsumePackageSession extends OperationalAction
                     ->first();
 
                 if ($saleItem === null) {
-                    throw new InvalidArgumentException('The associated sale item does not belong to the associated sale.');
+                    throw new \InvalidArgumentException('The associated sale item does not belong to the associated sale.');
                 }
 
                 if ($saleItem->service_id === null) {
-                    throw new InvalidArgumentException('Package consumption requires a service sale item.');
+                    throw new \InvalidArgumentException('Package consumption requires a service sale item.');
                 }
 
                 $eligibleServiceIds = collect($locked->eligible_services_snapshot ?? [])
@@ -104,7 +103,7 @@ final class ConsumePackageSession extends OperationalAction
                     ->all();
 
                 if (! in_array((string) $saleItem->service_id, $eligibleServiceIds, true)) {
-                    throw new InvalidArgumentException('The sale item service is not eligible for this package.');
+                    throw new \InvalidArgumentException('The sale item service is not eligible for this package.');
                 }
             }
 

@@ -13,7 +13,6 @@ use App\Support\TenantContext;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 final class SellCustomerPackage extends OperationalAction
 {
@@ -33,7 +32,7 @@ final class SellCustomerPackage extends OperationalAction
             ->first();
 
         if ($customer === null) {
-            throw new InvalidArgumentException('The selected customer was not found in this unit.');
+            throw new \InvalidArgumentException('The selected customer was not found in this unit.');
         }
 
         $template = PackageTemplate::query()
@@ -44,11 +43,11 @@ final class SellCustomerPackage extends OperationalAction
             ->first();
 
         if ($template === null) {
-            throw new InvalidArgumentException('The selected package template was not found in this unit.');
+            throw new \InvalidArgumentException('The selected package template was not found in this unit.');
         }
 
         if (! $template->is_active) {
-            throw new InvalidArgumentException('The selected package template is not active.');
+            throw new \InvalidArgumentException('The selected package template is not active.');
         }
 
         if ($saleId !== null) {
@@ -60,7 +59,7 @@ final class SellCustomerPackage extends OperationalAction
                 ->exists();
 
             if (! $saleExists) {
-                throw new InvalidArgumentException('The associated sale was not found in this unit.');
+                throw new \InvalidArgumentException('The associated sale was not found in this unit.');
             }
         }
 
