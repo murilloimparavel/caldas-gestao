@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnforceSaaSAccess;
+use App\Http\Middleware\EnsureFirstLoginComplete;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveTenantContext;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.context' => ResolveTenantContext::class,
             'tenant.domain' => ResolveTenantDomain::class,
             'saas.access' => EnforceSaaSAccess::class,
+            'first.login.complete' => EnsureFirstLoginComplete::class,
         ]);
 
         $middleware->web(append: [

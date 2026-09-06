@@ -13,6 +13,7 @@ use App\Http\Controllers\CustomerSubscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
+use App\Http\Controllers\FirstLoginPasswordController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
@@ -73,6 +74,11 @@ Route::get('/', function () {
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
 
+Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('/first-login/password', [FirstLoginPasswordController::class, 'edit'])->name('first-login-password.edit');
+    Route::put('/first-login/password', [FirstLoginPasswordController::class, 'update'])->middleware('throttle:6,1')->name('first-login-password.update');
+});
+
 Route::get('/book/{public_slug}', [PublicBookingController::class, 'showBySlug'])
     ->middleware('throttle:public-booking')
     ->name('public_booking.slug');
@@ -90,10 +96,10 @@ Route::prefix('book/{tenant:slug}/{unit:slug}')
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)
-        ->middleware(['tenant.context', 'saas.access'])
+        ->middleware(['tenant.context', 'saas.access', 'first.login.complete'])
         ->name('dashboard');
 
-    Route::middleware(['tenant.context', 'saas.access'])->group(function (): void {
+    Route::middleware(['tenant.context', 'saas.access', 'first.login.complete'])->group(function (): void {
         Route::get('settings/domains', [TenantDomainController::class, 'index'])->name('tenant-domains.index');
         Route::post('settings/domains', [TenantDomainController::class, 'store'])->name('tenant-domains.store');
         Route::post('settings/domains/{tenantDomain}/verify', [TenantDomainController::class, 'verify'])->name('tenant-domains.verify');
