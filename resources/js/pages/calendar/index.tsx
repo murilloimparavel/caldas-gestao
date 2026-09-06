@@ -1,13 +1,15 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    CalendarCheck2,
     CheckCircle2,
     Lock,
     Plus,
+    RefreshCw,
     Receipt,
     SlidersHorizontal,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import {
     CalendarError,
     CalendarLoading,
@@ -63,6 +65,7 @@ import {
     update as updateAppointment,
 } from '@/routes/appointments';
 import { index as calendarIndex } from '@/routes/calendar';
+import googleCalendar from '@/routes/google_calendar';
 import sales from '@/routes/sales';
 import {
     destroy as destroyScheduleBlock,
@@ -94,6 +97,115 @@ function optionList(
     fallback: CalendarOption[] | undefined,
 ): CalendarOption[] {
     return primary ?? fallback ?? [];
+}
+
+type GoogleCalendarStatus = {
+    status: 'connected' | 'disconnected' | 'not_configured';
+    configured: boolean;
+    connection: {
+        google_account_email?: string | null;
+        calendar_name?: string | null;
+        last_synced_at?: string | null;
+    } | null;
+};
+
+function GoogleCalendarPanel(): ReactElement {
+    const [state, setState] = useState<GoogleCalendarStatus | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [disconnecting, setDisconnecting] = useState(false);
+
+    const loadStatus = async (): Promise<void> => {
+        setLoading(true);
+
+        try {
+            const response = await fetch(googleCalendar.status.url(), {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to load Google Calendar status.');
+            }
+
+            setState((await response.json()) as GoogleCalendarStatus);
+        } catch {
+            setState(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadStatus();
+    }, []);
+
+    const connected = state?.status === 'connected';
+    const unavailable = state?.status === 'not_configured';
+
+    return (
+        <section className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5" aria-labelledby="google-calendar-heading">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarCheck2 aria-hidden="true" className="size-5" />
+                    </div>
+                    <div>
+                        <h2 id="google-calendar-heading" className="font-semibold">Google Calendar</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {loading
+                                ? 'Verificando conexão…'
+                                : unavailable
+                                  ? 'Integração indisponível neste ambiente.'
+                                  : connected
+                                    ? `Conectado${state?.connection?.google_account_email ? ` como ${state.connection.google_account_email}` : ''}.`
+                                    : 'Conecte o calendário desta unidade para sincronizar agendamentos.'}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Atualizar status do Google Calendar"
+                        onClick={() => void loadStatus()}
+                        disabled={loading || disconnecting}
+                    >
+                        <RefreshCw aria-hidden="true" className={loading ? 'animate-spin' : undefined} />
+                    </Button>
+                    {connected ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={disconnecting}
+                            onClick={() => {
+                                setDisconnecting(true);
+                                router.delete(googleCalendar.disconnect.url(), {
+                                    preserveScroll: true,
+                                    onFinish: () => {
+                                        setDisconnecting(false);
+                                        void loadStatus();
+                                    },
+                                });
+                            }}
+                        >
+                            {disconnecting ? 'Desconectando…' : 'Desconectar'}
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            disabled={loading || unavailable}
+                            onClick={() => {
+                                window.location.assign(googleCalendar.connect.url());
+                            }}
+                        >
+                            Conectar Google Calendar
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
 }
 
 function AppointmentForm({
@@ -1161,6 +1273,8 @@ export default function CalendarIndex(props: CalendarProps) {
                         </Button>
                     </div>
                 </header>
+
+                <GoogleCalendarPanel />
 
                 <CalendarToolbar
                     canManage={canManage}
