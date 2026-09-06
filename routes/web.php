@@ -40,14 +40,35 @@ Route::get('/billing', BillingController::class)
     ->middleware(['auth', 'verified', 'tenant.context'])
     ->name('billing.index');
 
-Route::get('/', fn () => Inertia::render('marketing/home', [
-    'branding' => [
-        'name' => config('branding.name', config('app.name')),
-        'logoUrl' => config('branding.logo_url'),
-        'primaryColor' => config('branding.primary_color'),
-        'accentColor' => config('branding.accent_color'),
-    ],
-]))->name('home');
+Route::get('/', function () {
+    $domain = request()->attributes->get('tenant_domain');
+
+    if ($domain?->kind?->value === 'public') {
+        $tenant = $domain->tenant;
+
+        return Inertia::render('public/coming-soon', [
+            'branding' => [
+                'name' => $tenant->brand_name ?: $tenant->name,
+                'logoUrl' => $tenant->logo_url,
+                'primaryColor' => $tenant->primary_color,
+                'accentColor' => $tenant->accent_color,
+            ],
+        ]);
+    }
+
+    if ($domain !== null) {
+        return redirect('/login');
+    }
+
+    return Inertia::render('marketing/home', [
+        'branding' => [
+            'name' => config('branding.name', config('app.name')),
+            'logoUrl' => config('branding.logo_url'),
+            'primaryColor' => config('branding.primary_color'),
+            'accentColor' => config('branding.accent_color'),
+        ],
+    ]);
+})->name('home');
 
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
