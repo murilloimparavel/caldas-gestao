@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Models\TenantBillingAccount;
 use App\Models\TenantSubscription;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -83,7 +84,16 @@ final class SaaSBillingService
             $q->whereNotNull('ends_at')->where('ends_at', '<=', now())->orWhere('status', 'grace')->whereNotNull('grace_ends_at')->where('grace_ends_at', '<=', now());
         })->each(function (TenantSubscription $subscription) use (&$count): void {
             $subscription->update(['status' => 'expired']);
-            Entitlement::query()->where('tenant_id', $subscription->tenant_id)->where('key', 'saas.access')->update(['status' => 'expired', 'ends_at' => now()->subSecond()]);
+            Entitlement::query()
+                ->where('tenant_id', $subscription->tenant_id)
+                ->where('key', 'saas.access')
+                ->get()
+                ->each(function (Entitlement $entitlement): void {
+                    $entitlement->update([
+                        'status' => 'expired',
+                        'ends_at' => CarbonImmutable::parse($entitlement->starts_at)->addSecond(),
+                    ]);
+                });
             $count++;
         });
 
