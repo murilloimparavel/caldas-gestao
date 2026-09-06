@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Identity\OnboardTenant;
 use App\Actions\TenantDomains\ActivateTenantDomain;
 use App\Actions\TenantDomains\DisableTenantDomain;
 use App\Actions\TenantDomains\MarkTenantDomainSslVerified;
@@ -15,11 +16,13 @@ use App\Enums\TenantDomainKind;
 use App\Enums\TenantDomainStatus;
 use App\Models\Entitlement;
 use App\Models\TenantDomain;
+use App\Models\User;
 use App\Support\HostnameNormalizer;
 use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 
 it('normalizes valid hostnames', function (): void {
     expect(HostnameNormalizer::normalize(' Gestao.Cliente.Example.COM. '))
@@ -64,6 +67,26 @@ it('redirects unauthenticated visitors on an active management hostname to login
     $response = $this->get('http://'.$domain->hostname.'/');
 
     $response->assertRedirect('/login');
+});
+
+it('loads the correct tenant dashboard after authenticating on its custom hostname', function (): void {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, [
+        'name' => 'Romawear',
+        'slug' => 'romawear',
+    ]);
+    $domain = TenantDomain::factory()->create([
+        'tenant_id' => $tenant->id,
+        'hostname' => 'gestao.romawear.example.com',
+        'status' => TenantDomainStatus::Active,
+    ]);
+
+    $this->actingAs($owner)
+        ->get('https://'.$domain->hostname.'/dashboard')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('dashboard')
+            ->where('workspace.tenant.name', 'Romawear'));
 });
 
 it('rejects an unknown custom hostname', function (): void {
