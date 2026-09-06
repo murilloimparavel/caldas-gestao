@@ -94,7 +94,7 @@ jobs:
         run: npm run build
 
       - name: Run Laravel tests
-        run: php artisan test --compact --parallel
+        run: php artisan test --compact
 
   publish:
     name: Publish image to GHCR
