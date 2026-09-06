@@ -181,3 +181,5 @@ export default function Home({ branding }: { branding: Branding }) {
         </>
     );
 }
+
+Home.layout = null;
