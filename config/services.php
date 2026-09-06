@@ -40,6 +40,7 @@ return [
         'calendar_url' => env('GOOGLE_CALENDAR_URL', 'https://www.googleapis.com/calendar/v3'),
         'scope' => env('GOOGLE_CALENDAR_SCOPE', 'https://www.googleapis.com/auth/calendar'),
         'state_ttl_minutes' => (int) env('GOOGLE_OAUTH_STATE_TTL_MINUTES', 10),
+        'return_paths' => ['/calendar'],
         'timeout' => (int) env('GOOGLE_HTTP_TIMEOUT', 10),
         'connect_timeout' => (int) env('GOOGLE_HTTP_CONNECT_TIMEOUT', 3),
     ],

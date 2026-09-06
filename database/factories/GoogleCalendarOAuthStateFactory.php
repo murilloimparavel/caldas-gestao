@@ -30,6 +30,8 @@ class GoogleCalendarOAuthStateFactory extends Factory
             'state_hash' => hash('sha256', $state),
             'code_verifier' => Str::random(96),
             'redirect_uri' => 'https://example.test/google-calendar/callback',
+            'return_host' => 'example.test',
+            'return_path' => '/calendar',
             'expires_at' => now()->addMinutes(10),
             'consumed_at' => null,
         ];

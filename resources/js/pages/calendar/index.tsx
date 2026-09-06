@@ -9,7 +9,8 @@ import {
     Receipt,
     SlidersHorizontal,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactElement } from 'react';
 import {
     CalendarError,
     CalendarLoading,
@@ -136,21 +137,35 @@ function GoogleCalendarPanel(): ReactElement {
     };
 
     useEffect(() => {
-        void loadStatus();
+        const timeoutId = window.setTimeout(() => {
+            void loadStatus();
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
     }, []);
 
     const connected = state?.status === 'connected';
     const unavailable = state?.status === 'not_configured';
 
     return (
-        <section className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5" aria-labelledby="google-calendar-heading">
+        <section
+            className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5"
+            aria-labelledby="google-calendar-heading"
+        >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <CalendarCheck2 aria-hidden="true" className="size-5" />
                     </div>
                     <div>
-                        <h2 id="google-calendar-heading" className="font-semibold">Google Calendar</h2>
+                        <h2
+                            id="google-calendar-heading"
+                            className="font-semibold"
+                        >
+                            Google Calendar
+                        </h2>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {loading
                                 ? 'Verificando conexão…'
@@ -171,7 +186,10 @@ function GoogleCalendarPanel(): ReactElement {
                         onClick={() => void loadStatus()}
                         disabled={loading || disconnecting}
                     >
-                        <RefreshCw aria-hidden="true" className={loading ? 'animate-spin' : undefined} />
+                        <RefreshCw
+                            aria-hidden="true"
+                            className={loading ? 'animate-spin' : undefined}
+                        />
                     </Button>
                     {connected ? (
                         <Button
@@ -196,7 +214,9 @@ function GoogleCalendarPanel(): ReactElement {
                             type="button"
                             disabled={loading || unavailable}
                             onClick={() => {
-                                window.location.assign(googleCalendar.connect.url());
+                                window.location.assign(
+                                    googleCalendar.connect.url(),
+                                );
                             }}
                         >
                             Conectar Google Calendar

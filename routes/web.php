@@ -13,8 +13,8 @@ use App\Http\Controllers\CustomerSubscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
-use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\FirstLoginPasswordController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
@@ -95,8 +95,9 @@ Route::prefix('book/{tenant:slug}/{unit:slug}')
             ->name('public_booking.appointments.store');
     });
 
+Route::get('google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google_calendar.callback');
+
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google_calendar.callback');
 
     Route::get('dashboard', DashboardController::class)
         ->middleware(['tenant.context', 'saas.access', 'first.login.complete'])
