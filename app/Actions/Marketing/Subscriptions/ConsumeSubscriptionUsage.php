@@ -7,6 +7,7 @@ use App\Models\CustomerSubscription;
 use App\Models\SubscriptionUsageEntry;
 use App\Models\User;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,7 +15,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class ConsumeSubscriptionUsage extends OperationalAction
 {
-    /** @param array{service_id:string, quantity?:int, idempotency_key?:string|null} $data */
+    /** @param array{service_id:string, quantity?:int, idempotency_key?:string|null, metadata?:array<string, mixed>|null} $data */
     public function handle(User $actor, TenantContext $context, CustomerSubscription $subscription, array $data): SubscriptionUsageEntry
     {
         $unit = $this->unit($actor, $context, 'subscription.usage');
@@ -25,7 +26,7 @@ final class ConsumeSubscriptionUsage extends OperationalAction
         if ($quantity < 1) {
             throw new ConflictHttpException('Usage quantity must be greater than zero.');
         }
-        $serviceId = (string) ($data['service_id'] ?? '');
+        $serviceId = $data['service_id'];
         $idempotencyKey = isset($data['idempotency_key']) ? trim((string) $data['idempotency_key']) : null;
         $payload = ['service_id' => $serviceId, 'quantity' => $quantity, 'metadata' => $data['metadata'] ?? null];
         ksort($payload);
@@ -37,7 +38,7 @@ final class ConsumeSubscriptionUsage extends OperationalAction
                 throw new ConflictHttpException('Only active subscriptions can be consumed.');
             }
             $cycle = $lockedSubscription->cycles()->where('status', 'open')->latest('cycle_number')->lockForUpdate()->first();
-            if ($cycle === null || $cycle->starts_on->isAfter(today()) || $cycle->ends_on->isBefore(today())) {
+            if ($cycle === null || CarbonImmutable::parse($cycle->starts_on)->isAfter(today()) || CarbonImmutable::parse($cycle->ends_on)->isBefore(today())) {
                 throw new ConflictHttpException('The subscription has no open cycle.');
             }
 

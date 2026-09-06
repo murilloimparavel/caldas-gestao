@@ -42,11 +42,13 @@ final class EnsureSubscriptionCycle extends OperationalAction
             }
 
             $latest = $lockedSubscription->cycles()->latest('cycle_number')->lockForUpdate()->first();
-            $effectiveStartsOn = $startsOn ?? $latest?->ends_on?->addDay()->toImmutable() ?? CarbonImmutable::parse($lockedSubscription->start_date);
+            $effectiveStartsOn = $startsOn
+                ?? ($latest === null ? null : CarbonImmutable::parse($latest->ends_on)->addDay())
+                ?? CarbonImmutable::parse($lockedSubscription->start_date);
             $effectiveEndsOn = $endsOn ?? ($latest === null
                 ? CarbonImmutable::parse($lockedSubscription->next_billing_date ?? $effectiveStartsOn->addMonth())->subDay()
                 : $this->cycleEnd($effectiveStartsOn, $lockedSubscription->billing_cycle));
-            $number = ($latest?->cycle_number ?? 0) + 1;
+            $number = ($latest === null ? 0 : $latest->cycle_number) + 1;
             $renewalKey = sprintf('%s:%d:%s', $lockedSubscription->getKey(), $number, $effectiveStartsOn->toDateString());
 
             $cycle = SubscriptionCycle::query()->firstOrCreate(
@@ -72,7 +74,7 @@ final class EnsureSubscriptionCycle extends OperationalAction
 
             $plan = $lockedSubscription->plan()->with('services')->firstOrFail();
             foreach ($plan->services as $service) {
-                $maxUses = $service->pivot->max_uses_per_cycle;
+                $maxUses = data_get($service->getRelationValue('pivot'), 'max_uses_per_cycle');
                 if ($maxUses !== null && $maxUses < 0) {
                     throw new \LogicException('A subscription plan service cannot have a negative cycle usage limit.');
                 }
@@ -95,7 +97,7 @@ final class EnsureSubscriptionCycle extends OperationalAction
 
             $this->events->record($actor, $context, 'customer_subscription.cycle_opened', $lockedSubscription, [
                 'customer_subscription_id' => $lockedSubscription->getKey(), 'status' => 'open',
-                'start_date' => $cycle->starts_on->toDateString(), 'next_billing_date' => $cycle->ends_on->toDateString(),
+                'start_date' => CarbonImmutable::parse($cycle->starts_on)->toDateString(), 'next_billing_date' => CarbonImmutable::parse($cycle->ends_on)->toDateString(),
             ]);
 
             return $cycle->fresh(['usages']);
