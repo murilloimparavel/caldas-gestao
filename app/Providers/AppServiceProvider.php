@@ -54,6 +54,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -85,6 +86,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Vite::createAssetPathsUsing(static fn (string $path): string => '/'.ltrim($path, '/'));
+
         Event::listen(Verified::class, ActivateVerifiedOwnerMemberships::class);
 
         RateLimiter::for('public-booking', fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
