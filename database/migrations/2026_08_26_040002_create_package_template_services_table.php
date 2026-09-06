@@ -22,10 +22,12 @@ return new class extends Migration
             $table->foreign(['tenant_id', 'unit_id', 'package_template_id'])
                 ->references(['tenant_id', 'unit_id', 'id'])
                 ->on('package_templates')
+                ->name('pts_services_template_fk')
                 ->cascadeOnDelete();
             $table->foreign(['tenant_id', 'unit_id', 'service_id'])
                 ->references(['tenant_id', 'unit_id', 'id'])
                 ->on('services')
+                ->name('pts_services_service_fk')
                 ->cascadeOnDelete();
         });
     }
