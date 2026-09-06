@@ -2,10 +2,9 @@
 
 namespace App\Support;
 
-use RuntimeException;
 use Throwable;
 
-final class IdempotencyOperationFailed extends RuntimeException
+final class IdempotencyOperationFailed extends \RuntimeException
 {
     public function __construct(public readonly Throwable $operationException)
     {

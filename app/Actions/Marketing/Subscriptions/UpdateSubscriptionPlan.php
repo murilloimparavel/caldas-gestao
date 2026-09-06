@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class UpdateSubscriptionPlan extends OperationalAction
@@ -77,7 +76,7 @@ final class UpdateSubscriptionPlan extends OperationalAction
                 ->count();
 
             if (count($serviceIds) !== $matchingCount) {
-                throw new InvalidArgumentException('Each service must belong to the active unit.');
+                throw new \InvalidArgumentException('Each service must belong to the active unit.');
             }
         }
 

@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 final class CreatePackageTemplate extends OperationalAction
 {
@@ -57,7 +56,7 @@ final class CreatePackageTemplate extends OperationalAction
                 ->count();
 
             if (count($serviceIds) !== $matchingCount) {
-                throw new InvalidArgumentException('Each service must belong to the active unit.');
+                throw new \InvalidArgumentException('Each service must belong to the active unit.');
             }
         }
 
