@@ -27,7 +27,9 @@ final class CoolifyCustomDomainProvisioner implements CustomDomainProvisioner
         }
 
         $domains = $current->json('fqdn', '');
-        $domains = is_string($domains) ? preg_split('/\s*,\s*|\R+/', $domains, -1, PREG_SPLIT_NO_EMPTY) : (is_array($domains) ? $domains : []);
+        $domains = is_string($domains)
+            ? preg_split('/\s*,\s*|\R+/', $domains, -1, PREG_SPLIT_NO_EMPTY) ?: []
+            : (is_array($domains) ? $domains : []);
         $domains = array_map(static fn (mixed $value): string => 'https://'.ltrim(str_replace(['http://', 'https://'], '', (string) $value), '/'), $domains);
         $domains = array_values(array_unique([...$domains, 'https://'.$domain->hostname]));
 

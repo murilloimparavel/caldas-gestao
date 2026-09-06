@@ -30,7 +30,7 @@ final class ResolveTenantContext
 
         /** @var TenantDomain|null $tenantDomain */
         $tenantDomain = $request->attributes->get('tenant_domain');
-        $explicitTenant = $tenantDomain?->tenant_id
+        $explicitTenant = $tenantDomain->tenant_id
             ?? $request->session()->get('tenant_id')
             ?? $request->header('X-Tenant-Id')
             ?? $request->route('tenant');

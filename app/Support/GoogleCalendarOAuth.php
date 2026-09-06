@@ -31,7 +31,7 @@ final class GoogleCalendarOAuth
             ->first();
 
         return [
-            'status' => $this->configured() ? ($connection?->status ?? 'disconnected') : 'not_configured',
+            'status' => $this->configured() ? ($connection->status ?? 'disconnected') : 'not_configured',
             'configured' => $this->configured(),
             'connection' => $connection?->only([
                 'id', 'provider', 'status', 'google_account_email', 'calendar_id', 'calendar_name', 'scopes', 'token_expires_at', 'last_error', 'last_synced_at',
@@ -55,7 +55,7 @@ final class GoogleCalendarOAuth
         DB::transaction(function () use ($context, $state, $codeVerifier, $redirectUri, $return): void {
             GoogleCalendarOAuthState::query()
                 ->where('tenant_id', $context->tenant->getKey())
-                ->where('unit_id', $context->unit?->getKey())
+                ->where('unit_id', $context->unit->getKey())
                 ->where('user_id', $context->user->getKey())
                 ->whereNull('consumed_at')
                 ->delete();
@@ -96,7 +96,7 @@ final class GoogleCalendarOAuth
                 ->lockForUpdate()
                 ->first();
 
-            if ($state === null || $state->consumed_at !== null || $state->expires_at?->isPast()) {
+            if ($state === null || $state->consumed_at !== null || $state->expires_at->isPast()) {
                 throw new GoogleCalendarOAuthException('The Google Calendar authorization state is invalid or expired. Start the connection again.');
             }
 
@@ -249,7 +249,7 @@ final class GoogleCalendarOAuth
         DB::transaction(function () use ($stateId): void {
             $state = GoogleCalendarOAuthState::query()->lockForUpdate()->find($stateId);
 
-            if ($state === null || $state->consumed_at !== null || $state->expires_at?->isPast()) {
+            if ($state === null || $state->consumed_at !== null || $state->expires_at->isPast()) {
                 throw new GoogleCalendarOAuthException('The Google Calendar authorization state is invalid or expired. Start the connection again.');
             }
 
