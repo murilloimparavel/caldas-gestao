@@ -38,6 +38,14 @@ return new class extends Migration
             return;
         }
 
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE subscription_usage_entries DROP CONSTRAINT IF EXISTS usage_entries_cycle_subscription_fk');
+            DB::statement('ALTER TABLE subscription_usage_entries DROP CONSTRAINT IF EXISTS usage_entries_cycle_usage_subscription_fk');
+            DB::statement('ALTER TABLE subscription_cycle_usages DROP CONSTRAINT IF EXISTS cycle_usages_cycle_subscription_fk');
+
+            return;
+        }
+
         Schema::table('subscription_usage_entries', function (Blueprint $table): void {
             $table->dropForeign('usage_entries_cycle_subscription_fk');
             $table->dropForeign('usage_entries_cycle_usage_subscription_fk');
