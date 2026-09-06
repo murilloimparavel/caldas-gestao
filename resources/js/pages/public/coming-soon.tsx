@@ -79,7 +79,9 @@ export default function ComingSoon({ branding }: { branding: Branding }) {
                     </section>
 
                     <footer className="flex flex-col gap-3 border-t border-white/10 pt-5 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
-                        <span>© {new Date().getFullYear()} {branding.name}</span>
+                        <span>
+                            © {new Date().getFullYear()} {branding.name}
+                        </span>
                         <a
                             href="https://caldasindica.com"
                             className="inline-flex items-center gap-1 transition-colors hover:text-white/75"
