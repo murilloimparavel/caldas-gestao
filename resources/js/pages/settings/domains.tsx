@@ -1,5 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
-import { CheckCircle2, Copy, Globe2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Copy, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { PageCanvas, ResourceHeader } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +50,6 @@ export default function Domains({ domains, expectedCname }: Props) {
                 eyebrow="Personalização"
                 title="Domínio próprio"
                 description="Use o painel do seu negócio em um endereço personalizado."
-                icon={Globe2}
             />
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
                 <Card>
