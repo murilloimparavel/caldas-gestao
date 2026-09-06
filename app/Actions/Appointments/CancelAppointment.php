@@ -3,6 +3,7 @@
 namespace App\Actions\Appointments;
 
 use App\Actions\Operational\OperationalAction;
+use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Support\AppointmentStatusTransition;
@@ -41,6 +42,7 @@ final class CancelAppointment extends OperationalAction
             $locked->forceFill(['status' => 'cancelled', 'cancelled_at' => now(), 'cancel_reason' => $data['cancel_reason'] ?? null, 'lock_version' => $locked->lock_version + 1])->save();
             $locked->statusHistories()->create(['id' => (string) Str::uuid7(), 'tenant_id' => $locked->tenant_id, 'unit_id' => $locked->unit_id, 'actor_user_id' => $actor->getKey(), 'action' => 'cancelled', 'from_status' => $fromStatus, 'to_status' => 'cancelled', 'reason' => $data['cancel_reason'] ?? null, 'occurred_at' => now()]);
             $this->events->record($actor, $context, 'appointment.cancelled', $locked, ['status' => 'cancelled', 'lock_version' => $locked->lock_version]);
+            SyncGoogleCalendarAppointment::dispatch((string) $locked->getKey())->afterCommit();
 
             return $locked->fresh(['items.service', 'customer', 'professional']);
         }, 5);

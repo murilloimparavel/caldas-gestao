@@ -4,6 +4,7 @@ namespace App\Actions\Appointments;
 
 use App\Actions\Marketing\Retention\RecordCustomerActivity;
 use App\Actions\Operational\OperationalAction;
+use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\AppointmentItem;
 use App\Models\Customer;
@@ -64,6 +65,7 @@ final class UpdateAppointment extends OperationalAction
                 $locked->statusHistories()->create(['id' => (string) Str::uuid7(), 'tenant_id' => $locked->tenant_id, 'unit_id' => $locked->unit_id, 'actor_user_id' => $actor->getKey(), 'action' => 'status_changed', 'from_status' => $fromStatus, 'to_status' => $locked->status, 'occurred_at' => now()]);
             }
             $this->events->record($actor, $context, 'appointment.updated', $locked, ['status' => $locked->status, 'lock_version' => $locked->lock_version]);
+            SyncGoogleCalendarAppointment::dispatch((string) $locked->getKey())->afterCommit();
 
             if ($fromStatus !== 'completed' && $locked->status === 'completed') {
                 $this->recordCustomerActivity->handle($actor, $context, (string) $locked->customer_id, 'appointment.completed');
