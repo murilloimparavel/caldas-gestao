@@ -1,5 +1,8 @@
 FROM node:22-bookworm-slim AS assets
 
+ARG WAYFINDER_SKIP_GENERATE=false
+ENV WAYFINDER_SKIP_GENERATE=${WAYFINDER_SKIP_GENERATE}
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -30,9 +33,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
 
 COPY . .
+RUN composer dump-autoload --no-dev --no-interaction --optimize
 COPY --from=assets /app/public/build public/build
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
@@ -41,4 +45,4 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 USER www-data
 EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan serve --host=0.0.0.0 --port=${PORT}"]
+CMD ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && case \"${CALDAS_PROCESS:-web}\" in web) exec php artisan serve --host=0.0.0.0 --port=${PORT} ;; worker) exec php artisan queue:work --sleep=1 --tries=3 --max-time=3600 ;; scheduler) exec php artisan schedule:work ;; *) echo \"Unknown CALDAS_PROCESS: ${CALDAS_PROCESS}\" >&2; exit 1 ;; esac"]

@@ -7,6 +7,7 @@ use App\Support\AuthorizationService;
 use App\Support\GoogleCalendarNotConfigured;
 use App\Support\GoogleCalendarOAuth;
 use App\Support\GoogleCalendarOAuthException;
+use App\Support\GoogleCalendarOAuthReturnUrl;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,7 @@ final class GoogleCalendarController extends Controller
     public function __construct(
         private readonly GoogleCalendarOAuth $oauth,
         private readonly AuthorizationService $authorization,
+        private readonly GoogleCalendarOAuthReturnUrl $returnUrl,
     ) {}
 
     public function status(TenantContext $context): JsonResponse
@@ -28,12 +30,12 @@ final class GoogleCalendarController extends Controller
         return response()->json($this->oauth->status($context));
     }
 
-    public function connect(TenantContext $context): RedirectResponse|JsonResponse
+    public function connect(Request $request, TenantContext $context): RedirectResponse|JsonResponse
     {
         $this->authorizeConfiguration($context);
 
         try {
-            return redirect()->away($this->oauth->authorizationUrl($context));
+            return redirect()->away($this->oauth->authorizationUrl($context, $request));
         } catch (GoogleCalendarNotConfigured $exception) {
             return response()->json(['status' => 'not_configured', 'message' => $exception->getMessage()], 503);
         }
@@ -41,28 +43,30 @@ final class GoogleCalendarController extends Controller
 
     public function callback(Request $request): RedirectResponse|JsonResponse
     {
-        $user = $request->user();
+        abort_unless($this->returnUrl->isOfficialHost($request->getHost()), 404, 'The Google Calendar callback must use the official host.');
 
-        abort_unless($user !== null, 401, 'Authentication is required to finish Google Calendar authorization.');
+        $stateValue = (string) $request->query('state');
+        $returnUrl = $this->oauth->returnUrl($stateValue);
 
         try {
             $this->oauth->complete(
-                $user,
-                (string) $request->query('state'),
+                $stateValue,
                 $request->query('code'),
                 $request->query('error'),
             );
         } catch (AuthorizationException $exception) {
-            return $this->callbackError($request, $exception->getMessage(), 403);
+            return $this->callbackError($request, $exception->getMessage(), 403, $returnUrl);
         } catch (GoogleCalendarOAuthException $exception) {
-            return $this->callbackError($request, $exception->getMessage(), 422);
+            return $this->callbackError($request, $exception->getMessage(), 422, $returnUrl);
         }
 
         if ($request->expectsJson()) {
             return response()->json(['status' => 'connected']);
         }
 
-        return to_route('calendar.index')->with('success', 'Google Calendar conectado.');
+        return $returnUrl === null
+            ? to_route('calendar.index')->with('success', 'Google Calendar conectado.')
+            : redirect()->away($this->withResult($returnUrl, 'connected'));
     }
 
     public function disconnect(TenantContext $context): RedirectResponse|JsonResponse
@@ -89,12 +93,19 @@ final class GoogleCalendarController extends Controller
         abort_unless($this->authorization->can($context->user, $context, 'calendar.configure', $context->unit), 403, 'You are not allowed to configure Google Calendar.');
     }
 
-    private function callbackError(Request $request, string $message, int $status): RedirectResponse|JsonResponse
+    private function callbackError(Request $request, string $message, int $status, ?string $returnUrl = null): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json(['message' => $message], $status);
         }
 
-        return to_route('calendar.index')->with('error', $message);
+        return $returnUrl === null
+            ? to_route('calendar.index')->with('error', $message)
+            : redirect()->away($this->withResult($returnUrl, 'error'))->with('error', $message);
+    }
+
+    private function withResult(string $url, string $result): string
+    {
+        return $url.'?'.http_build_query(['google' => $result], '', '&', PHP_QUERY_RFC3986);
     }
 }

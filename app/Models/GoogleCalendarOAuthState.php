@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $expires_at
  * @property Carbon|null $consumed_at
  */
-#[Fillable(['tenant_id', 'unit_id', 'user_id', 'state_hash', 'code_verifier', 'redirect_uri', 'expires_at', 'consumed_at'])]
+#[Fillable(['tenant_id', 'unit_id', 'user_id', 'state_hash', 'code_verifier', 'redirect_uri', 'return_host', 'return_path', 'expires_at', 'consumed_at'])]
 #[Hidden(['state_hash', 'code_verifier'])]
 class GoogleCalendarOAuthState extends Model
 {

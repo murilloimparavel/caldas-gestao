@@ -4,9 +4,9 @@ namespace App\Support;
 
 use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarOAuthState;
-use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -31,7 +31,7 @@ final class GoogleCalendarOAuth
             ->first();
 
         return [
-            'status' => $this->configured() ? ($connection === null ? 'disconnected' : $connection->status) : 'not_configured',
+            'status' => $this->configured() ? ($connection->status ?? 'disconnected') : 'not_configured',
             'configured' => $this->configured(),
             'connection' => $connection?->only([
                 'id', 'provider', 'status', 'google_account_email', 'calendar_id', 'calendar_name', 'scopes', 'token_expires_at', 'last_error', 'last_synced_at',
@@ -39,7 +39,7 @@ final class GoogleCalendarOAuth
         ];
     }
 
-    public function authorizationUrl(TenantContext $context): string
+    public function authorizationUrl(TenantContext $context, Request $request): string
     {
         $this->ensureConfigured();
 
@@ -50,8 +50,9 @@ final class GoogleCalendarOAuth
         $state = Str::random(64);
         $codeVerifier = Str::random(96);
         $redirectUri = (string) config('services.google_calendar.redirect_uri');
+        $return = app(GoogleCalendarOAuthReturnUrl::class)->capture($request, $context);
 
-        DB::transaction(function () use ($context, $state, $codeVerifier, $redirectUri): void {
+        DB::transaction(function () use ($context, $state, $codeVerifier, $redirectUri, $return): void {
             GoogleCalendarOAuthState::query()
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $context->unit->getKey())
@@ -66,6 +67,7 @@ final class GoogleCalendarOAuth
                 'state_hash' => hash('sha256', $state),
                 'code_verifier' => $codeVerifier,
                 'redirect_uri' => $redirectUri,
+                ...$return,
                 'expires_at' => now()->addMinutes((int) config('services.google_calendar.state_ttl_minutes', 10)),
             ]);
         });
@@ -86,9 +88,9 @@ final class GoogleCalendarOAuth
         return (string) config('services.google_calendar.authorization_url').'?'.$query;
     }
 
-    public function complete(User $user, string $stateValue, ?string $code, ?string $oauthError = null): GoogleCalendarConnection
+    public function complete(string $stateValue, ?string $code, ?string $oauthError = null): GoogleCalendarConnection
     {
-        $state = DB::transaction(function () use ($user, $stateValue): GoogleCalendarOAuthState {
+        $state = DB::transaction(function () use ($stateValue): GoogleCalendarOAuthState {
             $state = GoogleCalendarOAuthState::query()
                 ->where('state_hash', hash('sha256', $stateValue))
                 ->lockForUpdate()
@@ -98,8 +100,10 @@ final class GoogleCalendarOAuth
                 throw new GoogleCalendarOAuthException('The Google Calendar authorization state is invalid or expired. Start the connection again.');
             }
 
-            if ((string) $state->user_id !== (string) $user->getKey()) {
-                throw new AuthorizationException('This Google Calendar authorization belongs to another user.');
+            $user = $state->user;
+
+            if ($user === null) {
+                throw new AuthorizationException('The Google Calendar authorization user is no longer available.');
             }
 
             try {
@@ -110,6 +114,10 @@ final class GoogleCalendarOAuth
 
             if ($context->unit === null) {
                 throw new AuthorizationException('An active unit is required to connect Google Calendar.');
+            }
+
+            if (! app(AuthorizationService::class)->can($user, $context, 'calendar.configure', $context->unit)) {
+                throw new AuthorizationException('The user is no longer allowed to configure Google Calendar.');
             }
 
             return $state;
@@ -168,7 +176,7 @@ final class GoogleCalendarOAuth
         $refreshToken = $tokenResponse->json('refresh_token') ?: $existing?->refresh_token;
         $scopes = $this->scopes($tokenResponse->json('scope'));
 
-        return DB::transaction(function () use ($accessToken, $accountEmail, $existing, $refreshToken, $scopes, $state, $tokenResponse, $user): GoogleCalendarConnection {
+        return DB::transaction(function () use ($accessToken, $accountEmail, $existing, $refreshToken, $scopes, $state, $tokenResponse): GoogleCalendarConnection {
             $connection = $existing ?? new GoogleCalendarConnection([
                 'tenant_id' => $state->tenant_id,
                 'unit_id' => $state->unit_id,
@@ -176,7 +184,7 @@ final class GoogleCalendarOAuth
             $connection->forceFill([
                 'tenant_id' => $state->tenant_id,
                 'unit_id' => $state->unit_id,
-                'connected_by_user_id' => $user->getKey(),
+                'connected_by_user_id' => $state->user_id,
                 'provider' => 'google',
                 'status' => 'connected',
                 'google_account_email' => $accountEmail,
@@ -192,6 +200,19 @@ final class GoogleCalendarOAuth
 
             return $connection;
         });
+    }
+
+    public function returnUrl(string $stateValue): ?string
+    {
+        $state = GoogleCalendarOAuthState::query()
+            ->where('state_hash', hash('sha256', $stateValue))
+            ->first();
+
+        if ($state === null) {
+            return null;
+        }
+
+        return app(GoogleCalendarOAuthReturnUrl::class)->url($state->return_host, $state->return_path, (string) $state->tenant_id);
     }
 
     public function disconnect(TenantContext $context): void

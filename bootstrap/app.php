@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Middleware\EnforceSaaSAccess;
+use App\Http\Middleware\EnsureFirstLoginComplete;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveTenantContext;
+use App\Http\Middleware\ResolveTenantDomain;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,14 +23,18 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias([
             'tenant.context' => ResolveTenantContext::class,
+            'tenant.domain' => ResolveTenantDomain::class,
             'saas.access' => EnforceSaaSAccess::class,
+            'first.login.complete' => EnsureFirstLoginComplete::class,
         ]);
 
         $middleware->web(append: [
+            ResolveTenantDomain::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

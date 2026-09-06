@@ -20,6 +20,18 @@ Cada unidade pode conectar uma conta Google por OAuth Authorization Code com PKC
 
 Se client ID, secret ou redirect URI não estiverem configurados, a integração fica `not_configured`; a agenda local continua funcionando e o job termina sem efeito quando não existe conexão ativa.
 
+### Callback oficial e domínios white label
+
+O callback OAuth usa exclusivamente o domínio oficial configurado em
+`GOOGLE_REDIRECT_URI`. O início pode ocorrer em um domínio de gestão white
+label, mas o state persiste o `return_host` e `return_path` após validar que o
+host é oficial ou um `TenantDomain` ativo de gestão pertencente ao mesmo
+tenant. O callback não depende do cookie da origem: recupera o usuário pelo
+state, revalida membership, unidade ativa e `calendar.configure`, consome o
+state uma vez e redireciona para o host validado com apenas um marcador de
+resultado. Hosts externos e URLs arbitrárias são rejeitados; tokens nunca são
+colocados em URLs.
+
 ### Tenancy e unidade
 
 `GoogleCalendarConnection`, `GoogleCalendarOAuthState` e `GoogleCalendarEvent` carregam `tenant_id` e `unit_id`. As migrations usam FKs compostas para impedir associação cruzada entre unidade, appointment e conexão. Controllers, OAuth e jobs revalidam o contexto; nenhum identificador recebido do frontend define sozinho o escopo.

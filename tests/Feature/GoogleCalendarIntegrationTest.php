@@ -1,11 +1,14 @@
 <?php
 
 use App\Actions\Identity\OnboardTenant;
+use App\Enums\TenantDomainKind;
+use App\Enums\TenantDomainStatus;
 use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarEvent;
 use App\Models\GoogleCalendarOAuthState;
+use App\Models\TenantDomain;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -24,6 +27,8 @@ function googleCalendarWorkspace(): array
 function configureGoogleCalendar(): void
 {
     config()->set([
+        'app.url' => 'https://gestao.caldasindica.com',
+        'domains.official_hosts' => ['gestao.caldasindica.com'],
         'services.google_calendar.client_id' => 'client-id',
         'services.google_calendar.client_secret' => 'client-secret',
         'services.google_calendar.redirect_uri' => 'https://app.test/google-calendar/callback',
@@ -165,8 +170,7 @@ test('completes OAuth once and rejects replayed state', function (): void {
         'https://oauth.test/userinfo' => Http::response(['email' => 'owner@example.test']),
     ]);
 
-    $callback = fn () => $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'Accept' => 'application/json'])
-        ->actingAs($owner)
+    $callback = fn () => $this->withHeaders(['Accept' => 'application/json'])
         ->getJson(route('google_calendar.callback', ['state' => $rawState, 'code' => 'authorization-code']));
 
     $callback()->assertOk()->assertJsonPath('status', 'connected');
@@ -175,6 +179,85 @@ test('completes OAuth once and rejects replayed state', function (): void {
 
     $callback()->assertUnprocessable()->assertJsonPath('message', 'The Google Calendar authorization state is invalid or expired. Start the connection again.');
     Http::assertSentCount(2);
+});
+
+test('starts on an active white-label domain and returns there without a callback session', function (): void {
+    configureGoogleCalendar();
+    [$owner, $tenantId, $unitId] = googleCalendarWorkspace();
+    $domain = TenantDomain::factory()->create([
+        'tenant_id' => $tenantId,
+        'hostname' => 'gestao.romawear.example.com',
+        'kind' => TenantDomainKind::Management,
+        'status' => TenantDomainStatus::Active,
+    ]);
+
+    $this->actingAs($owner)
+        ->get('https://'.$domain->hostname.'/google-calendar/connect')
+        ->assertRedirect();
+
+    $state = GoogleCalendarOAuthState::query()->sole();
+    expect($state->return_host)->toBe($domain->hostname)
+        ->and($state->return_path)->toBe('/calendar');
+});
+
+test('returns to the white-label calendar path after callback without sharing the session cookie', function (): void {
+    configureGoogleCalendar();
+    [$owner, $tenantId, $unitId] = googleCalendarWorkspace();
+    $domain = TenantDomain::factory()->create([
+        'tenant_id' => $tenantId,
+        'hostname' => 'gestao.romawear.example.com',
+        'kind' => TenantDomainKind::Management,
+        'status' => TenantDomainStatus::Active,
+    ]);
+    $rawState = Str::random(64);
+    GoogleCalendarOAuthState::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'user_id' => $owner->getKey(),
+        'state_hash' => hash('sha256', $rawState),
+        'return_host' => $domain->hostname,
+        'return_path' => '/calendar',
+    ]);
+    Http::fake([
+        'https://oauth.test/token' => Http::response(['access_token' => 'access-secret', 'refresh_token' => 'refresh-secret', 'expires_in' => 3600]),
+        'https://oauth.test/userinfo' => Http::response(['email' => 'owner@example.test']),
+    ]);
+
+    $response = $this->get('https://gestao.caldasindica.com/google-calendar/callback?'.http_build_query([
+        'state' => $rawState,
+        'code' => 'authorization-code',
+    ]));
+
+    $response->assertRedirect('https://'.$domain->hostname.'/calendar?google=connected');
+});
+
+test('falls back to the official host when the saved return domain is no longer active', function (): void {
+    configureGoogleCalendar();
+    [$owner, $tenantId, $unitId] = googleCalendarWorkspace();
+    $domain = TenantDomain::factory()->create([
+        'tenant_id' => $tenantId,
+        'hostname' => 'gestao.romawear.example.com',
+        'kind' => TenantDomainKind::Management,
+        'status' => TenantDomainStatus::Suspended,
+    ]);
+    $rawState = Str::random(64);
+    GoogleCalendarOAuthState::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'user_id' => $owner->getKey(),
+        'state_hash' => hash('sha256', $rawState),
+        'return_host' => $domain->hostname,
+        'return_path' => '/calendar',
+    ]);
+    Http::fake([
+        'https://oauth.test/token' => Http::response(['access_token' => 'access-secret', 'refresh_token' => 'refresh-secret', 'expires_in' => 3600]),
+        'https://oauth.test/userinfo' => Http::response(['email' => 'owner@example.test']),
+    ]);
+
+    $this->get('https://gestao.caldasindica.com/google-calendar/callback?'.http_build_query([
+        'state' => $rawState,
+        'code' => 'authorization-code',
+    ]))->assertRedirect('https://gestao.caldasindica.com/calendar?google=connected');
 });
 
 test('rejects invalid OAuth state before contacting Google', function (): void {
@@ -206,11 +289,16 @@ test('isolates OAuth state and connections by user and tenant permissions', func
         'unit_id' => $unitId,
         'access_token' => 'tenant-one-secret',
     ]);
+    Http::fake([
+        'https://oauth.test/token' => Http::response(['access_token' => 'access-secret', 'refresh_token' => 'refresh-secret', 'expires_in' => 3600]),
+        'https://oauth.test/userinfo' => Http::response(['email' => 'owner@example.test']),
+    ]);
 
     $this->withHeaders(['X-Tenant-Id' => $otherTenantId, 'X-Unit-Id' => $otherUnitId, 'Accept' => 'application/json'])
-        ->actingAs($otherUser)
         ->getJson(route('google_calendar.callback', ['state' => $rawState, 'code' => 'authorization-code']))
-        ->assertForbidden();
+        ->assertOk();
+
+    expect(GoogleCalendarConnection::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->exists())->toBeTrue();
 
     $status = $this->withHeaders(['X-Tenant-Id' => $otherTenantId, 'X-Unit-Id' => $otherUnitId])
         ->actingAs($otherUser)
