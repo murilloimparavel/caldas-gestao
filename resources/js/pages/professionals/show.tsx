@@ -6,6 +6,8 @@ import {
     Lock,
     Mail,
     Phone,
+    Plus,
+    Search,
     UserRound,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,6 +38,7 @@ import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import { useInitials } from '@/hooks/use-initials';
 import professionals from '@/routes/professionals';
+import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
 
 type ServiceSummary = {
@@ -116,12 +119,18 @@ export default function ProfessionalShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [serviceSearch, setServiceSearch] = useState('');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
     const availableServices =
         serviceOptions ?? options?.services ?? professional.services;
     const hasServiceOptions =
         serviceOptions !== undefined || options?.services !== undefined;
+    const filteredServices = availableServices.filter((service) =>
+        service.name
+            .toLocaleLowerCase()
+            .includes(serviceSearch.toLocaleLowerCase()),
+    );
 
     return (
         <>
@@ -178,6 +187,7 @@ export default function ProfessionalShow({
                             </div>
                             <Form
                                 {...professionals.update.form(professional.id)}
+                                id="professional-update-form"
                                 headers={{ 'X-Idempotency-Key': updateKey }}
                                 className="space-y-5"
                             >
@@ -273,21 +283,7 @@ export default function ProfessionalShow({
                                                 </select>
                                             </FormField>
                                         </div>
-                                        {hasServiceOptions ? (
-                                            <div className="space-y-2">
-                                                <p className="text-sm font-medium text-foreground">
-                                                    Serviços habilitados
-                                                </p>
-                                                <RelationCheckboxes
-                                                    name="service_ids"
-                                                    options={availableServices}
-                                                    selectedIds={professional.services.map(
-                                                        (service) => service.id,
-                                                    )}
-                                                    disabled={!canManage}
-                                                />
-                                            </div>
-                                        ) : (
+                                        {!hasServiceOptions ? (
                                             <>
                                                 {professional.services.map(
                                                     (service) => (
@@ -307,7 +303,7 @@ export default function ProfessionalShow({
                                                     forem carregadas.
                                                 </p>
                                             </>
-                                        )}
+                                         ) : null}
                                         {canManage ? (
                                             <>
                                                 <input
@@ -493,19 +489,72 @@ export default function ProfessionalShow({
 
                     <aside className="space-y-5">
                         <section className="surface-panel p-5 sm:p-6">
-                            <h2 className="text-base font-semibold">
-                                Serviços habilitados
-                            </h2>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                A agenda usará estes vínculos para oferecer
-                                escolhas válidas.
-                            </p>
-                            <div className="mt-5">
-                                <RelationList
-                                    items={professional.services}
-                                    emptyLabel="Nenhum serviço vinculado"
-                                />
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="text-base font-semibold">
+                                        Serviços habilitados
+                                    </h2>
+                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                        Selecione os serviços que este
+                                        profissional realiza.
+                                    </p>
+                                </div>
+                                {canManage ? (
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="secondary"
+                                    >
+                                        <Link href={services.index()}>
+                                            <Plus aria-hidden="true" />
+                                            Novo serviço
+                                        </Link>
+                                    </Button>
+                                ) : null}
                             </div>
+                            {hasServiceOptions ? (
+                                <div className="mt-5 space-y-3">
+                                    <div className="relative">
+                                        <Search
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                        />
+                                        <Input
+                                            aria-label="Pesquisar serviços"
+                                            placeholder="Pesquisar serviço"
+                                            value={serviceSearch}
+                                            onChange={(event) =>
+                                                setServiceSearch(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <RelationCheckboxes
+                                        name="service_ids"
+                                        options={filteredServices}
+                                        selectedIds={professional.services.map(
+                                            (service) => service.id,
+                                        )}
+                                        disabled={!canManage}
+                                        form="professional-update-form"
+                                    />
+                                    {canManage ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            As alterações serão aplicadas ao
+                                            clicar em “Salvar alterações”.
+                                        </p>
+                                    ) : null}
+                                </div>
+                            ) : (
+                                <div className="mt-5">
+                                    <RelationList
+                                        items={professional.services}
+                                        emptyLabel="Nenhum serviço vinculado"
+                                    />
+                                </div>
+                            )}
                         </section>
                         <section className="surface-panel p-5 sm:p-6">
                             <h2 className="text-base font-semibold">
