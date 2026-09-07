@@ -491,7 +491,7 @@ export default function ProfessionalShow({
                     <aside className="space-y-5">
                         <section className="surface-panel p-5 sm:p-6">
                             <div className="flex items-start justify-between gap-3">
-                                <div>
+                                <div className="min-w-0">
                                     <h2 className="text-base font-semibold">
                                         Serviços deste profissional
                                     </h2>
@@ -531,7 +531,7 @@ export default function ProfessionalShow({
                                                     : 'Adicionar primeiro serviço'}
                                             </Button>
                                         </DialogTrigger>
-                                        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+                                        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:w-full sm:max-w-lg sm:p-6">
                                             <DialogHeader>
                                                 <DialogTitle>
                                                     Adicionar serviços
@@ -571,8 +571,12 @@ export default function ProfessionalShow({
                                                     form="professional-update-form"
                                                 />
                                             </div>
-                                            <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-                                                <Button asChild variant="ghost">
+                                            <DialogFooter className="sticky bottom-0 -mx-4 -mb-4 flex-col gap-2 border-t border-border bg-background/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    className="w-full sm:w-auto"
+                                                >
                                                     <Link
                                                         href={services.index()}
                                                     >
@@ -582,6 +586,7 @@ export default function ProfessionalShow({
                                                 </Button>
                                                 <Button
                                                     type="button"
+                                                    className="w-full sm:w-auto"
                                                     onClick={() =>
                                                         setServicesDialogOpen(
                                                             false,
