@@ -1,0 +1,25 @@
+name: Deploy Caldas Gestão no Coolify
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Disparar deploy no Coolify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar configuração do webhook
+        env:
+          COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+        run: test -n "$COOLIFY_DEPLOY_WEBHOOK"
+
+      - name: Disparar deploy
+        env:
+          COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+        run: curl --fail-with-body --silent --show-error --request POST "$COOLIFY_DEPLOY_WEBHOOK"
