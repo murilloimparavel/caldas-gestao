@@ -53,3 +53,19 @@ it('imports a service once when the command is replayed', function (): void {
         ->and(Service::query()->where('tenant_id', $tenant->getKey())->firstOrFail()->price_cents)->toBe(3500);
     unlink($file);
 });
+
+it('imports the sanitized Belasis service catalog without duplicates', function (): void {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, [
+        'name' => 'Belasis import '.Str::random(8),
+        'slug' => 'belasis-'.Str::lower(Str::random(8)),
+    ]);
+    $file = base_path('tests/Fixtures/belasis-services.sanitized.json');
+
+    $arguments = ['file' => $file, '--tenant-email' => $owner->email];
+    $this->artisan('app:import-services', $arguments)->assertSuccessful();
+    $this->artisan('app:import-services', $arguments)->assertSuccessful();
+
+    expect(Service::query()->where('tenant_id', $tenant->getKey())->count())->toBe(12)
+        ->and(Service::query()->where('tenant_id', $tenant->getKey())->where('online_booking_enabled', true)->count())->toBe(12);
+});
