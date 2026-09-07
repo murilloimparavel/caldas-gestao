@@ -67,6 +67,11 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Prepare application key
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force --no-interaction
+
       - name: Install JavaScript dependencies
         run: npm ci
 
