@@ -94,6 +94,13 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
 
     $serviceResponse->assertRedirect(route('services.show', $service));
 
+    $this->actingAs($owner)
+        ->get(route('services.show', $service))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('services/show')
+            ->where('professionalOptions', []),
+        );
+
     $professionalResponse = $this->actingAs($owner)->post(route('professionals.store'), [
         'name' => 'Beatriz Profissional',
         'email' => null,
@@ -108,6 +115,13 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
         ->and($professional->services()->first()->pivot->tenant_id)->toBe($tenant->getKey())
         ->and(AuditEvent::query()->where('action', 'professional.created')->where('resource_id', $professional->getKey())->firstOrFail()->metadata['service_ids'])->toBe([$service->getKey()])
         ->and(OutboxEvent::query()->where('event_type', 'professional.created')->where('aggregate_id', $professional->getKey())->firstOrFail()->payload['service_ids'])->toBe([$service->getKey()]);
+
+    $this->actingAs($owner)
+        ->get(route('services.show', $service))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('professionalOptions.0.id', $professional->getKey())
+            ->where('professionalOptions.0.name', $professional->name),
+        );
 
     $this->actingAs($owner)
         ->patch(route('services.update', $service), [
