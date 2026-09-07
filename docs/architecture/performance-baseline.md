@@ -38,9 +38,7 @@ chunk próprio de cerca de 69 KB.
 
 ## Estado de publicação
 
-O código otimizado foi publicado na `main` e o workflow do cPanel concluiu, mas
-`gestao.romawear.com.br` aponta para a VPS/Coolify, não para o cPanel. A produção
-Premium ainda servia o manifest anterior na última medição. A validação final
-depende de publicar o commit no recurso Coolify que atende esse domínio e
-repetir as medições acima, incluindo as rotas autenticadas e o link público de
-agendamento.
+O código otimizado foi publicado na `main`, mas a produção Premium ainda servia
+o manifest anterior na última medição. A validação final depende de concluir o
+deploy no recurso Coolify que atende esse domínio e repetir as medições acima,
+incluindo as rotas autenticadas e o link público de agendamento.

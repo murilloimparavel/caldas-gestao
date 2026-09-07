@@ -3,7 +3,7 @@ name: Build and publish Caldas Gestão image
 on:
   push:
     branches:
-      - production
+      - main
   workflow_dispatch:
 
 permissions:
