@@ -247,5 +247,6 @@ medida que novas fatias forem implementadas. A documentação de estrutura em
 - [Estrutura do projeto](docs/architecture/project-structure.md);
 - [Arquitetura de dados](docs/architecture/database-architecture.md);
 - [Contextos delimitados](docs/reconstruction/domain/contexts.md);
+- [Baseline e plano de performance](docs/architecture/performance-baseline.md);
 - [Plano de implementação frontend](docs/reconstruction/frontend-implementation-plan.md);
 - [Roadmap único do produto](docs/ROADMAP.md).
