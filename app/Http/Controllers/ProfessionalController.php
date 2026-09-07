@@ -62,7 +62,7 @@ final class ProfessionalController extends Controller
         ]);
     }
 
-    /** @return list<array{id:string,name:string}> */
+    /** @return array<int, array{id:string,name:string}> */
     private function serviceOptions(TenantContext $context): array
     {
         return $context->unit === null
