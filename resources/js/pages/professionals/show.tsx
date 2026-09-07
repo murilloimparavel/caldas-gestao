@@ -119,6 +119,7 @@ export default function ProfessionalShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
     const [serviceSearch, setServiceSearch] = useState('');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
@@ -492,69 +493,114 @@ export default function ProfessionalShow({
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <h2 className="text-base font-semibold">
-                                        Serviços habilitados
+                                        Serviços deste profissional
                                     </h2>
                                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                        Selecione os serviços que este
-                                        profissional realiza.
+                                        Disponíveis para seleção na agenda.
                                     </p>
                                 </div>
-                                {canManage ? (
-                                    <Button
-                                        asChild
-                                        size="sm"
-                                        variant="secondary"
+                                <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+                                    {professional.services.length}
+                                </span>
+                            </div>
+                            <div className="mt-5 space-y-3">
+                                <RelationList
+                                    items={professional.services}
+                                    emptyLabel="Nenhum serviço vinculado"
+                                />
+                                {canManage && hasServiceOptions ? (
+                                    <Dialog
+                                        open={servicesDialogOpen}
+                                        onOpenChange={(open) => {
+                                            setServicesDialogOpen(open);
+
+                                            if (!open) {
+                                                setServiceSearch('');
+                                            }
+                                        }}
                                     >
-                                        <Link href={services.index()}>
-                                            <Plus aria-hidden="true" />
-                                            Novo serviço
-                                        </Link>
-                                    </Button>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                className="w-full"
+                                                variant="secondary"
+                                            >
+                                                <Plus aria-hidden="true" />
+                                                {professional.services.length >
+                                                0
+                                                    ? 'Gerenciar serviços'
+                                                    : 'Adicionar primeiro serviço'}
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Adicionar serviços
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    Selecione os serviços que{' '}
+                                                    {professional.name} realiza.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="space-y-4">
+                                                <div className="relative">
+                                                    <Search
+                                                        aria-hidden="true"
+                                                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                                    />
+                                                    <Input
+                                                        aria-label="Pesquisar serviços"
+                                                        placeholder="Pesquisar serviço"
+                                                        value={serviceSearch}
+                                                        onChange={(event) =>
+                                                            setServiceSearch(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        className="pl-9"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <RelationCheckboxes
+                                                    name="service_ids"
+                                                    options={filteredServices}
+                                                    selectedIds={professional.services.map(
+                                                        (service) => service.id,
+                                                    )}
+                                                    disabled={!canManage}
+                                                    form="professional-update-form"
+                                                />
+                                            </div>
+                                            <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+                                                <Button asChild variant="ghost">
+                                                    <Link
+                                                        href={services.index()}
+                                                    >
+                                                        <Plus aria-hidden="true" />
+                                                        Criar novo serviço
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setServicesDialogOpen(
+                                                            false,
+                                                        )
+                                                    }
+                                                >
+                                                    Concluir seleção
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
                                 ) : null}
                             </div>
-                            {hasServiceOptions ? (
-                                <div className="mt-5 space-y-3">
-                                    <div className="relative">
-                                        <Search
-                                            aria-hidden="true"
-                                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                                        />
-                                        <Input
-                                            aria-label="Pesquisar serviços"
-                                            placeholder="Pesquisar serviço"
-                                            value={serviceSearch}
-                                            onChange={(event) =>
-                                                setServiceSearch(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="pl-9"
-                                        />
-                                    </div>
-                                    <RelationCheckboxes
-                                        name="service_ids"
-                                        options={filteredServices}
-                                        selectedIds={professional.services.map(
-                                            (service) => service.id,
-                                        )}
-                                        disabled={!canManage}
-                                        form="professional-update-form"
-                                    />
-                                    {canManage ? (
-                                        <p className="text-xs text-muted-foreground">
-                                            As alterações serão aplicadas ao
-                                            clicar em “Salvar alterações”.
-                                        </p>
-                                    ) : null}
-                                </div>
-                            ) : (
-                                <div className="mt-5">
-                                    <RelationList
-                                        items={professional.services}
-                                        emptyLabel="Nenhum serviço vinculado"
-                                    />
-                                </div>
-                            )}
+                            {!hasServiceOptions ? (
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    As opções de seleção ainda não foram
+                                    carregadas.
+                                </p>
+                            ) : null}
                         </section>
                         <section className="surface-panel p-5 sm:p-6">
                             <h2 className="text-base font-semibold">
