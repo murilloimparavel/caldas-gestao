@@ -25,4 +25,7 @@ jobs:
       - name: Disparar deploy
         env:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
-        run: curl --fail-with-body --silent --show-error --request POST "$COOLIFY_DEPLOY_TOKEN"
+        run: >-
+          curl --fail-with-body --silent --show-error --request POST
+          --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN"
+          "https://cy.caldasindica.com/api/v1/deploy?uuid=3&force=false"
