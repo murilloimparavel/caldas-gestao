@@ -1,0 +1,16 @@
+{
+  "services": [
+    {"name": "Barba", "price": "35,00", "duration_minutes": 30, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Botox Capilar", "price": "90,00", "duration_minutes": 80, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Consultoria de Visagismo", "price": "300,00", "duration_minutes": 120, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Corte", "price": "35,00", "duration_minutes": 40, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Corte + Barba", "price": "70,00", "duration_minutes": 60, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Corte + Barba + Sobrancelha", "price": "80,00", "duration_minutes": 80, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Corte + Sobrancelha", "price": "45,00", "duration_minutes": 45, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Depilação Nariz", "price": "25,00", "duration_minutes": 20, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Depilação Nariz + Orelha", "price": "40,00", "duration_minutes": 30, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Pigmentação", "price": "25,00", "duration_minutes": 25, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Selagem", "price": "100,00", "duration_minutes": 80, "category_name": "Serviços", "show_on_site": true},
+    {"name": "Sobrancelha", "price": "10,00", "duration_minutes": 10, "category_name": "Serviços", "show_on_site": true}
+  ]
+}
