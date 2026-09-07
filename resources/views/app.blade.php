@@ -28,6 +28,37 @@
             html.dark {
                 background-color: #0e171a;
             }
+
+            #app-loading {
+                position: fixed;
+                inset: 0;
+                z-index: 9999;
+                display: grid;
+                place-items: center;
+                background: #f3f0ea;
+                color: #17262b;
+                font: 500 0.95rem/1.5 system-ui, sans-serif;
+            }
+
+            html.dark #app-loading {
+                background: #0e171a;
+                color: #f3f0ea;
+            }
+
+            #app-loading::before {
+                width: 1.25rem;
+                height: 1.25rem;
+                margin-right: 0.6rem;
+                border: 2px solid currentColor;
+                border-right-color: transparent;
+                border-radius: 9999px;
+                animation: app-loading-spin 0.75s linear infinite;
+                content: '';
+            }
+
+            @keyframes app-loading-spin {
+                to { transform: rotate(360deg); }
+            }
         </style>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
@@ -43,6 +74,7 @@
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">
+        <div id="app-loading" role="status" aria-live="polite">Carregando…</div>
         <x-inertia::app />
     </body>
 </html>
