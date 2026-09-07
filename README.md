@@ -2,7 +2,10 @@
 
 Monólito modular para gestão operacional e financeira de negócios de beleza.
 O projeto está no início do scaffold: os contextos de negócio já têm fronteiras
-documentadas e a implementação evolui em fatias verticais.
+documentadas e a implementação evolui em fatias verticais. A separação de
+domínios é, neste momento, principalmente arquitetural e documental; o código
+executável ainda segue as convenções Laravel em `app/Actions`, `app/Http`,
+`app/Models` e `database`.
 
 ## Stack atual
 
@@ -181,21 +184,68 @@ Com os defaults locais, database fica disponível via SQLite e Redis só ficará
 
 ## Estrutura modular
 
-- `app/Domain/Identity`: identidade, tenant, unidade e autorização;
-- `app/Domain/Customers`: clientes e histórico;
-- `app/Domain/Catalog`: serviços, produtos, categorias e fornecedores;
-- `app/Domain/Calendar`: disponibilidade, agenda e conflitos;
-- `app/Domain/Orders`: comandas, checkout e pagamentos;
-- `app/Domain/Finance`: caixa, transações, conciliação e comissões;
-- `app/Domain/Analytics`: indicadores e relatórios;
-- `app/Http`, `app/Models` e `database`: entrada HTTP, modelos compartilhados
-  e fonte de verdade do schema;
-- `resources/js/pages`: entradas Inertia; `features` concentra comportamento
-  por domínio; `components` e `layouts` concentram a UI compartilhada.
+O monólito é organizado por fronteiras de negócio, mas ainda não por módulos
+PHP autossuficientes. `app/Domain/*` contém os READMEs das fronteiras e deve
+receber código somente quando houver responsabilidade real; não há classes PHP
+nessas pastas hoje. A implementação atual é distribuída assim:
+
+- `app/Actions`: casos de uso agrupados por fatia (`Identity`, `Customers`,
+  `Calendar`, `Sales`, `Finance`, `Inventory`, `Marketing` etc.);
+- `app/Http/Controllers`, `app/Http/Requests` e `routes`: adaptação HTTP,
+  validação de entrada e rotas nomeadas;
+- `app/Models`, `app/Enums` e `database`: persistência Eloquent, tipos de
+  domínio e fonte de verdade do schema;
+- `app/Policies`, `app/Rules`, `app/Contracts` e `app/Support`: autorização,
+  regras reutilizáveis, contratos e suporte transversal;
+- `app/Jobs` e `app/Console/Commands`: processamento assíncrono e operações
+  agendadas/administrativas;
+- `resources/js/pages`: entradas Inertia por fluxo;
+  `resources/js/features`: comportamento específico; `components`, `layouts`,
+  `hooks`, `lib` e `types`: UI e infraestrutura frontend compartilhadas;
+- `resources/js/actions` e `resources/js/routes`: funções TypeScript geradas
+  pelo Wayfinder para chamar controllers e rotas Laravel.
+
+### Fronteiras de negócio
+
+Os contextos documentados são:
+
+| Contexto | Responsabilidade |
+| --- | --- |
+| `Identity` | identidade, tenant, unidade e autorização |
+| `Customers` | clientes, busca, perfil e histórico |
+| `Catalog` | serviços, produtos, categorias e fornecedores |
+| `Calendar` | disponibilidade, agenda, recorrência e conflitos |
+| `Orders` | comandas, checkout, pagamentos e auditoria de alterações |
+| `Finance` | caixa, transações, conciliação e comissões |
+| `Analytics` | consultas, indicadores e relatórios |
+
+Cada contexto possui um README em `app/Domain/<Contexto>/README.md`. O mapa
+mais detalhado de ownership, dependências e decisões propostas está em
+[`docs/reconstruction/domain/contexts.md`](docs/reconstruction/domain/contexts.md).
+
+### Regras de dependência
+
+- `app/Http` adapta requisições e não deve concentrar regra de negócio;
+- Actions são a entrada preferencial para mutações e orquestração de casos de
+  uso;
+- Policies revalidam autorização no backend; entitlement não substitui Policy;
+- contextos não devem gravar diretamente em tabelas pertencentes a outro
+  contexto; referências são permitidas, mas operações cruzadas devem passar por
+  Action/serviço e, quando aplicável, eventos após commit;
+- modelos Eloquent são compartilhados nesta fase. A extração para módulos
+  PHP completos é uma evolução futura, não uma característica já concluída.
+
+Essas regras são intenção arquitetural e devem ser confirmadas/atualizadas à
+medida que novas fatias forem implementadas. A documentação de estrutura em
+[`docs/architecture/project-structure.md`](docs/architecture/project-structure.md)
+é a referência complementar.
 
 ## Decisões e plano
 
 - [ADR-001 — Stack inicial](docs/adr/ADR-001--stack-inicial.md);
+- [ADR-002 — Fundação de dados e tenancy](docs/adr/ADR-002--fundacao-de-dados-e-tenancy.md);
 - [Estrutura do projeto](docs/architecture/project-structure.md);
+- [Arquitetura de dados](docs/architecture/database-architecture.md);
+- [Contextos delimitados](docs/reconstruction/domain/contexts.md);
 - [Plano de implementação frontend](docs/reconstruction/frontend-implementation-plan.md);
 - [Roadmap único do produto](docs/ROADMAP.md).
