@@ -84,10 +84,12 @@ async function assertPerformanceBudget(
             `TTFB exceeded budget: ${metrics.ttfb} ms`,
         ).toBeLessThan(800);
     }
+
     expect(
         metrics.fcp,
         `FCP was not recorded: ${metrics.fcp} ms`,
     ).toBeGreaterThan(0);
+
     if (enforcePerformanceBudget) {
         expect(
             metrics.lcp,
@@ -105,6 +107,7 @@ async function assertPerformanceBudget(
             0.1,
         );
     }
+
     expect(failures, `Failed requests: ${failures.join(', ')}`).toHaveLength(0);
     expect(
         consoleErrors,
