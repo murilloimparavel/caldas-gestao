@@ -22,6 +22,16 @@ jobs:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
         run: test -n "$COOLIFY_DEPLOY_TOKEN"
 
+      - name: Garantir tag de imagem de produção
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: >-
+          curl --fail-with-body --silent --show-error --request PATCH
+          --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN"
+          --header "Content-Type: application/json"
+          --data '{"docker_registry_image_tag":"production"}'
+          "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv"
+
       - name: Disparar deploy
         env:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
