@@ -84,12 +84,14 @@ export function RelationCheckboxes({
     selectedIds = [],
     initialSelected,
     disabled = false,
+    form,
 }: {
     name: string;
     options: RelationOption[];
     selectedIds?: string[];
     initialSelected?: string[];
     disabled?: boolean;
+    form?: string;
 }) {
     const selectedOptionIds =
         selectedIds.length > 0 ? selectedIds : (initialSelected ?? []);
@@ -118,6 +120,7 @@ export function RelationCheckboxes({
                             type="checkbox"
                             name={`${name}[]`}
                             value={option.id}
+                            form={form}
                             defaultChecked={selectedOptionIds.includes(
                                 option.id,
                             )}

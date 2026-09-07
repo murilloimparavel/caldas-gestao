@@ -6,6 +6,8 @@ import {
     Lock,
     Mail,
     Phone,
+    Plus,
+    Search,
     UserRound,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,6 +38,7 @@ import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import { useInitials } from '@/hooks/use-initials';
 import professionals from '@/routes/professionals';
+import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
 
 type ServiceSummary = {
@@ -88,7 +91,6 @@ const weekdays = [
     { day: 6, name: 'Sábado', short: 'Sáb' },
 ];
 
-
 type Props = {
     options?: {
         services?: RelationOption[];
@@ -117,12 +119,18 @@ export default function ProfessionalShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [serviceSearch, setServiceSearch] = useState('');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
     const availableServices =
         serviceOptions ?? options?.services ?? professional.services;
     const hasServiceOptions =
         serviceOptions !== undefined || options?.services !== undefined;
+    const filteredServices = availableServices.filter((service) =>
+        service.name
+            .toLocaleLowerCase()
+            .includes(serviceSearch.toLocaleLowerCase()),
+    );
 
     return (
         <>
@@ -143,7 +151,7 @@ export default function ProfessionalShow({
                                     alt={professional.name}
                                 />
                             ) : null}
-                            <AvatarFallback className="bg-secondary text-secondary-foreground text-lg font-medium">
+                            <AvatarFallback className="bg-secondary text-lg font-medium text-secondary-foreground">
                                 {getInitials(professional.name) || (
                                     <UserRound
                                         aria-hidden="true"
@@ -157,7 +165,9 @@ export default function ProfessionalShow({
                                 eyebrow="Cadastro de profissional"
                                 title={professional.name}
                                 description="Mantenha os dados da equipe e os serviços que podem ser selecionados na agenda."
-                                action={<StatusBadge status={professional.status} />}
+                                action={
+                                    <StatusBadge status={professional.status} />
+                                }
                             />
                         </div>
                     </div>
@@ -166,341 +176,385 @@ export default function ProfessionalShow({
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
                     <div className="space-y-5">
                         <section className="surface-panel p-5 sm:p-6">
-                        <div className="mb-6 space-y-1">
-                            <h2 className="text-base font-semibold">
-                                Dados principais
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Profissionais inativos deixam de aparecer em
-                                novos agendamentos.
-                            </p>
-                        </div>
-                        <Form
-                            {...professionals.update.form(professional.id)}
-                            headers={{ 'X-Idempotency-Key': updateKey }}
-                            className="space-y-5"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <FormErrorSummary errors={errors} />
-                                    <div className="grid gap-4 sm:grid-cols-2">
-                                        <div className="sm:col-span-2">
-                                            <FormField
-                                                label="Foto do profissional"
-                                                name="avatar"
-                                                error={errors.avatar}
-                                            >
-                                                <ImageUploader
-                                                    value={selectedAvatar}
-                                                    onChange={setSelectedAvatar}
-                                                    disabled={!canManage}
+                            <div className="mb-6 space-y-1">
+                                <h2 className="text-base font-semibold">
+                                    Dados principais
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Profissionais inativos deixam de aparecer em
+                                    novos agendamentos.
+                                </p>
+                            </div>
+                            <Form
+                                {...professionals.update.form(professional.id)}
+                                id="professional-update-form"
+                                headers={{ 'X-Idempotency-Key': updateKey }}
+                                className="space-y-5"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <FormErrorSummary errors={errors} />
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <div className="sm:col-span-2">
+                                                <FormField
+                                                    label="Foto do profissional"
+                                                    name="avatar"
                                                     error={errors.avatar}
-                                                    aspectRatio="square"
-                                                    previewHeight="140px"
-                                                />
-                                            </FormField>
-                                        </div>
-                                        <div className="sm:col-span-2">
+                                                >
+                                                    <ImageUploader
+                                                        value={selectedAvatar}
+                                                        onChange={
+                                                            setSelectedAvatar
+                                                        }
+                                                        disabled={!canManage}
+                                                        error={errors.avatar}
+                                                        aspectRatio="square"
+                                                        previewHeight="140px"
+                                                    />
+                                                </FormField>
+                                            </div>
+                                            <div className="sm:col-span-2">
+                                                <FormField
+                                                    label="Nome completo"
+                                                    name="name"
+                                                    error={errors.name}
+                                                >
+                                                    <Input
+                                                        id="name"
+                                                        name="name"
+                                                        defaultValue={
+                                                            professional.name
+                                                        }
+                                                        required
+                                                        disabled={!canManage}
+                                                    />
+                                                </FormField>
+                                            </div>
                                             <FormField
-                                                label="Nome completo"
-                                                name="name"
-                                                error={errors.name}
+                                                label="E-mail"
+                                                name="email"
+                                                error={errors.email}
                                             >
                                                 <Input
-                                                    id="name"
-                                                    name="name"
+                                                    id="email"
+                                                    name="email"
+                                                    type="email"
                                                     defaultValue={
-                                                        professional.name
+                                                        professional.email ?? ''
                                                     }
-                                                    required
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
-                                        </div>
-                                        <FormField
-                                            label="E-mail"
-                                            name="email"
-                                            error={errors.email}
-                                        >
-                                            <Input
-                                                id="email"
-                                                name="email"
-                                                type="email"
-                                                defaultValue={
-                                                    professional.email ?? ''
-                                                }
-                                                disabled={!canManage}
-                                            />
-                                        </FormField>
-                                        <FormField
-                                            label="Telefone"
-                                            name="phone"
-                                            error={errors.phone}
-                                        >
-                                            <Input
-                                                id="phone"
+                                            <FormField
+                                                label="Telefone"
                                                 name="phone"
-                                                inputMode="tel"
-                                                defaultValue={
-                                                    professional.phone ?? ''
-                                                }
-                                                disabled={!canManage}
-                                            />
-                                        </FormField>
-                                        <FormField
-                                            label="Status"
-                                            name="status"
-                                            error={errors.status}
-                                        >
-                                            <select
-                                                id="status"
-                                                name="status"
-                                                defaultValue={
-                                                    professional.status
-                                                }
-                                                disabled={!canManage}
-                                                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                error={errors.phone}
                                             >
-                                                <option value="active">
-                                                    Ativo
-                                                </option>
-                                                <option value="inactive">
-                                                    Inativo
-                                                </option>
-                                            </select>
-                                        </FormField>
-                                    </div>
-                                    {hasServiceOptions ? (
-                                        <div className="space-y-2">
-                                            <p className="text-sm font-medium text-foreground">
-                                                Serviços habilitados
-                                            </p>
-                                            <RelationCheckboxes
-                                                name="service_ids"
-                                                options={availableServices}
-                                                selectedIds={professional.services.map(
-                                                    (service) => service.id,
+                                                <Input
+                                                    id="phone"
+                                                    name="phone"
+                                                    inputMode="tel"
+                                                    defaultValue={
+                                                        professional.phone ?? ''
+                                                    }
+                                                    disabled={!canManage}
+                                                />
+                                            </FormField>
+                                            <FormField
+                                                label="Status"
+                                                name="status"
+                                                error={errors.status}
+                                            >
+                                                <select
+                                                    id="status"
+                                                    name="status"
+                                                    defaultValue={
+                                                        professional.status
+                                                    }
+                                                    disabled={!canManage}
+                                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                >
+                                                    <option value="active">
+                                                        Ativo
+                                                    </option>
+                                                    <option value="inactive">
+                                                        Inativo
+                                                    </option>
+                                                </select>
+                                            </FormField>
+                                        </div>
+                                        {!hasServiceOptions ? (
+                                            <>
+                                                {professional.services.map(
+                                                    (service) => (
+                                                        <input
+                                                            key={service.id}
+                                                            type="hidden"
+                                                            name="service_ids[]"
+                                                            value={service.id}
+                                                        />
+                                                    ),
                                                 )}
-                                                disabled={!canManage}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {professional.services.map(
-                                                (service) => (
-                                                    <input
-                                                        key={service.id}
-                                                        type="hidden"
-                                                        name="service_ids[]"
-                                                        value={service.id}
-                                                    />
-                                                ),
-                                            )}
-                                            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                                                Os vínculos atuais são
-                                                preservados ao salvar. A seleção
-                                                ficará disponível quando as
-                                                opções da unidade forem
-                                                carregadas.
-                                            </p>
-                                        </>
-                                    )}
-                                    {canManage ? (
-                                        <>
-                                            <input
-                                                type="hidden"
-                                                name="lock_version"
-                                                value={
-                                                    professional.lock_version
-                                                }
-                                            />
-                                            <FormActions
-                                                processing={processing}
-                                                label="Salvar alterações"
-                                            />
-                                        </>
-                                    ) : (
-                                        <p
-                                            className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
-                                            role="status"
-                                        >
-                                            Você tem acesso somente para
-                                            consulta a este cadastro.
-                                        </p>
-                                    )}
-                                </>
-                            )}
-                        </Form>
-                    </section>
-
-                    <section className="surface-panel p-5 sm:p-6">
-                        <div className="mb-5 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-base font-semibold">
-                                    Jornada de trabalho e disponibilidade
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    Horários semanais de atendimento
-                                    configurados para este profissional.
-                                </p>
-                            </div>
-                            <Clock
-                                className="size-5 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {weekdays.map(({ day, name, short }) => {
-                                const dayRules = (
-                                    professional.availability_rules ??
-                                    professional.availabilityRules ??
-                                    []
-                                ).filter(
-                                    (rule) =>
-                                        rule.weekday === day &&
-                                        rule.status === 'active',
-                                );
-
-                                return (
-                                    <div
-                                        key={day}
-                                        className={`rounded-lg border p-3 ${
-                                            dayRules.length > 0
-                                                ? 'border-border bg-card'
-                                                : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-semibold">
-                                                {short} – {name}
-                                            </span>
-                                            {dayRules.length > 0 ? (
-                                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                    Ativo
-                                                </span>
-                                            ) : (
-                                                <span className="text-[10px] text-muted-foreground">
-                                                    Folga
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="mt-2 space-y-1">
-                                            {dayRules.length > 0 ? (
-                                                dayRules.map((rule) => (
-                                                    <div
-                                                        key={rule.id}
-                                                        className="text-xs font-medium text-foreground"
-                                                    >
-                                                        {rule.starts_at.slice(
-                                                            0,
-                                                            5,
-                                                        )}{' '}
-                                                        –{' '}
-                                                        {rule.ends_at.slice(
-                                                            0,
-                                                            5,
-                                                        )}
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-xs italic text-muted-foreground">
-                                                    Sem atendimento
+                                                <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                                    Os vínculos atuais são
+                                                    preservados ao salvar. A
+                                                    seleção ficará disponível
+                                                    quando as opções da unidade
+                                                    forem carregadas.
                                                 </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-
-                    <section className="surface-panel p-5 sm:p-6">
-                        <div className="mb-4 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-base font-semibold">
-                                    Bloqueios e pausas programadas
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    Pausas operacionais, consultas e ausências
-                                    registradas na agenda.
-                                </p>
-                            </div>
-                            <Lock
-                                className="size-5 text-amber-600 dark:text-amber-400"
-                                aria-hidden="true"
-                            />
-                        </div>
-
-                        {(
-                            professional.schedule_blocks ??
-                            professional.scheduleBlocks ??
-                            []
-                        ).length > 0 ? (
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                {(
-                                    professional.schedule_blocks ??
-                                    professional.scheduleBlocks ??
-                                    []
-                                ).map((block) => (
-                                    <div
-                                        key={block.id}
-                                        className="flex items-start gap-3 rounded-lg border border-amber-300/60 bg-amber-50/70 p-3 text-xs dark:border-amber-700/60 dark:bg-amber-950/40"
-                                    >
-                                        <Lock
-                                            className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-400"
-                                            aria-hidden="true"
-                                        />
-                                        <div className="min-w-0">
-                                            <p className="font-semibold text-amber-950 dark:text-amber-100">
-                                                {block.reason ||
-                                                    'Bloqueio de horário'}
+                                            </>
+                                        ) : null}
+                                        {canManage ? (
+                                            <>
+                                                <input
+                                                    type="hidden"
+                                                    name="lock_version"
+                                                    value={
+                                                        professional.lock_version
+                                                    }
+                                                />
+                                                <FormActions
+                                                    processing={processing}
+                                                    label="Salvar alterações"
+                                                />
+                                            </>
+                                        ) : (
+                                            <p
+                                                className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+                                                role="status"
+                                            >
+                                                Você tem acesso somente para
+                                                consulta a este cadastro.
                                             </p>
-                                            <p className="mt-0.5 text-amber-900/80 dark:text-amber-300/80">
-                                                {new Date(
-                                                    block.starts_at,
-                                                ).toLocaleString('pt-BR', {
-                                                    dateStyle: 'short',
-                                                    timeStyle: 'short',
-                                                })}{' '}
-                                                –{' '}
-                                                {new Date(
-                                                    block.ends_at,
-                                                ).toLocaleTimeString('pt-BR', {
-                                                    timeStyle: 'short',
-                                                })}
-                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </Form>
+                        </section>
+
+                        <section className="surface-panel p-5 sm:p-6">
+                            <div className="mb-5 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-base font-semibold">
+                                        Jornada de trabalho e disponibilidade
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Horários semanais de atendimento
+                                        configurados para este profissional.
+                                    </p>
+                                </div>
+                                <Clock
+                                    className="size-5 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {weekdays.map(({ day, name, short }) => {
+                                    const dayRules = (
+                                        professional.availability_rules ??
+                                        professional.availabilityRules ??
+                                        []
+                                    ).filter(
+                                        (rule) =>
+                                            rule.weekday === day &&
+                                            rule.status === 'active',
+                                    );
+
+                                    return (
+                                        <div
+                                            key={day}
+                                            className={`rounded-lg border p-3 ${
+                                                dayRules.length > 0
+                                                    ? 'border-border bg-card'
+                                                    : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-semibold">
+                                                    {short} – {name}
+                                                </span>
+                                                {dayRules.length > 0 ? (
+                                                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                        Ativo
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        Folga
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="mt-2 space-y-1">
+                                                {dayRules.length > 0 ? (
+                                                    dayRules.map((rule) => (
+                                                        <div
+                                                            key={rule.id}
+                                                            className="text-xs font-medium text-foreground"
+                                                        >
+                                                            {rule.starts_at.slice(
+                                                                0,
+                                                                5,
+                                                            )}{' '}
+                                                            –{' '}
+                                                            {rule.ends_at.slice(
+                                                                0,
+                                                                5,
+                                                            )}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-xs text-muted-foreground italic">
+                                                        Sem atendimento
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
-                        ) : (
-                            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                                <p className="text-xs text-muted-foreground">
-                                    Nenhum bloqueio ou ausência programada para
-                                    este profissional.
-                                </p>
+                        </section>
+
+                        <section className="surface-panel p-5 sm:p-6">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-base font-semibold">
+                                        Bloqueios e pausas programadas
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Pausas operacionais, consultas e
+                                        ausências registradas na agenda.
+                                    </p>
+                                </div>
+                                <Lock
+                                    className="size-5 text-amber-600 dark:text-amber-400"
+                                    aria-hidden="true"
+                                />
                             </div>
-                        )}
-                    </section>
+
+                            {(
+                                professional.schedule_blocks ??
+                                professional.scheduleBlocks ??
+                                []
+                            ).length > 0 ? (
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {(
+                                        professional.schedule_blocks ??
+                                        professional.scheduleBlocks ??
+                                        []
+                                    ).map((block) => (
+                                        <div
+                                            key={block.id}
+                                            className="flex items-start gap-3 rounded-lg border border-amber-300/60 bg-amber-50/70 p-3 text-xs dark:border-amber-700/60 dark:bg-amber-950/40"
+                                        >
+                                            <Lock
+                                                className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-400"
+                                                aria-hidden="true"
+                                            />
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-amber-950 dark:text-amber-100">
+                                                    {block.reason ||
+                                                        'Bloqueio de horário'}
+                                                </p>
+                                                <p className="mt-0.5 text-amber-900/80 dark:text-amber-300/80">
+                                                    {new Date(
+                                                        block.starts_at,
+                                                    ).toLocaleString('pt-BR', {
+                                                        dateStyle: 'short',
+                                                        timeStyle: 'short',
+                                                    })}{' '}
+                                                    –{' '}
+                                                    {new Date(
+                                                        block.ends_at,
+                                                    ).toLocaleTimeString(
+                                                        'pt-BR',
+                                                        {
+                                                            timeStyle: 'short',
+                                                        },
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                                    <p className="text-xs text-muted-foreground">
+                                        Nenhum bloqueio ou ausência programada
+                                        para este profissional.
+                                    </p>
+                                </div>
+                            )}
+                        </section>
                     </div>
 
                     <aside className="space-y-5">
-
                         <section className="surface-panel p-5 sm:p-6">
-                            <h2 className="text-base font-semibold">
-                                Serviços habilitados
-                            </h2>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                A agenda usará estes vínculos para oferecer
-                                escolhas válidas.
-                            </p>
-                            <div className="mt-5">
-                                <RelationList
-                                    items={professional.services}
-                                    emptyLabel="Nenhum serviço vinculado"
-                                />
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="text-base font-semibold">
+                                        Serviços habilitados
+                                    </h2>
+                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                        Selecione os serviços que este
+                                        profissional realiza.
+                                    </p>
+                                </div>
+                                {canManage ? (
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="secondary"
+                                    >
+                                        <Link href={services.index()}>
+                                            <Plus aria-hidden="true" />
+                                            Novo serviço
+                                        </Link>
+                                    </Button>
+                                ) : null}
                             </div>
+                            {hasServiceOptions ? (
+                                <div className="mt-5 space-y-3">
+                                    <div className="relative">
+                                        <Search
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                        />
+                                        <Input
+                                            aria-label="Pesquisar serviços"
+                                            placeholder="Pesquisar serviço"
+                                            value={serviceSearch}
+                                            onChange={(event) =>
+                                                setServiceSearch(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <RelationCheckboxes
+                                        name="service_ids"
+                                        options={filteredServices}
+                                        selectedIds={professional.services.map(
+                                            (service) => service.id,
+                                        )}
+                                        disabled={!canManage}
+                                        form="professional-update-form"
+                                    />
+                                    {canManage ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            As alterações serão aplicadas ao
+                                            clicar em “Salvar alterações”.
+                                        </p>
+                                    ) : null}
+                                </div>
+                            ) : (
+                                <div className="mt-5">
+                                    <RelationList
+                                        items={professional.services}
+                                        emptyLabel="Nenhum serviço vinculado"
+                                    />
+                                </div>
+                            )}
                         </section>
                         <section className="surface-panel p-5 sm:p-6">
                             <h2 className="text-base font-semibold">
@@ -569,7 +623,11 @@ export default function ProfessionalShow({
                                                 Reativar profissional
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                Este profissional está atualmente inativo. Reative o cadastro para disponibilizá-lo novamente na agenda e atendimentos.
+                                                Este profissional está
+                                                atualmente inativo. Reative o
+                                                cadastro para disponibilizá-lo
+                                                novamente na agenda e
+                                                atendimentos.
                                             </p>
                                         </div>
                                     </div>
@@ -591,7 +649,10 @@ export default function ProfessionalShow({
                                                     Reativar profissional?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O profissional voltará a ficar ativo e poderá ser selecionado em novos agendamentos e atendimentos.
+                                                    O profissional voltará a
+                                                    ficar ativo e poderá ser
+                                                    selecionado em novos
+                                                    agendamentos e atendimentos.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
@@ -658,8 +719,8 @@ export default function ProfessionalShow({
                                                 Desativar profissional
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                O histórico permanece disponível e o
-                                                status pode ser reativado.
+                                                O histórico permanece disponível
+                                                e o status pode ser reativado.
                                             </p>
                                         </div>
                                     </div>
@@ -682,7 +743,10 @@ export default function ProfessionalShow({
                                                     Desativar profissional?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O profissional deixará de aparecer em novos agendamentos, preservando o histórico existente.
+                                                    O profissional deixará de
+                                                    aparecer em novos
+                                                    agendamentos, preservando o
+                                                    histórico existente.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
