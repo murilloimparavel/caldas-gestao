@@ -95,6 +95,14 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
     $serviceResponse->assertRedirect(route('services.show', $service));
 
     $this->actingAs($owner)
+        ->get(route('professionals.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('professionals/index')
+            ->where('serviceOptions.0.id', $service->getKey())
+            ->where('serviceOptions.0.name', 'Corte feminino'),
+        );
+
+    $this->actingAs($owner)
         ->get(route('services.show', $service))
         ->assertInertia(fn (Assert $page) => $page
             ->component('services/show')
@@ -136,6 +144,13 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
     expect($service->fresh()->name)->toBe('Corte feminino premium')
         ->and($service->fresh()->price_cents)->toBe(15000)
         ->and($service->fresh()->professionals()->whereKey($professional->getKey())->exists())->toBeTrue();
+
+    $this->actingAs($owner)
+        ->get(route('professionals.show', $professional))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('serviceOptions.0.id', $service->getKey())
+            ->where('serviceOptions.0.name', 'Corte feminino premium'),
+        );
 });
 
 it('supports professional inactivation without requiring a full delete payload', function () {
