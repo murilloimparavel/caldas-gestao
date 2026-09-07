@@ -384,6 +384,17 @@ it('renders commissions index and professional show pages with Inertia', functio
         'name' => 'Profissional Apresentação',
     ]);
 
+    Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
+    Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'inactive',
+    ]);
+
     // Index page
     $indexResponse = $this->actingAs($owner)->get(route('commissions.index'));
     $indexResponse->assertOk()
@@ -391,6 +402,7 @@ it('renders commissions index and professional show pages with Inertia', functio
             ->component('finance/commissions/index')
             ->has('professionals')
             ->has('rules')
+            ->has('services', 1)
             ->has('metrics')
         );
 

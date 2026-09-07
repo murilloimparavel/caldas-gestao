@@ -78,7 +78,7 @@ final class CommissionController extends Controller
         $services = Service::query()
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->orderBy('name')
             ->get(['id', 'name', 'price_cents']);
 
