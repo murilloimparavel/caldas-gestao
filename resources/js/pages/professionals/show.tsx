@@ -137,7 +137,7 @@ export default function ProfessionalShow({
             <Head title={professional.name} />
             <PageCanvas>
                 <div>
-                    <Button asChild variant="ghost" className="mb-4 -ml-3">
+                    <Button asChild variant="ghost" className="-ml-3 mb-4">
                         <Link href={professionals.index()}>
                             <ArrowLeft aria-hidden="true" />
                             Voltar para profissionais
@@ -151,7 +151,7 @@ export default function ProfessionalShow({
                                     alt={professional.name}
                                 />
                             ) : null}
-                            <AvatarFallback className="bg-secondary text-lg font-medium text-secondary-foreground">
+                            <AvatarFallback className="bg-secondary text-secondary-foreground text-lg font-medium">
                                 {getInitials(professional.name) || (
                                     <UserRound
                                         aria-hidden="true"
@@ -180,7 +180,7 @@ export default function ProfessionalShow({
                                 <h2 className="text-base font-semibold">
                                     Dados principais
                                 </h2>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-muted-foreground text-sm">
                                     Profissionais inativos deixam de aparecer em
                                     novos agendamentos.
                                 </p>
@@ -272,7 +272,7 @@ export default function ProfessionalShow({
                                                         professional.status
                                                     }
                                                     disabled={!canManage}
-                                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                    className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-11 w-full rounded-md border bg-transparent px-3 text-base outline-none focus-visible:ring-[3px] md:text-sm"
                                                 >
                                                     <option value="active">
                                                         Ativo
@@ -295,7 +295,7 @@ export default function ProfessionalShow({
                                                         />
                                                     ),
                                                 )}
-                                                <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                                <p className="border-border bg-muted/40 text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-xs leading-5">
                                                     Os vínculos atuais são
                                                     preservados ao salvar. A
                                                     seleção ficará disponível
@@ -303,7 +303,7 @@ export default function ProfessionalShow({
                                                     forem carregadas.
                                                 </p>
                                             </>
-                                         ) : null}
+                                        ) : null}
                                         {canManage ? (
                                             <>
                                                 <input
@@ -320,7 +320,7 @@ export default function ProfessionalShow({
                                             </>
                                         ) : (
                                             <p
-                                                className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+                                                className="border-border bg-muted/40 text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-sm"
                                                 role="status"
                                             >
                                                 Você tem acesso somente para
@@ -338,13 +338,13 @@ export default function ProfessionalShow({
                                     <h2 className="text-base font-semibold">
                                         Jornada de trabalho e disponibilidade
                                     </h2>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-muted-foreground text-sm">
                                         Horários semanais de atendimento
                                         configurados para este profissional.
                                     </p>
                                 </div>
                                 <Clock
-                                    className="size-5 text-muted-foreground"
+                                    className="text-muted-foreground size-5"
                                     aria-hidden="true"
                                 />
                             </div>
@@ -367,7 +367,7 @@ export default function ProfessionalShow({
                                             className={`rounded-lg border p-3 ${
                                                 dayRules.length > 0
                                                     ? 'border-border bg-card'
-                                                    : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'
+                                                    : 'border-border/80 bg-muted/20 text-muted-foreground border-dashed'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between">
@@ -379,7 +379,7 @@ export default function ProfessionalShow({
                                                         Ativo
                                                     </span>
                                                 ) : (
-                                                    <span className="text-[10px] text-muted-foreground">
+                                                    <span className="text-muted-foreground text-[10px]">
                                                         Folga
                                                     </span>
                                                 )}
@@ -389,7 +389,7 @@ export default function ProfessionalShow({
                                                     dayRules.map((rule) => (
                                                         <div
                                                             key={rule.id}
-                                                            className="text-xs font-medium text-foreground"
+                                                            className="text-foreground text-xs font-medium"
                                                         >
                                                             {rule.starts_at.slice(
                                                                 0,
@@ -403,7 +403,7 @@ export default function ProfessionalShow({
                                                         </div>
                                                     ))
                                                 ) : (
-                                                    <p className="text-xs text-muted-foreground italic">
+                                                    <p className="text-muted-foreground text-xs italic">
                                                         Sem atendimento
                                                     </p>
                                                 )}
@@ -420,7 +420,7 @@ export default function ProfessionalShow({
                                     <h2 className="text-base font-semibold">
                                         Bloqueios e pausas programadas
                                     </h2>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-muted-foreground text-sm">
                                         Pausas operacionais, consultas e
                                         ausências registradas na agenda.
                                     </p>
@@ -477,8 +477,8 @@ export default function ProfessionalShow({
                                     ))}
                                 </div>
                             ) : (
-                                <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                                    <p className="text-xs text-muted-foreground">
+                                <div className="border-border bg-muted/20 rounded-lg border border-dashed px-4 py-6 text-center">
+                                    <p className="text-muted-foreground text-xs">
                                         Nenhum bloqueio ou ausência programada
                                         para este profissional.
                                     </p>
@@ -494,7 +494,7 @@ export default function ProfessionalShow({
                                     <h2 className="text-base font-semibold">
                                         Serviços habilitados
                                     </h2>
-                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                    <p className="text-muted-foreground mt-1 text-sm leading-6">
                                         Selecione os serviços que este
                                         profissional realiza.
                                     </p>
@@ -517,7 +517,7 @@ export default function ProfessionalShow({
                                     <div className="relative">
                                         <Search
                                             aria-hidden="true"
-                                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                            className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2"
                                         />
                                         <Input
                                             aria-label="Pesquisar serviços"
@@ -541,7 +541,7 @@ export default function ProfessionalShow({
                                         form="professional-update-form"
                                     />
                                     {canManage ? (
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-muted-foreground text-xs">
                                             As alterações serão aplicadas ao
                                             clicar em “Salvar alterações”.
                                         </p>
@@ -564,10 +564,10 @@ export default function ProfessionalShow({
                                 <div className="flex items-start gap-3">
                                     <Phone
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground"
+                                        className="text-muted-foreground mt-0.5 size-4"
                                     />
                                     <div className="min-w-0">
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-muted-foreground text-xs">
                                             Telefone
                                         </p>
                                         <p className="mt-0.5 truncate text-sm font-medium">
@@ -579,10 +579,10 @@ export default function ProfessionalShow({
                                 <div className="flex items-start gap-3">
                                     <Mail
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground"
+                                        className="text-muted-foreground mt-0.5 size-4"
                                     />
                                     <div className="min-w-0">
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-muted-foreground text-xs">
                                             E-mail
                                         </p>
                                         <p className="mt-0.5 truncate text-sm font-medium">
@@ -594,10 +594,10 @@ export default function ProfessionalShow({
                                 <div className="flex items-start gap-3">
                                     <BriefcaseBusiness
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground"
+                                        className="text-muted-foreground mt-0.5 size-4"
                                     />
                                     <div className="min-w-0">
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-muted-foreground text-xs">
                                             Vínculos
                                         </p>
                                         <p className="mt-0.5 text-sm font-medium">
@@ -619,10 +619,10 @@ export default function ProfessionalShow({
                                             className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400"
                                         />
                                         <div>
-                                            <h2 className="text-base font-semibold text-foreground">
+                                            <h2 className="text-foreground text-base font-semibold">
                                                 Reativar profissional
                                             </h2>
-                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                            <p className="text-muted-foreground mt-1 text-sm leading-6">
                                                 Este profissional está
                                                 atualmente inativo. Reative o
                                                 cadastro para disponibilizá-lo
@@ -712,13 +712,13 @@ export default function ProfessionalShow({
                                     <div className="flex items-start gap-3">
                                         <UserRound
                                             aria-hidden="true"
-                                            className="mt-0.5 size-4 text-destructive"
+                                            className="text-destructive mt-0.5 size-4"
                                         />
                                         <div>
                                             <h2 className="text-base font-semibold">
                                                 Desativar profissional
                                             </h2>
-                                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                            <p className="text-muted-foreground mt-1 text-sm leading-6">
                                                 O histórico permanece disponível
                                                 e o status pode ser reativado.
                                             </p>
