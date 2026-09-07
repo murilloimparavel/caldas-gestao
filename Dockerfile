@@ -14,7 +14,7 @@ COPY routes routes
 COPY composer.json composer.lock ./
 RUN npm run build
 
-FROM php:8.5-cli-bookworm AS runtime
+FROM php:8.4-cli-bookworm AS runtime
 
 ENV APP_ENV=production \
     LOG_CHANNEL=stderr \
