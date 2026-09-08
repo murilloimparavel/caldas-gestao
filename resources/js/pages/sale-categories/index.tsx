@@ -118,15 +118,15 @@ export default function SaleCategoriesIndex({
                                         Nova categoria de comanda
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
+                                <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:w-full sm:max-w-2xl sm:p-6">
                                     <DialogHeader>
                                         <DialogTitle>
                                             Nova categoria de comanda
                                         </DialogTitle>
                                         <DialogDescription>
-                                            Defina uma área de consumo para
-                                            segmentar comandas (ex: Barbearia,
-                                            Loja, Bar, Restaurante).
+                                            Crie uma área para organizar os
+                                            itens das suas comandas. Você poderá
+                                            ajustar as regras depois.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <TooltipProvider>
@@ -146,8 +146,8 @@ export default function SaleCategoriesIndex({
                                                     <FormErrorSummary
                                                         errors={errors}
                                                     />
-                                                    <div className="grid gap-4 sm:grid-cols-2">
-                                                        <div className="sm:col-span-2">
+                                                    <div className="grid min-w-0 gap-5 md:grid-cols-2">
+                                                        <div className="min-w-0 md:col-span-2">
                                                             <FormField
                                                                 label="Nome da categoria"
                                                                 name="name"
@@ -169,7 +169,7 @@ export default function SaleCategoriesIndex({
                                                             onOpenChange={
                                                                 setAdvancedOpen
                                                             }
-                                                            className="rounded-lg border border-border/60 bg-muted/20 p-3 sm:col-span-2"
+                                                            className="rounded-lg border border-border/60 bg-muted/20 p-3 md:col-span-2 md:p-4"
                                                         >
                                                             <CollapsibleTrigger
                                                                 asChild
@@ -190,7 +190,7 @@ export default function SaleCategoriesIndex({
                                                                 <FormField
                                                                     label="Identificador interno"
                                                                     name="key"
-                                                                    description={
+                                                                    action={
                                                                         <Tooltip>
                                                                             <TooltipTrigger
                                                                                 asChild
@@ -229,7 +229,7 @@ export default function SaleCategoriesIndex({
                                                                 </FormField>
                                                             </CollapsibleContent>
                                                         </Collapsible>
-                                                        <div className="sm:col-span-1">
+                                                        <div className="min-w-0 md:col-span-1">
                                                             <FormField
                                                                 label="O que pode ser adicionado?"
                                                                 name="type"
@@ -241,7 +241,7 @@ export default function SaleCategoriesIndex({
                                                                     id="type"
                                                                     name="type"
                                                                     defaultValue="service"
-                                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                                    className="h-11 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                                 >
                                                                     <option value="service">
                                                                         Apenas
@@ -260,11 +260,11 @@ export default function SaleCategoriesIndex({
                                                                 </select>
                                                             </FormField>
                                                         </div>
-                                                        <div className="sm:col-span-1">
+                                                        <div className="min-w-0 md:col-span-1">
                                                             <FormField
                                                                 label="Regra para comandas abertas"
                                                                 name="uniqueness_scope"
-                                                                description={
+                                                                action={
                                                                     <Tooltip>
                                                                         <TooltipTrigger
                                                                             asChild
@@ -302,7 +302,7 @@ export default function SaleCategoriesIndex({
                                                                     id="uniqueness_scope"
                                                                     name="uniqueness_scope"
                                                                     defaultValue="none"
-                                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                                    className="h-11 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                                 >
                                                                     <option value="none">
                                                                         Pode
