@@ -23,11 +23,17 @@ final class UploadedImageOptimizer
         $sourceHeight = imagesy($source);
         $targetWidth = min($sourceWidth, self::MAX_WIDTH);
         $targetHeight = (int) round($sourceHeight * ($targetWidth / $sourceWidth));
+        $targetHeight = max(1, $targetHeight);
         $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
 
         imagealphablending($canvas, false);
         imagesavealpha($canvas, true);
         $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+        if ($transparent === false) {
+            imagedestroy($source);
+            imagedestroy($canvas);
+            throw new RuntimeException('Não foi possível preparar a transparência da imagem.');
+        }
         imagefill($canvas, 0, 0, $transparent);
         imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $sourceWidth, $sourceHeight);
 
@@ -53,6 +59,6 @@ final class UploadedImageOptimizer
 
     public function storeWebp(UploadedFile $file, FilesystemAdapter $disk, string $path): bool
     {
-        return $disk->put($path, $this->encodeWebp($file));
+        return (bool) $disk->put($path, $this->encodeWebp($file));
     }
 }

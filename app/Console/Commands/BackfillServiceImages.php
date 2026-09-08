@@ -50,7 +50,7 @@ final class BackfillServiceImages extends Command
                 $newPath = preg_replace('/\.[^.]+$/', '.webp', $path) ?: $path.'.webp';
                 $optimizer->storeWebp($file, $mediaDisk, $newPath);
                 $service->forceFill(['image_path' => $newPath])->save();
-                if ($mediaDiskName !== (string) $this->option('source-disk') && $sourceDisk->exists($path)) {
+                if ($mediaDiskName !== (string) $this->option('source-disk')) {
                     $sourceDisk->delete($path);
                 }
                 $summary['migrated']++;
