@@ -208,8 +208,7 @@ export default function ServiceShow({
                                                     onChange={setSelectedPhoto}
                                                     disabled={!canManage}
                                                     error={errors.photo}
-                                                    aspectRatio="auto"
-                                                    previewHeight="140px"
+                                                    aspectRatio="video"
                                                 />
                                             </FormField>
                                         </div>
@@ -355,7 +354,7 @@ export default function ServiceShow({
                                     <img
                                         src={service.image_url}
                                         alt={service.name}
-                                        className="h-40 w-full object-cover"
+                                        className="aspect-video max-h-72 w-full bg-muted/30 object-contain sm:max-h-80"
                                         onError={(event) => {
                                             event.currentTarget.parentElement?.remove();
                                         }}

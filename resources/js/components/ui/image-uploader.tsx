@@ -118,7 +118,7 @@ export function ImageUploader({
                             className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                             onError={() => setPreviewError(true)}
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center gap-2">
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                             <Button
                                 type="button"
                                 variant="secondary"
