@@ -85,6 +85,7 @@ export function RelationCheckboxes({
     initialSelected,
     disabled = false,
     form,
+    onSelectionChange,
 }: {
     name: string;
     options: RelationOption[];
@@ -92,9 +93,13 @@ export function RelationCheckboxes({
     initialSelected?: string[];
     disabled?: boolean;
     form?: string;
+    onSelectionChange?: (selectedIds: string[]) => void;
 }) {
-    const selectedOptionIds =
-        selectedIds.length > 0 ? selectedIds : (initialSelected ?? []);
+    const selectedOptionIds = onSelectionChange
+        ? selectedIds
+        : selectedIds.length > 0
+          ? selectedIds
+          : (initialSelected ?? []);
 
     if (options.length === 0) {
         return (
@@ -121,9 +126,33 @@ export function RelationCheckboxes({
                             name={`${name}[]`}
                             value={option.id}
                             form={form}
-                            defaultChecked={selectedOptionIds.includes(
-                                option.id,
-                            )}
+                            {...(onSelectionChange
+                                ? {
+                                      checked: selectedOptionIds.includes(
+                                          option.id,
+                                      ),
+                                      onChange: (
+                                          event: FormEvent<HTMLInputElement>,
+                                      ) => {
+                                          const nextSelectedIds = new Set(
+                                              selectedOptionIds,
+                                          );
+
+                                          if (event.currentTarget.checked) {
+                                              nextSelectedIds.add(option.id);
+                                          } else {
+                                              nextSelectedIds.delete(option.id);
+                                          }
+
+                                          onSelectionChange(
+                                              Array.from(nextSelectedIds),
+                                          );
+                                      },
+                                  }
+                                : {
+                                      defaultChecked:
+                                          selectedOptionIds.includes(option.id),
+                                  })}
                             disabled={disabled}
                             className="size-4 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring"
                         />
