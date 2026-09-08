@@ -416,7 +416,7 @@ function AppointmentForm({
             <Form
                 {...route}
                 headers={{ 'X-Idempotency-Key': mutationKey }}
-                className="space-y-5"
+                className="space-y-6"
                 onSuccess={onClose}
             >
                 {({ errors, processing }) => (
@@ -442,19 +442,19 @@ function AppointmentForm({
                             </div>
                         )}
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="sm:col-span-2">
+                        <div className="grid min-w-0 gap-5 md:grid-cols-2">
+                            <div className="min-w-0 md:col-span-2">
                                 <FormField
                                     label="Cliente"
                                     name="customer_id"
                                     error={errors.customer_id}
-                                    description={
+                                    action={
                                         <button
                                             type="button"
                                             onClick={() =>
                                                 setQuickCustomerOpen(true)
                                             }
-                                            className="font-medium text-primary hover:underline"
+                                            className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                                         >
                                             + Novo Cliente
                                         </button>
@@ -488,13 +488,13 @@ function AppointmentForm({
                                 label="Serviço"
                                 name="service_id"
                                 error={errors.service_id}
-                                description={
+                                action={
                                     <button
                                         type="button"
                                         onClick={() =>
                                             setQuickServiceOpen(true)
                                         }
-                                        className="font-medium text-primary hover:underline"
+                                        className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                                     >
                                         + Novo Serviço
                                     </button>
@@ -527,13 +527,13 @@ function AppointmentForm({
                                 label="Profissional"
                                 name="professional_id"
                                 error={errors.professional_id}
-                                description={
+                                action={
                                     <button
                                         type="button"
                                         onClick={() =>
                                             setQuickProfessionalOpen(true)
                                         }
-                                        className="font-medium text-primary hover:underline"
+                                        className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                                     >
                                         + Novo Profissional
                                     </button>
@@ -563,7 +563,7 @@ function AppointmentForm({
                                 </select>
                             </FormField>
                             <FormField
-                                label="Horário"
+                                label="Data e horário"
                                 name="starts_at"
                                 error={errors.starts_at}
                             >
@@ -579,7 +579,7 @@ function AppointmentForm({
                                 />
                             </FormField>
                             <FormField
-                                label="Duração (minutos)"
+                                label="Duração"
                                 name="duration_minutes"
                                 error={errors.duration_minutes}
                             >
@@ -619,7 +619,7 @@ function AppointmentForm({
                                     ))}
                                 </select>
                             </FormField>
-                            <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 sm:col-span-2">
+                            <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-3.5 py-3 md:col-span-2">
                                 <input
                                     id="reminder_enabled"
                                     name="reminder_enabled"
@@ -640,7 +640,7 @@ function AppointmentForm({
                                     </span>
                                 </label>
                             </div>
-                            <div className="sm:col-span-2">
+                            <div className="min-w-0 md:col-span-2">
                                 <FormField
                                     label="Observações"
                                     name="notes"
@@ -1532,7 +1532,7 @@ export default function CalendarIndex(props: CalendarProps) {
                     }
                 }}
             >
-                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
+                <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:w-full sm:max-w-3xl sm:p-6">
                     <DialogHeader>
                         <DialogTitle>
                             {editing
