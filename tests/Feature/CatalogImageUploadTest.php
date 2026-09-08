@@ -42,6 +42,7 @@ it('uploads image successfully when creating a service and a product', function 
     $service = Service::query()->where('name', 'Corte Masculino com Foto')->firstOrFail();
     expect($service->image_path)->not()->toBeNull()
         ->and($service->image_path)->toBe("{$tenant->getKey()}/services/{$service->getKey()}/".basename($service->image_path))
+        ->and($service->image_path)->toEndWith('.webp')
         ->and($service->image_url)->toBe(Storage::disk('public')->url($service->image_path));
     Storage::disk('public')->assertExists($service->image_path);
 
