@@ -2,6 +2,7 @@
 
 namespace App\Support\Images;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use RuntimeException;
 
@@ -48,5 +49,10 @@ final class UploadedImageOptimizer
         }
 
         return $contents;
+    }
+
+    public function storeWebp(UploadedFile $file, FilesystemAdapter $disk, string $path): bool
+    {
+        return $disk->put($path, $this->encodeWebp($file));
     }
 }

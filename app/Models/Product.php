@@ -72,7 +72,7 @@ class Product extends Model
     protected function imageUrl(): Attribute
     {
         return Attribute::make(
-            get: fn (): ?string => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+            get: fn (): ?string => $this->image_path ? Storage::disk(config('filesystems.media_disk'))->url($this->image_path) : null,
         );
     }
 

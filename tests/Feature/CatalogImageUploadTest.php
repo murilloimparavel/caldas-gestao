@@ -65,6 +65,24 @@ it('uploads image successfully when creating a service and a product', function 
     Storage::disk('public')->assertExists($product->image_path);
 });
 
+it('stores service images on the configured media disk', function () {
+    config(['filesystems.media_disk' => 's3']);
+    Storage::fake('s3');
+    [$owner, $tenant] = catalogImageWorkspace();
+
+    $this->actingAs($owner)->post(route('services.store'), [
+        'name' => 'Serviço no MinIO',
+        'duration_minutes' => 30,
+        'price_cents' => 5000,
+        'image' => UploadedFile::fake()->image('service.png', 400, 400),
+    ])->assertRedirect();
+
+    $service = Service::query()->where('name', 'Serviço no MinIO')->firstOrFail();
+    expect($service->image_path)->toEndWith('.webp')
+        ->and($service->image_url)->toBe(Storage::disk('s3')->url($service->image_path));
+    Storage::disk('s3')->assertExists($service->image_path);
+});
+
 it('replaces photo on update and deletes old photo from storage', function () {
     [$owner, $tenant] = catalogImageWorkspace();
 

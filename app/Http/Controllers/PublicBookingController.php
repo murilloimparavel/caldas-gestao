@@ -47,7 +47,7 @@ final class PublicBookingController extends Controller
                 'public_hours' => $unit->onlineBookingSetting?->public_hours,
                 'minimum_notice_minutes' => $unit->onlineBookingSetting instanceof OnlineBookingSetting ? ($unit->onlineBookingSetting->minimum_notice_minutes ?? 0) : 0,
                 'contacts' => ['whatsapp' => $unit->onlineBookingSetting?->whatsapp_phone, 'phone' => $unit->onlineBookingSetting?->phone, 'instagram_url' => $unit->onlineBookingSetting?->instagram_url, 'facebook_url' => $unit->onlineBookingSetting?->facebook_url, 'website_url' => $unit->onlineBookingSetting?->website_url],
-                'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => Storage::disk('public')->url($image->path), 'alt_text' => $image->alt_text])->values()->all(),
+                'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => Storage::disk(config('filesystems.media_disk'))->url($image->path), 'alt_text' => $image->alt_text])->values()->all(),
             ],
             ...$catalog,
         ];

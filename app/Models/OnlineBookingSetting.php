@@ -31,7 +31,7 @@ class OnlineBookingSetting extends Model
     {
         return Attribute::make(
             get: fn (): ?string => $this->cover_image_path
-                ? Storage::disk('public')->url($this->cover_image_path)
+                ? Storage::disk(config('filesystems.media_disk'))->url($this->cover_image_path)
                 : null,
         );
     }

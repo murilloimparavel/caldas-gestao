@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\Images\UploadedImageOptimizer;
 use App\Support\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -30,15 +31,9 @@ final class CreateProfessional extends OperationalAction
             $professionalId = (string) Str::uuid7();
             $avatarPath = null;
             if ($avatarFile instanceof UploadedFile) {
-                $hash = Str::random(40);
-                $ext = $avatarFile->guessExtension() ?: $avatarFile->getClientOriginalExtension();
-                $diskName = 'public';
-                $storedPath = Storage::disk($diskName)->putFileAs(
-                    "{$context->tenant->getKey()}/professionals/{$professionalId}",
-                    $avatarFile,
-                    "{$hash}.{$ext}"
-                );
-                $avatarPath = $storedPath !== false ? $storedPath : null;
+                $path = "{$context->tenant->getKey()}/professionals/{$professionalId}/".Str::random(40).'.webp';
+                $stored = app(UploadedImageOptimizer::class)->storeWebp($avatarFile, Storage::disk((string) config('filesystems.media_disk')), $path);
+                $avatarPath = $stored ? $path : null;
             }
 
             $professional = new Professional;

@@ -13,6 +13,7 @@ use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Unit;
+use App\Support\Images\UploadedImageOptimizer;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -70,12 +71,13 @@ final class OnlineBookingSettingsController extends Controller
         abort_unless($setting instanceof OnlineBookingSetting, 422, 'Salve as configurações do agendamento antes de enviar a capa.');
 
         $image = $request->file('image');
-        $path = $image->store('online-booking/'.$context->unit->getKey().'/cover', 'public');
+        $path = 'online-booking/'.$context->unit->getKey().'/cover/'.Str::random(40).'.webp';
+        app(UploadedImageOptimizer::class)->storeWebp($image, Storage::disk((string) config('filesystems.media_disk')), $path);
         $oldPath = $setting->cover_image_path;
         $setting->forceFill(['cover_image_path' => $path])->save();
 
         if ($oldPath !== null) {
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk(config('filesystems.media_disk'))->delete($oldPath);
         }
 
         return response()->json(['cover' => $setting->fresh()->cover_image_url]);
@@ -90,7 +92,7 @@ final class OnlineBookingSettingsController extends Controller
             return response()->json(['cover' => null]);
         }
 
-        Storage::disk('public')->delete($setting->cover_image_path);
+        Storage::disk(config('filesystems.media_disk'))->delete($setting->cover_image_path);
         $setting->forceFill(['cover_image_path' => null])->save();
 
         return response()->json(['cover' => null]);
@@ -111,7 +113,8 @@ final class OnlineBookingSettingsController extends Controller
     public function storeGallery(OnlineBookingGalleryStoreRequest $request, TenantContext $context): JsonResponse
     {
         $image = $request->file('image');
-        $path = $image->store('online-booking/'.$context->unit->getKey(), 'public');
+        $path = 'online-booking/'.$context->unit->getKey().'/'.Str::random(40).'.webp';
+        app(UploadedImageOptimizer::class)->storeWebp($image, Storage::disk((string) config('filesystems.media_disk')), $path);
         $gallery = $context->unit->onlineBookingGalleryImages()->create([
             'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'path' => $path,
             'alt_text' => $request->validated('alt_text'), 'position' => (int) $context->unit->onlineBookingGalleryImages()->max('position') + 1,
@@ -132,7 +135,7 @@ final class OnlineBookingSettingsController extends Controller
     {
         Gate::authorize('update', $context->unit);
         $gallery = $this->galleryImage($context, $image);
-        Storage::disk('public')->delete($gallery->path);
+        Storage::disk(config('filesystems.media_disk'))->delete($gallery->path);
         $gallery->delete();
 
         return response()->json(['deleted' => true]);

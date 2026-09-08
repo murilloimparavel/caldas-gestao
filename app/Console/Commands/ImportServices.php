@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\Services\CreateService;
+use App\Actions\Services\UpdateService;
 use App\Models\Category;
 use App\Models\Professional;
 use App\Models\Service;
@@ -20,12 +21,13 @@ use RuntimeException;
     {--tenant-email= : Owner email used to resolve the destination tenant}
     {--unit-id= : Explicit destination unit UUID}
     {--dry-run : Validate and report without creating services}
+    {--refresh-images : Replace missing or existing service images from the export}
     {--report= : Optional JSON report output path}')]
 #[Description('Import services from a sanitized JSON export into a tenant')]
 final class ImportServices extends Command
 {
     /** @var array<string, int> */
-    private array $summary = ['created' => 0, 'skipped' => 0, 'pending' => 0];
+    private array $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'pending' => 0];
 
     /** @var array<string, true> */
     private array $seenNames = [];
@@ -33,7 +35,7 @@ final class ImportServices extends Command
     /** @var list<array<string, mixed>> */
     private array $report = [];
 
-    public function handle(CreateService $createService): int
+    public function handle(CreateService $createService, UpdateService $updateService): int
     {
         $payload = $this->readPayload((string) $this->argument('file'));
         $email = trim((string) $this->option('tenant-email'));
@@ -52,12 +54,13 @@ final class ImportServices extends Command
         }
 
         foreach ($payload['services'] as $index => $source) {
-            $this->importOne($source, $actor, $context, $createService, $index + 1);
+            $this->importOne($source, $actor, $context, $createService, $updateService, $index + 1);
         }
 
         $this->components->info(sprintf(
-            'Services: %d created, %d skipped, %d pending relation(s).',
+            'Services: %d created, %d updated, %d skipped, %d pending relation(s).',
             $this->summary['created'],
+            $this->summary['updated'],
             $this->summary['skipped'],
             $this->summary['pending'],
         ));
@@ -93,7 +96,7 @@ final class ImportServices extends Command
     }
 
     /** @param array<string, mixed> $source */
-    private function importOne(array $source, User $actor, TenantContext $context, CreateService $createService, int $position): void
+    private function importOne(array $source, User $actor, TenantContext $context, CreateService $createService, UpdateService $updateService, int $position): void
     {
         $name = trim((string) ($source['name'] ?? ''));
         if ($name === '') {
@@ -114,12 +117,25 @@ final class ImportServices extends Command
         }
         $this->seenNames[$normalizedName] = true;
 
-        $existing = Service::query()
+        $existingService = Service::query()
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit->getKey())
             ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
-            ->exists();
-        if ($existing) {
+            ->first();
+        if ($existingService instanceof Service) {
+            if ($this->option('refresh-images') && ! $this->option('dry-run')) {
+                $existingImage = $source['image_path'] ?? null;
+                if (is_string($existingImage) && is_file($existingImage) && is_readable($existingImage)) {
+                    $updateService->handle($actor, $context, $existingService, [
+                        'image' => new UploadedFile($existingImage, basename($existingImage), mime_content_type($existingImage) ?: null, null, true),
+                        'lock_version' => $existingService->lock_version,
+                    ]);
+                    $this->summary['updated'] = ($this->summary['updated'] ?? 0) + 1;
+                    $this->report[] = ['name' => $name, 'status' => 'image_updated'];
+
+                    return;
+                }
+            }
             $this->line("Skipped existing service: {$name}");
             $this->summary['skipped']++;
             $this->report[] = ['name' => $name, 'status' => 'skipped', 'reason' => 'already_exists'];

@@ -42,7 +42,7 @@ final class CreateService extends OperationalAction
             $imagePath = null;
             if ($imageFile instanceof UploadedFile) {
                 $hash = Str::random(40);
-                $diskName = 'public';
+                $diskName = (string) config('filesystems.media_disk');
                 $path = "{$context->tenant->getKey()}/services/{$serviceId}/{$hash}.webp";
                 $stored = Storage::disk($diskName)->put(
                     $path,

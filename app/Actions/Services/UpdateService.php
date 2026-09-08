@@ -55,7 +55,7 @@ final class UpdateService extends OperationalAction
             }
 
             if ($hasImageKey) {
-                $diskName = 'public';
+                $diskName = (string) config('filesystems.media_disk');
                 if ($imageFile instanceof UploadedFile) {
                     if ($locked->image_path) {
                         Storage::disk($diskName)->delete($locked->image_path);
