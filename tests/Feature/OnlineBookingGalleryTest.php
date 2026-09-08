@@ -4,6 +4,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('allows an authorized owner to manage the public gallery', function () {
+    config(['filesystems.media_disk' => 'public']);
     [$owner, $tenant, $unit] = onlineBookingWorkspace();
     Storage::fake('public');
 

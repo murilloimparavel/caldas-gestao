@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
+    config(['filesystems.media_disk' => 'public']);
     Storage::fake('public');
 });
 
