@@ -49,7 +49,7 @@ type Service = {
     id: string;
     lock_version: number;
     name: string;
-    photo_url?: string | null;
+    image_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: ResourceStatus;
@@ -118,7 +118,7 @@ export default function ServiceShow({
         [],
     );
     const [selectedPhoto, setSelectedPhoto] = useState<File | string | null>(
-        service.photo_url ?? null,
+        service.image_url ?? null,
     );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
@@ -350,12 +350,15 @@ export default function ServiceShow({
                             <h2 className="text-base font-semibold">
                                 Resumo operacional
                             </h2>
-                            {service.photo_url ? (
+                            {service.image_url ? (
                                 <div className="mt-4 overflow-hidden rounded-xl border border-border">
                                     <img
-                                        src={service.photo_url}
+                                        src={service.image_url}
                                         alt={service.name}
                                         className="h-40 w-full object-cover"
+                                        onError={(event) => {
+                                            event.currentTarget.parentElement?.remove();
+                                        }}
                                     />
                                 </div>
                             ) : null}

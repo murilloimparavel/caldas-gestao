@@ -48,7 +48,7 @@ type Service = {
     duration_minutes: number;
     id: string;
     name: string;
-    photo_url?: string | null;
+    image_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: 'active' | 'inactive';
@@ -362,11 +362,14 @@ export default function ServicesIndex({
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
-                                        {service.photo_url ? (
+                                        {service.image_url ? (
                                             <img
-                                                src={service.photo_url}
+                                                src={service.image_url}
                                                 alt={service.name}
                                                 className="size-11 shrink-0 rounded-2xl border border-border object-cover"
+                                                onError={(event) => {
+                                                    event.currentTarget.hidden = true;
+                                                }}
                                             />
                                         ) : (
                                             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
