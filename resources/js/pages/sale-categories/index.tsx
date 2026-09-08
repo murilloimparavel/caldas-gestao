@@ -1,5 +1,13 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
-import { Layers, Plus, Receipt, ShieldAlert, Tag } from 'lucide-react';
+import {
+    ChevronDown,
+    HelpCircle,
+    Layers,
+    Plus,
+    Receipt,
+    ShieldAlert,
+    Tag,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -24,6 +32,17 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import saleCategories from '@/routes/sale-categories';
 import type { SharedPageProps } from '@/types';
 
@@ -64,6 +83,7 @@ export default function SaleCategoriesIndex({
     filters,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const [advancedOpen, setAdvancedOpen] = useState(false);
     const [createKey] = useState(() =>
         createIdempotencyKey('sale-category-create'),
     );
@@ -109,132 +129,221 @@ export default function SaleCategoriesIndex({
                                             Loja, Bar, Restaurante).
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <Form
-                                        {...saleCategories.store.form()}
-                                        headers={{
-                                            'X-Idempotency-Key': createKey,
-                                        }}
-                                        resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
-                                        className="space-y-5"
-                                    >
-                                        {({ errors, processing }) => (
-                                            <>
-                                                <FormErrorSummary
-                                                    errors={errors}
-                                                />
-                                                <div className="grid gap-4 sm:grid-cols-2">
-                                                    <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Nome da categoria"
-                                                            name="name"
-                                                            error={errors.name}
-                                                        >
-                                                            <Input
-                                                                id="name"
+                                    <TooltipProvider>
+                                        <Form
+                                            {...saleCategories.store.form()}
+                                            headers={{
+                                                'X-Idempotency-Key': createKey,
+                                            }}
+                                            resetOnSuccess
+                                            onSuccess={() =>
+                                                setCreateOpen(false)
+                                            }
+                                            className="space-y-5"
+                                        >
+                                            {({ errors, processing }) => (
+                                                <>
+                                                    <FormErrorSummary
+                                                        errors={errors}
+                                                    />
+                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                        <div className="sm:col-span-2">
+                                                            <FormField
+                                                                label="Nome da categoria"
                                                                 name="name"
-                                                                required
-                                                                autoFocus
-                                                                placeholder="Ex.: Barbearia, Loja, Restaurante, Bar"
-                                                            />
-                                                        </FormField>
-                                                    </div>
-                                                    <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Chave estável (opcional)"
-                                                            name="key"
-                                                            error={errors.key}
-                                                        >
-                                                            <Input
-                                                                id="key"
-                                                                name="key"
-                                                                placeholder="Ex.: barbearia, loja, bar (deixe em branco para autogerar)"
-                                                            />
-                                                        </FormField>
-                                                    </div>
-                                                    <div className="sm:col-span-1">
-                                                        <FormField
-                                                            label="Tipo de itens permitidos"
-                                                            name="type"
-                                                            error={errors.type}
-                                                        >
-                                                            <select
-                                                                id="type"
-                                                                name="type"
-                                                                defaultValue="service"
-                                                                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                                error={
+                                                                    errors.name
+                                                                }
                                                             >
-                                                                <option value="service">
-                                                                    Apenas
-                                                                    Serviços
-                                                                </option>
-                                                                <option value="product">
-                                                                    Apenas
-                                                                    Produtos
-                                                                </option>
-                                                                <option value="mixed">
-                                                                    Misto
-                                                                    (Serviços e
-                                                                    Produtos)
-                                                                </option>
-                                                            </select>
-                                                        </FormField>
-                                                    </div>
-                                                    <div className="sm:col-span-1">
-                                                        <FormField
-                                                            label="Escopo de unicidade"
-                                                            name="uniqueness_scope"
-                                                            error={
-                                                                errors.uniqueness_scope
+                                                                <Input
+                                                                    id="name"
+                                                                    name="name"
+                                                                    required
+                                                                    autoFocus
+                                                                    placeholder="Ex.: Barbearia, Loja, Restaurante, Bar"
+                                                                />
+                                                            </FormField>
+                                                        </div>
+                                                        <Collapsible
+                                                            open={advancedOpen}
+                                                            onOpenChange={
+                                                                setAdvancedOpen
                                                             }
+                                                            className="rounded-lg border border-border/60 bg-muted/20 p-3 sm:col-span-2"
                                                         >
-                                                            <select
-                                                                id="uniqueness_scope"
-                                                                name="uniqueness_scope"
-                                                                defaultValue="none"
-                                                                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                            <CollapsibleTrigger
+                                                                asChild
                                                             >
-                                                                <option value="none">
-                                                                    Sem limite
-                                                                    (múltiplas
-                                                                    abertas)
-                                                                </option>
-                                                                <option value="customer">
-                                                                    Por Cliente
-                                                                    (1 ativa por
-                                                                    cliente)
-                                                                </option>
-                                                                <option value="appointment">
-                                                                    Por
-                                                                    Agendamento
-                                                                    (1 ativa por
-                                                                    agenda)
-                                                                </option>
-                                                                <option value="reference">
-                                                                    Por
-                                                                    Referência
-                                                                    (1 ativa por
-                                                                    mesa/pedido)
-                                                                </option>
-                                                            </select>
-                                                        </FormField>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    className="h-auto w-full justify-between px-1 py-1 text-sm font-medium"
+                                                                >
+                                                                    Opções
+                                                                    avançadas
+                                                                    <ChevronDown
+                                                                        className={`size-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                                                                    />
+                                                                </Button>
+                                                            </CollapsibleTrigger>
+                                                            <CollapsibleContent className="pt-3">
+                                                                <FormField
+                                                                    label="Identificador interno"
+                                                                    name="key"
+                                                                    description={
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger
+                                                                                asChild
+                                                                            >
+                                                                                <button
+                                                                                    type="button"
+                                                                                    aria-label="Ajuda sobre identificador interno"
+                                                                                    className="ml-1 inline-flex align-middle text-muted-foreground hover:text-foreground"
+                                                                                >
+                                                                                    <HelpCircle className="size-3.5" />
+                                                                                </button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                Usado
+                                                                                internamente
+                                                                                para
+                                                                                integrações.
+                                                                                Se
+                                                                                ficar
+                                                                                vazio,
+                                                                                será
+                                                                                gerado
+                                                                                automaticamente.
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    }
+                                                                    error={
+                                                                        errors.key
+                                                                    }
+                                                                >
+                                                                    <Input
+                                                                        id="key"
+                                                                        name="key"
+                                                                        placeholder="Gerado automaticamente se ficar vazio"
+                                                                    />
+                                                                </FormField>
+                                                            </CollapsibleContent>
+                                                        </Collapsible>
+                                                        <div className="sm:col-span-1">
+                                                            <FormField
+                                                                label="O que pode ser adicionado?"
+                                                                name="type"
+                                                                error={
+                                                                    errors.type
+                                                                }
+                                                            >
+                                                                <select
+                                                                    id="type"
+                                                                    name="type"
+                                                                    defaultValue="service"
+                                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                                >
+                                                                    <option value="service">
+                                                                        Apenas
+                                                                        Serviços
+                                                                    </option>
+                                                                    <option value="product">
+                                                                        Apenas
+                                                                        Produtos
+                                                                    </option>
+                                                                    <option value="mixed">
+                                                                        Misto
+                                                                        (Serviços
+                                                                        e
+                                                                        Produtos)
+                                                                    </option>
+                                                                </select>
+                                                            </FormField>
+                                                        </div>
+                                                        <div className="sm:col-span-1">
+                                                            <FormField
+                                                                label="Regra para comandas abertas"
+                                                                name="uniqueness_scope"
+                                                                description={
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger
+                                                                            asChild
+                                                                        >
+                                                                            <button
+                                                                                type="button"
+                                                                                aria-label="Ajuda sobre regra para comandas abertas"
+                                                                                className="ml-1 inline-flex align-middle text-muted-foreground hover:text-foreground"
+                                                                            >
+                                                                                <HelpCircle className="size-3.5" />
+                                                                            </button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            Define
+                                                                            se
+                                                                            essa
+                                                                            categoria
+                                                                            pode
+                                                                            aparecer
+                                                                            em
+                                                                            várias
+                                                                            comandas
+                                                                            abertas
+                                                                            ao
+                                                                            mesmo
+                                                                            tempo.
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                }
+                                                                error={
+                                                                    errors.uniqueness_scope
+                                                                }
+                                                            >
+                                                                <select
+                                                                    id="uniqueness_scope"
+                                                                    name="uniqueness_scope"
+                                                                    defaultValue="none"
+                                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                                >
+                                                                    <option value="none">
+                                                                        Pode
+                                                                        aparecer
+                                                                        em
+                                                                        várias
+                                                                        comandas
+                                                                    </option>
+                                                                    <option value="customer">
+                                                                        Uma por
+                                                                        cliente
+                                                                    </option>
+                                                                    <option value="appointment">
+                                                                        Uma por
+                                                                        agendamento
+                                                                    </option>
+                                                                    <option value="reference">
+                                                                        Uma por
+                                                                        referência
+                                                                        (mesa/pedido)
+                                                                    </option>
+                                                                </select>
+                                                            </FormField>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <input
-                                                    type="hidden"
-                                                    name="is_active"
-                                                    value="1"
-                                                />
-                                                <FormActions
-                                                    processing={processing}
-                                                    onCancel={() =>
-                                                        setCreateOpen(false)
-                                                    }
-                                                    label="Cadastrar categoria"
-                                                />
-                                            </>
-                                        )}
-                                    </Form>
+                                                    <input
+                                                        type="hidden"
+                                                        name="is_active"
+                                                        value="1"
+                                                    />
+                                                    <FormActions
+                                                        processing={processing}
+                                                        onCancel={() =>
+                                                            setCreateOpen(false)
+                                                        }
+                                                        label="Cadastrar categoria"
+                                                    />
+                                                </>
+                                            )}
+                                        </Form>
+                                    </TooltipProvider>
                                 </DialogContent>
                             </Dialog>
                         ) : null
