@@ -139,8 +139,9 @@ function AvailabilityEditor({
                     {day.name}
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Adicione intervalos separados para almoço, pausas ou jornadas
-                    divididas. Sem intervalos ativos, o dia fica como folga.
+                    Adicione intervalos separados para almoço, pausas ou
+                    jornadas divididas. Sem intervalos ativos, o dia fica como
+                    folga.
                 </p>
             </div>
 
@@ -156,26 +157,95 @@ function AvailabilityEditor({
                         <>
                             <FormErrorSummary errors={errors} />
                             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                                <FormField label="Início" name="starts_at" error={errors.starts_at}>
-                                    <Input name="starts_at" type="time" defaultValue={rule.starts_at.slice(0, 5)} required disabled={!canConfigure} />
+                                <FormField
+                                    label="Início"
+                                    name="starts_at"
+                                    error={errors.starts_at}
+                                >
+                                    <Input
+                                        name="starts_at"
+                                        type="time"
+                                        defaultValue={rule.starts_at.slice(
+                                            0,
+                                            5,
+                                        )}
+                                        required
+                                        disabled={!canConfigure}
+                                    />
                                 </FormField>
-                                <FormField label="Fim" name="ends_at" error={errors.ends_at}>
-                                    <Input name="ends_at" type="time" defaultValue={rule.ends_at.slice(0, 5)} required disabled={!canConfigure} />
+                                <FormField
+                                    label="Fim"
+                                    name="ends_at"
+                                    error={errors.ends_at}
+                                >
+                                    <Input
+                                        name="ends_at"
+                                        type="time"
+                                        defaultValue={rule.ends_at.slice(0, 5)}
+                                        required
+                                        disabled={!canConfigure}
+                                    />
                                 </FormField>
                                 <div className="flex gap-2 sm:pb-0.5">
-                                    <input type="hidden" name="professional_id" value={professional.id} />
-                                    <input type="hidden" name="weekday" value={day.day} />
-                                    <input type="hidden" name="timezone" value={timezone} />
-                                    <input type="hidden" name="status" value="active" />
-                                    <input type="hidden" name="lock_version" value={rule.lock_version} />
-                                    <Button type="submit" size="icon" aria-label={`Salvar intervalo de ${day.name}`} disabled={!canConfigure || processing}>
+                                    <input
+                                        type="hidden"
+                                        name="professional_id"
+                                        value={professional.id}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="weekday"
+                                        value={day.day}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="timezone"
+                                        value={timezone}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="status"
+                                        value="active"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="lock_version"
+                                        value={rule.lock_version}
+                                    />
+                                    <Button
+                                        type="submit"
+                                        size="icon"
+                                        aria-label={`Salvar intervalo de ${day.name}`}
+                                        disabled={!canConfigure || processing}
+                                    >
                                         <Check aria-hidden="true" />
                                     </Button>
-                                    <Form {...destroyAvailabilityRule.form(rule.id)} headers={{ 'X-Idempotency-Key': mutationKey }} onSuccess={goBackToProfessional}>
+                                    <Form
+                                        {...destroyAvailabilityRule.form(
+                                            rule.id,
+                                        )}
+                                        headers={{
+                                            'X-Idempotency-Key': mutationKey,
+                                        }}
+                                        onSuccess={goBackToProfessional}
+                                    >
                                         {({ processing: deleting }) => (
                                             <>
-                                                <input type="hidden" name="lock_version" value={rule.lock_version} />
-                                                <Button type="submit" size="icon" variant="outline" aria-label={`Remover intervalo de ${day.name}`} disabled={!canConfigure || deleting}>
+                                                <input
+                                                    type="hidden"
+                                                    name="lock_version"
+                                                    value={rule.lock_version}
+                                                />
+                                                <Button
+                                                    type="submit"
+                                                    size="icon"
+                                                    variant="outline"
+                                                    aria-label={`Remover intervalo de ${day.name}`}
+                                                    disabled={
+                                                        !canConfigure ||
+                                                        deleting
+                                                    }
+                                                >
                                                     <Trash2 aria-hidden="true" />
                                                 </Button>
                                             </>
@@ -198,21 +268,66 @@ function AvailabilityEditor({
                 >
                     {({ errors, processing }) => (
                         <>
-                            {index === 0 ? <p className="mb-3 text-xs font-semibold text-primary">Novo intervalo</p> : null}
+                            {index === 0 ? (
+                                <p className="mb-3 text-xs font-semibold text-primary">
+                                    Novo intervalo
+                                </p>
+                            ) : null}
                             <FormErrorSummary errors={errors} />
                             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                                <FormField label="Início" name="starts_at" error={errors.starts_at}>
-                                    <Input name="starts_at" type="time" defaultValue="09:00" required disabled={!canConfigure} />
+                                <FormField
+                                    label="Início"
+                                    name="starts_at"
+                                    error={errors.starts_at}
+                                >
+                                    <Input
+                                        name="starts_at"
+                                        type="time"
+                                        defaultValue="09:00"
+                                        required
+                                        disabled={!canConfigure}
+                                    />
                                 </FormField>
-                                <FormField label="Fim" name="ends_at" error={errors.ends_at}>
-                                    <Input name="ends_at" type="time" defaultValue="18:00" required disabled={!canConfigure} />
+                                <FormField
+                                    label="Fim"
+                                    name="ends_at"
+                                    error={errors.ends_at}
+                                >
+                                    <Input
+                                        name="ends_at"
+                                        type="time"
+                                        defaultValue="18:00"
+                                        required
+                                        disabled={!canConfigure}
+                                    />
                                 </FormField>
                                 <div className="sm:pb-0.5">
-                                    <input type="hidden" name="professional_id" value={professional.id} />
-                                    <input type="hidden" name="weekday" value={day.day} />
-                                    <input type="hidden" name="timezone" value={timezone} />
-                                    <input type="hidden" name="status" value="active" />
-                                    <Button type="submit" size="icon" aria-label={`Criar intervalo de ${day.name}`} disabled={!canConfigure || processing}>
+                                    <input
+                                        type="hidden"
+                                        name="professional_id"
+                                        value={professional.id}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="weekday"
+                                        value={day.day}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="timezone"
+                                        value={timezone}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="status"
+                                        value="active"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        size="icon"
+                                        aria-label={`Criar intervalo de ${day.name}`}
+                                        disabled={!canConfigure || processing}
+                                    >
                                         <Check aria-hidden="true" />
                                     </Button>
                                 </div>
@@ -223,12 +338,19 @@ function AvailabilityEditor({
             ))}
 
             {canConfigure ? (
-                <Button type="button" variant="outline" className="w-full" onClick={() => setDraftCount((count) => count + 1)}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setDraftCount((count) => count + 1)}
+                >
                     <Plus aria-hidden="true" /> Adicionar outro intervalo
                 </Button>
             ) : null}
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={onClose}>Fechar</Button>
+                <Button type="button" variant="ghost" onClick={onClose}>
+                    Fechar
+                </Button>
             </DialogFooter>
         </div>
     );
@@ -269,9 +391,8 @@ export default function ProfessionalShow({
     >(null);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
-    const canConfigureCalendar = props.auth.permissions.includes(
-        'calendar.configure',
-    );
+    const canConfigureCalendar =
+        props.auth.permissions.includes('calendar.configure');
     const availabilityRules =
         professional.availability_rules ?? professional.availabilityRules ?? [];
     const activeAvailabilityRules = availabilityRules.filter(
@@ -284,12 +405,15 @@ export default function ProfessionalShow({
         'UTC';
     const weeklySummary = useMemo(() => {
         const totalMinutes = activeAvailabilityRules.reduce(
-            (total, rule) => total + minutesBetween(rule.starts_at, rule.ends_at),
+            (total, rule) =>
+                total + minutesBetween(rule.starts_at, rule.ends_at),
             0,
         );
 
         return {
-            activeDays: new Set(activeAvailabilityRules.map((rule) => rule.weekday)).size,
+            activeDays: new Set(
+                activeAvailabilityRules.map((rule) => rule.weekday),
+            ).size,
             hours: Math.floor(totalMinutes / 60),
             minutes: totalMinutes % 60,
         };
@@ -511,29 +635,49 @@ export default function ProfessionalShow({
                                         Jornada de trabalho e disponibilidade
                                     </h2>
                                     <p className="text-sm text-muted-foreground">
-                                        Horários semanais de atendimento configurados para este profissional.
+                                        Horários semanais de atendimento
+                                        configurados para este profissional.
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 sm:min-w-48">
                                     <div className="rounded-lg bg-primary/10 px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Dias ativos</p>
-                                        <p className="mt-1 text-lg font-semibold">{weeklySummary.activeDays}<span className="ml-1 text-xs font-normal text-muted-foreground">/ 7</span></p>
+                                        <p className="text-[10px] font-semibold tracking-wide text-primary uppercase">
+                                            Dias ativos
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {weeklySummary.activeDays}
+                                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                                / 7
+                                            </span>
+                                        </p>
                                     </div>
                                     <div className="rounded-lg bg-emerald-500/10 px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Horas/semana</p>
-                                        <p className="mt-1 text-lg font-semibold">{weeklySummary.hours}h{weeklySummary.minutes ? ` ${weeklySummary.minutes}m` : ''}</p>
+                                        <p className="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
+                                            Horas/semana
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {weeklySummary.hours}h
+                                            {weeklySummary.minutes
+                                                ? ` ${weeklySummary.minutes}m`
+                                                : ''}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
 
                             {!canConfigureCalendar ? (
                                 <p className="mb-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                                    Consulta liberada. A edição exige a permissão calendar.configure.
+                                    Consulta liberada. A edição exige a
+                                    permissão calendar.configure.
                                 </p>
                             ) : null}
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {weekdays.map((weekday) => {
-                                    const dayRules = activeAvailabilityRules.filter((rule) => rule.weekday === weekday.day);
+                                    const dayRules =
+                                        activeAvailabilityRules.filter(
+                                            (rule) =>
+                                                rule.weekday === weekday.day,
+                                        );
                                     const canEdit = canConfigureCalendar;
 
                                     return (
@@ -541,22 +685,54 @@ export default function ProfessionalShow({
                                             key={weekday.day}
                                             type="button"
                                             className={`group min-h-28 rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-sm focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 ${dayRules.length > 0 ? 'border-border bg-card' : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'}`}
-                                            onClick={() => setAvailabilityDay(weekday)}
+                                            onClick={() =>
+                                                setAvailabilityDay(weekday)
+                                            }
                                             aria-label={`${canEdit ? 'Editar' : 'Consultar'} disponibilidade de ${weekday.name}`}
                                         >
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="text-xs font-semibold">{weekday.short} – {weekday.name}</span>
-                                                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${dayRules.length > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}>
-                                                    {dayRules.length > 0 ? 'Ativo' : 'Folga'}
+                                                <span className="text-xs font-semibold">
+                                                    {weekday.short} –{' '}
+                                                    {weekday.name}
+                                                </span>
+                                                <span
+                                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${dayRules.length > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}
+                                                >
+                                                    {dayRules.length > 0
+                                                        ? 'Ativo'
+                                                        : 'Folga'}
                                                 </span>
                                             </div>
                                             <div className="mt-3 space-y-1">
-                                                {dayRules.length > 0 ? dayRules.map((rule) => (
-                                                    <p key={rule.id} className="text-xs font-medium text-foreground">{rule.starts_at.slice(0, 5)} – {rule.ends_at.slice(0, 5)}</p>
-                                                )) : <p className="text-xs italic">Sem atendimento</p>}
+                                                {dayRules.length > 0 ? (
+                                                    dayRules.map((rule) => (
+                                                        <p
+                                                            key={rule.id}
+                                                            className="text-xs font-medium text-foreground"
+                                                        >
+                                                            {rule.starts_at.slice(
+                                                                0,
+                                                                5,
+                                                            )}{' '}
+                                                            –{' '}
+                                                            {rule.ends_at.slice(
+                                                                0,
+                                                                5,
+                                                            )}
+                                                        </p>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-xs italic">
+                                                        Sem atendimento
+                                                    </p>
+                                                )}
                                             </div>
                                             <p className="mt-3 text-[10px] font-medium text-muted-foreground group-hover:text-primary">
-                                                {canEdit ? (dayRules.length > 0 ? 'Editar horários' : 'Adicionar horário') : 'Somente consulta'}
+                                                {canEdit
+                                                    ? dayRules.length > 0
+                                                        ? 'Editar horários'
+                                                        : 'Adicionar horário'
+                                                    : 'Somente consulta'}
                                             </p>
                                         </button>
                                     );
@@ -574,9 +750,13 @@ export default function ProfessionalShow({
                         >
                             <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6">
                                 <DialogHeader>
-                                    <DialogTitle>Disponibilidade semanal</DialogTitle>
+                                    <DialogTitle>
+                                        Disponibilidade semanal
+                                    </DialogTitle>
                                     <DialogDescription>
-                                        Edite os intervalos de atendimento ou adicione uma nova jornada para o dia selecionado.
+                                        Edite os intervalos de atendimento ou
+                                        adicione uma nova jornada para o dia
+                                        selecionado.
                                     </DialogDescription>
                                 </DialogHeader>
                                 {availabilityDay ? (
@@ -585,7 +765,11 @@ export default function ProfessionalShow({
                                         day={availabilityDay}
                                         onClose={() => setAvailabilityDay(null)}
                                         professional={professional}
-                                        rules={activeAvailabilityRules.filter((rule) => rule.weekday === availabilityDay.day)}
+                                        rules={activeAvailabilityRules.filter(
+                                            (rule) =>
+                                                rule.weekday ===
+                                                availabilityDay.day,
+                                        )}
                                         timezone={timezone}
                                     />
                                 ) : null}
