@@ -176,6 +176,7 @@ final class PublicBookingController extends Controller
     /** @return array{services: array<int, array<string, mixed>>, professionals: array<int, array<string, mixed>>} */
     private function catalog(Tenant $tenant, Unit $unit): array
     {
+        /** @var list<array<string, mixed>> $services */
         $services = Service::query()
             ->whereBelongsTo($tenant)
             ->whereBelongsTo($unit)
@@ -192,6 +193,7 @@ final class PublicBookingController extends Controller
                 'thumbnail_url' => $service->thumbnail_url,
                 'professionals' => $service->professionals->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all(),
             ])->values()->all();
+        /** @var list<array<string, mixed>> $professionals */
         $professionals = Professional::query()
             ->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)
             ->whereHas('services', fn ($query) => $query->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())->where('services.status', 'active')->where('services.online_booking_enabled', true))

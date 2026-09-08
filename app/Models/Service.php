@@ -54,6 +54,7 @@ class Service extends Model
         );
     }
 
+    /** @return Attribute<string|null, never> */
     protected function thumbnailUrl(): Attribute
     {
         return Attribute::make(get: fn (): ?string => MediaUrl::for($this->thumbnail_path));
