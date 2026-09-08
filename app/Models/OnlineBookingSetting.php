@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Images\MediaUrl;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -9,7 +10,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['tenant_id', 'unit_id', 'public_slug', 'description', 'cover_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
 class OnlineBookingSetting extends Model
@@ -31,7 +31,7 @@ class OnlineBookingSetting extends Model
     {
         return Attribute::make(
             get: fn (): ?string => $this->cover_image_path
-                ? Storage::disk(config('filesystems.media_disk'))->url($this->cover_image_path)
+                ? MediaUrl::for($this->cover_image_path)
                 : null,
         );
     }

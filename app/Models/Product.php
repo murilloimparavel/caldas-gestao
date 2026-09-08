@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Policies\ProductPolicy;
+use App\Support\Images\MediaUrl;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property string $id
@@ -72,7 +72,7 @@ class Product extends Model
     protected function imageUrl(): Attribute
     {
         return Attribute::make(
-            get: fn (): ?string => $this->image_path ? Storage::disk(config('filesystems.media_disk'))->url($this->image_path) : null,
+            get: fn (): ?string => MediaUrl::for($this->image_path),
         );
     }
 

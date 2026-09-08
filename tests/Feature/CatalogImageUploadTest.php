@@ -80,7 +80,8 @@ it('stores service images on the configured media disk', function () {
 
     $service = Service::query()->where('name', 'Serviço no MinIO')->firstOrFail();
     expect($service->image_path)->toEndWith('.webp')
-        ->and($service->image_url)->toBe(Storage::disk('s3')->url($service->image_path));
+        ->and($service->image_url)->toContain($service->image_path)
+        ->and($service->image_url)->toContain('expiration=');
     Storage::disk('s3')->assertExists($service->image_path);
 });
 

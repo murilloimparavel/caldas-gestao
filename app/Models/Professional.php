@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Policies\ProfessionalPolicy;
+use App\Support\Images\MediaUrl;
 use Database\Factories\ProfessionalFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
@@ -14,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Support\Facades\Storage;
 
 /** @property int $lock_version */
 #[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'avatar_path', 'status', 'online_booking_enabled'])]
@@ -35,7 +35,7 @@ class Professional extends Model
     {
         return Attribute::make(
             get: fn (): ?string => $this->avatar_path
-            ? Storage::disk(config('filesystems.media_disk'))->url($this->avatar_path)
+            ? MediaUrl::for($this->avatar_path)
                 : null,
         );
     }
