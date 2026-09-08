@@ -11,7 +11,11 @@ return new class extends Migration
             return;
         }
 
-        DB::unprepared(<<<'SQL'
+        $triggerExecution = (int) DB::scalar('SHOW server_version_num') >= 110000
+            ? 'EXECUTE FUNCTION'
+            : 'EXECUTE PROCEDURE';
+
+        DB::unprepared(<<<SQL
             CREATE OR REPLACE FUNCTION audit_events_append_only_guard()
             RETURNS trigger
             LANGUAGE plpgsql
@@ -25,7 +29,7 @@ return new class extends Migration
             DROP TRIGGER IF EXISTS audit_events_append_only_guard ON audit_events;
             CREATE TRIGGER audit_events_append_only_guard
             BEFORE UPDATE OR DELETE ON audit_events
-            FOR EACH ROW EXECUTE FUNCTION audit_events_append_only_guard();
+            FOR EACH ROW {$triggerExecution} audit_events_append_only_guard();
 
             CREATE OR REPLACE FUNCTION roles_system_immutability_guard()
             RETURNS trigger
@@ -53,7 +57,7 @@ return new class extends Migration
             DROP TRIGGER IF EXISTS roles_system_immutability_guard ON roles;
             CREATE TRIGGER roles_system_immutability_guard
             BEFORE UPDATE OR DELETE ON roles
-            FOR EACH ROW EXECUTE FUNCTION roles_system_immutability_guard();
+            FOR EACH ROW {$triggerExecution} roles_system_immutability_guard();
         SQL);
 
         $runtimeRole = config('database.runtime_role');
