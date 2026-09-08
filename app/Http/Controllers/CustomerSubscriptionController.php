@@ -21,7 +21,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 
 final class CustomerSubscriptionController extends Controller
 {
@@ -36,7 +35,7 @@ final class CustomerSubscriptionController extends Controller
 
                 return ['resource_id' => $subscription->getKey(), 'resource_type' => 'customer_subscription'];
             });
-        } catch (InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             throw ValidationException::withMessages(['subscription_plan_id' => $exception->getMessage()]);
         }
 
@@ -110,8 +109,14 @@ final class CustomerSubscriptionController extends Controller
             $data['idempotency_key'] = $idempotencyKey;
         }
 
-        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($consumeSubscriptionUsage, $request, $context, $customerSubscription, $data): array {
-            $entry = $consumeSubscriptionUsage->handle($request->user(), $context, $customerSubscription, $data);
+        $usageData = [
+            'service_id' => (string) $data['service_id'],
+            'quantity' => isset($data['quantity']) ? (int) $data['quantity'] : null,
+            'idempotency_key' => $data['idempotency_key'] ?? null,
+            'metadata' => is_array($data['metadata'] ?? null) ? $data['metadata'] : null,
+        ];
+        $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($consumeSubscriptionUsage, $request, $context, $customerSubscription, $usageData): array {
+            $entry = $consumeSubscriptionUsage->handle($request->user(), $context, $customerSubscription, $usageData);
 
             return ['resource_id' => $entry->getKey(), 'resource_type' => 'subscription_usage_entry'];
         });

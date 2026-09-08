@@ -3,6 +3,7 @@
 namespace App\Actions\Appointments;
 
 use App\Actions\Operational\OperationalAction;
+use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\AppointmentItem;
 use App\Models\Customer;
@@ -57,6 +58,7 @@ final class CreateAppointment extends OperationalAction
             $this->upsertItem($appointment, $service, $duration);
             $this->recordHistory($appointment, $actor, null, $appointment->status, 'created');
             $this->events->record($actor, $context, 'appointment.created', $appointment, ['status' => $appointment->status]);
+            SyncGoogleCalendarAppointment::dispatch((string) $appointment->getKey())->afterCommit();
 
             return $appointment->fresh(['items.service', 'customer', 'professional']);
         }, 5);

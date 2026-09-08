@@ -27,6 +27,7 @@ import type {
     RelationOption,
     ResourceStatus,
 } from '@/components/operational';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,7 +47,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import customerSubscriptionsRoutes from '@/routes/customer-subscriptions';
 import subscriptionsRoutes from '@/routes/subscriptions';
 import type { SharedPageProps } from '@/types';
@@ -899,7 +899,8 @@ export default function SubscriptionsShow({
                                 ).url
                             }
                             headers={{
-                                'X-Idempotency-Key': renewSubscriber.idempotencyKey,
+                                'X-Idempotency-Key':
+                                    renewSubscriber.idempotencyKey,
                             }}
                             onSuccess={() => setRenewSubscriber(null)}
                             className="space-y-4"

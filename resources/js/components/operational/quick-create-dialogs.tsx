@@ -120,12 +120,18 @@ export function QuickCreateCustomerModal({
                 <DialogHeader>
                     <DialogTitle>Novo Cliente</DialogTitle>
                     <DialogDescription>
-                        Cadastre um cliente rapidamente para selecionar no agendamento.
+                        Cadastre um cliente rapidamente para selecionar no
+                        agendamento.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormErrorSummary errors={errors} />
-                    <FormField label="Nome" name="name" error={errors.name} required>
+                    <FormField
+                        label="Nome"
+                        name="name"
+                        error={errors.name}
+                        required
+                    >
                         <Input
                             id="quick_customer_name"
                             value={name}
@@ -145,7 +151,11 @@ export function QuickCreateCustomerModal({
                         />
                     </FormField>
 
-                    <FormField label="Telefone / WhatsApp" name="phone" error={errors.phone}>
+                    <FormField
+                        label="Telefone / WhatsApp"
+                        name="phone"
+                        error={errors.phone}
+                    >
                         <Input
                             id="quick_customer_phone"
                             value={phone}
@@ -255,12 +265,18 @@ export function QuickCreateServiceModal({
                 <DialogHeader>
                     <DialogTitle>Novo Serviço</DialogTitle>
                     <DialogDescription>
-                        Cadastre um novo serviço rapidamente para vincular ao agendamento.
+                        Cadastre um novo serviço rapidamente para vincular ao
+                        agendamento.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormErrorSummary errors={errors} />
-                    <FormField label="Nome do Serviço" name="name" error={errors.name} required>
+                    <FormField
+                        label="Nome do Serviço"
+                        name="name"
+                        error={errors.name}
+                        required
+                    >
                         <Input
                             id="quick_service_name"
                             value={name}
@@ -271,24 +287,38 @@ export function QuickCreateServiceModal({
                     </FormField>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField label="Preço (R$)" name="price_cents" error={errors.price_cents} required>
+                        <FormField
+                            label="Preço (R$)"
+                            name="price_cents"
+                            error={errors.price_cents}
+                            required
+                        >
                             <Input
                                 id="quick_service_price"
                                 value={priceFormatted}
-                                onChange={(e) => setPriceFormatted(e.target.value)}
+                                onChange={(e) =>
+                                    setPriceFormatted(e.target.value)
+                                }
                                 placeholder="50,00"
                                 required
                             />
                         </FormField>
 
-                        <FormField label="Duração (minutos)" name="duration_minutes" error={errors.duration_minutes} required>
+                        <FormField
+                            label="Duração (minutos)"
+                            name="duration_minutes"
+                            error={errors.duration_minutes}
+                            required
+                        >
                             <Input
                                 id="quick_service_duration"
                                 type="number"
                                 min={1}
                                 max={1440}
                                 value={durationMinutes}
-                                onChange={(e) => setDurationMinutes(e.target.value)}
+                                onChange={(e) =>
+                                    setDurationMinutes(e.target.value)
+                                }
                                 placeholder="30"
                                 required
                             />
@@ -394,7 +424,12 @@ export function QuickCreateProfessionalModal({
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormErrorSummary errors={errors} />
-                    <FormField label="Nome do Profissional" name="name" error={errors.name} required>
+                    <FormField
+                        label="Nome do Profissional"
+                        name="name"
+                        error={errors.name}
+                        required
+                    >
                         <Input
                             id="quick_professional_name"
                             value={name}
@@ -404,7 +439,11 @@ export function QuickCreateProfessionalModal({
                         />
                     </FormField>
 
-                    <FormField label="Telefone / Contato" name="phone" error={errors.phone}>
+                    <FormField
+                        label="Telefone / Contato"
+                        name="phone"
+                        error={errors.phone}
+                    >
                         <Input
                             id="quick_professional_phone"
                             value={phone}
@@ -513,12 +552,18 @@ export function QuickCreateSupplierModal({
                 <DialogHeader>
                     <DialogTitle>Novo Fornecedor</DialogTitle>
                     <DialogDescription>
-                        Cadastre um fornecedor rapidamente para vincular ao lançamento.
+                        Cadastre um fornecedor rapidamente para vincular ao
+                        lançamento.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormErrorSummary errors={errors} />
-                    <FormField label="Razão Social / Empresa" name="name" error={errors.name} required>
+                    <FormField
+                        label="Razão Social / Empresa"
+                        name="name"
+                        error={errors.name}
+                        required
+                    >
                         <Input
                             id="quick_supplier_name"
                             value={name}
@@ -528,7 +573,11 @@ export function QuickCreateSupplierModal({
                         />
                     </FormField>
 
-                    <FormField label="CNPJ / CPF" name="document_number" error={errors.document_number}>
+                    <FormField
+                        label="CNPJ / CPF"
+                        name="document_number"
+                        error={errors.document_number}
+                    >
                         <Input
                             id="quick_supplier_document"
                             value={documentNumber}
@@ -538,7 +587,11 @@ export function QuickCreateSupplierModal({
                     </FormField>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField label="Telefone / Contato" name="phone" error={errors.phone}>
+                        <FormField
+                            label="Telefone / Contato"
+                            name="phone"
+                            error={errors.phone}
+                        >
                             <Input
                                 id="quick_supplier_phone"
                                 value={phone}
@@ -547,7 +600,11 @@ export function QuickCreateSupplierModal({
                             />
                         </FormField>
 
-                        <FormField label="E-mail" name="email" error={errors.email}>
+                        <FormField
+                            label="E-mail"
+                            name="email"
+                            error={errors.email}
+                        >
                             <Input
                                 id="quick_supplier_email"
                                 type="email"
@@ -648,12 +705,18 @@ export function QuickCreateCategoryModal({
                 <DialogHeader>
                     <DialogTitle>Nova Categoria</DialogTitle>
                     <DialogDescription>
-                        Cadastre uma nova categoria para organizar itens e lançamentos.
+                        Cadastre uma nova categoria para organizar itens e
+                        lançamentos.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormErrorSummary errors={errors} />
-                    <FormField label="Nome da Categoria" name="name" error={errors.name} required>
+                    <FormField
+                        label="Nome da Categoria"
+                        name="name"
+                        error={errors.name}
+                        required
+                    >
                         <Input
                             id="quick_category_name"
                             value={name}
@@ -742,7 +805,8 @@ export function QuickCreateProductModal({
                 id: data.id || data.product?.id,
                 name: data.name || data.product?.name,
                 price_cents: priceCents,
-                current_stock: data.current_stock ?? data.product?.current_stock ?? 0,
+                current_stock:
+                    data.current_stock ?? data.product?.current_stock ?? 0,
             };
 
             setProcessing(false);
@@ -766,7 +830,12 @@ export function QuickCreateProductModal({
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormErrorSummary errors={errors} />
-                    <FormField label="Nome do Produto" name="name" error={errors.name} required>
+                    <FormField
+                        label="Nome do Produto"
+                        name="name"
+                        error={errors.name}
+                        required
+                    >
                         <Input
                             id="quick_product_name"
                             value={name}
@@ -776,7 +845,12 @@ export function QuickCreateProductModal({
                         />
                     </FormField>
 
-                    <FormField label="Preço de Venda (R$)" name="sale_price_cents" error={errors.sale_price_cents} required>
+                    <FormField
+                        label="Preço de Venda (R$)"
+                        name="sale_price_cents"
+                        error={errors.sale_price_cents}
+                        required
+                    >
                         <Input
                             id="quick_product_price"
                             value={priceFormatted}
@@ -796,4 +870,3 @@ export function QuickCreateProductModal({
         </Dialog>
     );
 }
-

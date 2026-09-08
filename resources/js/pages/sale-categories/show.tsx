@@ -57,15 +57,22 @@ const uniquenessScopeLabels: Record<UniquenessScope, string> = {
 };
 
 const uniquenessScopeDescriptions: Record<UniquenessScope, string> = {
-    customer: 'Impede a abertura de mais de uma comanda aberta simultaneamente para o mesmo cliente nesta categoria (ex: Barbearia).',
-    appointment: 'Vincula a comanda estritamente a um agendamento específico, impedindo duplicata.',
-    reference: 'Impede mais de uma comanda aberta com a mesma referência ou mesa (ex: Restaurante mesa 4).',
+    customer:
+        'Impede a abertura de mais de uma comanda aberta simultaneamente para o mesmo cliente nesta categoria (ex: Barbearia).',
+    appointment:
+        'Vincula a comanda estritamente a um agendamento específico, impedindo duplicata.',
+    reference:
+        'Impede mais de uma comanda aberta com a mesma referência ou mesa (ex: Restaurante mesa 4).',
     none: 'Permite abrir qualquer quantidade de comandas nesta categoria sem restrição de duplicidade.',
 };
 
 export default function SaleCategoryShow({ category }: Props) {
-    const [updateKey] = useState(() => createIdempotencyKey('sale-category-update'));
-    const [destroyKey] = useState(() => createIdempotencyKey('sale-category-destroy'));
+    const [updateKey] = useState(() =>
+        createIdempotencyKey('sale-category-update'),
+    );
+    const [destroyKey] = useState(() =>
+        createIdempotencyKey('sale-category-destroy'),
+    );
     const [reactivateKey] = useState(() =>
         createIdempotencyKey('sale-category-reactivate'),
     );
@@ -89,30 +96,44 @@ export default function SaleCategoryShow({ category }: Props) {
                         eyebrow="Configuração de comanda"
                         title={category.name}
                         description="Atualize as regras operacionais, tipos permitidos e unicidade desta área de consumo."
-                        action={<StatusBadge status={category.is_active ? 'active' : 'inactive'} />}
+                        action={
+                            <StatusBadge
+                                status={
+                                    category.is_active ? 'active' : 'inactive'
+                                }
+                            />
+                        }
                     />
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
                     <section className="surface-panel p-5 sm:p-6">
                         <div className="mb-6 space-y-1">
-                            <h2 className="text-base font-semibold">Regras da categoria</h2>
+                            <h2 className="text-base font-semibold">
+                                Regras da categoria
+                            </h2>
                             <p className="text-sm text-muted-foreground">
-                                As configurações governam como o operador abre e manipula comandas nesta área.
+                                As configurações governam como o operador abre e
+                                manipula comandas nesta área.
                             </p>
                         </div>
                         {!category.is_active ? (
-                            <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-emerald-950 sm:flex-row sm:items-center sm:justify-between dark:bg-emerald-950/20 dark:text-emerald-200">
                                 <div>
-                                    <p className="font-semibold text-sm">Esta categoria de comanda está inativa</p>
-                                    <p className="text-xs text-muted-foreground">Não é possível abrir novas comandas nesta categoria até que seja reativada.</p>
+                                    <p className="text-sm font-semibold">
+                                        Esta categoria de comanda está inativa
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Não é possível abrir novas comandas
+                                        nesta categoria até que seja reativada.
+                                    </p>
                                 </div>
                                 {canManage ? (
                                     <Button
                                         type="button"
                                         size="sm"
                                         onClick={() => setReactivateOpen(true)}
-                                        className="bg-emerald-600 text-white hover:bg-emerald-700 shrink-0"
+                                        className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
                                     >
                                         Reativar cadastro
                                     </Button>
@@ -174,11 +195,18 @@ export default function SaleCategoryShow({ category }: Props) {
                                                     name="type"
                                                     defaultValue={category.type}
                                                     disabled={!canManage}
-                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 >
-                                                    <option value="service">Apenas Serviços</option>
-                                                    <option value="product">Apenas Produtos</option>
-                                                    <option value="mixed">Misto (Serviços e Produtos)</option>
+                                                    <option value="service">
+                                                        Apenas Serviços
+                                                    </option>
+                                                    <option value="product">
+                                                        Apenas Produtos
+                                                    </option>
+                                                    <option value="mixed">
+                                                        Misto (Serviços e
+                                                        Produtos)
+                                                    </option>
                                                 </select>
                                             </FormField>
                                         </div>
@@ -191,14 +219,28 @@ export default function SaleCategoryShow({ category }: Props) {
                                                 <select
                                                     id="uniqueness_scope"
                                                     name="uniqueness_scope"
-                                                    defaultValue={category.uniqueness_scope}
+                                                    defaultValue={
+                                                        category.uniqueness_scope
+                                                    }
                                                     disabled={!canManage}
-                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 >
-                                                    <option value="none">Sem limite de duplicidade</option>
-                                                    <option value="customer">1 comanda ativa por cliente</option>
-                                                    <option value="appointment">1 comanda ativa por agendamento</option>
-                                                    <option value="reference">1 comanda ativa por referência (mesa/pedido)</option>
+                                                    <option value="none">
+                                                        Sem limite de
+                                                        duplicidade
+                                                    </option>
+                                                    <option value="customer">
+                                                        1 comanda ativa por
+                                                        cliente
+                                                    </option>
+                                                    <option value="appointment">
+                                                        1 comanda ativa por
+                                                        agendamento
+                                                    </option>
+                                                    <option value="reference">
+                                                        1 comanda ativa por
+                                                        referência (mesa/pedido)
+                                                    </option>
                                                 </select>
                                             </FormField>
                                         </div>
@@ -208,7 +250,9 @@ export default function SaleCategoryShow({ category }: Props) {
                                             {category.is_active ? (
                                                 <Dialog
                                                     open={inactivateOpen}
-                                                    onOpenChange={setInactivateOpen}
+                                                    onOpenChange={
+                                                        setInactivateOpen
+                                                    }
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -221,41 +265,70 @@ export default function SaleCategoryShow({ category }: Props) {
                                                     <DialogContent>
                                                         <DialogHeader>
                                                             <DialogTitle>
-                                                                Inativar categoria de comanda?
+                                                                Inativar
+                                                                categoria de
+                                                                comanda?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                Comandas abertas ou históricas permanecerão intactas, mas não será possível abrir novas comandas nesta categoria.
+                                                                Comandas abertas
+                                                                ou históricas
+                                                                permanecerão
+                                                                intactas, mas
+                                                                não será
+                                                                possível abrir
+                                                                novas comandas
+                                                                nesta categoria.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
-                                                            {...saleCategories.destroy.form(category.id)}
+                                                            {...saleCategories.destroy.form(
+                                                                category.id,
+                                                            )}
                                                             headers={{
-                                                                'X-Idempotency-Key': destroyKey,
+                                                                'X-Idempotency-Key':
+                                                                    destroyKey,
                                                             }}
                                                             method="delete"
-                                                            onSuccess={() => setInactivateOpen(false)}
+                                                            onSuccess={() =>
+                                                                setInactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
-                                                            {({ processing: inactivating }) => (
+                                                            {({
+                                                                processing:
+                                                                    inactivating,
+                                                            }) => (
                                                                 <>
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
-                                                                        value={category.lock_version}
+                                                                        value={
+                                                                            category.lock_version
+                                                                        }
                                                                     />
                                                                     <DialogFooter className="mt-4">
                                                                         <Button
                                                                             type="button"
                                                                             variant="outline"
-                                                                            onClick={() => setInactivateOpen(false)}
+                                                                            onClick={() =>
+                                                                                setInactivateOpen(
+                                                                                    false,
+                                                                                )
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
                                                                         <Button
                                                                             type="submit"
                                                                             variant="destructive"
-                                                                            disabled={inactivating}
+                                                                            disabled={
+                                                                                inactivating
+                                                                            }
                                                                         >
-                                                                            {inactivating ? 'Inativando...' : 'Confirmar inativação'}
+                                                                            {inactivating
+                                                                                ? 'Inativando...'
+                                                                                : 'Confirmar inativação'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -266,7 +339,9 @@ export default function SaleCategoryShow({ category }: Props) {
                                             ) : (
                                                 <Dialog
                                                     open={reactivateOpen}
-                                                    onOpenChange={setReactivateOpen}
+                                                    onOpenChange={
+                                                        setReactivateOpen
+                                                    }
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -279,41 +354,68 @@ export default function SaleCategoryShow({ category }: Props) {
                                                     <DialogContent>
                                                         <DialogHeader>
                                                             <DialogTitle>
-                                                                Reativar categoria de comanda?
+                                                                Reativar
+                                                                categoria de
+                                                                comanda?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                A categoria voltará a ficar ativa para abertura de novas comandas e checkouts.
+                                                                A categoria
+                                                                voltará a ficar
+                                                                ativa para
+                                                                abertura de
+                                                                novas comandas e
+                                                                checkouts.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
-                                                            {...saleCategories.reactivate.form(category.id)}
+                                                            {...saleCategories.reactivate.form(
+                                                                category.id,
+                                                            )}
                                                             headers={{
-                                                                'X-Idempotency-Key': reactivateKey,
+                                                                'X-Idempotency-Key':
+                                                                    reactivateKey,
                                                             }}
                                                             method="patch"
-                                                            onSuccess={() => setReactivateOpen(false)}
+                                                            onSuccess={() =>
+                                                                setReactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
-                                                            {({ processing: reactivating }) => (
+                                                            {({
+                                                                processing:
+                                                                    reactivating,
+                                                            }) => (
                                                                 <>
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
-                                                                        value={category.lock_version}
+                                                                        value={
+                                                                            category.lock_version
+                                                                        }
                                                                     />
                                                                     <DialogFooter className="mt-4">
                                                                         <Button
                                                                             type="button"
                                                                             variant="outline"
-                                                                            onClick={() => setReactivateOpen(false)}
+                                                                            onClick={() =>
+                                                                                setReactivateOpen(
+                                                                                    false,
+                                                                                )
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
                                                                         <Button
                                                                             type="submit"
-                                                                            disabled={reactivating}
+                                                                            disabled={
+                                                                                reactivating
+                                                                            }
                                                                             className="bg-emerald-600 text-white hover:bg-emerald-700"
                                                                         >
-                                                                            {reactivating ? 'Reativando...' : 'Confirmar reativação'}
+                                                                            {reactivating
+                                                                                ? 'Reativando...'
+                                                                                : 'Confirmar reativação'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -354,7 +456,9 @@ export default function SaleCategoryShow({ category }: Props) {
                                         Tipo de consumo
                                     </span>
                                     <span className="font-medium text-foreground">
-                                        {saleCategoryTypeLabels[category.type] ?? category.type}
+                                        {saleCategoryTypeLabels[
+                                            category.type
+                                        ] ?? category.type}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -363,7 +467,9 @@ export default function SaleCategoryShow({ category }: Props) {
                                         Escopo de unicidade
                                     </span>
                                     <span className="font-medium text-foreground">
-                                        {uniquenessScopeLabels[category.uniqueness_scope] ?? category.uniqueness_scope}
+                                        {uniquenessScopeLabels[
+                                            category.uniqueness_scope
+                                        ] ?? category.uniqueness_scope}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -376,9 +482,17 @@ export default function SaleCategoryShow({ category }: Props) {
                                     </span>
                                 </div>
                             </div>
-                            <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground border border-border/50">
-                                <p className="font-medium text-foreground mb-1">Regra de Unicidade:</p>
-                                <p>{uniquenessScopeDescriptions[category.uniqueness_scope]}</p>
+                            <div className="rounded-lg border border-border/50 bg-muted/50 p-3 text-xs text-muted-foreground">
+                                <p className="mb-1 font-medium text-foreground">
+                                    Regra de Unicidade:
+                                </p>
+                                <p>
+                                    {
+                                        uniquenessScopeDescriptions[
+                                            category.uniqueness_scope
+                                        ]
+                                    }
+                                </p>
                             </div>
                         </section>
                     </aside>

@@ -8,6 +8,7 @@ import {
     User,
 } from 'lucide-react';
 import { useState } from 'react';
+import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import {
     createIdempotencyKey,
     FormActions,
@@ -45,7 +46,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import customers from '@/routes/customers';
 import packagesRoutes from '@/routes/packages';
 import type { SharedPageProps } from '@/types';
@@ -68,7 +68,12 @@ type PackageUsageRecord = {
 
 type CustomerPackageRecord = {
     created_at: string;
-    customer: { email?: string | null; id: string; name: string; phone?: string | null };
+    customer: {
+        email?: string | null;
+        id: string;
+        name: string;
+        phone?: string | null;
+    };
     expires_at: string | null;
     id: string;
     name_snapshot?: string | null;
@@ -145,15 +150,22 @@ export default function PackageShow({
     } | null>(null);
 
     const [updateKey] = useState(() => createIdempotencyKey('package-update'));
-    const [deactivateKey] = useState(() => createIdempotencyKey('package-deactivate'));
-    const [reactivateKey] = useState(() => createIdempotencyKey('package-reactivate'));
+    const [deactivateKey] = useState(() =>
+        createIdempotencyKey('package-deactivate'),
+    );
+    const [reactivateKey] = useState(() =>
+        createIdempotencyKey('package-reactivate'),
+    );
 
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('package.manage');
     const canConsume = canManage || permissions.has('package.consume');
 
-    const unitPriceCents = pkg.total_sessions > 0 ? Math.round(pkg.price_cents / pkg.total_sessions) : 0;
+    const unitPriceCents =
+        pkg.total_sessions > 0
+            ? Math.round(pkg.price_cents / pkg.total_sessions)
+            : 0;
     const selectedServiceIds = pkg.services.map((s) => s.id);
 
     return (
@@ -171,34 +183,59 @@ export default function PackageShow({
 
             <ResourceHeader
                 title={pkg.name}
-                subtitle={pkg.description ?? 'Detalhes e histórico de vendas do pacote.'}
-                status={<StatusBadge status={pkg.is_active ? 'active' : 'inactive'} />}
+                subtitle={
+                    pkg.description ??
+                    'Detalhes e histórico de vendas do pacote.'
+                }
+                status={
+                    <StatusBadge
+                        status={pkg.is_active ? 'active' : 'inactive'}
+                    />
+                }
                 actions={
                     canManage && (
                         <div className="flex items-center gap-2">
-                            <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
+                            <Dialog
+                                open={updateOpen}
+                                onOpenChange={setUpdateOpen}
+                            >
                                 <DialogTrigger asChild>
-                                    <Button variant="outline">Editar Pacote</Button>
+                                    <Button variant="outline">
+                                        Editar Pacote
+                                    </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                                     <DialogHeader>
-                                        <DialogTitle>Editar Pacote de Serviços</DialogTitle>
+                                        <DialogTitle>
+                                            Editar Pacote de Serviços
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            Atualize as informações, sessões e serviços vinculados.
+                                            Atualize as informações, sessões e
+                                            serviços vinculados.
                                         </DialogDescription>
                                     </DialogHeader>
 
                                     <Form
                                         method="put"
-                                        action={packagesRoutes.update(pkg.id).url}
-                                        headers={{ 'X-Idempotency-Key': updateKey }}
+                                        action={
+                                            packagesRoutes.update(pkg.id).url
+                                        }
+                                        headers={{
+                                            'X-Idempotency-Key': updateKey,
+                                        }}
                                         onSuccess={() => setUpdateOpen(false)}
                                         className="space-y-4"
                                     >
                                         {({ processing, errors }) => (
                                             <>
-                                                <FormErrorSummary errors={errors} />
-                                                <input type="hidden" name="lock_version" value={pkg.lock_version} />
+                                                <FormErrorSummary
+                                                    errors={errors}
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="lock_version"
+                                                    value={pkg.lock_version}
+                                                />
 
                                                 <FormField
                                                     id="name"
@@ -222,7 +259,10 @@ export default function PackageShow({
                                                     <Input
                                                         id="description"
                                                         name="description"
-                                                        defaultValue={pkg.description ?? ''}
+                                                        defaultValue={
+                                                            pkg.description ??
+                                                            ''
+                                                        }
                                                     />
                                                 </FormField>
 
@@ -231,16 +271,24 @@ export default function PackageShow({
                                                         id="price_display"
                                                         label="Preço Total"
                                                         required
-                                                        error={errors.price_cents}
+                                                        error={
+                                                            errors.price_cents
+                                                        }
                                                     >
-                                                        <PackagePriceField initialCents={pkg.price_cents} />
+                                                        <PackagePriceField
+                                                            initialCents={
+                                                                pkg.price_cents
+                                                            }
+                                                        />
                                                     </FormField>
 
                                                     <FormField
                                                         id="total_sessions"
                                                         label="Qtd. de Sessões"
                                                         required
-                                                        error={errors.total_sessions}
+                                                        error={
+                                                            errors.total_sessions
+                                                        }
                                                     >
                                                         <Input
                                                             id="total_sessions"
@@ -248,7 +296,9 @@ export default function PackageShow({
                                                             type="number"
                                                             min="1"
                                                             max="1000"
-                                                            defaultValue={pkg.total_sessions}
+                                                            defaultValue={
+                                                                pkg.total_sessions
+                                                            }
                                                             required
                                                         />
                                                     </FormField>
@@ -257,7 +307,9 @@ export default function PackageShow({
                                                         id="validity_days"
                                                         label="Validade (dias)"
                                                         required
-                                                        error={errors.validity_days}
+                                                        error={
+                                                            errors.validity_days
+                                                        }
                                                     >
                                                         <Input
                                                             id="validity_days"
@@ -265,7 +317,9 @@ export default function PackageShow({
                                                             type="number"
                                                             min="1"
                                                             max="3650"
-                                                            defaultValue={pkg.validity_days}
+                                                            defaultValue={
+                                                                pkg.validity_days
+                                                            }
                                                             required
                                                         />
                                                     </FormField>
@@ -275,19 +329,27 @@ export default function PackageShow({
                                                     <FormField
                                                         id="service_ids"
                                                         label="Serviços Inclusos"
-                                                        error={errors.service_ids}
+                                                        error={
+                                                            errors.service_ids
+                                                        }
                                                     >
                                                         <RelationCheckboxes
                                                             name="service_ids"
-                                                            options={serviceOptions}
-                                                            initialSelected={selectedServiceIds}
+                                                            options={
+                                                                serviceOptions
+                                                            }
+                                                            initialSelected={
+                                                                selectedServiceIds
+                                                            }
                                                         />
                                                     </FormField>
                                                 )}
 
                                                 <FormActions
                                                     cancelLabel="Cancelar"
-                                                    onCancel={() => setUpdateOpen(false)}
+                                                    onCancel={() =>
+                                                        setUpdateOpen(false)
+                                                    }
                                                     submitLabel="Salvar Alterações"
                                                     submitting={processing}
                                                 />
@@ -298,42 +360,73 @@ export default function PackageShow({
                             </Dialog>
 
                             {pkg.is_active ? (
-                                <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+                                <Dialog
+                                    open={deactivateOpen}
+                                    onOpenChange={setDeactivateOpen}
+                                >
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="text-destructive hover:text-destructive">
+                                        <Button
+                                            variant="outline"
+                                            className="text-destructive hover:text-destructive"
+                                        >
                                             Desativar
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
-                                            <DialogTitle>Desativar Pacote</DialogTitle>
+                                            <DialogTitle>
+                                                Desativar Pacote
+                                            </DialogTitle>
                                             <DialogDescription>
-                                                Tem certeza de que deseja desativar este pacote? Novos pacotes não poderão ser vendidos com este modelo.
+                                                Tem certeza de que deseja
+                                                desativar este pacote? Novos
+                                                pacotes não poderão ser vendidos
+                                                com este modelo.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <Form
                                             method="delete"
-                                            action={packagesRoutes.destroy(pkg.id).url}
-                                            headers={{ 'X-Idempotency-Key': deactivateKey }}
-                                            onSuccess={() => setDeactivateOpen(false)}
+                                            action={
+                                                packagesRoutes.destroy(pkg.id)
+                                                    .url
+                                            }
+                                            headers={{
+                                                'X-Idempotency-Key':
+                                                    deactivateKey,
+                                            }}
+                                            onSuccess={() =>
+                                                setDeactivateOpen(false)
+                                            }
                                         >
                                             {({ processing }) => (
                                                 <>
-                                                    <input type="hidden" name="lock_version" value={pkg.lock_version} />
+                                                    <input
+                                                        type="hidden"
+                                                        name="lock_version"
+                                                        value={pkg.lock_version}
+                                                    />
                                                     <DialogFooter>
                                                         <Button
                                                             type="button"
                                                             variant="outline"
-                                                            onClick={() => setDeactivateOpen(false)}
+                                                            onClick={() =>
+                                                                setDeactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
                                                             Cancelar
                                                         </Button>
                                                         <Button
                                                             type="submit"
                                                             variant="destructive"
-                                                            disabled={processing}
+                                                            disabled={
+                                                                processing
+                                                            }
                                                         >
-                                                            {processing ? 'Desativando...' : 'Confirmar Desativação'}
+                                                            {processing
+                                                                ? 'Desativando...'
+                                                                : 'Confirmar Desativação'}
                                                         </Button>
                                                     </DialogFooter>
                                                 </>
@@ -342,39 +435,68 @@ export default function PackageShow({
                                     </DialogContent>
                                 </Dialog>
                             ) : (
-                                <Dialog open={reactivateOpen} onOpenChange={setReactivateOpen}>
+                                <Dialog
+                                    open={reactivateOpen}
+                                    onOpenChange={setReactivateOpen}
+                                >
                                     <DialogTrigger asChild>
-                                        <Button variant="outline">Reativar</Button>
+                                        <Button variant="outline">
+                                            Reativar
+                                        </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
-                                            <DialogTitle>Reativar Pacote</DialogTitle>
+                                            <DialogTitle>
+                                                Reativar Pacote
+                                            </DialogTitle>
                                             <DialogDescription>
-                                                Deseja reativar este pacote para permitir novas vendas?
+                                                Deseja reativar este pacote para
+                                                permitir novas vendas?
                                             </DialogDescription>
                                         </DialogHeader>
                                         <Form
                                             method="patch"
-                                            action={packagesRoutes.reactivate(pkg.id).url}
-                                            headers={{ 'X-Idempotency-Key': reactivateKey }}
-                                            onSuccess={() => setReactivateOpen(false)}
+                                            action={
+                                                packagesRoutes.reactivate(
+                                                    pkg.id,
+                                                ).url
+                                            }
+                                            headers={{
+                                                'X-Idempotency-Key':
+                                                    reactivateKey,
+                                            }}
+                                            onSuccess={() =>
+                                                setReactivateOpen(false)
+                                            }
                                         >
                                             {({ processing }) => (
                                                 <>
-                                                    <input type="hidden" name="lock_version" value={pkg.lock_version} />
+                                                    <input
+                                                        type="hidden"
+                                                        name="lock_version"
+                                                        value={pkg.lock_version}
+                                                    />
                                                     <DialogFooter>
                                                         <Button
                                                             type="button"
                                                             variant="outline"
-                                                            onClick={() => setReactivateOpen(false)}
+                                                            onClick={() =>
+                                                                setReactivateOpen(
+                                                                    false,
+                                                                )
+                                                            }
                                                         >
                                                             Cancelar
                                                         </Button>
                                                         <Button
                                                             type="submit"
-                                                            disabled={processing}
+                                                            disabled={
+                                                                processing
+                                                            }
                                                         >
-                                                            {processing ? 'Reativando...' : 'Confirmar Reativação'}
+                                                            {processing
+                                                                ? 'Reativando...'
+                                                                : 'Confirmar Reativação'}
                                                         </Button>
                                                     </DialogFooter>
                                                 </>
@@ -400,7 +522,9 @@ export default function PackageShow({
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="text-xs text-muted-foreground">
-                        {formatMoney(unitPriceCents)} por sessão ({pkg.total_sessions} {pkg.total_sessions === 1 ? 'sessão' : 'sessões'})
+                        {formatMoney(unitPriceCents)} por sessão (
+                        {pkg.total_sessions}{' '}
+                        {pkg.total_sessions === 1 ? 'sessão' : 'sessões'})
                     </CardContent>
                 </Card>
 
@@ -415,7 +539,8 @@ export default function PackageShow({
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="text-xs text-muted-foreground">
-                        Prazo padrão contado a partir do momento da venda ao cliente.
+                        Prazo padrão contado a partir do momento da venda ao
+                        cliente.
                     </CardContent>
                 </Card>
 
@@ -426,12 +551,17 @@ export default function PackageShow({
                             Serviços Inclusos
                         </CardDescription>
                         <CardTitle className="text-2xl font-bold">
-                            {pkg.services.length} {pkg.services.length === 1 ? 'serviço' : 'serviços'}
+                            {pkg.services.length}{' '}
+                            {pkg.services.length === 1 ? 'serviço' : 'serviços'}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-wrap gap-1">
                         {pkg.services.map((srv) => (
-                            <Badge key={srv.id} variant="secondary" className="text-xs">
+                            <Badge
+                                key={srv.id}
+                                variant="secondary"
+                                className="text-xs"
+                            >
                                 {srv.name}
                             </Badge>
                         ))}
@@ -441,7 +571,9 @@ export default function PackageShow({
 
             <div className="mt-8 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold tracking-tight">Pacotes Vendidos ({customerPackages.total})</h3>
+                    <h3 className="text-lg font-semibold tracking-tight">
+                        Pacotes Vendidos ({customerPackages.total})
+                    </h3>
                 </div>
 
                 {customerPackages.data.length === 0 ? (
@@ -455,35 +587,67 @@ export default function PackageShow({
                         {customerPackages.data.map((cp) => (
                             <Card key={cp.id} className="overflow-hidden">
                                 <CardContent className="p-4 sm:p-5">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <User className="h-4 w-4 text-muted-foreground" />
                                                 <Link
-                                                    href={customers.show(cp.customer.id).url}
+                                                    href={
+                                                        customers.show(
+                                                            cp.customer.id,
+                                                        ).url
+                                                    }
                                                     className="font-medium text-foreground hover:underline"
                                                 >
                                                     {cp.customer.name}
                                                 </Link>
-                                                <StatusBadge status={cp.status} />
+                                                <StatusBadge
+                                                    status={cp.status}
+                                                />
                                             </div>
                                             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                                {cp.customer.phone && <span>{cp.customer.phone}</span>}
-                                                <span>Vendido em {new Date(cp.created_at).toLocaleDateString('pt-BR')}</span>
+                                                {cp.customer.phone && (
+                                                    <span>
+                                                        {cp.customer.phone}
+                                                    </span>
+                                                )}
+                                                <span>
+                                                    Vendido em{' '}
+                                                    {new Date(
+                                                        cp.created_at,
+                                                    ).toLocaleDateString(
+                                                        'pt-BR',
+                                                    )}
+                                                </span>
                                                 {cp.expires_at && (
-                                                    <span>Validade até {new Date(cp.expires_at).toLocaleDateString('pt-BR')}</span>
+                                                    <span>
+                                                        Validade até{' '}
+                                                        {new Date(
+                                                            cp.expires_at,
+                                                        ).toLocaleDateString(
+                                                            'pt-BR',
+                                                        )}
+                                                    </span>
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                                 <span className="rounded-md bg-muted px-2 py-1">
-                                                    Snapshot: {cp.name_snapshot ?? pkg.name}
+                                                    Snapshot:{' '}
+                                                    {cp.name_snapshot ??
+                                                        pkg.name}
                                                 </span>
                                                 <span className="rounded-md bg-muted px-2 py-1">
-                                                    {cp.validity_days_snapshot ?? pkg.validity_days} dias de validade
+                                                    {cp.validity_days_snapshot ??
+                                                        pkg.validity_days}{' '}
+                                                    dias de validade
                                                 </span>
-                                                {cp.price_cents_snapshot != null && (
+                                                {cp.price_cents_snapshot !=
+                                                    null && (
                                                     <span className="rounded-md bg-muted px-2 py-1">
-                                                        Venda: {formatMoney(cp.price_cents_snapshot)}
+                                                        Venda:{' '}
+                                                        {formatMoney(
+                                                            cp.price_cents_snapshot,
+                                                        )}
                                                     </span>
                                                 )}
                                             </div>
@@ -492,41 +656,73 @@ export default function PackageShow({
                                         <div className="flex items-center gap-3">
                                             <div className="text-right">
                                                 <div className="text-sm font-semibold">
-                                                    {cp.remaining_sessions} de {cp.total_sessions} sessões
+                                                    {cp.remaining_sessions} de{' '}
+                                                    {cp.total_sessions} sessões
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    {cp.total_sessions - cp.remaining_sessions} consumidas
+                                                    {cp.total_sessions -
+                                                        cp.remaining_sessions}{' '}
+                                                    consumidas
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
                                     {cp.usages && cp.usages.length > 0 && (
-                                        <div className="mt-4 pt-3 border-t">
-                                            <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                                                <History className="h-3 w-3" /> Histórico de consumo recente:
+                                        <div className="mt-4 border-t pt-3">
+                                            <p className="mb-2 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                                                <History className="h-3 w-3" />{' '}
+                                                Histórico de consumo recente:
                                             </p>
                                             <div className="space-y-1">
                                                 {cp.usages.map((usage) => (
-                                                    <div key={usage.id} className="text-xs text-muted-foreground flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div
+                                                        key={usage.id}
+                                                        className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+                                                    >
                                                         <span>
-                                                            {usage.sessions_consumed} {usage.sessions_consumed === 1 ? 'sessão consumida' : 'sessões consumidas'}
-                                                            {usage.user ? ` por ${usage.user.name}` : ''}
-                                                            {usage.reversed_at ? ' · revertido' : ''}
+                                                            {
+                                                                usage.sessions_consumed
+                                                            }{' '}
+                                                            {usage.sessions_consumed ===
+                                                            1
+                                                                ? 'sessão consumida'
+                                                                : 'sessões consumidas'}
+                                                            {usage.user
+                                                                ? ` por ${usage.user.name}`
+                                                                : ''}
+                                                            {usage.reversed_at
+                                                                ? ' · revertido'
+                                                                : ''}
                                                         </span>
                                                         <div className="flex items-center gap-2">
-                                                            <span>{new Date(usage.created_at).toLocaleString('pt-BR')}</span>
-                                                            {canConsume && !usage.reversed_at && (
-                                                                <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    className="h-7 px-2 text-destructive hover:text-destructive"
-                                                                    onClick={() => setUsageToReverse({ customerPackageId: cp.id, usage })}
-                                                                >
-                                                                    Reverter
-                                                                </Button>
-                                                            )}
+                                                            <span>
+                                                                {new Date(
+                                                                    usage.created_at,
+                                                                ).toLocaleString(
+                                                                    'pt-BR',
+                                                                )}
+                                                            </span>
+                                                            {canConsume &&
+                                                                !usage.reversed_at && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        className="h-7 px-2 text-destructive hover:text-destructive"
+                                                                        onClick={() =>
+                                                                            setUsageToReverse(
+                                                                                {
+                                                                                    customerPackageId:
+                                                                                        cp.id,
+                                                                                    usage,
+                                                                                },
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Reverter
+                                                                    </Button>
+                                                                )}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -542,33 +738,57 @@ export default function PackageShow({
                 )}
             </div>
 
-            <Dialog open={usageToReverse !== null} onOpenChange={(open) => !open && setUsageToReverse(null)}>
+            <Dialog
+                open={usageToReverse !== null}
+                onOpenChange={(open) => !open && setUsageToReverse(null)}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Reverter consumo?</DialogTitle>
                         <DialogDescription>
-                            Esta ação devolverá as sessões ao saldo do cliente e ficará registrada no histórico operacional.
+                            Esta ação devolverá as sessões ao saldo do cliente e
+                            ficará registrada no histórico operacional.
                         </DialogDescription>
                     </DialogHeader>
                     {usageToReverse && (
                         <Form
                             method="post"
-                            action={customerPackageActions.reverseUsage({
-                                customer_package: usageToReverse.customerPackageId,
-                                package_usage: usageToReverse.usage.id,
-                            }).url}
-                            headers={{ 'X-Idempotency-Key': createIdempotencyKey('package-usage-reverse', usageToReverse.usage.id) }}
+                            action={
+                                customerPackageActions.reverseUsage({
+                                    customer_package:
+                                        usageToReverse.customerPackageId,
+                                    package_usage: usageToReverse.usage.id,
+                                }).url
+                            }
+                            headers={{
+                                'X-Idempotency-Key': createIdempotencyKey(
+                                    'package-usage-reverse',
+                                    usageToReverse.usage.id,
+                                ),
+                            }}
                             onSuccess={() => setUsageToReverse(null)}
                         >
                             {({ processing, errors }) => (
                                 <>
                                     <FormErrorSummary errors={errors} />
                                     <DialogFooter>
-                                        <Button type="button" variant="outline" onClick={() => setUsageToReverse(null)}>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                setUsageToReverse(null)
+                                            }
+                                        >
                                             Cancelar
                                         </Button>
-                                        <Button type="submit" variant="destructive" disabled={processing}>
-                                            {processing ? 'Revertendo…' : 'Confirmar reversão'}
+                                        <Button
+                                            type="submit"
+                                            variant="destructive"
+                                            disabled={processing}
+                                        >
+                                            {processing
+                                                ? 'Revertendo…'
+                                                : 'Confirmar reversão'}
                                         </Button>
                                     </DialogFooter>
                                 </>

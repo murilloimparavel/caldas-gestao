@@ -112,7 +112,7 @@ it('checks in a scoped appointment and rejects an invalid check-in transition', 
     expect($appointment->fresh()->status)->toBe('checked_in')
         ->and($appointment->fresh()->lock_version)->toBe(1);
 
-    $draft = Appointment::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'professional_id' => $professional->getKey(), 'customer_id' => $customer->getKey(), 'status' => 'draft']);
+    $draft = Appointment::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'professional_id' => $professional->getKey(), 'customer_id' => $customer->getKey(), 'status' => 'draft', 'starts_at' => '2030-02-10 12:00:00', 'ends_at' => '2030-02-10 13:00:00']);
     $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'X-Idempotency-Key' => 'appointment-check-in-invalid-1'])
         ->actingAs($owner)->post(route('appointments.check_in', $draft), ['lock_version' => 0])->assertSessionHasErrors('status');
 

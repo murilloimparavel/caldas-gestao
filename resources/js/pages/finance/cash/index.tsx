@@ -102,9 +102,15 @@ export default function CashIndex({ active_shift, metrics }: Props) {
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
 
-    const canOpen = permissions.has('cash_shift.open') || permissions.has('cash_shift.manage');
-    const canMove = permissions.has('cash_shift.move') || permissions.has('cash_shift.manage');
-    const canClose = permissions.has('cash_shift.close') || permissions.has('cash_shift.manage');
+    const canOpen =
+        permissions.has('cash_shift.open') ||
+        permissions.has('cash_shift.manage');
+    const canMove =
+        permissions.has('cash_shift.move') ||
+        permissions.has('cash_shift.manage');
+    const canClose =
+        permissions.has('cash_shift.close') ||
+        permissions.has('cash_shift.manage');
 
     const [openModalOpen, setOpenModalOpen] = useState(false);
     const [supplyModalOpen, setSupplyModalOpen] = useState(false);
@@ -185,7 +191,8 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         <DialogHeader>
                             <DialogTitle>Abrir Novo Turno de Caixa</DialogTitle>
                             <DialogDescription>
-                                Informe o fundo de troco (saldo inicial) para iniciar a operação.
+                                Informe o fundo de troco (saldo inicial) para
+                                iniciar a operação.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -215,7 +222,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         error={errors.initial_amount_cents}
                                     >
                                         <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">
+                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
                                                 R$
                                             </span>
                                             <Input
@@ -224,7 +231,9 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                 placeholder="0,00"
                                                 value={initialAmountFloat}
                                                 onChange={(e) =>
-                                                    setInitialAmountFloat(e.target.value)
+                                                    setInitialAmountFloat(
+                                                        e.target.value,
+                                                    )
                                                 }
                                             />
                                         </div>
@@ -242,10 +251,12 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                     >
                                         <Textarea
                                             id="open-notes"
-                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                             placeholder="Ex: Gaveta 1, troco em notas miúdas"
                                             value={openNotes}
-                                            onChange={(e) => setOpenNotes(e.target.value)}
+                                            onChange={(e) =>
+                                                setOpenNotes(e.target.value)
+                                            }
                                             name="notes"
                                         />
                                     </FormField>
@@ -275,7 +286,10 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                 Nenhum turno de caixa aberto no momento
                             </h3>
                             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                                Para registrar vendas em dinheiro, sangrias e suprimentos, é necessário abrir um turno operacional com o valor inicial do fundo de troco.
+                                Para registrar vendas em dinheiro, sangrias e
+                                suprimentos, é necessário abrir um turno
+                                operacional com o valor inicial do fundo de
+                                troco.
                             </p>
 
                             {canOpen ? (
@@ -289,7 +303,8 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                 </Button>
                             ) : (
                                 <p className="mt-4 text-xs text-amber-600 dark:text-amber-400">
-                                    Seu perfil não possui permissão para abrir turnos de caixa.
+                                    Seu perfil não possui permissão para abrir
+                                    turnos de caixa.
                                 </p>
                             )}
                         </div>
@@ -321,7 +336,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div className="rounded-xl border border-emerald-300 bg-emerald-50/50 p-5 shadow-sm dark:border-emerald-800/80 dark:bg-emerald-950/20">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                                <span className="text-xs font-bold tracking-wider text-emerald-800 uppercase dark:text-emerald-300">
                                     Saldo Atual em Caixa
                                 </span>
                                 <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">
@@ -329,7 +344,9 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                 </Badge>
                             </div>
                             <p className="mt-2 text-3xl font-extrabold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                {formatMoney(active_shift.expected_amount_cents)}
+                                {formatMoney(
+                                    active_shift.expected_amount_cents,
+                                )}
                             </p>
                             <span className="text-xs text-emerald-700 dark:text-emerald-400">
                                 Saldo esperado em gaveta
@@ -344,7 +361,8 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                 {formatMoney(active_shift.initial_amount_cents)}
                             </p>
                             <span className="text-xs text-muted-foreground">
-                                Aberto em {formatDateTime(active_shift.opened_at)}
+                                Aberto em{' '}
+                                {formatDateTime(active_shift.opened_at)}
                             </span>
                         </div>
 
@@ -387,11 +405,15 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                             </div>
                             <div>
                                 <h4 className="text-sm font-semibold">
-                                    Operador: {active_shift.opened_by?.name ?? 'Operador'}
+                                    Operador:{' '}
+                                    {active_shift.opened_by?.name ?? 'Operador'}
                                 </h4>
                                 <p className="text-xs text-muted-foreground">
-                                    Turno iniciado às {formatDateTime(active_shift.opened_at)}
-                                    {active_shift.notes ? ` • ${active_shift.notes}` : ''}
+                                    Turno iniciado às{' '}
+                                    {formatDateTime(active_shift.opened_at)}
+                                    {active_shift.notes
+                                        ? ` • ${active_shift.notes}`
+                                        : ''}
                                 </p>
                             </div>
                         </div>
@@ -399,7 +421,10 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         <div className="flex flex-wrap items-center gap-2">
                             {/* Modal de Suprimento */}
                             {canMove && (
-                                <Dialog open={supplyModalOpen} onOpenChange={setSupplyModalOpen}>
+                                <Dialog
+                                    open={supplyModalOpen}
+                                    onOpenChange={setSupplyModalOpen}
+                                >
                                     <DialogTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -412,19 +437,25 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-md">
                                         <DialogHeader>
-                                            <DialogTitle>Registrar Suprimento de Caixa</DialogTitle>
+                                            <DialogTitle>
+                                                Registrar Suprimento de Caixa
+                                            </DialogTitle>
                                             <DialogDescription>
-                                                Adicione fundos à gaveta de dinheiro (reforço de troco).
+                                                Adicione fundos à gaveta de
+                                                dinheiro (reforço de troco).
                                             </DialogDescription>
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.move.post({ cashShift: active_shift.id })}
+                                            {...cashShifts.move.post({
+                                                cashShift: active_shift.id,
+                                            })}
                                             headers={{
-                                                'X-Idempotency-Key': createIdempotencyKey(
-                                                    'cash-supply',
-                                                    active_shift.id,
-                                                ),
+                                                'X-Idempotency-Key':
+                                                    createIdempotencyKey(
+                                                        'cash-supply',
+                                                        active_shift.id,
+                                                    ),
                                             }}
                                             onSuccess={() => {
                                                 setSupplyModalOpen(false);
@@ -435,39 +466,56 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         >
                                             {({ errors, processing }) => (
                                                 <>
-                                                    <FormErrorSummary errors={errors} />
+                                                    <FormErrorSummary
+                                                        errors={errors}
+                                                    />
 
-                                                    <input type="hidden" name="type" value="supply" />
+                                                    <input
+                                                        type="hidden"
+                                                        name="type"
+                                                        value="supply"
+                                                    />
                                                     <input
                                                         type="hidden"
                                                         name="lock_version"
-                                                        value={active_shift.lock_version}
+                                                        value={
+                                                            active_shift.lock_version
+                                                        }
                                                     />
 
                                                     <FormField
                                                         label="Valor do Suprimento (R$)"
                                                         name="amount_cents"
                                                         required
-                                                        error={errors.amount_cents}
+                                                        error={
+                                                            errors.amount_cents
+                                                        }
                                                     >
                                                         <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">
+                                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
                                                                 R$
                                                             </span>
                                                             <Input
                                                                 type="text"
                                                                 className="pl-10 text-lg font-bold"
                                                                 placeholder="0,00"
-                                                                value={movementAmountFloat}
+                                                                value={
+                                                                    movementAmountFloat
+                                                                }
                                                                 onChange={(e) =>
-                                                                    setMovementAmountFloat(e.target.value)
+                                                                    setMovementAmountFloat(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
                                                                 }
                                                             />
                                                         </div>
                                                         <input
                                                             type="hidden"
                                                             name="amount_cents"
-                                                            value={movementAmountCents}
+                                                            value={
+                                                                movementAmountCents
+                                                            }
                                                         />
                                                     </FormField>
 
@@ -480,9 +528,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <Input
                                                             type="text"
                                                             placeholder="Ex: Troco adicional em moedas"
-                                                            value={movementReason}
+                                                            value={
+                                                                movementReason
+                                                            }
                                                             onChange={(e) =>
-                                                                setMovementReason(e.target.value)
+                                                                setMovementReason(
+                                                                    e.target
+                                                                        .value,
+                                                                )
                                                             }
                                                             name="reason"
                                                         />
@@ -491,8 +544,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                     <FormActions
                                                         submitLabel="Confirmar Entrada"
                                                         submittingLabel="Registrando..."
-                                                        isSubmitting={processing}
-                                                        onCancel={() => setSupplyModalOpen(false)}
+                                                        isSubmitting={
+                                                            processing
+                                                        }
+                                                        onCancel={() =>
+                                                            setSupplyModalOpen(
+                                                                false,
+                                                            )
+                                                        }
                                                     />
                                                 </>
                                             )}
@@ -503,7 +562,10 @@ export default function CashIndex({ active_shift, metrics }: Props) {
 
                             {/* Modal de Sangria */}
                             {canMove && (
-                                <Dialog open={bleedModalOpen} onOpenChange={setBleedModalOpen}>
+                                <Dialog
+                                    open={bleedModalOpen}
+                                    onOpenChange={setBleedModalOpen}
+                                >
                                     <DialogTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -516,19 +578,25 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-md">
                                         <DialogHeader>
-                                            <DialogTitle>Registrar Sangria de Caixa</DialogTitle>
+                                            <DialogTitle>
+                                                Registrar Sangria de Caixa
+                                            </DialogTitle>
                                             <DialogDescription>
-                                                Retire valores da gaveta para cofre, depósito ou despesas.
+                                                Retire valores da gaveta para
+                                                cofre, depósito ou despesas.
                                             </DialogDescription>
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.move.post({ cashShift: active_shift.id })}
+                                            {...cashShifts.move.post({
+                                                cashShift: active_shift.id,
+                                            })}
                                             headers={{
-                                                'X-Idempotency-Key': createIdempotencyKey(
-                                                    'cash-bleed',
-                                                    active_shift.id,
-                                                ),
+                                                'X-Idempotency-Key':
+                                                    createIdempotencyKey(
+                                                        'cash-bleed',
+                                                        active_shift.id,
+                                                    ),
                                             }}
                                             onSuccess={() => {
                                                 setBleedModalOpen(false);
@@ -539,19 +607,30 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         >
                                             {({ errors, processing }) => (
                                                 <>
-                                                    <FormErrorSummary errors={errors} />
+                                                    <FormErrorSummary
+                                                        errors={errors}
+                                                    />
 
-                                                    <input type="hidden" name="type" value="bleed" />
+                                                    <input
+                                                        type="hidden"
+                                                        name="type"
+                                                        value="bleed"
+                                                    />
                                                     <input
                                                         type="hidden"
                                                         name="lock_version"
-                                                        value={active_shift.lock_version}
+                                                        value={
+                                                            active_shift.lock_version
+                                                        }
                                                     />
 
                                                     <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
-                                                        Saldo disponível para sangria:{' '}
+                                                        Saldo disponível para
+                                                        sangria:{' '}
                                                         <strong className="text-foreground">
-                                                            {formatMoney(active_shift.expected_amount_cents)}
+                                                            {formatMoney(
+                                                                active_shift.expected_amount_cents,
+                                                            )}
                                                         </strong>
                                                     </div>
 
@@ -559,26 +638,35 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         label="Valor da Sangria (R$)"
                                                         name="amount_cents"
                                                         required
-                                                        error={errors.amount_cents}
+                                                        error={
+                                                            errors.amount_cents
+                                                        }
                                                     >
                                                         <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">
+                                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
                                                                 R$
                                                             </span>
                                                             <Input
                                                                 type="text"
                                                                 className="pl-10 text-lg font-bold"
                                                                 placeholder="0,00"
-                                                                value={movementAmountFloat}
+                                                                value={
+                                                                    movementAmountFloat
+                                                                }
                                                                 onChange={(e) =>
-                                                                    setMovementAmountFloat(e.target.value)
+                                                                    setMovementAmountFloat(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
                                                                 }
                                                             />
                                                         </div>
                                                         <input
                                                             type="hidden"
                                                             name="amount_cents"
-                                                            value={movementAmountCents}
+                                                            value={
+                                                                movementAmountCents
+                                                            }
                                                         />
                                                     </FormField>
 
@@ -591,9 +679,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <Input
                                                             type="text"
                                                             placeholder="Ex: Transferência para cofre principal"
-                                                            value={movementReason}
+                                                            value={
+                                                                movementReason
+                                                            }
                                                             onChange={(e) =>
-                                                                setMovementReason(e.target.value)
+                                                                setMovementReason(
+                                                                    e.target
+                                                                        .value,
+                                                                )
                                                             }
                                                             name="reason"
                                                         />
@@ -602,8 +695,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                     <FormActions
                                                         submitLabel="Confirmar Retirada"
                                                         submittingLabel="Registrando..."
-                                                        isSubmitting={processing}
-                                                        onCancel={() => setBleedModalOpen(false)}
+                                                        isSubmitting={
+                                                            processing
+                                                        }
+                                                        onCancel={() =>
+                                                            setBleedModalOpen(
+                                                                false,
+                                                            )
+                                                        }
                                                     />
                                                 </>
                                             )}
@@ -614,7 +713,10 @@ export default function CashIndex({ active_shift, metrics }: Props) {
 
                             {/* Modal de Fechamento de Caixa */}
                             {canClose && (
-                                <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
+                                <Dialog
+                                    open={closeModalOpen}
+                                    onOpenChange={setCloseModalOpen}
+                                >
                                     <DialogTrigger asChild>
                                         <Button
                                             size="sm"
@@ -626,19 +728,27 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-lg">
                                         <DialogHeader>
-                                            <DialogTitle>Fechamento e Conferência de Caixa</DialogTitle>
+                                            <DialogTitle>
+                                                Fechamento e Conferência de
+                                                Caixa
+                                            </DialogTitle>
                                             <DialogDescription>
-                                                Realize a contagem física do dinheiro em gaveta e informe o valor final apurado.
+                                                Realize a contagem física do
+                                                dinheiro em gaveta e informe o
+                                                valor final apurado.
                                             </DialogDescription>
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.close.post({ cashShift: active_shift.id })}
+                                            {...cashShifts.close.post({
+                                                cashShift: active_shift.id,
+                                            })}
                                             headers={{
-                                                'X-Idempotency-Key': createIdempotencyKey(
-                                                    'cash-close',
-                                                    active_shift.id,
-                                                ),
+                                                'X-Idempotency-Key':
+                                                    createIdempotencyKey(
+                                                        'cash-close',
+                                                        active_shift.id,
+                                                    ),
                                             }}
                                             onSuccess={() => {
                                                 setCloseModalOpen(false);
@@ -649,26 +759,38 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         >
                                             {({ errors, processing }) => (
                                                 <>
-                                                    <FormErrorSummary errors={errors} />
+                                                    <FormErrorSummary
+                                                        errors={errors}
+                                                    />
 
                                                     <input
                                                         type="hidden"
                                                         name="lock_version"
-                                                        value={active_shift.lock_version}
+                                                        value={
+                                                            active_shift.lock_version
+                                                        }
                                                     />
 
                                                     {/* Resumo do Turno */}
                                                     <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/40 p-3 text-xs">
                                                         <div>
-                                                            <span className="text-muted-foreground">Fundo Inicial:</span>
+                                                            <span className="text-muted-foreground">
+                                                                Fundo Inicial:
+                                                            </span>
                                                             <p className="font-semibold">
-                                                                {formatMoney(active_shift.initial_amount_cents)}
+                                                                {formatMoney(
+                                                                    active_shift.initial_amount_cents,
+                                                                )}
                                                             </p>
                                                         </div>
                                                         <div>
-                                                            <span className="text-muted-foreground">Saldo Esperado:</span>
+                                                            <span className="text-muted-foreground">
+                                                                Saldo Esperado:
+                                                            </span>
                                                             <p className="text-sm font-bold text-foreground">
-                                                                {formatMoney(active_shift.expected_amount_cents)}
+                                                                {formatMoney(
+                                                                    active_shift.expected_amount_cents,
+                                                                )}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -677,19 +799,26 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         label="Valor Total Contado na Gaveta (R$)"
                                                         name="final_amount_cents"
                                                         required
-                                                        error={errors.final_amount_cents}
+                                                        error={
+                                                            errors.final_amount_cents
+                                                        }
                                                     >
                                                         <div className="relative">
-                                                            <span className="absolute left-3 top-2.5 text-sm font-semibold text-muted-foreground">
+                                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
                                                                 R$
                                                             </span>
                                                             <Input
                                                                 type="text"
                                                                 className="pl-10 text-xl font-black"
                                                                 placeholder="0,00"
-                                                                value={finalAmountFloat}
+                                                                value={
+                                                                    finalAmountFloat
+                                                                }
                                                                 onChange={(e) =>
-                                                                    setFinalAmountFloat(e.target.value)
+                                                                    setFinalAmountFloat(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
                                                                 }
                                                                 autoFocus
                                                             />
@@ -697,35 +826,53 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <input
                                                             type="hidden"
                                                             name="final_amount_cents"
-                                                            value={finalAmountCents}
+                                                            value={
+                                                                finalAmountCents
+                                                            }
                                                         />
                                                     </FormField>
 
                                                     {/* Indicador de Diferença em Tempo Real */}
                                                     <div
                                                         className={`rounded-lg border p-3.5 text-sm transition-colors ${
-                                                            calculatedDifferenceCents === 0
+                                                            calculatedDifferenceCents ===
+                                                            0
                                                                 ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                                                : calculatedDifferenceCents > 0
-                                                                ? 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
-                                                                : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                                                                : calculatedDifferenceCents >
+                                                                    0
+                                                                  ? 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                                                                  : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
                                                         }`}
                                                     >
                                                         <div className="flex items-center justify-between font-semibold">
                                                             <span>
-                                                                {calculatedDifferenceCents === 0
+                                                                {calculatedDifferenceCents ===
+                                                                0
                                                                     ? '✓ Caixa Exato (Sem divergência)'
-                                                                    : calculatedDifferenceCents > 0
-                                                                    ? '↑ Sobra de Caixa'
-                                                                    : '↓ Quebra / Falta de Caixa'}
+                                                                    : calculatedDifferenceCents >
+                                                                        0
+                                                                      ? '↑ Sobra de Caixa'
+                                                                      : '↓ Quebra / Falta de Caixa'}
                                                             </span>
                                                             <span className="text-base font-bold">
-                                                                {calculatedDifferenceCents > 0 ? '+' : ''}
-                                                                {formatMoney(calculatedDifferenceCents)}
+                                                                {calculatedDifferenceCents >
+                                                                0
+                                                                    ? '+'
+                                                                    : ''}
+                                                                {formatMoney(
+                                                                    calculatedDifferenceCents,
+                                                                )}
                                                             </span>
                                                         </div>
                                                         <p className="mt-1 text-xs opacity-80">
-                                                            Esperado: {formatMoney(active_shift.expected_amount_cents)} | Informado: {formatMoney(finalAmountCents)}
+                                                            Esperado:{' '}
+                                                            {formatMoney(
+                                                                active_shift.expected_amount_cents,
+                                                            )}{' '}
+                                                            | Informado:{' '}
+                                                            {formatMoney(
+                                                                finalAmountCents,
+                                                            )}
                                                         </p>
                                                     </div>
 
@@ -736,10 +883,15 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                     >
                                                         <Textarea
                                                             id="close-notes"
-                                                            className="flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                            className="flex min-h-[70px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                                             placeholder="Ex: Justificativa de eventuais sobras ou quebras"
                                                             value={closeNotes}
-                                                            onChange={(e) => setCloseNotes(e.target.value)}
+                                                            onChange={(e) =>
+                                                                setCloseNotes(
+                                                                    e.target
+                                                                        .value,
+                                                                )
+                                                            }
                                                             name="notes"
                                                         />
                                                     </FormField>
@@ -747,8 +899,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                     <FormActions
                                                         submitLabel="Encerrar Turno de Caixa"
                                                         submittingLabel="Encerrando..."
-                                                        isSubmitting={processing}
-                                                        onCancel={() => setCloseModalOpen(false)}
+                                                        isSubmitting={
+                                                            processing
+                                                        }
+                                                        onCancel={() =>
+                                                            setCloseModalOpen(
+                                                                false,
+                                                            )
+                                                        }
                                                     />
                                                 </>
                                             )}
@@ -763,17 +921,22 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                     <div className="rounded-xl border border-border bg-card shadow-sm">
                         <div className="flex items-center justify-between border-b border-border px-6 py-4">
                             <div>
-                                <h3 className="text-base font-semibold">Movimentações do Turno</h3>
+                                <h3 className="text-base font-semibold">
+                                    Movimentações do Turno
+                                </h3>
                                 <p className="text-xs text-muted-foreground">
-                                    Histórico de todas as entradas, sangrias e operações registradas neste turno
+                                    Histórico de todas as entradas, sangrias e
+                                    operações registradas neste turno
                                 </p>
                             </div>
                             <span className="text-xs font-semibold text-muted-foreground">
-                                {active_shift.movements?.length ?? 0} lançamentos
+                                {active_shift.movements?.length ?? 0}{' '}
+                                lançamentos
                             </span>
                         </div>
 
-                        {!active_shift.movements || active_shift.movements.length === 0 ? (
+                        {!active_shift.movements ||
+                        active_shift.movements.length === 0 ? (
                             <EmptyState
                                 title="Nenhuma movimentação avulsa lançada"
                                 description="Realize suprimentos ou sangrias para movimentar o caixa operacional."
@@ -781,63 +944,86 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <thead className="bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                         <tr>
                                             <th className="px-6 py-3">Tipo</th>
-                                            <th className="px-6 py-3">Motivo / Descrição</th>
-                                            <th className="px-6 py-3">Responsável</th>
-                                            <th className="px-6 py-3">Horário</th>
-                                            <th className="px-6 py-3 text-right">Valor</th>
+                                            <th className="px-6 py-3">
+                                                Motivo / Descrição
+                                            </th>
+                                            <th className="px-6 py-3">
+                                                Responsável
+                                            </th>
+                                            <th className="px-6 py-3">
+                                                Horário
+                                            </th>
+                                            <th className="px-6 py-3 text-right">
+                                                Valor
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {active_shift.movements.map((movement) => {
-                                            const config =
-                                                movementTypeConfig[movement.type] ??
-                                                movementTypeConfig.supply;
+                                        {active_shift.movements.map(
+                                            (movement) => {
+                                                const config =
+                                                    movementTypeConfig[
+                                                        movement.type
+                                                    ] ??
+                                                    movementTypeConfig.supply;
 
-                                            return (
-                                                <tr
-                                                    key={movement.id}
-                                                    className="transition-colors hover:bg-muted/30"
-                                                >
-                                                    <td className="whitespace-nowrap px-6 py-4">
-                                                        <Badge
-                                                            variant="outline"
-                                                            className={`font-semibold ${config.bgClass}`}
-                                                        >
-                                                            {config.label}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-6 py-4 font-medium text-foreground">
-                                                        {movement.reason}
-                                                        {movement.reference_type && (
-                                                            <span className="ml-2 text-xs text-muted-foreground">
-                                                                ({movement.reference_type})
+                                                return (
+                                                    <tr
+                                                        key={movement.id}
+                                                        className="transition-colors hover:bg-muted/30"
+                                                    >
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={`font-semibold ${config.bgClass}`}
+                                                            >
+                                                                {config.label}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="px-6 py-4 font-medium text-foreground">
+                                                            {movement.reason}
+                                                            {movement.reference_type && (
+                                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                                    (
+                                                                    {
+                                                                        movement.reference_type
+                                                                    }
+                                                                    )
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                                                            {movement.user
+                                                                ?.name ?? '—'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-xs whitespace-nowrap text-muted-foreground">
+                                                            {formatDateTime(
+                                                                movement.created_at,
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right font-bold whitespace-nowrap">
+                                                            <span
+                                                                className={
+                                                                    config.isCredit
+                                                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                                                        : 'text-rose-600 dark:text-rose-400'
+                                                                }
+                                                            >
+                                                                {config.isCredit
+                                                                    ? '+'
+                                                                    : '-'}
+                                                                {formatMoney(
+                                                                    movement.amount_cents,
+                                                                )}
                                                             </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
-                                                        {movement.user?.name ?? '—'}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-xs text-muted-foreground">
-                                                        {formatDateTime(movement.created_at)}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-6 py-4 text-right font-bold">
-                                                        <span
-                                                            className={
-                                                                config.isCredit
-                                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                                    : 'text-rose-600 dark:text-rose-400'
-                                                            }
-                                                        >
-                                                            {config.isCredit ? '+' : '-'}
-                                                            {formatMoney(movement.amount_cents)}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            },
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

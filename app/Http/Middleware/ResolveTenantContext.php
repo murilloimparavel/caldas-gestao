@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\MembershipStatus;
 use App\Models\Membership;
+use App\Models\TenantDomain;
 use App\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -27,7 +28,10 @@ final class ResolveTenantContext
             return $next($request);
         }
 
-        $explicitTenant = $request->session()->get('tenant_id')
+        /** @var TenantDomain|null $tenantDomain */
+        $tenantDomain = $request->attributes->get('tenant_domain');
+        $explicitTenant = $tenantDomain->tenant_id
+            ?? $request->session()->get('tenant_id')
             ?? $request->header('X-Tenant-Id')
             ?? $request->route('tenant');
         $explicitUnit = $request->session()->get('unit_id')

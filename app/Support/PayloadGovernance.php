@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Arr;
-use JsonException;
 
 final class PayloadGovernance
 {
@@ -118,7 +117,7 @@ final class PayloadGovernance
     {
         try {
             return hash('sha256', json_encode($this->canonicalize($value), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION));
-        } catch (JsonException $exception) {
+        } catch (\JsonException $exception) {
             throw new \InvalidArgumentException('The payload must be JSON serializable.', 0, $exception);
         }
     }

@@ -1,13 +1,21 @@
 import { TrendingUp, TrendingDown, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from '@/components/ui/card';
 import type { ProfessionalPerformance } from '../types';
 
 type ProfessionalPerformanceTableProps = {
     data?: ProfessionalPerformance[];
 };
 
-export function ProfessionalPerformanceTable({ data = [] }: ProfessionalPerformanceTableProps) {
+export function ProfessionalPerformanceTable({
+    data = [],
+}: ProfessionalPerformanceTableProps) {
     const hasData = data.length > 0;
 
     const formatCurrency = (cents?: number | string) => {
@@ -16,7 +24,10 @@ export function ProfessionalPerformanceTable({ data = [] }: ProfessionalPerforma
         }
 
         if (typeof cents === 'number') {
-            return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return (cents / 100).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+            });
         }
 
         return 'R$ 0,00';
@@ -25,8 +36,12 @@ export function ProfessionalPerformanceTable({ data = [] }: ProfessionalPerforma
     return (
         <Card className="border-border/60">
             <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold">Desempenho por Profissional</CardTitle>
-                <CardDescription className="text-xs">Atendimentos executados e ticket médio individual</CardDescription>
+                <CardTitle className="text-base font-semibold">
+                    Desempenho por Profissional
+                </CardTitle>
+                <CardDescription className="text-xs">
+                    Atendimentos executados e ticket médio individual
+                </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
                 {!hasData ? (
@@ -38,20 +53,40 @@ export function ProfessionalPerformanceTable({ data = [] }: ProfessionalPerforma
                         <table className="w-full text-left text-xs">
                             <thead>
                                 <tr className="border-y border-border/50 bg-muted/30 text-muted-foreground">
-                                    <th className="py-2.5 px-4 font-medium">Profissional</th>
-                                    <th className="py-2.5 px-4 font-medium text-center">Atendimentos</th>
-                                    <th className="py-2.5 px-4 font-medium text-center">Variação %</th>
-                                    <th className="py-2.5 px-4 font-medium text-right">Ticket Médio</th>
+                                    <th className="px-4 py-2.5 font-medium">
+                                        Profissional
+                                    </th>
+                                    <th className="px-4 py-2.5 text-center font-medium">
+                                        Atendimentos
+                                    </th>
+                                    <th className="px-4 py-2.5 text-center font-medium">
+                                        Variação %
+                                    </th>
+                                    <th className="px-4 py-2.5 text-right font-medium">
+                                        Ticket Médio
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/40">
                                 {data.map((prof) => {
-                                    const avatarUrl = prof.avatar_url ?? prof.avatarUrl ?? '';
-                                    const totalServices = prof.services_count ?? prof.totalServices ?? 0;
-                                    const variation = prof.variation_percentage ?? prof.changePercentage ?? 0;
-                                    const avgTicket = prof.average_ticket_cents !== undefined
-                                        ? formatCurrency(prof.average_ticket_cents)
-                                        : formatCurrency(prof.averageTicket);
+                                    const avatarUrl =
+                                        prof.avatar_url ?? prof.avatarUrl ?? '';
+                                    const totalServices =
+                                        prof.services_count ??
+                                        prof.totalServices ??
+                                        0;
+                                    const variation =
+                                        prof.variation_percentage ??
+                                        prof.changePercentage ??
+                                        0;
+                                    const avgTicket =
+                                        prof.average_ticket_cents !== undefined
+                                            ? formatCurrency(
+                                                  prof.average_ticket_cents,
+                                              )
+                                            : formatCurrency(
+                                                  prof.averageTicket,
+                                              );
 
                                     const initials = prof.name
                                         .split(' ')
@@ -63,22 +98,34 @@ export function ProfessionalPerformanceTable({ data = [] }: ProfessionalPerforma
                                     const isUp = variation >= 0;
 
                                     return (
-                                        <tr key={prof.id} className="transition-colors hover:bg-muted/20">
-                                            <td className="py-3 px-4">
+                                        <tr
+                                            key={prof.id}
+                                            className="transition-colors hover:bg-muted/20"
+                                        >
+                                            <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2.5">
                                                     <Avatar className="size-8 border border-border/50">
-                                                        {avatarUrl && <AvatarImage src={avatarUrl} alt={prof.name} />}
+                                                        {avatarUrl && (
+                                                            <AvatarImage
+                                                                src={avatarUrl}
+                                                                alt={prof.name}
+                                                            />
+                                                        )}
                                                         <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
-                                                            {initials || <User className="size-3.5" />}
+                                                            {initials || (
+                                                                <User className="size-3.5" />
+                                                            )}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <span className="font-medium text-foreground">{prof.name}</span>
+                                                    <span className="font-medium text-foreground">
+                                                        {prof.name}
+                                                    </span>
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-4 text-center font-semibold text-foreground">
+                                            <td className="px-4 py-3 text-center font-semibold text-foreground">
                                                 {totalServices}
                                             </td>
-                                            <td className="py-3 px-4 text-center">
+                                            <td className="px-4 py-3 text-center">
                                                 <span
                                                     className={`inline-flex items-center gap-1 font-semibold ${
                                                         isUp
@@ -86,12 +133,16 @@ export function ProfessionalPerformanceTable({ data = [] }: ProfessionalPerforma
                                                             : 'text-red-600 dark:text-red-400'
                                                     }`}
                                                 >
-                                                    {isUp ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                                                    {isUp ? (
+                                                        <TrendingUp className="size-3" />
+                                                    ) : (
+                                                        <TrendingDown className="size-3" />
+                                                    )}
                                                     {isUp ? '+' : ''}
                                                     {variation}%
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4 text-right font-medium text-foreground">
+                                            <td className="px-4 py-3 text-right font-medium text-foreground">
                                                 {avgTicket}
                                             </td>
                                         </tr>

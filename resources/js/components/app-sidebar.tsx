@@ -209,12 +209,21 @@ export function AppSidebar() {
         .filter((group) => group.items.length > 0);
 
     return (
-        <Sidebar collapsible="icon" variant="inset" role="navigation" aria-label="Barra lateral de navegação">
+        <Sidebar
+            collapsible="icon"
+            variant="inset"
+            role="navigation"
+            aria-label="Barra lateral de navegação"
+        >
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch aria-label="Ir para o Painel">
+                            <Link
+                                href={dashboard()}
+                                prefetch
+                                aria-label="Ir para o Painel"
+                            >
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

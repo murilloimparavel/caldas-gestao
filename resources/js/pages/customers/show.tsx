@@ -182,7 +182,6 @@ type Props = {
     subscription_history?: ActiveSubscription[];
 };
 
-
 function formatAppointmentDate(isoString: string): string {
     const date = new Date(isoString);
 
@@ -245,13 +244,19 @@ function SaleStatusBadge({ status }: { status: CustomerSale['status'] }) {
             );
         case 'cancelled':
             return (
-                <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
+                <Badge
+                    variant="outline"
+                    className="border-border bg-muted text-muted-foreground"
+                >
                     Cancelada
                 </Badge>
             );
         default:
             return (
-                <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
+                <Badge
+                    variant="outline"
+                    className="border-border bg-muted text-muted-foreground"
+                >
                     Rascunho
                 </Badge>
             );
@@ -264,7 +269,7 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
             return (
                 <Badge
                     variant="outline"
-                    className="gap-1 border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 text-[11px] py-0"
+                    className="gap-1 border-blue-200 bg-blue-50 py-0 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
                 >
                     <Scissors className="size-3" /> Serviço
                 </Badge>
@@ -273,7 +278,7 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
             return (
                 <Badge
                     variant="outline"
-                    className="gap-1 border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 text-[11px] py-0"
+                    className="gap-1 border-purple-200 bg-purple-50 py-0 text-[11px] text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
                 >
                     <Package className="size-3" /> Produto
                 </Badge>
@@ -282,7 +287,7 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
             return (
                 <Badge
                     variant="outline"
-                    className="gap-1 border-border bg-muted text-muted-foreground text-[11px] py-0"
+                    className="gap-1 border-border bg-muted py-0 text-[11px] text-muted-foreground"
                 >
                     <Sparkles className="size-3" /> Item
                 </Badge>
@@ -333,11 +338,15 @@ export default function CustomerShow({
     const canConsumePackage =
         props.auth.permissions.includes('package.consume') ||
         props.auth.permissions.includes('package.manage');
-    const canSubscribe = props.auth.permissions.includes('subscription.subscribe');
+    const canSubscribe = props.auth.permissions.includes(
+        'subscription.subscribe',
+    );
     const canViewSub = props.auth.permissions.includes('subscription.view');
     const canCancelSub = props.auth.permissions.includes('subscription.cancel');
     const canManageSub = props.auth.permissions.includes('subscription.manage');
-    const [subscribeKey] = useState(() => createIdempotencyKey('customer-subscribe'));
+    const [subscribeKey] = useState(() =>
+        createIdempotencyKey('customer-subscribe'),
+    );
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
     const customerPackages = customer.customerPackages ?? [];
@@ -386,7 +395,7 @@ export default function CustomerShow({
                             <TrendingUp className="size-5" />
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                 Total Gasto
                             </p>
                             <p className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
@@ -400,11 +409,12 @@ export default function CustomerShow({
                             <CalendarDays className="size-5" />
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                 Total de Visitas
                             </p>
                             <p className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
-                                {totalVisits} {totalVisits === 1 ? 'visita' : 'visitas'}
+                                {totalVisits}{' '}
+                                {totalVisits === 1 ? 'visita' : 'visitas'}
                             </p>
                         </div>
                     </div>
@@ -414,11 +424,14 @@ export default function CustomerShow({
                             <Receipt className="size-5" />
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                 Comandas
                             </p>
                             <p className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
-                                {salesList.length} {salesList.length === 1 ? 'comanda' : 'comandas'}
+                                {salesList.length}{' '}
+                                {salesList.length === 1
+                                    ? 'comanda'
+                                    : 'comandas'}
                             </p>
                         </div>
                     </div>
@@ -428,11 +441,14 @@ export default function CustomerShow({
                             <Calendar className="size-5" />
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                 Agendamentos
                             </p>
                             <p className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
-                                {appointments.length} {appointments.length === 1 ? 'registro' : 'registros'}
+                                {appointments.length}{' '}
+                                {appointments.length === 1
+                                    ? 'registro'
+                                    : 'registros'}
                             </p>
                         </div>
                     </div>
@@ -441,19 +457,22 @@ export default function CustomerShow({
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
                     <div className="space-y-5">
                         {/* Abas de Navegação */}
-                        <div className="flex border-b border-border space-x-1 sm:space-x-2">
+                        <div className="flex space-x-1 border-b border-border sm:space-x-2">
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('sales')}
                                 className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
                                     activeTab === 'sales'
-                                        ? 'border-primary text-primary font-semibold'
+                                        ? 'border-primary font-semibold text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                                 <Receipt className="size-4" />
                                 <span>Histórico de Comandas & Consumo</span>
-                                <Badge variant="secondary" className="ml-1 text-xs">
+                                <Badge
+                                    variant="secondary"
+                                    className="ml-1 text-xs"
+                                >
                                     {salesList.length}
                                 </Badge>
                             </button>
@@ -462,13 +481,16 @@ export default function CustomerShow({
                                 onClick={() => setActiveTab('appointments')}
                                 className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
                                     activeTab === 'appointments'
-                                        ? 'border-primary text-primary font-semibold'
+                                        ? 'border-primary font-semibold text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                                 <Calendar className="size-4" />
                                 <span>Agendamentos</span>
-                                <Badge variant="secondary" className="ml-1 text-xs">
+                                <Badge
+                                    variant="secondary"
+                                    className="ml-1 text-xs"
+                                >
                                     {appointments.length}
                                 </Badge>
                             </button>
@@ -477,13 +499,16 @@ export default function CustomerShow({
                                 onClick={() => setActiveTab('packages')}
                                 className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
                                     activeTab === 'packages'
-                                        ? 'border-primary text-primary font-semibold'
+                                        ? 'border-primary font-semibold text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                                 <Gift className="size-4" />
                                 <span>Pacotes de Serviços</span>
-                                <Badge variant="secondary" className="ml-1 text-xs">
+                                <Badge
+                                    variant="secondary"
+                                    className="ml-1 text-xs"
+                                >
                                     {customerPackages.length}
                                 </Badge>
                             </button>
@@ -492,7 +517,7 @@ export default function CustomerShow({
                                 onClick={() => setActiveTab('details')}
                                 className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
                                     activeTab === 'details'
-                                        ? 'border-primary text-primary font-semibold'
+                                        ? 'border-primary font-semibold text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                 }`}
                             >
@@ -504,14 +529,17 @@ export default function CustomerShow({
                                 onClick={() => setActiveTab('subscriptions')}
                                 className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
                                     activeTab === 'subscriptions'
-                                        ? 'border-primary text-primary font-semibold'
+                                        ? 'border-primary font-semibold text-primary'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                                 <RefreshCw className="size-4" />
                                 <span>Assinaturas</span>
                                 {active_subscription?.status === 'active' && (
-                                    <Badge variant="default" className="ml-1 text-xs bg-emerald-500">
+                                    <Badge
+                                        variant="default"
+                                        className="ml-1 bg-emerald-500 text-xs"
+                                    >
                                         Ativo
                                     </Badge>
                                 )}
@@ -520,57 +548,84 @@ export default function CustomerShow({
 
                         {/* Aba: Histórico de Comandas & Consumo */}
                         {activeTab === 'sales' && (
-                            <section className="surface-panel p-5 sm:p-6 space-y-4">
+                            <section className="surface-panel space-y-4 p-5 sm:p-6">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
                                         <h2 className="text-base font-semibold">
                                             Histórico de Comandas & Consumo
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            Todas as comandas, serviços prestados e produtos adquiridos por este cliente.
+                                            Todas as comandas, serviços
+                                            prestados e produtos adquiridos por
+                                            este cliente.
                                         </p>
                                     </div>
                                 </div>
 
                                 {salesList.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                                        <Receipt className="mx-auto size-8 text-muted-foreground/50 mb-2" />
-                                        Nenhuma comanda registrada para este cliente até o momento.
+                                        <Receipt className="mx-auto mb-2 size-8 text-muted-foreground/50" />
+                                        Nenhuma comanda registrada para este
+                                        cliente até o momento.
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                                         {salesList.map((sale) => (
                                             <div
                                                 key={sale.id}
-                                                className="p-4 transition-colors hover:bg-muted/20 space-y-3"
+                                                className="space-y-3 p-4 transition-colors hover:bg-muted/20"
                                             >
                                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                                     <div className="space-y-1">
-                                                        <div className="flex items-center gap-2.5 flex-wrap">
+                                                        <div className="flex flex-wrap items-center gap-2.5">
                                                             <span className="font-semibold text-foreground">
-                                                                {sale.reference_label || `Comanda #${sale.id.slice(0, 8).toUpperCase()}`}
+                                                                {sale.reference_label ||
+                                                                    `Comanda #${sale.id.slice(0, 8).toUpperCase()}`}
                                                             </span>
-                                                            <SaleStatusBadge status={sale.status} />
-                                                            {(sale.category_name_snapshot || sale.sale_category?.name) && (
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {sale.category_name_snapshot || sale.sale_category?.name}
+                                                            <SaleStatusBadge
+                                                                status={
+                                                                    sale.status
+                                                                }
+                                                            />
+                                                            {(sale.category_name_snapshot ||
+                                                                sale
+                                                                    .sale_category
+                                                                    ?.name) && (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="text-xs"
+                                                                >
+                                                                    {sale.category_name_snapshot ||
+                                                                        sale
+                                                                            .sale_category
+                                                                            ?.name}
                                                                 </Badge>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                             <Clock className="size-3.5" />
-                                                            <span>{formatSaleDateTime(sale.created_at)}</span>
+                                                            <span>
+                                                                {formatSaleDateTime(
+                                                                    sale.created_at,
+                                                                )}
+                                                            </span>
                                                         </div>
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
                                                         <div className="text-right">
                                                             <p className="text-sm font-bold text-foreground">
-                                                                {formatMoney(sale.final_amount_cents)}
+                                                                {formatMoney(
+                                                                    sale.final_amount_cents,
+                                                                )}
                                                             </p>
-                                                            {sale.discount_amount_cents > 0 && (
+                                                            {sale.discount_amount_cents >
+                                                                0 && (
                                                                 <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                                                                    Desc. {formatMoney(sale.discount_amount_cents)}
+                                                                    Desc.{' '}
+                                                                    {formatMoney(
+                                                                        sale.discount_amount_cents,
+                                                                    )}
                                                                 </p>
                                                             )}
                                                         </div>
@@ -580,7 +635,11 @@ export default function CustomerShow({
                                                             size="sm"
                                                             className="gap-1.5"
                                                         >
-                                                            <Link href={sales.show(sale.id)}>
+                                                            <Link
+                                                                href={sales.show(
+                                                                    sale.id,
+                                                                )}
+                                                            >
                                                                 Ver comanda
                                                                 <ExternalLink className="size-3.5" />
                                                             </Link>
@@ -589,34 +648,63 @@ export default function CustomerShow({
                                                 </div>
 
                                                 {/* Itens da Comanda */}
-                                                {sale.items && sale.items.length > 0 && (
-                                                    <div className="mt-2 rounded-md bg-muted/40 p-3 space-y-2 border border-border/50">
-                                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                                            Itens consumidos ({sale.items.length})
-                                                        </p>
-                                                        <div className="grid gap-1.5">
-                                                            {sale.items.map((item) => (
-                                                                <div
-                                                                    key={item.id}
-                                                                    className="flex items-center justify-between text-xs text-muted-foreground"
-                                                                >
-                                                                    <div className="flex items-center gap-2 min-w-0">
-                                                                        <ItemTypeBadge type={item.item_type} />
-                                                                        <span className="font-medium text-foreground truncate">
-                                                                            {item.name_snapshot}
-                                                                        </span>
-                                                                        <span>
-                                                                            ({item.quantity}x {formatMoney(item.unit_price_cents)})
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className="font-semibold text-foreground shrink-0">
-                                                                        {formatMoney(item.total_cents)}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
+                                                {sale.items &&
+                                                    sale.items.length > 0 && (
+                                                        <div className="mt-2 space-y-2 rounded-md border border-border/50 bg-muted/40 p-3">
+                                                            <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                                                Itens consumidos
+                                                                (
+                                                                {
+                                                                    sale.items
+                                                                        .length
+                                                                }
+                                                                )
+                                                            </p>
+                                                            <div className="grid gap-1.5">
+                                                                {sale.items.map(
+                                                                    (item) => (
+                                                                        <div
+                                                                            key={
+                                                                                item.id
+                                                                            }
+                                                                            className="flex items-center justify-between text-xs text-muted-foreground"
+                                                                        >
+                                                                            <div className="flex min-w-0 items-center gap-2">
+                                                                                <ItemTypeBadge
+                                                                                    type={
+                                                                                        item.item_type
+                                                                                    }
+                                                                                />
+                                                                                <span className="truncate font-medium text-foreground">
+                                                                                    {
+                                                                                        item.name_snapshot
+                                                                                    }
+                                                                                </span>
+                                                                                <span>
+                                                                                    (
+                                                                                    {
+                                                                                        item.quantity
+                                                                                    }
+
+                                                                                    x{' '}
+                                                                                    {formatMoney(
+                                                                                        item.unit_price_cents,
+                                                                                    )}
+
+                                                                                    )
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="shrink-0 font-semibold text-foreground">
+                                                                                {formatMoney(
+                                                                                    item.total_cents,
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    )}
                                             </div>
                                         ))}
                                     </div>
@@ -633,7 +721,8 @@ export default function CustomerShow({
                                             Histórico de Agendamentos
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            Atendimentos recentes e agendamentos deste cliente.
+                                            Atendimentos recentes e agendamentos
+                                            deste cliente.
                                         </p>
                                     </div>
                                     <Button asChild variant="outline" size="sm">
@@ -646,7 +735,8 @@ export default function CustomerShow({
 
                                 {appointments.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                                        Nenhum agendamento registrado até o momento.
+                                        Nenhum agendamento registrado até o
+                                        momento.
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
@@ -658,22 +748,35 @@ export default function CustomerShow({
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-medium text-foreground">
-                                                            {formatAppointmentDate(apt.starts_at)}
+                                                            {formatAppointmentDate(
+                                                                apt.starts_at,
+                                                            )}
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
-                                                            {formatAppointmentTime(apt.starts_at)} - {formatAppointmentTime(apt.ends_at)}
+                                                            {formatAppointmentTime(
+                                                                apt.starts_at,
+                                                            )}{' '}
+                                                            -{' '}
+                                                            {formatAppointmentTime(
+                                                                apt.ends_at,
+                                                            )}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                         <UserRound className="size-3.5" />
                                                         <span>
-                                                            Profissional: {apt.professional?.name || 'Não informado'}
+                                                            Profissional:{' '}
+                                                            {apt.professional
+                                                                ?.name ||
+                                                                'Não informado'}
                                                         </span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <Badge variant="outline">
-                                                        {statusLabels[apt.status] || apt.status}
+                                                        {statusLabels[
+                                                            apt.status
+                                                        ] || apt.status}
                                                     </Badge>
                                                     <Button
                                                         asChild
@@ -682,11 +785,16 @@ export default function CustomerShow({
                                                         className="size-8 p-0"
                                                     >
                                                         <Link
-                                                            href={calendarIndex({
-                                                                query: {
-                                                                    date: apt.starts_at.slice(0, 10),
+                                                            href={calendarIndex(
+                                                                {
+                                                                    query: {
+                                                                        date: apt.starts_at.slice(
+                                                                            0,
+                                                                            10,
+                                                                        ),
+                                                                    },
                                                                 },
-                                                            })}
+                                                            )}
                                                             title="Ver na agenda"
                                                         >
                                                             <ExternalLink className="size-4" />
@@ -702,146 +810,259 @@ export default function CustomerShow({
 
                         {/* Aba: Pacotes de Serviços */}
                         {activeTab === 'packages' && (
-                            <section className="surface-panel p-5 sm:p-6 space-y-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <section className="surface-panel space-y-4 p-5 sm:p-6">
+                                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                                     <div className="space-y-1">
                                         <h2 className="text-base font-semibold">
                                             Pacotes de Serviços
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            Sessões pré-pagas, validades e histórico de utilização de pacotes.
+                                            Sessões pré-pagas, validades e
+                                            histórico de utilização de pacotes.
                                         </p>
                                     </div>
-                                    {canSellPackage && packageTemplates.length > 0 && (
-                                        <Dialog open={sellPackageOpen} onOpenChange={setSellPackageOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button size="sm">
-                                                    <Gift className="mr-2 h-4 w-4" />
-                                                    Vender / Adicionar Pacote
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                                                <DialogHeader>
-                                                    <DialogTitle>Vender Pacote para {customer.name}</DialogTitle>
-                                                    <DialogDescription>
-                                                        Selecione o modelo do pacote para atribuir as sessões e calcular a validade.
-                                                    </DialogDescription>
-                                                </DialogHeader>
+                                    {canSellPackage &&
+                                        packageTemplates.length > 0 && (
+                                            <Dialog
+                                                open={sellPackageOpen}
+                                                onOpenChange={
+                                                    setSellPackageOpen
+                                                }
+                                            >
+                                                <DialogTrigger asChild>
+                                                    <Button size="sm">
+                                                        <Gift className="mr-2 h-4 w-4" />
+                                                        Vender / Adicionar
+                                                        Pacote
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                                                    <DialogHeader>
+                                                        <DialogTitle>
+                                                            Vender Pacote para{' '}
+                                                            {customer.name}
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                            Selecione o modelo
+                                                            do pacote para
+                                                            atribuir as sessões
+                                                            e calcular a
+                                                            validade.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
 
-                                                <Form
-                                                    method="post"
-                                                    action={customerPackagesRoutes.store().url}
-                                                    headers={{ 'X-Idempotency-Key': sellKey }}
-                                                    onSuccess={() => setSellPackageOpen(false)}
-                                                    className="space-y-4"
-                                                >
-                                                    {({ processing, errors }) => (
-                                                        <>
-                                                            <FormErrorSummary errors={errors} />
-                                                            <input type="hidden" name="customer_id" value={customer.id} />
+                                                    <Form
+                                                        method="post"
+                                                        action={
+                                                            customerPackagesRoutes.store()
+                                                                .url
+                                                        }
+                                                        headers={{
+                                                            'X-Idempotency-Key':
+                                                                sellKey,
+                                                        }}
+                                                        onSuccess={() =>
+                                                            setSellPackageOpen(
+                                                                false,
+                                                            )
+                                                        }
+                                                        className="space-y-4"
+                                                    >
+                                                        {({
+                                                            processing,
+                                                            errors,
+                                                        }) => (
+                                                            <>
+                                                                <FormErrorSummary
+                                                                    errors={
+                                                                        errors
+                                                                    }
+                                                                />
+                                                                <input
+                                                                    type="hidden"
+                                                                    name="customer_id"
+                                                                    value={
+                                                                        customer.id
+                                                                    }
+                                                                />
 
-                                                            <FormField
-                                                                id="package_template_id"
-                                                                label="Modelo de Pacote"
-                                                                required
-                                                                error={errors.package_template_id}
-                                                            >
-                                                                <select
+                                                                <FormField
                                                                     id="package_template_id"
-                                                                    name="package_template_id"
+                                                                    label="Modelo de Pacote"
                                                                     required
-                                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                                                    defaultValue=""
+                                                                    error={
+                                                                        errors.package_template_id
+                                                                    }
                                                                 >
-                                                                    <option value="" disabled>Selecione um pacote...</option>
-                                                                    {packageTemplates.map((tmpl) => (
-                                                                        <option key={tmpl.id} value={tmpl.id}>
-                                                                            {tmpl.name} ({tmpl.total_sessions} sessões - {formatMoney(tmpl.price_cents)})
+                                                                    <select
+                                                                        id="package_template_id"
+                                                                        name="package_template_id"
+                                                                        required
+                                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                                                        defaultValue=""
+                                                                    >
+                                                                        <option
+                                                                            value=""
+                                                                            disabled
+                                                                        >
+                                                                            Selecione
+                                                                            um
+                                                                            pacote...
                                                                         </option>
-                                                                    ))}
-                                                                </select>
-                                                            </FormField>
+                                                                        {packageTemplates.map(
+                                                                            (
+                                                                                tmpl,
+                                                                            ) => (
+                                                                                <option
+                                                                                    key={
+                                                                                        tmpl.id
+                                                                                    }
+                                                                                    value={
+                                                                                        tmpl.id
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        tmpl.name
+                                                                                    }{' '}
+                                                                                    (
+                                                                                    {
+                                                                                        tmpl.total_sessions
+                                                                                    }{' '}
+                                                                                    sessões
+                                                                                    -{' '}
+                                                                                    {formatMoney(
+                                                                                        tmpl.price_cents,
+                                                                                    )}
 
-                                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                                                <FormField
-                                                                    id="total_sessions"
-                                                                    label="Sessões (opcional)"
-                                                                    error={errors.total_sessions}
-                                                                >
-                                                                    <Input
+                                                                                    )
+                                                                                </option>
+                                                                            ),
+                                                                        )}
+                                                                    </select>
+                                                                </FormField>
+
+                                                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                                                    <FormField
                                                                         id="total_sessions"
-                                                                        name="total_sessions"
-                                                                        type="number"
-                                                                        min="1"
-                                                                        placeholder="Padrão do modelo"
-                                                                    />
-                                                                </FormField>
+                                                                        label="Sessões (opcional)"
+                                                                        error={
+                                                                            errors.total_sessions
+                                                                        }
+                                                                    >
+                                                                        <Input
+                                                                            id="total_sessions"
+                                                                            name="total_sessions"
+                                                                            type="number"
+                                                                            min="1"
+                                                                            placeholder="Padrão do modelo"
+                                                                        />
+                                                                    </FormField>
 
-                                                                <FormField
-                                                                    id="expires_at"
-                                                                    label="Validade personalizada (opcional)"
-                                                                    error={errors.expires_at}
-                                                                >
-                                                                    <Input
+                                                                    <FormField
                                                                         id="expires_at"
-                                                                        name="expires_at"
-                                                                        type="date"
-                                                                    />
-                                                                </FormField>
-                                                            </div>
+                                                                        label="Validade personalizada (opcional)"
+                                                                        error={
+                                                                            errors.expires_at
+                                                                        }
+                                                                    >
+                                                                        <Input
+                                                                            id="expires_at"
+                                                                            name="expires_at"
+                                                                            type="date"
+                                                                        />
+                                                                    </FormField>
+                                                                </div>
 
-                                                            <FormActions
-                                                                cancelLabel="Cancelar"
-                                                                onCancel={() => setSellPackageOpen(false)}
-                                                                submitLabel="Confirmar Venda"
-                                                                submitting={processing}
-                                                            />
-                                                        </>
-                                                    )}
-                                                </Form>
-                                            </DialogContent>
-                                        </Dialog>
-                                    )}
+                                                                <FormActions
+                                                                    cancelLabel="Cancelar"
+                                                                    onCancel={() =>
+                                                                        setSellPackageOpen(
+                                                                            false,
+                                                                        )
+                                                                    }
+                                                                    submitLabel="Confirmar Venda"
+                                                                    submitting={
+                                                                        processing
+                                                                    }
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </Form>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )}
                                 </div>
 
                                 {customerPackages.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                                        <Gift className="mx-auto size-8 text-muted-foreground/50 mb-2" />
-                                        Nenhum pacote contratado por este cliente até o momento.
+                                        <Gift className="mx-auto mb-2 size-8 text-muted-foreground/50" />
+                                        Nenhum pacote contratado por este
+                                        cliente até o momento.
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         {customerPackages.map((cp) => (
                                             <div
                                                 key={cp.id}
-                                                className="rounded-xl border bg-card p-5 shadow-xs space-y-4"
+                                                className="space-y-4 rounded-xl border bg-card p-5 shadow-xs"
                                             >
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                                                     <div className="space-y-1">
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <h3 className="font-semibold text-foreground text-base">
-                                                                {cp.name_snapshot ?? cp.package_template?.name ?? 'Pacote de Serviços'}
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <h3 className="text-base font-semibold text-foreground">
+                                                                {cp.name_snapshot ??
+                                                                    cp
+                                                                        .package_template
+                                                                        ?.name ??
+                                                                    'Pacote de Serviços'}
                                                             </h3>
-                                                            <StatusBadge status={cp.status} />
+                                                            <StatusBadge
+                                                                status={
+                                                                    cp.status
+                                                                }
+                                                            />
                                                         </div>
                                                         <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                                             <span className="rounded-md bg-muted px-2 py-1">
-                                                                {cp.validity_days_snapshot ?? cp.package_template?.validity_days ?? '—'} dias de validade
+                                                                {cp.validity_days_snapshot ??
+                                                                    cp
+                                                                        .package_template
+                                                                        ?.validity_days ??
+                                                                    '—'}{' '}
+                                                                dias de validade
                                                             </span>
-                                                            {cp.price_cents_snapshot != null && (
+                                                            {cp.price_cents_snapshot !=
+                                                                null && (
                                                                 <span className="rounded-md bg-muted px-2 py-1">
-                                                                    Venda: {formatMoney(cp.price_cents_snapshot)}
+                                                                    Venda:{' '}
+                                                                    {formatMoney(
+                                                                        cp.price_cents_snapshot,
+                                                                    )}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                                            <span>Adquirido em {new Date(cp.created_at).toLocaleDateString('pt-BR')}</span>
+                                                            <span>
+                                                                Adquirido em{' '}
+                                                                {new Date(
+                                                                    cp.created_at,
+                                                                ).toLocaleDateString(
+                                                                    'pt-BR',
+                                                                )}
+                                                            </span>
                                                             {cp.expires_at ? (
                                                                 <span className="font-medium text-foreground">
-                                                                    Válido até {new Date(cp.expires_at).toLocaleDateString('pt-BR')}
+                                                                    Válido até{' '}
+                                                                    {new Date(
+                                                                        cp.expires_at,
+                                                                    ).toLocaleDateString(
+                                                                        'pt-BR',
+                                                                    )}
                                                                 </span>
                                                             ) : (
-                                                                <span>Sem validade</span>
+                                                                <span>
+                                                                    Sem validade
+                                                                </span>
                                                             )}
                                                         </div>
                                                     </div>
@@ -849,32 +1070,63 @@ export default function CustomerShow({
                                                     <div className="flex items-center gap-3">
                                                         <div className="text-right">
                                                             <div className="text-lg font-bold text-foreground">
-                                                                {cp.remaining_sessions} / {cp.total_sessions}
+                                                                {
+                                                                    cp.remaining_sessions
+                                                                }{' '}
+                                                                /{' '}
+                                                                {
+                                                                    cp.total_sessions
+                                                                }
                                                             </div>
                                                             <div className="text-xs text-muted-foreground">
-                                                                sessões restantes
+                                                                sessões
+                                                                restantes
                                                             </div>
                                                         </div>
 
-                                                        {canConsumePackage && cp.status === 'active' && cp.remaining_sessions > 0 && (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    setSelectedPackageForConsume(cp);
-                                                                    setConsumePackageOpen(true);
-                                                                }}
-                                                            >
-                                                                Consumir Sessão
-                                                            </Button>
-                                                        )}
+                                                        {canConsumePackage &&
+                                                            cp.status ===
+                                                                'active' &&
+                                                            cp.remaining_sessions >
+                                                                0 && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        setSelectedPackageForConsume(
+                                                                            cp,
+                                                                        );
+                                                                        setConsumePackageOpen(
+                                                                            true,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    Consumir
+                                                                    Sessão
+                                                                </Button>
+                                                            )}
                                                     </div>
                                                 </div>
 
-                                                {(cp.eligible_services_snapshot ?? cp.package_template?.services)?.length ? (
-                                                    <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-                                                        <span className="text-xs text-muted-foreground self-center mr-1">Serviços inclusos:</span>
-                                                        {(cp.eligible_services_snapshot ?? cp.package_template?.services ?? []).map((srv) => (
-                                                            <Badge key={srv.id} variant="secondary" className="text-xs">
+                                                {(
+                                                    cp.eligible_services_snapshot ??
+                                                    cp.package_template
+                                                        ?.services
+                                                )?.length ? (
+                                                    <div className="flex flex-wrap gap-1.5 border-t pt-2">
+                                                        <span className="mr-1 self-center text-xs text-muted-foreground">
+                                                            Serviços inclusos:
+                                                        </span>
+                                                        {(
+                                                            cp.eligible_services_snapshot ??
+                                                            cp.package_template
+                                                                ?.services ??
+                                                            []
+                                                        ).map((srv) => (
+                                                            <Badge
+                                                                key={srv.id}
+                                                                variant="secondary"
+                                                                className="text-xs"
+                                                            >
                                                                 <Scissors className="mr-1 h-3 w-3" />
                                                                 {srv.name}
                                                             </Badge>
@@ -882,38 +1134,72 @@ export default function CustomerShow({
                                                     </div>
                                                 ) : null}
 
-                                                {cp.usages && cp.usages.length > 0 && (
-                                                    <div className="pt-2 border-t">
-                                                        <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                                                            <History className="h-3 w-3" /> Utilizações:
-                                                        </p>
-                                                        <div className="space-y-1">
-                                                            {cp.usages.map((u) => (
-                                                                <div key={u.id} className="text-xs text-muted-foreground flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                                    <span>
-                                                                        {u.sessions_consumed} {u.sessions_consumed === 1 ? 'sessão consumida' : 'sessões consumidas'}
-                                                                        {u.user ? ` por ${u.user.name}` : ''}
-                                                                        {u.reversed_at ? ' · revertido' : ''}
-                                                                    </span>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span>{new Date(u.created_at).toLocaleString('pt-BR')}</span>
-                                                                        {canConsumePackage && !u.reversed_at && (
-                                                                            <Button
-                                                                                type="button"
-                                                                                size="sm"
-                                                                                variant="ghost"
-                                                                                className="h-7 px-2 text-destructive hover:text-destructive"
-                                                                                onClick={() => setUsageToReverse({ customerPackageId: cp.id, usage: u })}
-                                                                            >
-                                                                                Reverter
-                                                                            </Button>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                {cp.usages &&
+                                                    cp.usages.length > 0 && (
+                                                        <div className="border-t pt-2">
+                                                            <p className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                                                                <History className="h-3 w-3" />{' '}
+                                                                Utilizações:
+                                                            </p>
+                                                            <div className="space-y-1">
+                                                                {cp.usages.map(
+                                                                    (u) => (
+                                                                        <div
+                                                                            key={
+                                                                                u.id
+                                                                            }
+                                                                            className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+                                                                        >
+                                                                            <span>
+                                                                                {
+                                                                                    u.sessions_consumed
+                                                                                }{' '}
+                                                                                {u.sessions_consumed ===
+                                                                                1
+                                                                                    ? 'sessão consumida'
+                                                                                    : 'sessões consumidas'}
+                                                                                {u.user
+                                                                                    ? ` por ${u.user.name}`
+                                                                                    : ''}
+                                                                                {u.reversed_at
+                                                                                    ? ' · revertido'
+                                                                                    : ''}
+                                                                            </span>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span>
+                                                                                    {new Date(
+                                                                                        u.created_at,
+                                                                                    ).toLocaleString(
+                                                                                        'pt-BR',
+                                                                                    )}
+                                                                                </span>
+                                                                                {canConsumePackage &&
+                                                                                    !u.reversed_at && (
+                                                                                        <Button
+                                                                                            type="button"
+                                                                                            size="sm"
+                                                                                            variant="ghost"
+                                                                                            className="h-7 px-2 text-destructive hover:text-destructive"
+                                                                                            onClick={() =>
+                                                                                                setUsageToReverse(
+                                                                                                    {
+                                                                                                        customerPackageId:
+                                                                                                            cp.id,
+                                                                                                        usage: u,
+                                                                                                    },
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            Reverter
+                                                                                        </Button>
+                                                                                    )}
+                                                                            </div>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    )}
                                             </div>
                                         ))}
                                     </div>
@@ -926,32 +1212,88 @@ export default function CustomerShow({
                             <section className="surface-panel space-y-5 p-5 sm:p-6">
                                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                                     <div className="space-y-1">
-                                        <h2 className="text-base font-semibold">Assinatura recorrente</h2>
-                                        <p className="text-sm text-muted-foreground">Apenas uma assinatura ativa ou pausada pode existir por cliente nesta unidade.</p>
+                                        <h2 className="text-base font-semibold">
+                                            Assinatura recorrente
+                                        </h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            Apenas uma assinatura ativa ou
+                                            pausada pode existir por cliente
+                                            nesta unidade.
+                                        </p>
                                     </div>
-                                    {!active_subscription && canSubscribe && planOptions.length > 0 && (
-                                        <Form
-                                            method="post"
-                                            action={customerSubscriptionsRoutes.store().url}
-                                            headers={{ 'X-Idempotency-Key': subscribeKey }}
-                                            className="flex flex-col gap-2 sm:flex-row sm:items-end"
-                                        >
-                                            {({ processing, errors }) => (
-                                                <>
-                                                    <input type="hidden" name="customer_id" value={customer.id} />
-                                                    <FormField id="subscription_plan_id" label="Plano" error={errors.subscription_plan_id}>
-                                                        <select id="subscription_plan_id" name="subscription_plan_id" required className="flex h-10 min-w-56 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                                                            <option value="">Selecione um plano</option>
-                                                            {planOptions.map((plan) => (
-                                                                <option key={plan.id} value={plan.id}>{plan.name} — {formatMoney(plan.price_cents)}</option>
-                                                            ))}
-                                                        </select>
-                                                    </FormField>
-                                                    <Button type="submit" disabled={processing}>Contratar</Button>
-                                                </>
-                                            )}
-                                        </Form>
-                                    )}
+                                    {!active_subscription &&
+                                        canSubscribe &&
+                                        planOptions.length > 0 && (
+                                            <Form
+                                                method="post"
+                                                action={
+                                                    customerSubscriptionsRoutes.store()
+                                                        .url
+                                                }
+                                                headers={{
+                                                    'X-Idempotency-Key':
+                                                        subscribeKey,
+                                                }}
+                                                className="flex flex-col gap-2 sm:flex-row sm:items-end"
+                                            >
+                                                {({ processing, errors }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="customer_id"
+                                                            value={customer.id}
+                                                        />
+                                                        <FormField
+                                                            id="subscription_plan_id"
+                                                            label="Plano"
+                                                            error={
+                                                                errors.subscription_plan_id
+                                                            }
+                                                        >
+                                                            <select
+                                                                id="subscription_plan_id"
+                                                                name="subscription_plan_id"
+                                                                required
+                                                                className="flex h-10 min-w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                            >
+                                                                <option value="">
+                                                                    Selecione um
+                                                                    plano
+                                                                </option>
+                                                                {planOptions.map(
+                                                                    (plan) => (
+                                                                        <option
+                                                                            key={
+                                                                                plan.id
+                                                                            }
+                                                                            value={
+                                                                                plan.id
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                plan.name
+                                                                            }{' '}
+                                                                            —{' '}
+                                                                            {formatMoney(
+                                                                                plan.price_cents,
+                                                                            )}
+                                                                        </option>
+                                                                    ),
+                                                                )}
+                                                            </select>
+                                                        </FormField>
+                                                        <Button
+                                                            type="submit"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                        >
+                                                            Contratar
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        )}
                                 </div>
 
                                 {active_subscription ? (
@@ -959,48 +1301,167 @@ export default function CustomerShow({
                                         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                                             <div>
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    <h3 className="font-semibold">{active_subscription.plan.name}</h3>
-                                                    <StatusBadge status={active_subscription.status as ResourceStatus} />
+                                                    <h3 className="font-semibold">
+                                                        {
+                                                            active_subscription
+                                                                .plan.name
+                                                        }
+                                                    </h3>
+                                                    <StatusBadge
+                                                        status={
+                                                            active_subscription.status as ResourceStatus
+                                                        }
+                                                    />
                                                 </div>
-                                                <p className="mt-1 text-sm text-muted-foreground">{formatMoney(active_subscription.price_cents ?? active_subscription.plan.price_cents)} · {active_subscription.billing_cycle === 'yearly' ? 'Anual' : active_subscription.billing_cycle === 'quarterly' ? 'Trimestral' : 'Mensal'}</p>
-                                                <p className="mt-2 text-xs text-muted-foreground">Início: {active_subscription.start_date}{active_subscription.next_billing_date ? ` · Próxima cobrança: ${active_subscription.next_billing_date}` : ''}</p>
+                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                    {formatMoney(
+                                                        active_subscription.price_cents ??
+                                                            active_subscription
+                                                                .plan
+                                                                .price_cents,
+                                                    )}{' '}
+                                                    ·{' '}
+                                                    {active_subscription.billing_cycle ===
+                                                    'yearly'
+                                                        ? 'Anual'
+                                                        : active_subscription.billing_cycle ===
+                                                            'quarterly'
+                                                          ? 'Trimestral'
+                                                          : 'Mensal'}
+                                                </p>
+                                                <p className="mt-2 text-xs text-muted-foreground">
+                                                    Início:{' '}
+                                                    {
+                                                        active_subscription.start_date
+                                                    }
+                                                    {active_subscription.next_billing_date
+                                                        ? ` · Próxima cobrança: ${active_subscription.next_billing_date}`
+                                                        : ''}
+                                                </p>
                                             </div>
                                             <div className="flex flex-wrap gap-2">
-                                                {active_subscription.status === 'active' && canManageSub && (
-                                                    <Form method="post" action={customerSubscriptionsRoutes.pause(active_subscription.id).url}>
-                                                        <input type="hidden" name="lock_version" value={active_subscription.lock_version} />
-                                                        <Button type="submit" variant="outline">Pausar</Button>
-                                                    </Form>
-                                                )}
-                                                {active_subscription.status === 'paused' && canManageSub && (
-                                                    <Form method="post" action={customerSubscriptionsRoutes.resume(active_subscription.id).url}>
-                                                        <input type="hidden" name="lock_version" value={active_subscription.lock_version} />
-                                                        <Button type="submit" variant="outline">Retomar</Button>
-                                                    </Form>
-                                                )}
+                                                {active_subscription.status ===
+                                                    'active' &&
+                                                    canManageSub && (
+                                                        <Form
+                                                            method="post"
+                                                            action={
+                                                                customerSubscriptionsRoutes.pause(
+                                                                    active_subscription.id,
+                                                                ).url
+                                                            }
+                                                        >
+                                                            <input
+                                                                type="hidden"
+                                                                name="lock_version"
+                                                                value={
+                                                                    active_subscription.lock_version
+                                                                }
+                                                            />
+                                                            <Button
+                                                                type="submit"
+                                                                variant="outline"
+                                                            >
+                                                                Pausar
+                                                            </Button>
+                                                        </Form>
+                                                    )}
+                                                {active_subscription.status ===
+                                                    'paused' &&
+                                                    canManageSub && (
+                                                        <Form
+                                                            method="post"
+                                                            action={
+                                                                customerSubscriptionsRoutes.resume(
+                                                                    active_subscription.id,
+                                                                ).url
+                                                            }
+                                                        >
+                                                            <input
+                                                                type="hidden"
+                                                                name="lock_version"
+                                                                value={
+                                                                    active_subscription.lock_version
+                                                                }
+                                                            />
+                                                            <Button
+                                                                type="submit"
+                                                                variant="outline"
+                                                            >
+                                                                Retomar
+                                                            </Button>
+                                                        </Form>
+                                                    )}
                                                 {canCancelSub && (
-                                                    <Form method="post" action={customerSubscriptionsRoutes.cancel(active_subscription.id).url}>
-                                                        <input type="hidden" name="lock_version" value={active_subscription.lock_version} />
-                                                        <Button type="submit" variant="destructive">Cancelar</Button>
+                                                    <Form
+                                                        method="post"
+                                                        action={
+                                                            customerSubscriptionsRoutes.cancel(
+                                                                active_subscription.id,
+                                                            ).url
+                                                        }
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="lock_version"
+                                                            value={
+                                                                active_subscription.lock_version
+                                                            }
+                                                        />
+                                                        <Button
+                                                            type="submit"
+                                                            variant="destructive"
+                                                        >
+                                                            Cancelar
+                                                        </Button>
                                                     </Form>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Nenhuma assinatura vigente.</div>
+                                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                                        Nenhuma assinatura vigente.
+                                    </div>
                                 )}
 
                                 {subscription_history.length > 0 && (
                                     <div className="space-y-3">
-                                        <h3 className="text-sm font-semibold">Histórico</h3>
+                                        <h3 className="text-sm font-semibold">
+                                            Histórico
+                                        </h3>
                                         <div className="divide-y rounded-lg border">
-                                            {subscription_history.map((subscription) => (
-                                                <div key={subscription.id} className="flex flex-col justify-between gap-1 px-4 py-3 text-sm sm:flex-row">
-                                                    <span>{subscription.plan.name} · {formatMoney(subscription.price_cents ?? subscription.plan.price_cents)}</span>
-                                                    <span className="text-muted-foreground">{subscription.status} · {subscription.start_date}</span>
-                                                </div>
-                                            ))}
+                                            {subscription_history.map(
+                                                (subscription) => (
+                                                    <div
+                                                        key={subscription.id}
+                                                        className="flex flex-col justify-between gap-1 px-4 py-3 text-sm sm:flex-row"
+                                                    >
+                                                        <span>
+                                                            {
+                                                                subscription
+                                                                    .plan.name
+                                                            }{' '}
+                                                            ·{' '}
+                                                            {formatMoney(
+                                                                subscription.price_cents ??
+                                                                    subscription
+                                                                        .plan
+                                                                        .price_cents,
+                                                            )}
+                                                        </span>
+                                                        <span className="text-muted-foreground">
+                                                            {
+                                                                subscription.status
+                                                            }{' '}
+                                                            ·{' '}
+                                                            {
+                                                                subscription.start_date
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                ),
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -1015,8 +1476,9 @@ export default function CustomerShow({
                                         Dados principais
                                     </h2>
                                     <p className="text-sm text-muted-foreground">
-                                        Apenas pessoas com cadastro ativo aparecem nas
-                                        próximas escolhas operacionais.
+                                        Apenas pessoas com cadastro ativo
+                                        aparecem nas próximas escolhas
+                                        operacionais.
                                     </p>
                                 </div>
                                 <Form
@@ -1037,9 +1499,13 @@ export default function CustomerShow({
                                                         <Input
                                                             id="name"
                                                             name="name"
-                                                            defaultValue={customer.name}
+                                                            defaultValue={
+                                                                customer.name
+                                                            }
                                                             required
-                                                            disabled={!canManage}
+                                                            disabled={
+                                                                !canManage
+                                                            }
                                                         />
                                                     </FormField>
                                                 </div>
@@ -1099,7 +1565,9 @@ export default function CustomerShow({
                                                     <select
                                                         id="status"
                                                         name="status"
-                                                        defaultValue={customer.status}
+                                                        defaultValue={
+                                                            customer.status
+                                                        }
                                                         disabled={!canManage}
                                                         className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                     >
@@ -1122,9 +1590,12 @@ export default function CustomerShow({
                                                             name="notes"
                                                             rows={4}
                                                             defaultValue={
-                                                                customer.notes ?? ''
+                                                                customer.notes ??
+                                                                ''
                                                             }
-                                                            disabled={!canManage}
+                                                            disabled={
+                                                                !canManage
+                                                            }
                                                             className="min-h-28 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                         />
                                                     </FormField>
@@ -1135,7 +1606,9 @@ export default function CustomerShow({
                                                     <input
                                                         type="hidden"
                                                         name="lock_version"
-                                                        value={customer.lock_version}
+                                                        value={
+                                                            customer.lock_version
+                                                        }
                                                     />
                                                     <FormActions
                                                         processing={processing}
@@ -1227,7 +1700,11 @@ export default function CustomerShow({
                                                 Reativar cadastro
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                Este cliente está atualmente inativo. Reative o cadastro para que ele volte a aparecer em novos agendamentos e atendimentos.
+                                                Este cliente está atualmente
+                                                inativo. Reative o cadastro para
+                                                que ele volte a aparecer em
+                                                novos agendamentos e
+                                                atendimentos.
                                             </p>
                                         </div>
                                     </div>
@@ -1249,7 +1726,10 @@ export default function CustomerShow({
                                                     Reativar cliente?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O cliente voltará a ficar ativo e poderá ser selecionado em novos agendamentos.
+                                                    O cliente voltará a ficar
+                                                    ativo e poderá ser
+                                                    selecionado em novos
+                                                    agendamentos.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
@@ -1316,8 +1796,9 @@ export default function CustomerShow({
                                                 Desativar cadastro
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                O histórico é preservado e o cliente
-                                                pode ser reativado a qualquer momento.
+                                                O histórico é preservado e o
+                                                cliente pode ser reativado a
+                                                qualquer momento.
                                             </p>
                                         </div>
                                     </div>
@@ -1340,7 +1821,10 @@ export default function CustomerShow({
                                                     Desativar cliente?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O cliente deixará de aparecer em novas buscas e agendamentos, mantendo todo o histórico de visitas.
+                                                    O cliente deixará de
+                                                    aparecer em novas buscas e
+                                                    agendamentos, mantendo todo
+                                                    o histórico de visitas.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
@@ -1401,18 +1885,28 @@ export default function CustomerShow({
                 </div>
 
                 {selectedPackageForConsume && (
-                    <Dialog open={consumePackageOpen} onOpenChange={setConsumePackageOpen}>
+                    <Dialog
+                        open={consumePackageOpen}
+                        onOpenChange={setConsumePackageOpen}
+                    >
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Consumir Sessão do Pacote</DialogTitle>
+                                <DialogTitle>
+                                    Consumir Sessão do Pacote
+                                </DialogTitle>
                                 <DialogDescription>
-                                    Confirmar a baixa de sessão do pacote para {customer.name}.
+                                    Confirmar a baixa de sessão do pacote para{' '}
+                                    {customer.name}.
                                 </DialogDescription>
                             </DialogHeader>
 
                             <Form
                                 method="post"
-                                action={customerPackagesRoutes.consume(selectedPackageForConsume.id).url}
+                                action={
+                                    customerPackagesRoutes.consume(
+                                        selectedPackageForConsume.id,
+                                    ).url
+                                }
                                 headers={{ 'X-Idempotency-Key': consumeKey }}
                                 onSuccess={() => {
                                     setConsumePackageOpen(false);
@@ -1424,20 +1918,44 @@ export default function CustomerShow({
                                     <>
                                         <FormErrorSummary errors={errors} />
 
-                                        <div className="rounded-lg bg-muted p-4 space-y-2 text-sm">
+                                        <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Pacote:</span>
+                                                <span className="text-muted-foreground">
+                                                    Pacote:
+                                                </span>
                                                 <span className="font-semibold text-foreground">
-                                                    {selectedPackageForConsume.package_template?.name ?? 'Pacote de Serviços'}
+                                                    {selectedPackageForConsume
+                                                        .package_template
+                                                        ?.name ??
+                                                        'Pacote de Serviços'}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Sessões disponíveis:</span>
-                                                <span className="font-semibold">{selectedPackageForConsume.remaining_sessions} de {selectedPackageForConsume.total_sessions}</span>
+                                                <span className="text-muted-foreground">
+                                                    Sessões disponíveis:
+                                                </span>
+                                                <span className="font-semibold">
+                                                    {
+                                                        selectedPackageForConsume.remaining_sessions
+                                                    }{' '}
+                                                    de{' '}
+                                                    {
+                                                        selectedPackageForConsume.total_sessions
+                                                    }
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Após o consumo:</span>
-                                                <span className="font-semibold text-primary">{Math.max(0, selectedPackageForConsume.remaining_sessions - 1)} restantes</span>
+                                                <span className="text-muted-foreground">
+                                                    Após o consumo:
+                                                </span>
+                                                <span className="font-semibold text-primary">
+                                                    {Math.max(
+                                                        0,
+                                                        selectedPackageForConsume.remaining_sessions -
+                                                            1,
+                                                    )}{' '}
+                                                    restantes
+                                                </span>
                                             </div>
                                         </div>
 
@@ -1452,7 +1970,9 @@ export default function CustomerShow({
                                                 name="sessions_consumed"
                                                 type="number"
                                                 min="1"
-                                                max={selectedPackageForConsume.remaining_sessions}
+                                                max={
+                                                    selectedPackageForConsume.remaining_sessions
+                                                }
                                                 defaultValue={1}
                                                 required
                                             />
@@ -1463,8 +1983,12 @@ export default function CustomerShow({
                                                 type="button"
                                                 variant="outline"
                                                 onClick={() => {
-                                                    setConsumePackageOpen(false);
-                                                    setSelectedPackageForConsume(null);
+                                                    setConsumePackageOpen(
+                                                        false,
+                                                    );
+                                                    setSelectedPackageForConsume(
+                                                        null,
+                                                    );
                                                 }}
                                             >
                                                 Cancelar
@@ -1473,7 +1997,9 @@ export default function CustomerShow({
                                                 type="submit"
                                                 disabled={processing}
                                             >
-                                                {processing ? 'Registrando…' : 'Confirmar Consumo'}
+                                                {processing
+                                                    ? 'Registrando…'
+                                                    : 'Confirmar Consumo'}
                                             </Button>
                                         </DialogFooter>
                                     </>
@@ -1483,33 +2009,57 @@ export default function CustomerShow({
                     </Dialog>
                 )}
 
-                <Dialog open={usageToReverse !== null} onOpenChange={(open) => !open && setUsageToReverse(null)}>
+                <Dialog
+                    open={usageToReverse !== null}
+                    onOpenChange={(open) => !open && setUsageToReverse(null)}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Reverter consumo?</DialogTitle>
                             <DialogDescription>
-                                As sessões serão devolvidas ao saldo do pacote e a reversão ficará registrada.
+                                As sessões serão devolvidas ao saldo do pacote e
+                                a reversão ficará registrada.
                             </DialogDescription>
                         </DialogHeader>
                         {usageToReverse && (
                             <Form
                                 method="post"
-                                action={customerPackageActions.reverseUsage({
-                                    customer_package: usageToReverse.customerPackageId,
-                                    package_usage: usageToReverse.usage.id,
-                                }).url}
-                                headers={{ 'X-Idempotency-Key': createIdempotencyKey('customer-package-usage-reverse', usageToReverse.usage.id) }}
+                                action={
+                                    customerPackageActions.reverseUsage({
+                                        customer_package:
+                                            usageToReverse.customerPackageId,
+                                        package_usage: usageToReverse.usage.id,
+                                    }).url
+                                }
+                                headers={{
+                                    'X-Idempotency-Key': createIdempotencyKey(
+                                        'customer-package-usage-reverse',
+                                        usageToReverse.usage.id,
+                                    ),
+                                }}
                                 onSuccess={() => setUsageToReverse(null)}
                             >
                                 {({ processing, errors }) => (
                                     <>
                                         <FormErrorSummary errors={errors} />
                                         <DialogFooter>
-                                            <Button type="button" variant="outline" onClick={() => setUsageToReverse(null)}>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() =>
+                                                    setUsageToReverse(null)
+                                                }
+                                            >
                                                 Cancelar
                                             </Button>
-                                            <Button type="submit" variant="destructive" disabled={processing}>
-                                                {processing ? 'Revertendo…' : 'Confirmar reversão'}
+                                            <Button
+                                                type="submit"
+                                                variant="destructive"
+                                                disabled={processing}
+                                            >
+                                                {processing
+                                                    ? 'Revertendo…'
+                                                    : 'Confirmar reversão'}
                                             </Button>
                                         </DialogFooter>
                                     </>

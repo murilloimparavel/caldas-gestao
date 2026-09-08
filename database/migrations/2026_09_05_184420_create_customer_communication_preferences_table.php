@@ -27,9 +27,9 @@ return new class extends Migration
 
             $table->unique(['tenant_id', 'unit_id', 'customer_id', 'channel']);
             $table->index(['tenant_id', 'unit_id', 'opted_in']);
-            $table->foreign('tenant_id')->references('id')->on('tenants')->restrictOnDelete();
-            $table->foreign(['tenant_id', 'unit_id'])->references(['tenant_id', 'id'])->on('units')->restrictOnDelete();
-            $table->foreign(['tenant_id', 'unit_id', 'customer_id'], 'cust_comm_prefs_customer_fk')
+            $table->foreign('tenant_id', 'ccp_tenant_fk')->references('id')->on('tenants')->restrictOnDelete();
+            $table->foreign(['tenant_id', 'unit_id'], 'ccp_unit_fk')->references(['tenant_id', 'id'])->on('units')->restrictOnDelete();
+            $table->foreign(['tenant_id', 'unit_id', 'customer_id'], 'ccp_customer_fk')
                 ->references(['tenant_id', 'unit_id', 'id'])
                 ->on('customers')
                 ->cascadeOnDelete();

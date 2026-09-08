@@ -14,7 +14,7 @@ COPY routes routes
 COPY composer.json composer.lock ./
 RUN npm run build
 
-FROM php:8.5-cli-bookworm AS runtime
+FROM php:8.4-cli-bookworm AS runtime
 
 ENV APP_ENV=production \
     LOG_CHANNEL=stderr \
@@ -22,7 +22,7 @@ ENV APP_ENV=production \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libicu-dev libpq-dev libzip-dev unzip \
-    && docker-php-ext-install -j2 bcmath intl opcache pcntl pdo_pgsql zip \
+    && docker-php-ext-install -j1 bcmath intl opcache pcntl pdo_pgsql zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
@@ -41,10 +41,12 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
 
 COPY . .
 COPY --from=assets /app/public/build public/build
+
+RUN php artisan package:discover --ansi
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache

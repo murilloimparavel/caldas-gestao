@@ -9,7 +9,7 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check');
-            DB::statement("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('draft', 'open', 'ready_to_bill', 'finalized', 'cancelled', 'adjusted'))");
+            DB::statement("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('draft', 'open', 'ready_to_bill', 'completed', 'finalized', 'cancelled', 'adjusted'))");
         }
     }
 
@@ -17,7 +17,7 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check');
-            DB::statement("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('draft', 'open', 'ready_to_bill', 'finalized', 'cancelled'))");
+            DB::statement("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('draft', 'open', 'ready_to_bill', 'completed', 'finalized', 'cancelled'))");
         }
     }
 };

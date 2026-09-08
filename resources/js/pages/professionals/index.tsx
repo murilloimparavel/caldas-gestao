@@ -143,12 +143,20 @@ export default function ProfessionalsIndex({
                                                         <FormField
                                                             label="Foto do profissional"
                                                             name="avatar"
-                                                            error={errors.avatar}
+                                                            error={
+                                                                errors.avatar
+                                                            }
                                                         >
                                                             <ImageUploader
-                                                                value={selectedAvatar}
-                                                                onChange={setSelectedAvatar}
-                                                                error={errors.avatar}
+                                                                value={
+                                                                    selectedAvatar
+                                                                }
+                                                                onChange={
+                                                                    setSelectedAvatar
+                                                                }
+                                                                error={
+                                                                    errors.avatar
+                                                                }
                                                                 aspectRatio="square"
                                                                 previewHeight="120px"
                                                             />
@@ -280,12 +288,16 @@ export default function ProfessionalsIndex({
                                         <Avatar className="size-11 shrink-0">
                                             {professional.avatar_url ? (
                                                 <AvatarImage
-                                                    src={professional.avatar_url}
+                                                    src={
+                                                        professional.avatar_url
+                                                    }
                                                     alt={professional.name}
                                                 />
                                             ) : null}
-                                            <AvatarFallback className="bg-secondary text-secondary-foreground font-medium">
-                                                {getInitials(professional.name) || (
+                                            <AvatarFallback className="bg-secondary font-medium text-secondary-foreground">
+                                                {getInitials(
+                                                    professional.name,
+                                                ) || (
                                                     <UserRound
                                                         aria-hidden="true"
                                                         className="size-5"
