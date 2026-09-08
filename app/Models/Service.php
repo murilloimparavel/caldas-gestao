@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property string|null $image_path
  * @property-read string|null $image_url
  */
-#[Fillable(['tenant_id', 'unit_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status', 'online_booking_enabled', 'image_path'])]
+#[Fillable(['tenant_id', 'unit_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status', 'online_booking_enabled', 'image_path', 'thumbnail_path'])]
 #[UsePolicy(ServicePolicy::class)]
 class Service extends Model
 {
@@ -38,7 +38,7 @@ class Service extends Model
     use HasFactory, HasUuids;
 
     /** @var list<string> */
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'thumbnail_url'];
 
     protected $attributes = [
         'status' => 'active',
@@ -52,6 +52,11 @@ class Service extends Model
         return Attribute::make(
             get: fn (): ?string => MediaUrl::for($this->image_path),
         );
+    }
+
+    protected function thumbnailUrl(): Attribute
+    {
+        return Attribute::make(get: fn (): ?string => MediaUrl::for($this->thumbnail_path));
     }
 
     protected function casts(): array

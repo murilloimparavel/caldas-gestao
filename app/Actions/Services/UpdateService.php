@@ -60,15 +60,24 @@ final class UpdateService extends OperationalAction
                     if ($locked->image_path) {
                         Storage::disk($diskName)->delete($locked->image_path);
                     }
+                    if ($locked->thumbnail_path) {
+                        Storage::disk($diskName)->delete($locked->thumbnail_path);
+                    }
                     $hash = Str::random(40);
                     $path = "{$context->tenant->getKey()}/services/{$locked->getKey()}/{$hash}.webp";
                     $stored = Storage::disk($diskName)->put($path, $this->imageOptimizer->encodeWebp($imageFile));
                     $data['image_path'] = $stored ? $path : null;
+                    $thumbnailPath = "{$context->tenant->getKey()}/services/{$locked->getKey()}/thumbnail-{$hash}.webp";
+                    $data['thumbnail_path'] = $this->imageOptimizer->storeSquareWebp($imageFile, Storage::disk($diskName), $thumbnailPath) ? $thumbnailPath : null;
                 } elseif ($imageFile === null) {
                     if ($locked->image_path) {
                         Storage::disk($diskName)->delete($locked->image_path);
                     }
+                    if ($locked->thumbnail_path) {
+                        Storage::disk($diskName)->delete($locked->thumbnail_path);
+                    }
                     $data['image_path'] = null;
+                    $data['thumbnail_path'] = null;
                 }
             }
 

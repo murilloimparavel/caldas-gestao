@@ -56,12 +56,16 @@ final class BackfillServiceImages extends Command
                 if (! $optimizer->storeWebp($file, $mediaDisk, $newPath)) {
                     throw new \RuntimeException('Could not store optimized image.');
                 }
-                $service->forceFill(['image_path' => $newPath])->save();
+                $thumbnailPath = preg_replace('/([^\/]+)\.webp$/', 'thumbnail-$1.webp', $newPath) ?: $newPath.'.thumbnail.webp';
+                if (! $optimizer->storeSquareWebp($file, $mediaDisk, $thumbnailPath)) {
+                    throw new \RuntimeException('Could not store thumbnail image.');
+                }
+                $service->forceFill(['image_path' => $newPath, 'thumbnail_path' => $thumbnailPath])->save();
                 if ($mediaDiskName !== (string) $this->option('source-disk')) {
                     $sourceDisk->delete($path);
                 }
                 $summary['migrated']++;
-                $items[] = ['service_id' => $service->id, 'name' => $service->name, 'status' => 'migrated', 'path' => $newPath];
+                $items[] = ['service_id' => $service->id, 'name' => $service->name, 'status' => 'migrated', 'path' => $newPath, 'thumbnail_path' => $thumbnailPath];
             } catch (\Throwable $exception) {
                 $summary['failed']++;
                 $items[] = ['service_id' => $service->id, 'name' => $service->name, 'status' => 'failed', 'reason' => $exception->getMessage()];

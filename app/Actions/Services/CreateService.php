@@ -40,6 +40,7 @@ final class CreateService extends OperationalAction
 
             $serviceId = (string) Str::uuid7();
             $imagePath = null;
+            $thumbnailPath = null;
             if ($imageFile instanceof UploadedFile) {
                 $hash = Str::random(40);
                 $diskName = (string) config('filesystems.media_disk');
@@ -49,6 +50,8 @@ final class CreateService extends OperationalAction
                     $this->imageOptimizer->encodeWebp($imageFile),
                 );
                 $imagePath = $stored ? $path : null;
+                $thumbnail = "{$context->tenant->getKey()}/services/{$serviceId}/thumbnail-{$hash}.webp";
+                $thumbnailPath = $this->imageOptimizer->storeSquareWebp($imageFile, Storage::disk($diskName), $thumbnail) ? $thumbnail : null;
             }
 
             $service = new Service;
@@ -56,6 +59,7 @@ final class CreateService extends OperationalAction
             $service->tenant_id = $context->tenant->getKey();
             $service->unit_id = $unit->getKey();
             $service->image_path = $imagePath;
+            $service->thumbnail_path = $thumbnailPath;
             $service->lock_version = 0;
             $service->fill($data);
             $service->save();

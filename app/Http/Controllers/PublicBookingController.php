@@ -189,6 +189,7 @@ final class PublicBookingController extends Controller
                 'id' => $service->getKey(), 'name' => $service->name, 'description' => $service->description,
                 'duration_minutes' => $service->duration_minutes, 'price_cents' => $service->price_cents,
                 'image_url' => $service->image_url,
+                'thumbnail_url' => $service->thumbnail_url,
                 'professionals' => $service->professionals->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all(),
             ])->values()->all();
         $professionals = Professional::query()

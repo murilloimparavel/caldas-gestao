@@ -49,6 +49,7 @@ type Service = {
     id: string;
     name: string;
     image_url?: string | null;
+    thumbnail_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: 'active' | 'inactive';
@@ -362,9 +363,9 @@ export default function ServicesIndex({
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
-                                        {service.image_url ? (
+                                        {service.thumbnail_url ? (
                                             <img
-                                                src={service.image_url}
+                                                src={service.thumbnail_url}
                                                 alt={service.name}
                                                 className="size-11 shrink-0 rounded-2xl border border-border object-cover"
                                                 onError={(event) => {
