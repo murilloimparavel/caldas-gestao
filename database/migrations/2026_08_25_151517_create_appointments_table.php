@@ -49,12 +49,19 @@ return new class extends Migration
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gist');
             DB::statement('ALTER TABLE appointments ADD CONSTRAINT appointments_time_check CHECK (ends_at > starts_at)');
             DB::statement("ALTER TABLE appointments ADD CONSTRAINT appointments_status_check CHECK (status IN ('draft', 'scheduled', 'confirmed', 'checked_in', 'in_service', 'completed', 'no_show', 'cancelled'))");
             DB::statement("ALTER TABLE appointments ADD CONSTRAINT appointments_source_check CHECK (source IN ('internal', 'online', 'imported'))");
             DB::statement("ALTER TABLE appointments ADD CONSTRAINT appointments_cancel_check CHECK ((status = 'cancelled') = (cancelled_at IS NOT NULL))");
-            DB::statement("ALTER TABLE appointments ADD CONSTRAINT appointments_professional_no_overlap EXCLUDE USING gist (tenant_id WITH =, unit_id WITH =, professional_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status NOT IN ('cancelled', 'no_show'))");
+
+            $btreeGistAvailable = DB::table('pg_available_extensions')
+                ->where('name', 'btree_gist')
+                ->exists();
+
+            if ($btreeGistAvailable) {
+                DB::statement('CREATE EXTENSION IF NOT EXISTS btree_gist');
+                DB::statement("ALTER TABLE appointments ADD CONSTRAINT appointments_professional_no_overlap EXCLUDE USING gist (tenant_id WITH =, unit_id WITH =, professional_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status NOT IN ('cancelled', 'no_show'))");
+            }
         }
     }
 
