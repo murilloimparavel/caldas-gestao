@@ -21,8 +21,9 @@ ENV APP_ENV=production \
     PORT=8080
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libicu-dev libpq-dev libzip-dev unzip \
-    && docker-php-ext-install -j1 bcmath intl opcache pcntl pdo_pgsql zip \
+    && apt-get install -y --no-install-recommends libicu-dev libjpeg62-turbo-dev libpng-dev libpq-dev libwebp-dev libzip-dev unzip \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install -j1 bcmath gd intl opcache pcntl pdo_pgsql zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
