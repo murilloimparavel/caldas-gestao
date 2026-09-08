@@ -639,12 +639,10 @@ export default function PublicBooking({
                                                 }
                                                 className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${serviceId === service.id ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950' : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900'}`}
                                             >
-                                                {(service.image_url ||
-                                                    service.photo_url) && (
+                                                {service.image_url && (
                                                     <img
                                                         src={
                                                             service.image_url ||
-                                                            service.photo_url ||
                                                             undefined
                                                         }
                                                         alt=""
