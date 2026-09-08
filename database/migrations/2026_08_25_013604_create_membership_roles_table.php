@@ -42,7 +42,15 @@ return new class extends Migration
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('CREATE UNIQUE INDEX membership_roles_active_unique ON membership_roles (tenant_id, membership_id, role_id, unit_id) NULLS NOT DISTINCT WHERE revoked_at IS NULL');
+            $supportsNullsNotDistinct = (int) DB::scalar('SHOW server_version_num') >= 150000;
+
+            if ($supportsNullsNotDistinct) {
+                DB::statement('CREATE UNIQUE INDEX membership_roles_active_unique ON membership_roles (tenant_id, membership_id, role_id, unit_id) NULLS NOT DISTINCT WHERE revoked_at IS NULL');
+            } else {
+                DB::statement('CREATE UNIQUE INDEX membership_roles_active_tenant_unique ON membership_roles (tenant_id, membership_id, role_id) WHERE revoked_at IS NULL AND unit_id IS NULL');
+                DB::statement('CREATE UNIQUE INDEX membership_roles_active_unit_unique ON membership_roles (tenant_id, membership_id, role_id, unit_id) WHERE revoked_at IS NULL AND unit_id IS NOT NULL');
+            }
+
             DB::statement("ALTER TABLE membership_roles ADD CONSTRAINT membership_roles_scope_check CHECK ((scope_kind = 'tenant' AND unit_id IS NULL AND assignment_scope = 'tenant') OR (scope_kind = 'unit' AND unit_id IS NOT NULL AND assignment_scope = 'unit:' || unit_id::text))");
             DB::statement("ALTER TABLE membership_roles ADD CONSTRAINT membership_roles_scope_kind_check CHECK (scope_kind IN ('tenant', 'unit'))");
         } elseif (DB::getDriverName() === 'sqlite') {
@@ -58,6 +66,8 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('DROP INDEX IF EXISTS membership_roles_active_unique');
+            DB::statement('DROP INDEX IF EXISTS membership_roles_active_tenant_unique');
+            DB::statement('DROP INDEX IF EXISTS membership_roles_active_unit_unique');
         } elseif (DB::getDriverName() === 'sqlite') {
             DB::statement('DROP INDEX IF EXISTS membership_roles_active_tenant_unique');
             DB::statement('DROP INDEX IF EXISTS membership_roles_active_unit_unique');
