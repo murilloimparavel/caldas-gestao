@@ -223,7 +223,9 @@ final class ImportServices extends Command
         return (string) $category->getKey();
     }
 
-    /** @param mixed $names @return list<string> */
+    /**
+     * @return list<string>
+     */
     private function resolveProfessionalIds(mixed $names, TenantContext $context): array
     {
         if (! is_array($names)) {
