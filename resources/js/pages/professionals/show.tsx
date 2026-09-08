@@ -1,16 +1,18 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     BriefcaseBusiness,
     Clock,
+    Check,
     Lock,
     Mail,
     Phone,
     Plus,
     Search,
+    Trash2,
     UserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     createIdempotencyKey,
     FormActions,
@@ -37,6 +39,11 @@ import {
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import { useInitials } from '@/hooks/use-initials';
+import {
+    destroy as destroyAvailabilityRule,
+    store as storeAvailabilityRule,
+    update as updateAvailabilityRule,
+} from '@/routes/availability_rules';
 import professionals from '@/routes/professionals';
 import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
@@ -91,6 +98,142 @@ const weekdays = [
     { day: 6, name: 'Sábado', short: 'Sáb' },
 ];
 
+type AvailabilityEditorProps = {
+    canConfigure: boolean;
+    day: (typeof weekdays)[number];
+    onClose: () => void;
+    professional: Professional;
+    rules: AvailabilityRuleSummary[];
+    timezone: string;
+};
+
+function minutesBetween(start: string, end: string): number {
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const [endHour, endMinute] = end.split(':').map(Number);
+
+    return Math.max(0, endHour * 60 + endMinute - startHour * 60 - startMinute);
+}
+
+function AvailabilityEditor({
+    canConfigure,
+    day,
+    onClose,
+    professional,
+    rules,
+    timezone,
+}: AvailabilityEditorProps) {
+    const [draftCount, setDraftCount] = useState(1);
+    const [mutationKey] = useState(() =>
+        createIdempotencyKey(`availability-rule-${day.day}`),
+    );
+
+    const goBackToProfessional = () => {
+        router.visit(professionals.show(professional.id));
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="size-4 text-primary" aria-hidden="true" />
+                    {day.name}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Adicione intervalos separados para almoço, pausas ou jornadas
+                    divididas. Sem intervalos ativos, o dia fica como folga.
+                </p>
+            </div>
+
+            {rules.map((rule) => (
+                <Form
+                    key={rule.id}
+                    {...updateAvailabilityRule.form(rule.id)}
+                    headers={{ 'X-Idempotency-Key': mutationKey }}
+                    className="rounded-xl border border-border bg-card p-4"
+                    onSuccess={goBackToProfessional}
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <FormErrorSummary errors={errors} />
+                            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                                <FormField label="Início" name="starts_at" error={errors.starts_at}>
+                                    <Input name="starts_at" type="time" defaultValue={rule.starts_at.slice(0, 5)} required disabled={!canConfigure} />
+                                </FormField>
+                                <FormField label="Fim" name="ends_at" error={errors.ends_at}>
+                                    <Input name="ends_at" type="time" defaultValue={rule.ends_at.slice(0, 5)} required disabled={!canConfigure} />
+                                </FormField>
+                                <div className="flex gap-2 sm:pb-0.5">
+                                    <input type="hidden" name="professional_id" value={professional.id} />
+                                    <input type="hidden" name="weekday" value={day.day} />
+                                    <input type="hidden" name="timezone" value={timezone} />
+                                    <input type="hidden" name="status" value="active" />
+                                    <input type="hidden" name="lock_version" value={rule.lock_version} />
+                                    <Button type="submit" size="icon" aria-label={`Salvar intervalo de ${day.name}`} disabled={!canConfigure || processing}>
+                                        <Check aria-hidden="true" />
+                                    </Button>
+                                    <Form {...destroyAvailabilityRule.form(rule.id)} headers={{ 'X-Idempotency-Key': mutationKey }} onSuccess={goBackToProfessional}>
+                                        {({ processing: deleting }) => (
+                                            <>
+                                                <input type="hidden" name="lock_version" value={rule.lock_version} />
+                                                <Button type="submit" size="icon" variant="outline" aria-label={`Remover intervalo de ${day.name}`} disabled={!canConfigure || deleting}>
+                                                    <Trash2 aria-hidden="true" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    </Form>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            ))}
+
+            {Array.from({ length: draftCount }).map((_, index) => (
+                <Form
+                    key={`new-${index}`}
+                    {...storeAvailabilityRule.form()}
+                    headers={{ 'X-Idempotency-Key': `${mutationKey}-${index}` }}
+                    className="rounded-xl border border-dashed border-primary/35 bg-primary/[0.03] p-4"
+                    onSuccess={goBackToProfessional}
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            {index === 0 ? <p className="mb-3 text-xs font-semibold text-primary">Novo intervalo</p> : null}
+                            <FormErrorSummary errors={errors} />
+                            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                                <FormField label="Início" name="starts_at" error={errors.starts_at}>
+                                    <Input name="starts_at" type="time" defaultValue="09:00" required disabled={!canConfigure} />
+                                </FormField>
+                                <FormField label="Fim" name="ends_at" error={errors.ends_at}>
+                                    <Input name="ends_at" type="time" defaultValue="18:00" required disabled={!canConfigure} />
+                                </FormField>
+                                <div className="sm:pb-0.5">
+                                    <input type="hidden" name="professional_id" value={professional.id} />
+                                    <input type="hidden" name="weekday" value={day.day} />
+                                    <input type="hidden" name="timezone" value={timezone} />
+                                    <input type="hidden" name="status" value="active" />
+                                    <Button type="submit" size="icon" aria-label={`Criar intervalo de ${day.name}`} disabled={!canConfigure || processing}>
+                                        <Check aria-hidden="true" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            ))}
+
+            {canConfigure ? (
+                <Button type="button" variant="outline" className="w-full" onClick={() => setDraftCount((count) => count + 1)}>
+                    <Plus aria-hidden="true" /> Adicionar outro intervalo
+                </Button>
+            ) : null}
+            <DialogFooter>
+                <Button type="button" variant="ghost" onClick={onClose}>Fechar</Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
 type Props = {
     options?: {
         services?: RelationOption[];
@@ -121,8 +264,36 @@ export default function ProfessionalShow({
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
     const [serviceSearch, setServiceSearch] = useState('');
+    const [availabilityDay, setAvailabilityDay] = useState<
+        (typeof weekdays)[number] | null
+    >(null);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
+    const canConfigureCalendar = props.auth.permissions.includes(
+        'calendar.configure',
+    );
+    const availabilityRules =
+        professional.availability_rules ?? professional.availabilityRules ?? [];
+    const activeAvailabilityRules = availabilityRules.filter(
+        (rule) => rule.status === 'active',
+    );
+    const timezone =
+        activeAvailabilityRules[0]?.timezone ??
+        props.workspace?.activeUnit?.timezone ??
+        props.workspace?.tenant.timezone ??
+        'UTC';
+    const weeklySummary = useMemo(() => {
+        const totalMinutes = activeAvailabilityRules.reduce(
+            (total, rule) => total + minutesBetween(rule.starts_at, rule.ends_at),
+            0,
+        );
+
+        return {
+            activeDays: new Set(activeAvailabilityRules.map((rule) => rule.weekday)).size,
+            hours: Math.floor(totalMinutes / 60),
+            minutes: totalMinutes % 60,
+        };
+    }, [activeAvailabilityRules]);
     const availableServices =
         serviceOptions ?? options?.services ?? professional.services;
     const hasServiceOptions =
@@ -334,86 +505,92 @@ export default function ProfessionalShow({
                         </section>
 
                         <section className="surface-panel p-5 sm:p-6">
-                            <div className="mb-5 flex items-center justify-between">
+                            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <h2 className="text-base font-semibold">
                                         Jornada de trabalho e disponibilidade
                                     </h2>
                                     <p className="text-sm text-muted-foreground">
-                                        Horários semanais de atendimento
-                                        configurados para este profissional.
+                                        Horários semanais de atendimento configurados para este profissional.
                                     </p>
                                 </div>
-                                <Clock
-                                    className="size-5 text-muted-foreground"
-                                    aria-hidden="true"
-                                />
+                                <div className="grid grid-cols-2 gap-2 sm:min-w-48">
+                                    <div className="rounded-lg bg-primary/10 px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Dias ativos</p>
+                                        <p className="mt-1 text-lg font-semibold">{weeklySummary.activeDays}<span className="ml-1 text-xs font-normal text-muted-foreground">/ 7</span></p>
+                                    </div>
+                                    <div className="rounded-lg bg-emerald-500/10 px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Horas/semana</p>
+                                        <p className="mt-1 text-lg font-semibold">{weeklySummary.hours}h{weeklySummary.minutes ? ` ${weeklySummary.minutes}m` : ''}</p>
+                                    </div>
+                                </div>
                             </div>
 
+                            {!canConfigureCalendar ? (
+                                <p className="mb-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                                    Consulta liberada. A edição exige a permissão calendar.configure.
+                                </p>
+                            ) : null}
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {weekdays.map(({ day, name, short }) => {
-                                    const dayRules = (
-                                        professional.availability_rules ??
-                                        professional.availabilityRules ??
-                                        []
-                                    ).filter(
-                                        (rule) =>
-                                            rule.weekday === day &&
-                                            rule.status === 'active',
-                                    );
+                                {weekdays.map((weekday) => {
+                                    const dayRules = activeAvailabilityRules.filter((rule) => rule.weekday === weekday.day);
+                                    const canEdit = canConfigureCalendar;
 
                                     return (
-                                        <div
-                                            key={day}
-                                            className={`rounded-lg border p-3 ${
-                                                dayRules.length > 0
-                                                    ? 'border-border bg-card'
-                                                    : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'
-                                            }`}
+                                        <button
+                                            key={weekday.day}
+                                            type="button"
+                                            className={`group min-h-28 rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-sm focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 ${dayRules.length > 0 ? 'border-border bg-card' : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'}`}
+                                            onClick={() => setAvailabilityDay(weekday)}
+                                            aria-label={`${canEdit ? 'Editar' : 'Consultar'} disponibilidade de ${weekday.name}`}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-semibold">
-                                                    {short} – {name}
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-xs font-semibold">{weekday.short} – {weekday.name}</span>
+                                                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${dayRules.length > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}>
+                                                    {dayRules.length > 0 ? 'Ativo' : 'Folga'}
                                                 </span>
-                                                {dayRules.length > 0 ? (
-                                                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                        Ativo
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Folga
-                                                    </span>
-                                                )}
                                             </div>
-                                            <div className="mt-2 space-y-1">
-                                                {dayRules.length > 0 ? (
-                                                    dayRules.map((rule) => (
-                                                        <div
-                                                            key={rule.id}
-                                                            className="text-xs font-medium text-foreground"
-                                                        >
-                                                            {rule.starts_at.slice(
-                                                                0,
-                                                                5,
-                                                            )}{' '}
-                                                            –{' '}
-                                                            {rule.ends_at.slice(
-                                                                0,
-                                                                5,
-                                                            )}
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <p className="text-xs text-muted-foreground italic">
-                                                        Sem atendimento
-                                                    </p>
-                                                )}
+                                            <div className="mt-3 space-y-1">
+                                                {dayRules.length > 0 ? dayRules.map((rule) => (
+                                                    <p key={rule.id} className="text-xs font-medium text-foreground">{rule.starts_at.slice(0, 5)} – {rule.ends_at.slice(0, 5)}</p>
+                                                )) : <p className="text-xs italic">Sem atendimento</p>}
                                             </div>
-                                        </div>
+                                            <p className="mt-3 text-[10px] font-medium text-muted-foreground group-hover:text-primary">
+                                                {canEdit ? (dayRules.length > 0 ? 'Editar horários' : 'Adicionar horário') : 'Somente consulta'}
+                                            </p>
+                                        </button>
                                     );
                                 })}
                             </div>
                         </section>
+
+                        <Dialog
+                            open={availabilityDay !== null}
+                            onOpenChange={(open) => {
+                                if (!open) {
+                                    setAvailabilityDay(null);
+                                }
+                            }}
+                        >
+                            <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6">
+                                <DialogHeader>
+                                    <DialogTitle>Disponibilidade semanal</DialogTitle>
+                                    <DialogDescription>
+                                        Edite os intervalos de atendimento ou adicione uma nova jornada para o dia selecionado.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                {availabilityDay ? (
+                                    <AvailabilityEditor
+                                        canConfigure={canConfigureCalendar}
+                                        day={availabilityDay}
+                                        onClose={() => setAvailabilityDay(null)}
+                                        professional={professional}
+                                        rules={activeAvailabilityRules.filter((rule) => rule.weekday === availabilityDay.day)}
+                                        timezone={timezone}
+                                    />
+                                ) : null}
+                            </DialogContent>
+                        </Dialog>
 
                         <section className="surface-panel p-5 sm:p-6">
                             <div className="mb-4 flex items-center justify-between">
