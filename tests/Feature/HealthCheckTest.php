@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use Mockery;
 
 it('reports the application as healthy', function () {
     config(['session.driver' => 'redis']);

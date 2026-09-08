@@ -10,7 +10,6 @@ use Closure;
 use DateTimeInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use JsonException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Throwable;
 
@@ -139,7 +138,7 @@ final class IdempotencyService
     {
         try {
             return hash('sha256', json_encode($this->canonicalize($request), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION));
-        } catch (JsonException $exception) {
+        } catch (\JsonException $exception) {
             throw new \InvalidArgumentException('The idempotency request payload must be JSON serializable.', 0, $exception);
         }
     }

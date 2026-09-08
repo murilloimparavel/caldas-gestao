@@ -1,5 +1,11 @@
 import { Scissors, Package, Layers } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from '@/components/ui/card';
 import type { CategorySales, SalesByCategoryBackend } from '../types';
 
 type SalesCategoryBreakdownProps = {
@@ -8,7 +14,10 @@ type SalesCategoryBreakdownProps = {
 
 export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
     const formatCurrency = (cents: number) => {
-        return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return (cents / 100).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+        });
     };
 
     const categoriesList: CategorySales[] = Array.isArray(data)
@@ -39,7 +48,11 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
             ]
           : [];
 
-    const hasData = categoriesList.length > 0 && categoriesList.some((item) => item.percentage > 0 || item.totalAmount !== 'R$ 0,00');
+    const hasData =
+        categoriesList.length > 0 &&
+        categoriesList.some(
+            (item) => item.percentage > 0 || item.totalAmount !== 'R$ 0,00',
+        );
 
     const getCategoryIcon = (category: string) => {
         switch (category) {
@@ -56,8 +69,12 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
     return (
         <Card className="border-border/60">
             <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold">Vendas por Categoria</CardTitle>
-                <CardDescription className="text-xs">Distribuição da receita entre serviços, produtos e pacotes</CardDescription>
+                <CardTitle className="text-base font-semibold">
+                    Vendas por Categoria
+                </CardTitle>
+                <CardDescription className="text-xs">
+                    Distribuição da receita entre serviços, produtos e pacotes
+                </CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
                 {!hasData ? (
@@ -86,18 +103,36 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
                                 const Icon = getCategoryIcon(item.category);
 
                                 return (
-                                    <div key={item.category} className="flex flex-col rounded-lg border border-border/40 bg-muted/20 p-3">
+                                    <div
+                                        key={item.category}
+                                        className="flex flex-col rounded-lg border border-border/40 bg-muted/20 p-3"
+                                    >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
-                                                <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+                                                <span
+                                                    className="size-2 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            item.color,
+                                                    }}
+                                                />
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                    {item.label}
+                                                </span>
                                             </div>
                                             <Icon className="size-3.5 text-muted-foreground" />
                                         </div>
                                         <span className="mt-2 text-base font-bold text-foreground">
-                                            {item.totalAmount ?? (item.total_cents !== undefined ? formatCurrency(item.total_cents) : 'R$ 0,00')}
+                                            {item.totalAmount ??
+                                                (item.total_cents !== undefined
+                                                    ? formatCurrency(
+                                                          item.total_cents,
+                                                      )
+                                                    : 'R$ 0,00')}
                                         </span>
-                                        <span className="text-[11px] font-medium text-muted-foreground">{item.percentage}% do total</span>
+                                        <span className="text-[11px] font-medium text-muted-foreground">
+                                            {item.percentage}% do total
+                                        </span>
                                     </div>
                                 );
                             })}

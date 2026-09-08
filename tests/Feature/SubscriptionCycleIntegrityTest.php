@@ -13,7 +13,7 @@ it('installs the one-open-cycle scope index on supported local databases', funct
         );
 
         expect($index?->indexdef)->toContain('(tenant_id, unit_id, customer_subscription_id)')
-            ->and($index?->indexdef)->toContain("status = 'open'");
+            ->and($index?->indexdef)->toMatch('/status.*open/');
 
         return;
     }

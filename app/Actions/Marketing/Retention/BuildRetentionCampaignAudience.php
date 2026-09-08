@@ -36,14 +36,16 @@ final class BuildRetentionCampaignAudience extends OperationalAction
                 ];
             }
 
-            $definition = (array) $locked->segment_definition;
+            $definition = $locked->segment_definition;
+            $inactiveDays = data_get($definition, 'inactive_days');
+            $retentionStatus = data_get($definition, 'retention_status');
             $customers = Customer::query()
                 ->where('tenant_id', $locked->tenant_id)
                 ->where('unit_id', $locked->unit_id)
                 ->where('status', 'active')
                 ->whereNull('anonymized_at')
-                ->when(isset($definition['inactive_days']), fn ($query) => $query->inactiveFor(max(1, (int) $definition['inactive_days'])))
-                ->when(isset($definition['retention_status']), fn ($query) => $query->where('retention_status', $definition['retention_status']))
+                ->when($inactiveDays !== null, fn ($query) => $query->inactiveFor(max(1, (int) $inactiveDays)))
+                ->when($retentionStatus !== null, fn ($query) => $query->where('retention_status', $retentionStatus))
                 ->with([
                     'communicationPreferences' => fn ($query) => $query
                         ->where('channel', $locked->channel)

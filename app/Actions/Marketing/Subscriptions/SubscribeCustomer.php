@@ -12,7 +12,6 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 
 final class SubscribeCustomer extends OperationalAction
 {
@@ -31,7 +30,7 @@ final class SubscribeCustomer extends OperationalAction
             ->first();
 
         if ($customer === null) {
-            throw new InvalidArgumentException('The selected customer was not found in this unit.');
+            throw new \InvalidArgumentException('The selected customer was not found in this unit.');
         }
 
         $plan = SubscriptionPlan::query()
@@ -41,11 +40,11 @@ final class SubscribeCustomer extends OperationalAction
             ->first();
 
         if ($plan === null) {
-            throw new InvalidArgumentException('The selected subscription plan was not found in this unit.');
+            throw new \InvalidArgumentException('The selected subscription plan was not found in this unit.');
         }
 
         if (! $plan->is_active) {
-            throw new InvalidArgumentException('The selected subscription plan is not active.');
+            throw new \InvalidArgumentException('The selected subscription plan is not active.');
         }
 
         $startDate = Carbon::today();

@@ -28,7 +28,7 @@ final class CustomerRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:160'],
-            'email' => ['nullable', 'email:rfc,dns', 'max:255'],
+            'email' => ['nullable', 'email:rfc', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
             'birth_date' => ['nullable', 'date', 'before:tomorrow'],
             'notes' => ['nullable', 'string', 'max:5000'],

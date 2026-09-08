@@ -136,12 +136,12 @@ export default function InventoryIndex({
                 <form
                     method="get"
                     action={inventory.index.url()}
-                    className="surface-panel grid gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4 items-end"
+                    className="surface-panel grid items-end gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4"
                 >
                     <div>
                         <label
                             htmlFor="product_id"
-                            className="block text-xs font-medium text-muted-foreground mb-1"
+                            className="mb-1 block text-xs font-medium text-muted-foreground"
                         >
                             Produto
                         </label>
@@ -163,7 +163,7 @@ export default function InventoryIndex({
                     <div>
                         <label
                             htmlFor="type"
-                            className="block text-xs font-medium text-muted-foreground mb-1"
+                            className="mb-1 block text-xs font-medium text-muted-foreground"
                         >
                             Tipo de movimentação
                         </label>
@@ -175,17 +175,25 @@ export default function InventoryIndex({
                         >
                             <option value="">Todos os tipos</option>
                             <option value="sale_outflow">Venda / Saída</option>
-                            <option value="purchase_inflow">Compra / Entrada</option>
-                            <option value="adjustment_gain">Ajuste (Ganho)</option>
-                            <option value="adjustment_loss">Ajuste (Perda)</option>
-                            <option value="manual_count">Contagem física</option>
+                            <option value="purchase_inflow">
+                                Compra / Entrada
+                            </option>
+                            <option value="adjustment_gain">
+                                Ajuste (Ganho)
+                            </option>
+                            <option value="adjustment_loss">
+                                Ajuste (Perda)
+                            </option>
+                            <option value="manual_count">
+                                Contagem física
+                            </option>
                         </select>
                     </div>
 
                     <div>
                         <label
                             htmlFor="date"
-                            className="block text-xs font-medium text-muted-foreground mb-1"
+                            className="mb-1 block text-xs font-medium text-muted-foreground"
                         >
                             Data
                         </label>
@@ -198,7 +206,11 @@ export default function InventoryIndex({
                     </div>
 
                     <div className="flex gap-2">
-                        <Button type="submit" variant="secondary" className="w-full">
+                        <Button
+                            type="submit"
+                            variant="secondary"
+                            className="w-full"
+                        >
                             <Filter className="size-3.5" />
                             Filtrar
                         </Button>
@@ -225,15 +237,21 @@ export default function InventoryIndex({
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-border bg-muted/30 text-xs text-muted-foreground uppercase">
                                     <tr>
-                                        <th className="py-3 px-4">Data / Hora</th>
-                                        <th className="py-3 px-4">Produto</th>
-                                        <th className="py-3 px-4">Tipo</th>
-                                        <th className="py-3 px-4">Qtd</th>
-                                        <th className="py-3 px-4">Custo Un.</th>
-                                        <th className="py-3 px-4">Anterior</th>
-                                        <th className="py-3 px-4">Resultante</th>
-                                        <th className="py-3 px-4">Motivo / Ref</th>
-                                        <th className="py-3 px-4">Operador</th>
+                                        <th className="px-4 py-3">
+                                            Data / Hora
+                                        </th>
+                                        <th className="px-4 py-3">Produto</th>
+                                        <th className="px-4 py-3">Tipo</th>
+                                        <th className="px-4 py-3">Qtd</th>
+                                        <th className="px-4 py-3">Custo Un.</th>
+                                        <th className="px-4 py-3">Anterior</th>
+                                        <th className="px-4 py-3">
+                                            Resultante
+                                        </th>
+                                        <th className="px-4 py-3">
+                                            Motivo / Ref
+                                        </th>
+                                        <th className="px-4 py-3">Operador</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/60">
@@ -246,23 +264,29 @@ export default function InventoryIndex({
                                             m.type === 'adjustment_loss';
 
                                         const date = new Date(m.created_at);
-                                        const formattedDate = date.toLocaleString('pt-BR', {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        });
+                                        const formattedDate =
+                                            date.toLocaleString('pt-BR', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            });
 
                                         return (
-                                            <tr key={m.id} className="hover:bg-muted/30">
-                                                <td className="py-3.5 px-4 whitespace-nowrap text-xs text-muted-foreground">
+                                            <tr
+                                                key={m.id}
+                                                className="hover:bg-muted/30"
+                                            >
+                                                <td className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
                                                     {formattedDate}
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap font-medium text-foreground">
+                                                <td className="px-4 py-3.5 font-medium whitespace-nowrap text-foreground">
                                                     <Link
-                                                        href={productsRoute.show(m.product.id)}
-                                                        className="hover:underline text-primary"
+                                                        href={productsRoute.show(
+                                                            m.product.id,
+                                                        )}
+                                                        className="text-primary hover:underline"
                                                     >
                                                         {m.product.name}
                                                     </Link>
@@ -272,10 +296,12 @@ export default function InventoryIndex({
                                                         </span>
                                                     ) : null}
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap">
-                                                    <MovementTypeBadge type={m.type} />
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                    <MovementTypeBadge
+                                                        type={m.type}
+                                                    />
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap font-semibold">
+                                                <td className="px-4 py-3.5 font-semibold whitespace-nowrap">
                                                     <span
                                                         className={
                                                             isInflow
@@ -285,33 +311,46 @@ export default function InventoryIndex({
                                                                   : 'text-foreground'
                                                         }
                                                     >
-                                                        {isInflow ? '+' : isOutflow ? '-' : ''}
-                                                        {m.quantity} {m.product.unit_of_measure}
+                                                        {isInflow
+                                                            ? '+'
+                                                            : isOutflow
+                                                              ? '-'
+                                                              : ''}
+                                                        {m.quantity}{' '}
+                                                        {
+                                                            m.product
+                                                                .unit_of_measure
+                                                        }
                                                     </span>
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap text-xs text-muted-foreground">
+                                                <td className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
                                                     {m.unit_cost_cents > 0
-                                                        ? formatMoney(m.unit_cost_cents)
+                                                        ? formatMoney(
+                                                              m.unit_cost_cents,
+                                                          )
                                                         : '-'}
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap text-muted-foreground">
-                                                    {m.previous_stock} {m.product.unit_of_measure}
+                                                <td className="px-4 py-3.5 whitespace-nowrap text-muted-foreground">
+                                                    {m.previous_stock}{' '}
+                                                    {m.product.unit_of_measure}
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-foreground">
-                                                    {m.resulting_stock} {m.product.unit_of_measure}
+                                                <td className="px-4 py-3.5 font-semibold whitespace-nowrap text-foreground">
+                                                    {m.resulting_stock}{' '}
+                                                    {m.product.unit_of_measure}
                                                 </td>
-                                                <td className="py-3.5 px-4 text-xs text-foreground max-w-xs truncate">
+                                                <td className="max-w-xs truncate px-4 py-3.5 text-xs text-foreground">
                                                     {m.reason}
                                                     {m.reference_type ? (
                                                         <span className="block text-[11px] text-muted-foreground">
-                                                            Ref: {m.reference_type}
+                                                            Ref:{' '}
+                                                            {m.reference_type}
                                                             {m.reference_id
                                                                 ? ` #${m.reference_id.slice(0, 8)}`
                                                                 : ''}
                                                         </span>
                                                     ) : null}
                                                 </td>
-                                                <td className="py-3.5 px-4 whitespace-nowrap text-xs text-muted-foreground">
+                                                <td className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
                                                     {m.user?.name ?? 'Sistema'}
                                                 </td>
                                             </tr>

@@ -1,13 +1,16 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    CalendarCheck2,
     CheckCircle2,
     Lock,
     Plus,
+    RefreshCw,
     Receipt,
     SlidersHorizontal,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactElement } from 'react';
 import {
     CalendarError,
     CalendarLoading,
@@ -35,10 +38,9 @@ import {
 import {
     QuickCreateCustomerModal,
     QuickCreateProfessionalModal,
-    QuickCreateServiceModal
-    
+    QuickCreateServiceModal,
 } from '@/components/operational/quick-create-dialogs';
-import type {CreatedEntity} from '@/components/operational/quick-create-dialogs';
+import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -64,6 +66,7 @@ import {
     update as updateAppointment,
 } from '@/routes/appointments';
 import { index as calendarIndex } from '@/routes/calendar';
+import googleCalendar from '@/routes/google_calendar';
 import sales from '@/routes/sales';
 import {
     destroy as destroyScheduleBlock,
@@ -78,8 +81,6 @@ import type {
     SaleCategoryOptionSummary,
     ScheduleBlock,
 } from '@/types/calendar';
-
-
 
 const statusOptions: AppointmentStatus[] = [
     'draft',
@@ -97,6 +98,134 @@ function optionList(
     fallback: CalendarOption[] | undefined,
 ): CalendarOption[] {
     return primary ?? fallback ?? [];
+}
+
+type GoogleCalendarStatus = {
+    status: 'connected' | 'disconnected' | 'not_configured';
+    configured: boolean;
+    connection: {
+        google_account_email?: string | null;
+        calendar_name?: string | null;
+        last_synced_at?: string | null;
+    } | null;
+};
+
+function GoogleCalendarPanel(): ReactElement {
+    const [state, setState] = useState<GoogleCalendarStatus | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [disconnecting, setDisconnecting] = useState(false);
+
+    const loadStatus = async (): Promise<void> => {
+        setLoading(true);
+
+        try {
+            const response = await fetch(googleCalendar.status.url(), {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to load Google Calendar status.');
+            }
+
+            setState((await response.json()) as GoogleCalendarStatus);
+        } catch {
+            setState(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            void loadStatus();
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, []);
+
+    const connected = state?.status === 'connected';
+    const unavailable = state?.status === 'not_configured';
+
+    return (
+        <section
+            className="rounded-2xl border border-border bg-card/80 p-4 shadow-xs sm:p-5"
+            aria-labelledby="google-calendar-heading"
+        >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarCheck2 aria-hidden="true" className="size-5" />
+                    </div>
+                    <div>
+                        <h2
+                            id="google-calendar-heading"
+                            className="font-semibold"
+                        >
+                            Google Calendar
+                        </h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {loading
+                                ? 'Verificando conexão…'
+                                : unavailable
+                                  ? 'Integração indisponível neste ambiente.'
+                                  : connected
+                                    ? `Conectado${state?.connection?.google_account_email ? ` como ${state.connection.google_account_email}` : ''}.`
+                                    : 'Conecte o calendário desta unidade para sincronizar agendamentos.'}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Atualizar status do Google Calendar"
+                        onClick={() => void loadStatus()}
+                        disabled={loading || disconnecting}
+                    >
+                        <RefreshCw
+                            aria-hidden="true"
+                            className={loading ? 'animate-spin' : undefined}
+                        />
+                    </Button>
+                    {connected ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={disconnecting}
+                            onClick={() => {
+                                setDisconnecting(true);
+                                router.delete(googleCalendar.disconnect.url(), {
+                                    preserveScroll: true,
+                                    onFinish: () => {
+                                        setDisconnecting(false);
+                                        void loadStatus();
+                                    },
+                                });
+                            }}
+                        >
+                            {disconnecting ? 'Desconectando…' : 'Desconectar'}
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            disabled={loading || unavailable}
+                            onClick={() => {
+                                window.location.assign(
+                                    googleCalendar.connect.url(),
+                                );
+                            }}
+                        >
+                            Conectar Google Calendar
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
 }
 
 function AppointmentForm({
@@ -132,9 +261,12 @@ function AppointmentForm({
         ),
     );
 
-    const [customerList, setCustomerList] = useState<CalendarOption[]>(initialCustomers);
-    const [serviceList, setServiceList] = useState<CalendarOption[]>(initialServices);
-    const [professionalList, setProfessionalList] = useState<CalendarOption[]>(initialProfessionals);
+    const [customerList, setCustomerList] =
+        useState<CalendarOption[]>(initialCustomers);
+    const [serviceList, setServiceList] =
+        useState<CalendarOption[]>(initialServices);
+    const [professionalList, setProfessionalList] =
+        useState<CalendarOption[]>(initialProfessionals);
 
     const [selectedCustomer, setSelectedCustomer] = useState(
         appointment?.customer_id ?? appointment?.customer?.id ?? '',
@@ -143,7 +275,9 @@ function AppointmentForm({
         appointment?.service_id ?? appointment?.service?.id ?? '',
     );
     const [selectedProfessional, setSelectedProfessional] = useState(
-        appointment?.professional_id ?? appointment?.professional?.id ?? defaultProfessionalId,
+        appointment?.professional_id ??
+            appointment?.professional?.id ??
+            defaultProfessionalId,
     );
     const [selectedStartsAt, setSelectedStartsAt] = useState(
         appointment
@@ -227,7 +361,8 @@ function AppointmentForm({
             });
 
             if (aptConflict) {
-                const customerName = aptConflict.customer?.name || 'Outro cliente';
+                const customerName =
+                    aptConflict.customer?.name || 'Outro cliente';
 
                 return {
                     type: 'appointment',
@@ -239,7 +374,10 @@ function AppointmentForm({
         // 2. Verificar conflitos com bloqueios de agenda
         if (existingScheduleBlocks && existingScheduleBlocks.length > 0) {
             const blockConflict = existingScheduleBlocks.find((block) => {
-                if (block.professional_id && block.professional_id !== selectedProfessional) {
+                if (
+                    block.professional_id &&
+                    block.professional_id !== selectedProfessional
+                ) {
                     return false;
                 }
 
@@ -258,7 +396,15 @@ function AppointmentForm({
         }
 
         return null;
-    }, [selectedProfessional, selectedStartsAt, selectedDuration, existingAppointments, existingScheduleBlocks, appointment, unitTimezone]);
+    }, [
+        selectedProfessional,
+        selectedStartsAt,
+        selectedDuration,
+        existingAppointments,
+        existingScheduleBlocks,
+        appointment,
+        unitTimezone,
+    ]);
 
     const isEditing = appointment !== null;
     const route = isEditing
@@ -280,13 +426,14 @@ function AppointmentForm({
                         {/* Aviso amigável de conflito de horário */}
                         {conflict && (
                             <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                                     <Badge
                                         variant="outline"
                                         className="border-amber-400 bg-amber-100 font-semibold text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
                                     >
-                                        Atenção: Horário coincide com outro agendamento/bloqueio
+                                        Atenção: Horário coincide com outro
+                                        agendamento/bloqueio
                                     </Badge>
                                 </div>
                                 <p className="text-xs text-amber-800 dark:text-amber-300">
@@ -304,7 +451,9 @@ function AppointmentForm({
                                     description={
                                         <button
                                             type="button"
-                                            onClick={() => setQuickCustomerOpen(true)}
+                                            onClick={() =>
+                                                setQuickCustomerOpen(true)
+                                            }
                                             className="font-medium text-primary hover:underline"
                                         >
                                             + Novo Cliente
@@ -315,7 +464,9 @@ function AppointmentForm({
                                         id="customer_id"
                                         name="customer_id"
                                         value={selectedCustomer}
-                                        onChange={(e) => setSelectedCustomer(e.target.value)}
+                                        onChange={(e) =>
+                                            setSelectedCustomer(e.target.value)
+                                        }
                                         required
                                         className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                     >
@@ -340,7 +491,9 @@ function AppointmentForm({
                                 description={
                                     <button
                                         type="button"
-                                        onClick={() => setQuickServiceOpen(true)}
+                                        onClick={() =>
+                                            setQuickServiceOpen(true)
+                                        }
                                         className="font-medium text-primary hover:underline"
                                     >
                                         + Novo Serviço
@@ -351,7 +504,9 @@ function AppointmentForm({
                                     id="service_id"
                                     name="service_id"
                                     value={selectedService}
-                                    onChange={(e) => setSelectedService(e.target.value)}
+                                    onChange={(e) =>
+                                        setSelectedService(e.target.value)
+                                    }
                                     required
                                     className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 >
@@ -375,7 +530,9 @@ function AppointmentForm({
                                 description={
                                     <button
                                         type="button"
-                                        onClick={() => setQuickProfessionalOpen(true)}
+                                        onClick={() =>
+                                            setQuickProfessionalOpen(true)
+                                        }
                                         className="font-medium text-primary hover:underline"
                                     >
                                         + Novo Profissional
@@ -386,7 +543,9 @@ function AppointmentForm({
                                     id="professional_id"
                                     name="professional_id"
                                     value={selectedProfessional}
-                                    onChange={(e) => setSelectedProfessional(e.target.value)}
+                                    onChange={(e) =>
+                                        setSelectedProfessional(e.target.value)
+                                    }
                                     required
                                     className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 >
@@ -413,7 +572,9 @@ function AppointmentForm({
                                     name="starts_at"
                                     type="datetime-local"
                                     value={selectedStartsAt}
-                                    onChange={(e) => setSelectedStartsAt(e.target.value)}
+                                    onChange={(e) =>
+                                        setSelectedStartsAt(e.target.value)
+                                    }
                                     required
                                 />
                             </FormField>
@@ -430,7 +591,11 @@ function AppointmentForm({
                                     max={1440}
                                     step={5}
                                     value={selectedDuration}
-                                    onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                                    onChange={(e) =>
+                                        setSelectedDuration(
+                                            Number(e.target.value),
+                                        )
+                                    }
                                     required
                                 />
                             </FormField>
@@ -470,8 +635,8 @@ function AppointmentForm({
                                 >
                                     Enviar lembrete ao cliente
                                     <span className="block text-xs text-muted-foreground">
-                                        O canal e o consentimento são validados pelo
-                                        servidor.
+                                        O canal e o consentimento são validados
+                                        pelo servidor.
                                     </span>
                                 </label>
                             </div>
@@ -713,7 +878,6 @@ function OpenAppointmentSaleForm({
     );
 }
 
-
 function ScheduleBlockForm({
     defaultDate,
     defaultEndsAt: prefilledEndsAt,
@@ -735,8 +899,11 @@ function ScheduleBlockForm({
         createIdempotencyKey('schedule-block-create'),
     );
 
-    const [professionalList, setProfessionalList] = useState<CalendarOption[]>(initialProfessionals);
-    const [selectedProfessional, setSelectedProfessional] = useState(defaultProfessionalId);
+    const [professionalList, setProfessionalList] =
+        useState<CalendarOption[]>(initialProfessionals);
+    const [selectedProfessional, setSelectedProfessional] = useState(
+        defaultProfessionalId,
+    );
     const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
 
     const handleProfessionalCreated = (created: CreatedEntity) => {
@@ -771,7 +938,9 @@ function ScheduleBlockForm({
                                     action={
                                         <button
                                             type="button"
-                                            onClick={() => setQuickProfessionalOpen(true)}
+                                            onClick={() =>
+                                                setQuickProfessionalOpen(true)
+                                            }
                                             className="text-xs font-semibold text-primary hover:underline focus:outline-none"
                                         >
                                             + Novo Profissional
@@ -782,7 +951,11 @@ function ScheduleBlockForm({
                                         id="professional_id"
                                         name="professional_id"
                                         value={selectedProfessional}
-                                        onChange={(e) => setSelectedProfessional(e.target.value)}
+                                        onChange={(e) =>
+                                            setSelectedProfessional(
+                                                e.target.value,
+                                            )
+                                        }
                                         className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                     >
                                         <option value="">
@@ -1029,7 +1202,8 @@ export default function CalendarIndex(props: CalendarProps) {
         }
 
         const minMins = Math.min(selection.startMinutes, selection.endMinutes);
-        const maxMins = Math.max(selection.startMinutes, selection.endMinutes) + 15;
+        const maxMins =
+            Math.max(selection.startMinutes, selection.endMinutes) + 15;
         const durationMinutes = maxMins - minMins;
 
         const startH = Math.floor(minMins / 60);
@@ -1063,17 +1237,24 @@ export default function CalendarIndex(props: CalendarProps) {
 
     const activeProfessionalsForHeader = useMemo(() => {
         if (filters.professional_ids && filters.professional_ids.length > 0) {
-            return professionals.filter((p) => filters.professional_ids?.includes(p.id));
+            return professionals.filter((p) =>
+                filters.professional_ids?.includes(p.id),
+            );
         }
 
         return professionals;
     }, [professionals, filters.professional_ids]);
 
     const weekDates = useMemo(() => {
-        return Array.from({ length: 7 }, (_, index) => addDays(range.start, index));
+        return Array.from({ length: 7 }, (_, index) =>
+            addDays(range.start, index),
+        );
     }, [range.start]);
 
-    const activeMobileProfId = selectedProfessionalIds.length === 1 ? selectedProfessionalIds[0] : undefined;
+    const activeMobileProfId =
+        selectedProfessionalIds.length === 1
+            ? selectedProfessionalIds[0]
+            : undefined;
 
     return (
         <>
@@ -1113,6 +1294,8 @@ export default function CalendarIndex(props: CalendarProps) {
                     </div>
                 </header>
 
+                <GoogleCalendarPanel />
+
                 <CalendarToolbar
                     canManage={canManage}
                     date={selectedDate}
@@ -1131,11 +1314,8 @@ export default function CalendarIndex(props: CalendarProps) {
                 {loadError ? <CalendarError message={loadError} /> : null}
 
                 {/* Filtros rápidos de profissionais (responsivo para mobile e desktop) */}
-                <section
-                    className="gap-4"
-                    aria-label="Filtros da agenda"
-                >
-                    <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-muted/20 px-3 py-2 scrollbar-none sm:flex-wrap sm:px-4 sm:py-3">
+                <section className="gap-4" aria-label="Filtros da agenda">
+                    <div className="flex scrollbar-none items-center gap-2 overflow-x-auto rounded-xl border border-border bg-muted/20 px-3 py-2 sm:flex-wrap sm:px-4 sm:py-3">
                         <span className="shrink-0 text-xs font-semibold text-muted-foreground">
                             Profissionais:
                         </span>
@@ -1147,7 +1327,7 @@ export default function CalendarIndex(props: CalendarProps) {
                                     ? 'secondary'
                                     : 'ghost'
                             }
-                            className="h-11 shrink-0 rounded-full px-3 text-xs font-medium min-h-[44px] sm:h-8 sm:min-h-0"
+                            className="h-11 min-h-[44px] shrink-0 rounded-full px-3 text-xs font-medium sm:h-8 sm:min-h-0"
                         >
                             <Link
                                 href={calendarIndex({
@@ -1163,7 +1343,9 @@ export default function CalendarIndex(props: CalendarProps) {
                             </Link>
                         </Button>
                         {professionals.map((professional) => {
-                            const isSelected = selectedProfessionalIds.includes(professional.id);
+                            const isSelected = selectedProfessionalIds.includes(
+                                professional.id,
+                            );
 
                             return (
                                 <Button
@@ -1171,7 +1353,7 @@ export default function CalendarIndex(props: CalendarProps) {
                                     asChild
                                     size="sm"
                                     variant={isSelected ? 'secondary' : 'ghost'}
-                                    className="h-11 shrink-0 rounded-full px-3 text-xs font-medium min-h-[44px] sm:h-8 sm:min-h-0"
+                                    className="h-11 min-h-[44px] shrink-0 rounded-full px-3 text-xs font-medium sm:h-8 sm:min-h-0"
                                 >
                                     <Link
                                         href={calendarIndex({
@@ -1181,7 +1363,9 @@ export default function CalendarIndex(props: CalendarProps) {
                                                 view,
                                                 professional_ids: isSelected
                                                     ? selectedProfessionalIds.filter(
-                                                          (id) => id !== professional.id,
+                                                          (id) =>
+                                                              id !==
+                                                              professional.id,
                                                       )
                                                     : [
                                                           ...selectedProfessionalIds,
@@ -1206,14 +1390,17 @@ export default function CalendarIndex(props: CalendarProps) {
                 {props.loading ? (
                     <CalendarLoading />
                 ) : view === 'month' ? (
-                    visibleAppointments.length === 0 && visibleScheduleBlocks.length === 0 ? (
+                    visibleAppointments.length === 0 &&
+                    visibleScheduleBlocks.length === 0 ? (
                         <EmptyCalendar
                             action={
                                 canManage ? (
                                     <div className="flex items-center gap-2">
                                         <Button
                                             variant="outline"
-                                            onClick={() => setBlockCreateOpen(true)}
+                                            onClick={() =>
+                                                setBlockCreateOpen(true)
+                                            }
                                             className="h-11 min-h-[44px] sm:h-9 sm:min-h-0"
                                         >
                                             <Lock aria-hidden="true" />
@@ -1255,14 +1442,16 @@ export default function CalendarIndex(props: CalendarProps) {
                         professionals={professionals}
                         selectedProfessionalId={activeMobileProfId}
                         onSelectProfessional={(id) => {
-                            router.get(calendarIndex({
-                                query: {
-                                    ...filters,
-                                    date: selectedDate,
-                                    view: 'day',
-                                    professional_ids: id ? [id] : [],
-                                },
-                            }));
+                            router.get(
+                                calendarIndex({
+                                    query: {
+                                        ...filters,
+                                        date: selectedDate,
+                                        view: 'day',
+                                        professional_ids: id ? [id] : [],
+                                    },
+                                }),
+                            );
                         }}
                         scheduleBlocks={visibleScheduleBlocks}
                         timeZone={unitTimezone}
@@ -1280,24 +1469,30 @@ export default function CalendarIndex(props: CalendarProps) {
                                 professionals={professionals}
                                 selectedProfessionalId={activeMobileProfId}
                                 onSelectProfessional={(id) => {
-                                    router.get(calendarIndex({
-                                        query: {
-                                            ...filters,
-                                            date: selectedDate,
-                                            view: 'week',
-                                            professional_ids: id ? [id] : [],
-                                        },
-                                    }));
+                                    router.get(
+                                        calendarIndex({
+                                            query: {
+                                                ...filters,
+                                                date: selectedDate,
+                                                view: 'week',
+                                                professional_ids: id
+                                                    ? [id]
+                                                    : [],
+                                            },
+                                        }),
+                                    );
                                 }}
                                 weekDates={weekDates}
                                 onSelectDate={(d) => {
-                                    router.get(calendarIndex({
-                                        query: {
-                                            ...filters,
-                                            date: d,
-                                            view: 'week',
-                                        },
-                                    }));
+                                    router.get(
+                                        calendarIndex({
+                                            query: {
+                                                ...filters,
+                                                date: d,
+                                                view: 'week',
+                                            },
+                                        }),
+                                    );
                                 }}
                                 scheduleBlocks={visibleScheduleBlocks}
                                 timeZone={unitTimezone}
@@ -1378,35 +1573,56 @@ export default function CalendarIndex(props: CalendarProps) {
                             </p>
                             {editing.sale_link?.sale ? (
                                 <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3.5 text-sm">
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                        <Receipt className="size-4 text-primary shrink-0" />
+                                    <div className="flex min-w-0 items-center gap-2.5">
+                                        <Receipt className="size-4 shrink-0 text-primary" />
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-foreground truncate">
-                                                    {editing.sale_link.sale.reference_label || 'Comanda Vinculada'}
+                                                <span className="truncate font-semibold text-foreground">
+                                                    {editing.sale_link.sale
+                                                        .reference_label ||
+                                                        'Comanda Vinculada'}
                                                 </span>
-                                                <Badge variant="outline" className="text-[11px] capitalize shrink-0">
-                                                    {editing.sale_link.sale.status}
+                                                <Badge
+                                                    variant="outline"
+                                                    className="shrink-0 text-[11px] capitalize"
+                                                >
+                                                    {
+                                                        editing.sale_link.sale
+                                                            .status
+                                                    }
                                                 </Badge>
                                             </div>
-                                            <p className="text-xs text-muted-foreground truncate">
-                                                Comanda já vinculada a este agendamento.
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                Comanda já vinculada a este
+                                                agendamento.
                                             </p>
                                         </div>
                                     </div>
-                                    <Button asChild size="sm" variant="outline" className="shrink-0">
-                                        <Link href={sales.show(editing.sale_link.sale.id)}>
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="shrink-0"
+                                    >
+                                        <Link
+                                            href={sales.show(
+                                                editing.sale_link.sale.id,
+                                            )}
+                                        >
                                             Ver Comanda →
                                         </Link>
                                     </Button>
                                 </div>
-                            ) : canManageSales && editing.status !== 'cancelled' ? (
+                            ) : canManageSales &&
+                              editing.status !== 'cancelled' ? (
                                 <div>
                                     <Button
                                         type="button"
                                         variant="outline"
                                         className="w-full gap-2 border-dashed"
-                                        onClick={() => setOpenSaleDialogOpen(true)}
+                                        onClick={() =>
+                                            setOpenSaleDialogOpen(true)
+                                        }
                                     >
                                         <Receipt className="size-4" />
                                         Abrir Comanda para este Agendamento
@@ -1414,7 +1630,8 @@ export default function CalendarIndex(props: CalendarProps) {
                                 </div>
                             ) : (
                                 <p className="text-xs text-muted-foreground">
-                                    Nenhuma comanda vinculada a este agendamento.
+                                    Nenhuma comanda vinculada a este
+                                    agendamento.
                                 </p>
                             )}
                         </div>
@@ -1459,7 +1676,8 @@ export default function CalendarIndex(props: CalendarProps) {
                             Abrir comanda para agendamento
                         </DialogTitle>
                         <DialogDescription>
-                            Selecione a categoria de comanda para iniciar o atendimento de{' '}
+                            Selecione a categoria de comanda para iniciar o
+                            atendimento de{' '}
                             <strong>
                                 {editing?.customer?.name ?? 'Cliente'}
                             </strong>
@@ -1478,7 +1696,6 @@ export default function CalendarIndex(props: CalendarProps) {
                     ) : null}
                 </DialogContent>
             </Dialog>
-
 
             <Dialog
                 open={blockCreateOpen}
@@ -1507,7 +1724,9 @@ export default function CalendarIndex(props: CalendarProps) {
                     <ScheduleBlockForm
                         defaultDate={prefilledBlockSlot?.date ?? selectedDate}
                         defaultEndsAt={prefilledBlockSlot?.endsAt}
-                        defaultProfessionalId={prefilledBlockSlot?.professionalId}
+                        defaultProfessionalId={
+                            prefilledBlockSlot?.professionalId
+                        }
                         defaultStartsAt={prefilledBlockSlot?.startsAt}
                         onClose={() => {
                             setBlockCreateOpen(false);
@@ -1681,4 +1900,3 @@ export default function CalendarIndex(props: CalendarProps) {
 CalendarIndex.layout = {
     breadcrumbs: [{ title: 'Agenda', href: calendarIndex() }],
 };
-

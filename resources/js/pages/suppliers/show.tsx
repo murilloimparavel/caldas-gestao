@@ -49,7 +49,9 @@ type Props = {
 
 export default function SupplierShow({ supplier }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('supplier-update'));
-    const [destroyKey] = useState(() => createIdempotencyKey('supplier-destroy'));
+    const [destroyKey] = useState(() =>
+        createIdempotencyKey('supplier-destroy'),
+    );
     const [reactivateKey] = useState(() =>
         createIdempotencyKey('supplier-reactivate'),
     );
@@ -73,7 +75,13 @@ export default function SupplierShow({ supplier }: Props) {
                         eyebrow="Cadastro de fornecedor"
                         title={supplier.trade_name || supplier.name}
                         description="Atualize dados cadastrais, informações de contato e condições comerciais do fornecedor."
-                        action={<StatusBadge status={supplier.is_active ? 'active' : 'inactive'} />}
+                        action={
+                            <StatusBadge
+                                status={
+                                    supplier.is_active ? 'active' : 'inactive'
+                                }
+                            />
+                        }
                     />
                 </div>
 
@@ -84,7 +92,8 @@ export default function SupplierShow({ supplier }: Props) {
                                 Dados cadastrais
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Mantenha as informações atualizadas para emissão de pedidos e cotações.
+                                Mantenha as informações atualizadas para emissão
+                                de pedidos e cotações.
                             </p>
                         </div>
                         <Form
@@ -126,7 +135,10 @@ export default function SupplierShow({ supplier }: Props) {
                                                 <Input
                                                     id="trade_name"
                                                     name="trade_name"
-                                                    defaultValue={supplier.trade_name ?? ''}
+                                                    defaultValue={
+                                                        supplier.trade_name ??
+                                                        ''
+                                                    }
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
@@ -141,7 +153,10 @@ export default function SupplierShow({ supplier }: Props) {
                                                 <Input
                                                     id="document_number"
                                                     name="document_number"
-                                                    defaultValue={supplier.document_number ?? ''}
+                                                    defaultValue={
+                                                        supplier.document_number ??
+                                                        ''
+                                                    }
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
@@ -157,7 +172,9 @@ export default function SupplierShow({ supplier }: Props) {
                                                     id="email"
                                                     name="email"
                                                     type="email"
-                                                    defaultValue={supplier.email ?? ''}
+                                                    defaultValue={
+                                                        supplier.email ?? ''
+                                                    }
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
@@ -173,7 +190,9 @@ export default function SupplierShow({ supplier }: Props) {
                                                     id="phone"
                                                     name="phone"
                                                     inputMode="tel"
-                                                    defaultValue={supplier.phone ?? ''}
+                                                    defaultValue={
+                                                        supplier.phone ?? ''
+                                                    }
                                                     disabled={!canManage}
                                                 />
                                             </FormField>
@@ -188,12 +207,20 @@ export default function SupplierShow({ supplier }: Props) {
                                                 <select
                                                     id="is_active"
                                                     name="is_active"
-                                                    defaultValue={supplier.is_active ? '1' : '0'}
+                                                    defaultValue={
+                                                        supplier.is_active
+                                                            ? '1'
+                                                            : '0'
+                                                    }
                                                     disabled={!canManage}
-                                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 >
-                                                    <option value="1">Ativo</option>
-                                                    <option value="0">Inativo</option>
+                                                    <option value="1">
+                                                        Ativo
+                                                    </option>
+                                                    <option value="0">
+                                                        Inativo
+                                                    </option>
                                                 </select>
                                             </FormField>
                                         </div>
@@ -208,10 +235,12 @@ export default function SupplierShow({ supplier }: Props) {
                                                     id="notes"
                                                     name="notes"
                                                     rows={4}
-                                                    defaultValue={supplier.notes ?? ''}
+                                                    defaultValue={
+                                                        supplier.notes ?? ''
+                                                    }
                                                     disabled={!canManage}
                                                     placeholder="Condições comerciais, prazos de entrega ou dados bancários"
-                                                    className="min-h-28 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="min-h-28 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                                 />
                                             </FormField>
                                         </div>
@@ -227,7 +256,8 @@ export default function SupplierShow({ supplier }: Props) {
                                             className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
                                             role="status"
                                         >
-                                            Você tem acesso somente para consulta a este cadastro.
+                                            Você tem acesso somente para
+                                            consulta a este cadastro.
                                         </p>
                                     )}
                                 </>
@@ -244,7 +274,7 @@ export default function SupplierShow({ supplier }: Props) {
                                 <div className="flex items-start gap-3">
                                     <Building2
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground shrink-0"
+                                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
                                     />
                                     <div className="min-w-0">
                                         <p className="text-xs text-muted-foreground">
@@ -259,14 +289,15 @@ export default function SupplierShow({ supplier }: Props) {
                                 <div className="flex items-start gap-3">
                                     <FileText
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground shrink-0"
+                                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
                                     />
                                     <div className="min-w-0">
                                         <p className="text-xs text-muted-foreground">
                                             Documento (CNPJ/CPF)
                                         </p>
                                         <p className="mt-0.5 truncate text-sm font-medium">
-                                            {supplier.document_number || 'Não informado'}
+                                            {supplier.document_number ||
+                                                'Não informado'}
                                         </p>
                                     </div>
                                 </div>
@@ -274,7 +305,7 @@ export default function SupplierShow({ supplier }: Props) {
                                 <div className="flex items-start gap-3">
                                     <Phone
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground shrink-0"
+                                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
                                     />
                                     <div className="min-w-0">
                                         <p className="text-xs text-muted-foreground">
@@ -289,7 +320,7 @@ export default function SupplierShow({ supplier }: Props) {
                                 <div className="flex items-start gap-3">
                                     <Mail
                                         aria-hidden="true"
-                                        className="mt-0.5 size-4 text-muted-foreground shrink-0"
+                                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
                                     />
                                     <div className="min-w-0">
                                         <p className="text-xs text-muted-foreground">
@@ -309,14 +340,17 @@ export default function SupplierShow({ supplier }: Props) {
                                     <div className="flex items-start gap-3">
                                         <Truck
                                             aria-hidden="true"
-                                            className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400 shrink-0"
+                                            className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
                                         />
                                         <div>
                                             <h2 className="text-base font-semibold text-foreground">
                                                 Reativar fornecedor
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                Este fornecedor está atualmente inativo. Reative o cadastro para utilizá-lo novamente em pedidos, compras e entradas de estoque.
+                                                Este fornecedor está atualmente
+                                                inativo. Reative o cadastro para
+                                                utilizá-lo novamente em pedidos,
+                                                compras e entradas de estoque.
                                             </p>
                                         </div>
                                     </div>
@@ -338,7 +372,10 @@ export default function SupplierShow({ supplier }: Props) {
                                                     Reativar fornecedor?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O fornecedor voltará a ficar ativo e poderá ser selecionado em novos lançamentos e pedidos.
+                                                    O fornecedor voltará a ficar
+                                                    ativo e poderá ser
+                                                    selecionado em novos
+                                                    lançamentos e pedidos.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form
@@ -398,14 +435,17 @@ export default function SupplierShow({ supplier }: Props) {
                                     <div className="flex items-start gap-3">
                                         <Truck
                                             aria-hidden="true"
-                                            className="mt-0.5 size-4 text-destructive shrink-0"
+                                            className="mt-0.5 size-4 shrink-0 text-destructive"
                                         />
                                         <div>
                                             <h2 className="text-base font-semibold">
                                                 Desativar fornecedor
                                             </h2>
                                             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                O histórico de movimentações e pedidos é preservado. O fornecedor pode ser reativado a qualquer momento.
+                                                O histórico de movimentações e
+                                                pedidos é preservado. O
+                                                fornecedor pode ser reativado a
+                                                qualquer momento.
                                             </p>
                                         </div>
                                     </div>
@@ -428,7 +468,10 @@ export default function SupplierShow({ supplier }: Props) {
                                                     Desativar fornecedor?
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    O fornecedor deixará de aparecer em novas compras e entradas, preservando o histórico existente.
+                                                    O fornecedor deixará de
+                                                    aparecer em novas compras e
+                                                    entradas, preservando o
+                                                    histórico existente.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Form

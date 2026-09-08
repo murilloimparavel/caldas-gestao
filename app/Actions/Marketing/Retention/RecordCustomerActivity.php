@@ -33,7 +33,7 @@ final class RecordCustomerActivity
             }
 
             $attributes = [];
-            if ($customer->last_activity_at === null || $customer->last_activity_at->lt($occurredAt)) {
+            if ($customer->last_activity_at === null || CarbonImmutable::parse($customer->last_activity_at)->lt($occurredAt)) {
                 $attributes['last_activity_at'] = $occurredAt;
             }
 

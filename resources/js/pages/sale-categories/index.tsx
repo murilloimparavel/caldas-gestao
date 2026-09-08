@@ -64,7 +64,9 @@ export default function SaleCategoriesIndex({
     filters,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
-    const [createKey] = useState(() => createIdempotencyKey('sale-category-create'));
+    const [createKey] = useState(() =>
+        createIdempotencyKey('sale-category-create'),
+    );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale_category.manage');
 
@@ -98,9 +100,13 @@ export default function SaleCategoriesIndex({
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
                                     <DialogHeader>
-                                        <DialogTitle>Nova categoria de comanda</DialogTitle>
+                                        <DialogTitle>
+                                            Nova categoria de comanda
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            Defina uma área de consumo para segmentar comandas (ex: Barbearia, Loja, Bar, Restaurante).
+                                            Defina uma área de consumo para
+                                            segmentar comandas (ex: Barbearia,
+                                            Loja, Bar, Restaurante).
                                         </DialogDescription>
                                     </DialogHeader>
                                     <Form
@@ -114,7 +120,9 @@ export default function SaleCategoriesIndex({
                                     >
                                         {({ errors, processing }) => (
                                             <>
-                                                <FormErrorSummary errors={errors} />
+                                                <FormErrorSummary
+                                                    errors={errors}
+                                                />
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="sm:col-span-2">
                                                         <FormField
@@ -156,9 +164,19 @@ export default function SaleCategoriesIndex({
                                                                 defaultValue="service"
                                                                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
-                                                                <option value="service">Apenas Serviços</option>
-                                                                <option value="product">Apenas Produtos</option>
-                                                                <option value="mixed">Misto (Serviços e Produtos)</option>
+                                                                <option value="service">
+                                                                    Apenas
+                                                                    Serviços
+                                                                </option>
+                                                                <option value="product">
+                                                                    Apenas
+                                                                    Produtos
+                                                                </option>
+                                                                <option value="mixed">
+                                                                    Misto
+                                                                    (Serviços e
+                                                                    Produtos)
+                                                                </option>
                                                             </select>
                                                         </FormField>
                                                     </div>
@@ -166,7 +184,9 @@ export default function SaleCategoriesIndex({
                                                         <FormField
                                                             label="Escopo de unicidade"
                                                             name="uniqueness_scope"
-                                                            error={errors.uniqueness_scope}
+                                                            error={
+                                                                errors.uniqueness_scope
+                                                            }
                                                         >
                                                             <select
                                                                 id="uniqueness_scope"
@@ -174,10 +194,28 @@ export default function SaleCategoriesIndex({
                                                                 defaultValue="none"
                                                                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
-                                                                <option value="none">Sem limite (múltiplas abertas)</option>
-                                                                <option value="customer">Por Cliente (1 ativa por cliente)</option>
-                                                                <option value="appointment">Por Agendamento (1 ativa por agenda)</option>
-                                                                <option value="reference">Por Referência (1 ativa por mesa/pedido)</option>
+                                                                <option value="none">
+                                                                    Sem limite
+                                                                    (múltiplas
+                                                                    abertas)
+                                                                </option>
+                                                                <option value="customer">
+                                                                    Por Cliente
+                                                                    (1 ativa por
+                                                                    cliente)
+                                                                </option>
+                                                                <option value="appointment">
+                                                                    Por
+                                                                    Agendamento
+                                                                    (1 ativa por
+                                                                    agenda)
+                                                                </option>
+                                                                <option value="reference">
+                                                                    Por
+                                                                    Referência
+                                                                    (1 ativa por
+                                                                    mesa/pedido)
+                                                                </option>
                                                             </select>
                                                         </FormField>
                                                     </div>
@@ -189,7 +227,9 @@ export default function SaleCategoriesIndex({
                                                 />
                                                 <FormActions
                                                     processing={processing}
-                                                    onCancel={() => setCreateOpen(false)}
+                                                    onCancel={() =>
+                                                        setCreateOpen(false)
+                                                    }
                                                     label="Cadastrar categoria"
                                                 />
                                             </>
@@ -255,34 +295,57 @@ export default function SaleCategoriesIndex({
                                             <h2 className="truncate font-semibold text-foreground">
                                                 {category.name}
                                             </h2>
-                                            <p className="truncate text-xs font-mono text-muted-foreground">
+                                            <p className="truncate font-mono text-xs text-muted-foreground">
                                                 chave: {category.key}
                                             </p>
                                         </div>
                                     </div>
-                                    <StatusBadge status={category.is_active ? 'active' : 'inactive'} />
+                                    <StatusBadge
+                                        status={
+                                            category.is_active
+                                                ? 'active'
+                                                : 'inactive'
+                                        }
+                                    />
                                 </div>
                                 <div className="flex flex-col gap-2 border-y border-border py-2 text-sm text-muted-foreground">
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="inline-flex items-center gap-1.5 font-medium">
-                                            <Tag aria-hidden="true" className="size-4" />
-                                            {saleCategoryTypeLabels[category.type] ?? category.type}
+                                            <Tag
+                                                aria-hidden="true"
+                                                className="size-4"
+                                            />
+                                            {saleCategoryTypeLabels[
+                                                category.type
+                                            ] ?? category.type}
                                         </span>
                                         <span className="inline-flex items-center gap-1.5 text-xs">
-                                            <Layers aria-hidden="true" className="size-3.5" />
+                                            <Layers
+                                                aria-hidden="true"
+                                                className="size-3.5"
+                                            />
                                             {category.sales_count ?? 0} comandas
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-xs">
-                                        <ShieldAlert aria-hidden="true" className="size-3.5 text-muted-foreground shrink-0" />
+                                        <ShieldAlert
+                                            aria-hidden="true"
+                                            className="size-3.5 shrink-0 text-muted-foreground"
+                                        />
                                         <span className="truncate">
-                                            {uniquenessScopeLabels[category.uniqueness_scope] ?? category.uniqueness_scope}
+                                            {uniquenessScopeLabels[
+                                                category.uniqueness_scope
+                                            ] ?? category.uniqueness_scope}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="mt-auto flex justify-end">
                                     <Button asChild variant="outline" size="sm">
-                                        <Link href={saleCategories.show(category.id)}>
+                                        <Link
+                                            href={saleCategories.show(
+                                                category.id,
+                                            )}
+                                        >
                                             Ver configuração
                                         </Link>
                                     </Button>
@@ -299,5 +362,7 @@ export default function SaleCategoriesIndex({
 }
 
 SaleCategoriesIndex.layout = {
-    breadcrumbs: [{ title: 'Categorias de Comanda', href: saleCategories.index() }],
+    breadcrumbs: [
+        { title: 'Categorias de Comanda', href: saleCategories.index() },
+    ],
 };

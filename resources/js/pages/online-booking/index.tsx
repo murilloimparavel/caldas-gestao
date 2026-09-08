@@ -367,7 +367,8 @@ function PublicPreview({
     gallery: NonNullable<Props['gallery']>;
     services: BookingItem[];
 }) {
-    const coverUrl = settings.cover_url ?? settings.cover_image_url ?? settings.logo_url;
+    const coverUrl =
+        settings.cover_url ?? settings.cover_image_url ?? settings.logo_url;
     const visibleServices = services.filter(
         (item) => item.status === 'active' && item.online_booking_enabled,
     );
@@ -377,12 +378,17 @@ function PublicPreview({
             <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <CardTitle className="text-base">Prévia pública</CardTitle>
+                        <CardTitle className="text-base">
+                            Prévia pública
+                        </CardTitle>
                         <CardDescription className="mt-1">
                             Veja como o celular do cliente exibirá a unidade.
                         </CardDescription>
                     </div>
-                    <Smartphone aria-hidden="true" className="size-4 text-primary" />
+                    <Smartphone
+                        aria-hidden="true"
+                        className="size-4 text-primary"
+                    />
                 </div>
             </CardHeader>
             <CardContent className="flex justify-center bg-muted/10 p-5">
@@ -393,11 +399,16 @@ function PublicPreview({
                                 {unit.name}
                             </span>
                             <span className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                                <UserRound aria-hidden="true" className="size-3.5" />
+                                <UserRound
+                                    aria-hidden="true"
+                                    className="size-3.5"
+                                />
                             </span>
                         </div>
                         <div className="flex gap-4 overflow-hidden border-b border-border/70 px-4 pt-3 text-[11px] font-semibold text-muted-foreground">
-                            <span className="border-b-2 border-primary pb-2 text-foreground">Detalhes</span>
+                            <span className="border-b-2 border-primary pb-2 text-foreground">
+                                Detalhes
+                            </span>
                             <span className="pb-2">Serviços</span>
                             <span className="pb-2">Profissionais</span>
                             <span className="pb-2">Avaliações</span>
@@ -417,36 +428,70 @@ function PublicPreview({
                                 />
                             ) : (
                                 <div className="flex h-36 items-center justify-center bg-primary/10 text-primary">
-                                    <ImagePlus aria-hidden="true" className="size-8" />
+                                    <ImagePlus
+                                        aria-hidden="true"
+                                        className="size-8"
+                                    />
                                 </div>
                             )}
                             <div className="space-y-4 px-4 py-4">
                                 <div>
-                                    <p className="text-sm font-bold">{unit.name}</p>
+                                    <p className="text-sm font-bold">
+                                        {unit.name}
+                                    </p>
                                     <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                                        {settings.description || 'Escolha um serviço e reserve seu horário.'}
+                                        {settings.description ||
+                                            'Escolha um serviço e reserve seu horário.'}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-border/70 p-3">
-                                    <p className="text-[11px] font-bold">Contato</p>
+                                    <p className="text-[11px] font-bold">
+                                        Contato
+                                    </p>
                                     <p className="mt-1 text-[11px] text-muted-foreground">
-                                        {settings.whatsapp || settings.phone || 'WhatsApp não informado'}
+                                        {settings.whatsapp ||
+                                            settings.phone ||
+                                            'WhatsApp não informado'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-[11px] font-bold">Serviços</p>
+                                    <p className="text-[11px] font-bold">
+                                        Serviços
+                                    </p>
                                     <div className="mt-2 space-y-2">
-                                        {visibleServices.slice(0, 3).map((service) => (
-                                            <div key={service.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-2.5 py-2">
-                                                <span className="truncate text-[11px] font-medium">{service.name}</span>
-                                                {service.price_cents !== undefined && (
-                                                    <span className="shrink-0 text-[10px] text-muted-foreground">
-                                                        {(service.price_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        {visibleServices
+                                            .slice(0, 3)
+                                            .map((service) => (
+                                                <div
+                                                    key={service.id}
+                                                    className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-2.5 py-2"
+                                                >
+                                                    <span className="truncate text-[11px] font-medium">
+                                                        {service.name}
                                                     </span>
-                                                )}
-                                            </div>
-                                        ))}
-                                        {!visibleServices.length && <p className="text-[11px] text-muted-foreground">Cadastre um serviço ativo.</p>}
+                                                    {service.price_cents !==
+                                                        undefined && (
+                                                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                                                            {(
+                                                                service.price_cents /
+                                                                100
+                                                            ).toLocaleString(
+                                                                'pt-BR',
+                                                                {
+                                                                    style: 'currency',
+                                                                    currency:
+                                                                        'BRL',
+                                                                },
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        {!visibleServices.length && (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Cadastre um serviço ativo.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -634,7 +679,7 @@ export default function OnlineBookingIndex({
                                     ))}
                                 </nav>
                             </div>
-                            <div className="grid gap-5 xl:items-start xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
+                            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] xl:items-start">
                                 <div className="space-y-5">
                                     {activeTab === 'details' && (
                                         <SectionCard
@@ -705,8 +750,12 @@ export default function OnlineBookingIndex({
                                             </div>
                                             <CoverEditor
                                                 url={coverUrl}
-                                                uploadUrl={resolvedCoverUploadUrl}
-                                                deleteUrl={resolvedCoverDeleteUrl}
+                                                uploadUrl={
+                                                    resolvedCoverUploadUrl
+                                                }
+                                                deleteUrl={
+                                                    resolvedCoverDeleteUrl
+                                                }
                                                 onUploaded={() =>
                                                     router.reload({
                                                         only: [
@@ -1099,31 +1148,51 @@ export default function OnlineBookingIndex({
                                                                 name={`public_hours[${index}][enabled]`}
                                                                 value="1"
                                                                 defaultChecked={
-                                                                    settings.public_hours?.[String(index)]?.enabled ??
-                                                                    (index < 6)
+                                                                    settings
+                                                                        .public_hours?.[
+                                                                        String(
+                                                                            index,
+                                                                        )
+                                                                    ]
+                                                                        ?.enabled ??
+                                                                    index < 6
                                                                 }
                                                                 className="size-4 accent-primary"
                                                             />
                                                             {day}
                                                         </label>
-                                                            <Input
-                                                                aria-label={`${day} início`}
-                                                                type="time"
-                                                                name={`public_hours[${index}][starts_at]`}
-                                                                defaultValue={
-                                                                    settings.public_hours?.[String(index)]?.starts_at ??
-                                                                    (index < 6 ? '08:00' : '')
-                                                                }
+                                                        <Input
+                                                            aria-label={`${day} início`}
+                                                            type="time"
+                                                            name={`public_hours[${index}][starts_at]`}
+                                                            defaultValue={
+                                                                settings
+                                                                    .public_hours?.[
+                                                                    String(
+                                                                        index,
+                                                                    )
+                                                                ]?.starts_at ??
+                                                                (index < 6
+                                                                    ? '08:00'
+                                                                    : '')
+                                                            }
                                                             className="h-8 w-28"
                                                         />
-                                                            <Input
-                                                                aria-label={`${day} fim`}
-                                                                type="time"
-                                                                name={`public_hours[${index}][ends_at]`}
-                                                                defaultValue={
-                                                                    settings.public_hours?.[String(index)]?.ends_at ??
-                                                                    (index < 6 ? '18:00' : '')
-                                                                }
+                                                        <Input
+                                                            aria-label={`${day} fim`}
+                                                            type="time"
+                                                            name={`public_hours[${index}][ends_at]`}
+                                                            defaultValue={
+                                                                settings
+                                                                    .public_hours?.[
+                                                                    String(
+                                                                        index,
+                                                                    )
+                                                                ]?.ends_at ??
+                                                                (index < 6
+                                                                    ? '18:00'
+                                                                    : '')
+                                                            }
                                                             className="h-8 w-28"
                                                         />
                                                     </div>

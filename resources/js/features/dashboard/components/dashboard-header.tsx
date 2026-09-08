@@ -3,7 +3,13 @@ import { RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { dashboard } from '@/routes';
 import type { PeriodFilter } from '../types';
 
@@ -40,7 +46,7 @@ export function DashboardHeader({
             router.get(
                 dashboard().url,
                 { period: newPeriod },
-                { preserveState: true, preserveScroll: true }
+                { preserveState: true, preserveScroll: true },
             );
         }
     };
@@ -50,7 +56,7 @@ export function DashboardHeader({
             router.get(
                 dashboard().url,
                 { period: 'custom', start_date: startDate, end_date: endDate },
-                { preserveState: true, preserveScroll: true }
+                { preserveState: true, preserveScroll: true },
             );
         }
     };
@@ -74,7 +80,10 @@ export function DashboardHeader({
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-                <Select value={selectedPeriod} onValueChange={(v) => handlePeriodChange(v as PeriodFilter)}>
+                <Select
+                    value={selectedPeriod}
+                    onValueChange={(v) => handlePeriodChange(v as PeriodFilter)}
+                >
                     <SelectTrigger className="w-[150px] bg-background">
                         <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
                         <SelectValue placeholder="Selecione o período" />
@@ -96,14 +105,20 @@ export function DashboardHeader({
                             onChange={(e) => setStartDate(e.target.value)}
                             className="w-[135px] bg-background text-xs"
                         />
-                        <span className="text-xs text-muted-foreground">até</span>
+                        <span className="text-xs text-muted-foreground">
+                            até
+                        </span>
                         <Input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
                             className="w-[135px] bg-background text-xs"
                         />
-                        <Button size="sm" variant="secondary" onClick={handleApplyCustomDates}>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={handleApplyCustomDates}
+                        >
                             Filtrar
                         </Button>
                     </div>
@@ -116,7 +131,9 @@ export function DashboardHeader({
                     title="Atualizar dados"
                     className="shrink-0 bg-background"
                 >
-                    <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                        className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                    />
                 </Button>
             </div>
         </div>

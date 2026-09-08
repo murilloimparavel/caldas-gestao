@@ -106,9 +106,9 @@ export default function ServicesIndex({
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
 
-    const [professionalOptions, setProfessionalOptions] = useState<RelationOption[]>(
-        initialProfessionalOptions ?? options?.professionals ?? [],
-    );
+    const [professionalOptions, setProfessionalOptions] = useState<
+        RelationOption[]
+    >(initialProfessionalOptions ?? options?.professionals ?? []);
     const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
 
     const handleProfessionalCreated = (created: CreatedEntity) => {
@@ -187,9 +187,15 @@ export default function ServicesIndex({
                                                             error={errors.photo}
                                                         >
                                                             <ImageUploader
-                                                                value={selectedPhoto}
-                                                                onChange={setSelectedPhoto}
-                                                                error={errors.photo}
+                                                                value={
+                                                                    selectedPhoto
+                                                                }
+                                                                onChange={
+                                                                    setSelectedPhoto
+                                                                }
+                                                                error={
+                                                                    errors.photo
+                                                                }
                                                                 aspectRatio="auto"
                                                                 previewHeight="120px"
                                                             />
@@ -256,14 +262,20 @@ export default function ServicesIndex({
                                                     <div className="space-y-2 sm:col-span-2">
                                                         <div className="flex items-center justify-between">
                                                             <p className="text-sm font-medium text-foreground">
-                                                                Profissionais habilitados
+                                                                Profissionais
+                                                                habilitados
                                                             </p>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setQuickProfessionalOpen(true)}
+                                                                onClick={() =>
+                                                                    setQuickProfessionalOpen(
+                                                                        true,
+                                                                    )
+                                                                }
                                                                 className="text-xs font-semibold text-primary hover:underline focus:outline-none"
                                                             >
-                                                                + Novo Profissional
+                                                                + Novo
+                                                                Profissional
                                                             </button>
                                                         </div>
                                                         <RelationCheckboxes
@@ -354,7 +366,7 @@ export default function ServicesIndex({
                                             <img
                                                 src={service.photo_url}
                                                 alt={service.name}
-                                                className="size-11 shrink-0 rounded-2xl object-cover border border-border"
+                                                className="size-11 shrink-0 rounded-2xl border border-border object-cover"
                                             />
                                         ) : (
                                             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">

@@ -52,7 +52,7 @@ final class OnlineBookingSettingsController extends Controller
             'cover' => $setting?->cover_image_url,
             'tenant' => ['slug' => $context->tenant->slug],
             'publicUrl' => $readiness['publishable'] ? route('public_booking.show', [$context->tenant, $context->unit]) : null,
-            'canonicalUrl' => $readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $setting?->public_slug ?? $context->unit->slug]) : null,
+            'canonicalUrl' => $readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug]) : null,
             'services' => $services,
             'professionals' => $professionals,
             'readiness' => $readiness,

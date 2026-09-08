@@ -13,6 +13,8 @@ use App\Http\Controllers\CustomerSubscriptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
+use App\Http\Controllers\FirstLoginPasswordController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
@@ -28,6 +30,7 @@ use App\Http\Controllers\SaleItemController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\TenantDomainController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -39,17 +42,43 @@ Route::get('/billing', BillingController::class)
     ->middleware(['auth', 'verified', 'tenant.context'])
     ->name('billing.index');
 
-Route::get('/', fn () => Inertia::render('marketing/home', [
-    'branding' => [
-        'name' => config('branding.name', config('app.name')),
-        'logoUrl' => config('branding.logo_url'),
-        'primaryColor' => config('branding.primary_color'),
-        'accentColor' => config('branding.accent_color'),
-    ],
-]))->name('home');
+Route::get('/', function () {
+    $domain = request()->attributes->get('tenant_domain');
+
+    if ($domain?->kind?->value === 'public') {
+        $tenant = $domain->tenant;
+
+        return Inertia::render('public/coming-soon', [
+            'branding' => [
+                'name' => $tenant->brand_name ?: $tenant->name,
+                'logoUrl' => $tenant->logo_url,
+                'primaryColor' => $tenant->primary_color,
+                'accentColor' => $tenant->accent_color,
+            ],
+        ]);
+    }
+
+    if ($domain !== null) {
+        return redirect('/login');
+    }
+
+    return Inertia::render('marketing/home', [
+        'branding' => [
+            'name' => config('branding.name', config('app.name')),
+            'logoUrl' => config('branding.logo_url'),
+            'primaryColor' => config('branding.primary_color'),
+            'accentColor' => config('branding.accent_color'),
+        ],
+    ]);
+})->name('home');
 
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
+
+Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('/first-login/password', [FirstLoginPasswordController::class, 'edit'])->name('first-login-password.edit');
+    Route::put('/first-login/password', [FirstLoginPasswordController::class, 'update'])->middleware('throttle:6,1')->name('first-login-password.update');
+});
 
 Route::get('/book/{public_slug}', [PublicBookingController::class, 'showBySlug'])
     ->middleware('throttle:public-booking')
@@ -66,12 +95,20 @@ Route::prefix('book/{tenant:slug}/{unit:slug}')
             ->name('public_booking.appointments.store');
     });
 
+Route::get('google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google_calendar.callback');
+
 Route::middleware(['auth', 'verified'])->group(function () {
+
     Route::get('dashboard', DashboardController::class)
-        ->middleware(['tenant.context', 'saas.access'])
+        ->middleware(['tenant.context', 'saas.access', 'first.login.complete'])
         ->name('dashboard');
 
-    Route::middleware(['tenant.context', 'saas.access'])->group(function (): void {
+    Route::middleware(['tenant.context', 'saas.access', 'first.login.complete'])->group(function (): void {
+        Route::get('settings/domains', [TenantDomainController::class, 'index'])->name('tenant-domains.index');
+        Route::post('settings/domains', [TenantDomainController::class, 'store'])->name('tenant-domains.store');
+        Route::post('settings/domains/{tenantDomain}/verify', [TenantDomainController::class, 'verify'])->name('tenant-domains.verify');
+        Route::post('settings/domains/{tenantDomain}/provision', [TenantDomainController::class, 'provision'])->name('tenant-domains.provision');
+        Route::post('settings/domains/{tenantDomain}/activate', [TenantDomainController::class, 'activate'])->name('tenant-domains.activate');
         Route::get('online-booking', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.index');
         Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
         Route::post('online-booking/cover', [OnlineBookingSettingsController::class, 'storeCover'])->name('online_booking.cover.store');
@@ -81,6 +118,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'destroyGallery'])->name('online_booking.gallery.destroy');
         Route::post('online-booking/gallery/reorder', [OnlineBookingSettingsController::class, 'reorderGallery'])->name('online_booking.gallery.reorder');
         Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+        Route::get('google-calendar/status', [GoogleCalendarController::class, 'status'])->name('google_calendar.status');
+        Route::get('google-calendar/connect', [GoogleCalendarController::class, 'connect'])->name('google_calendar.connect');
+        Route::delete('google-calendar/disconnect', [GoogleCalendarController::class, 'disconnect'])->name('google_calendar.disconnect');
         Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
         Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');
         Route::post('appointments/{appointment}/cancel', [CalendarController::class, 'cancel'])->name('appointments.cancel');

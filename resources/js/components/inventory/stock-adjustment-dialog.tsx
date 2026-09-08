@@ -1,10 +1,5 @@
 import { Form } from '@inertiajs/react';
-import {
-    ArrowDownRight,
-    ArrowUpRight,
-    Boxes,
-    RotateCcw,
-} from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Boxes, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -48,7 +43,10 @@ export function StockAdjustmentDialog({
     trigger,
 }: Props) {
     const [movementType, setMovementType] = useState<
-        'purchase_inflow' | 'adjustment_gain' | 'adjustment_loss' | 'manual_count'
+        | 'purchase_inflow'
+        | 'adjustment_gain'
+        | 'adjustment_loss'
+        | 'manual_count'
     >('purchase_inflow');
     const [quantityInput, setQuantityInput] = useState<string>('1');
     const [costInput, setCostInput] = useState<string>(
@@ -78,7 +76,9 @@ export function StockAdjustmentDialog({
             setQuantityInput('1');
             setCostInput(
                 product.cost_price_cents && product.cost_price_cents > 0
-                    ? (product.cost_price_cents / 100).toFixed(2).replace('.', ',')
+                    ? (product.cost_price_cents / 100)
+                          .toFixed(2)
+                          .replace('.', ',')
                     : '',
             );
         }
@@ -96,23 +96,31 @@ export function StockAdjustmentDialog({
                         Ajustar Estoque
                     </DialogTitle>
                     <DialogDescription>
-                        Lance uma entrada, saída ou contagem física de estoque para{' '}
-                        <strong className="text-foreground">{product.name}</strong>.
+                        Lance uma entrada, saída ou contagem física de estoque
+                        para{' '}
+                        <strong className="text-foreground">
+                            {product.name}
+                        </strong>
+                        .
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3">
+                <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Estoque atual:</span>
+                        <span className="text-muted-foreground">
+                            Estoque atual:
+                        </span>
                         <span className="font-semibold text-foreground">
                             {product.current_stock} {product.unit_of_measure}
                         </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm border-t border-border/60 pt-2">
-                        <span className="text-muted-foreground">Estoque resultante:</span>
+                    <div className="flex items-center justify-between border-t border-border/60 pt-2 text-sm">
+                        <span className="text-muted-foreground">
+                            Estoque resultante:
+                        </span>
                         <span
-                            className={`font-semibold flex items-center gap-1.5 ${
+                            className={`flex items-center gap-1.5 font-semibold ${
                                 resultingStock < 0
                                     ? 'text-destructive'
                                     : resultingStock <= (product.min_stock ?? 0)
@@ -143,7 +151,11 @@ export function StockAdjustmentDialog({
                         <>
                             <FormErrorSummary errors={errors} />
 
-                            <input type="hidden" name="product_id" value={product.id} />
+                            <input
+                                type="hidden"
+                                name="product_id"
+                                value={product.id}
+                            />
                             <input
                                 type="hidden"
                                 name="lock_version"
@@ -162,22 +174,27 @@ export function StockAdjustmentDialog({
                                         value={movementType}
                                         onChange={(e) =>
                                             setMovementType(
-                                                e.target.value as typeof movementType,
+                                                e.target
+                                                    .value as typeof movementType,
                                             )
                                         }
                                         className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                     >
                                         <option value="purchase_inflow">
-                                            Entrada por compra (Nota fiscal / Fornecedor)
+                                            Entrada por compra (Nota fiscal /
+                                            Fornecedor)
                                         </option>
                                         <option value="adjustment_gain">
-                                            Ajuste de entrada (Sobra / Bonificação)
+                                            Ajuste de entrada (Sobra /
+                                            Bonificação)
                                         </option>
                                         <option value="adjustment_loss">
-                                            Ajuste de saída (Avaria / Perda / Uso interno)
+                                            Ajuste de saída (Avaria / Perda /
+                                            Uso interno)
                                         </option>
                                         <option value="manual_count">
-                                            Balanço físico (Substituir estoque contado)
+                                            Balanço físico (Substituir estoque
+                                            contado)
                                         </option>
                                     </select>
                                 </FormField>
@@ -189,7 +206,8 @@ export function StockAdjustmentDialog({
                                         label={
                                             movementType === 'manual_count'
                                                 ? 'Nova quantidade contada'
-                                                : movementType === 'adjustment_loss'
+                                                : movementType ===
+                                                    'adjustment_loss'
                                                   ? 'Quantidade a subtrair'
                                                   : 'Quantidade a adicionar'
                                         }
@@ -200,9 +218,15 @@ export function StockAdjustmentDialog({
                                             id="quantity"
                                             name="quantity"
                                             type="number"
-                                            min={movementType === 'manual_count' ? 0 : 1}
+                                            min={
+                                                movementType === 'manual_count'
+                                                    ? 0
+                                                    : 1
+                                            }
                                             value={quantityInput}
-                                            onChange={(e) => setQuantityInput(e.target.value)}
+                                            onChange={(e) =>
+                                                setQuantityInput(e.target.value)
+                                            }
                                             required
                                         />
                                     </FormField>
@@ -249,9 +273,11 @@ export function StockAdjustmentDialog({
                                         placeholder={
                                             movementType === 'purchase_inflow'
                                                 ? 'Ex.: Recebimento de compra NF 1042'
-                                                : movementType === 'manual_count'
+                                                : movementType ===
+                                                    'manual_count'
                                                   ? 'Ex.: Balanço físico mensal'
-                                                  : movementType === 'adjustment_loss'
+                                                  : movementType ===
+                                                      'adjustment_loss'
                                                     ? 'Ex.: Frasco quebrado durante transporte'
                                                     : 'Ex.: Sobra identificada em conferência'
                                         }

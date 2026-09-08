@@ -19,11 +19,14 @@ import {
     ResourceHeader,
 } from '@/components/operational';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type {
-    FinanceDashboardMetrics,
-    FinancialObligation,
-} from '@/types';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import type { FinanceDashboardMetrics, FinancialObligation } from '@/types';
 
 type Props = {
     metrics: FinanceDashboardMetrics;
@@ -36,7 +39,6 @@ export default function FinanceDashboard({
     upcomingObligations,
     recentSettled,
 }: Props) {
-
     return (
         <>
             <Head title="Painel Financeiro - Visão Geral" />
@@ -78,10 +80,16 @@ export default function FinanceDashboard({
                             </div>
                             <div>
                                 <p className="font-semibold">
-                                    Atenção: Existem {metrics.overdue_count} conta(s) em atraso
+                                    Atenção: Existem {metrics.overdue_count}{' '}
+                                    conta(s) em atraso
                                 </p>
                                 <p className="text-sm opacity-90">
-                                    Total pendente vencido: <strong>{formatMoney(metrics.overdue_amount_cents)}</strong>
+                                    Total pendente vencido:{' '}
+                                    <strong>
+                                        {formatMoney(
+                                            metrics.overdue_amount_cents,
+                                        )}
+                                    </strong>
                                 </p>
                             </div>
                         </div>
@@ -104,9 +112,11 @@ export default function FinanceDashboard({
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
-                                {formatMoney(metrics.current_cash_balance_cents)}
+                                {formatMoney(
+                                    metrics.current_cash_balance_cents,
+                                )}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 Turnos de caixa abertos atualmente
                             </p>
                         </CardContent>
@@ -120,14 +130,16 @@ export default function FinanceDashboard({
                             <PiggyBank className="h-4 w-4 text-indigo-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className={`text-2xl font-bold ${
-                                metrics.projected_balance_cents >= 0
-                                    ? 'text-indigo-600 dark:text-indigo-400'
-                                    : 'text-rose-600 dark:text-rose-400'
-                            }`}>
+                            <div
+                                className={`text-2xl font-bold ${
+                                    metrics.projected_balance_cents >= 0
+                                        ? 'text-indigo-600 dark:text-indigo-400'
+                                        : 'text-rose-600 dark:text-rose-400'
+                                }`}
+                            >
                                 {formatMoney(metrics.projected_balance_cents)}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 Caixa + Receitas Previstas - Despesas Previstas
                             </p>
                         </CardContent>
@@ -144,8 +156,11 @@ export default function FinanceDashboard({
                             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                                 {formatMoney(metrics.receivable_today_cents)}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Previsto no mês: {formatMoney(metrics.receivable_month_pending_cents)}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Previsto no mês:{' '}
+                                {formatMoney(
+                                    metrics.receivable_month_pending_cents,
+                                )}
                             </p>
                         </CardContent>
                     </Card>
@@ -161,8 +176,11 @@ export default function FinanceDashboard({
                             <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">
                                 {formatMoney(metrics.payable_today_cents)}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Previsto no mês: {formatMoney(metrics.payable_month_pending_cents)}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Previsto no mês:{' '}
+                                {formatMoney(
+                                    metrics.payable_month_pending_cents,
+                                )}
                             </p>
                         </CardContent>
                     </Card>
@@ -172,17 +190,20 @@ export default function FinanceDashboard({
                 <div className="grid gap-4 md:grid-cols-2">
                     <Card>
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-base">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                 Realizado no Mês (Recebimentos)
                             </CardTitle>
                             <CardDescription>
-                                Total de receitas efetivamente liquidadas no mês corrente.
+                                Total de receitas efetivamente liquidadas no mês
+                                corrente.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-lg">
-                                <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Receitas Liquidadas</span>
+                            <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 p-3">
+                                <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                                    Receitas Liquidadas
+                                </span>
                                 <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                                     {formatMoney(metrics.received_month_cents)}
                                 </span>
@@ -192,17 +213,20 @@ export default function FinanceDashboard({
 
                     <Card>
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-base">
                                 <CheckCircle2 className="h-4 w-4 text-rose-600" />
                                 Realizado no Mês (Pagamentos)
                             </CardTitle>
                             <CardDescription>
-                                Total de despesas e contas operacionais pagas no mês corrente.
+                                Total de despesas e contas operacionais pagas no
+                                mês corrente.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex items-center justify-between p-3 bg-rose-500/10 rounded-lg">
-                                <span className="text-sm font-medium text-rose-800 dark:text-rose-300">Despesas Pagas</span>
+                            <div className="flex items-center justify-between rounded-lg bg-rose-500/10 p-3">
+                                <span className="text-sm font-medium text-rose-800 dark:text-rose-300">
+                                    Despesas Pagas
+                                </span>
                                 <span className="text-xl font-bold text-rose-600 dark:text-rose-400">
                                     {formatMoney(metrics.paid_month_cents)}
                                 </span>
@@ -217,7 +241,7 @@ export default function FinanceDashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-3">
                             <div>
-                                <CardTitle className="text-base flex items-center gap-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
                                     <Clock className="h-4 w-4 text-amber-600" />
                                     Próximos Vencimentos
                                 </CardTitle>
@@ -225,27 +249,38 @@ export default function FinanceDashboard({
                                     Contas pendentes a vencer nos próximos dias.
                                 </CardDescription>
                             </div>
-                            <Button variant="ghost" size="sm" asChild className="text-xs">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                                className="text-xs"
+                            >
                                 <Link href="/finance/transactions?status=pending">
-                                    Ver todas <ArrowRight className="h-3 w-3 ml-1" />
+                                    Ver todas{' '}
+                                    <ArrowRight className="ml-1 h-3 w-3" />
                                 </Link>
                             </Button>
                         </CardHeader>
                         <CardContent>
                             {upcomingObligations.length === 0 ? (
-                                <p className="text-xs text-muted-foreground py-6 text-center">
+                                <p className="py-6 text-center text-xs text-muted-foreground">
                                     Nenhum vencimento pendente agendado.
                                 </p>
                             ) : (
                                 <div className="divide-y text-sm">
                                     {upcomingObligations.map((item) => (
-                                        <div key={item.id} className="py-2.5 flex items-center justify-between">
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between py-2.5"
+                                        >
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-1.5 rounded-md ${
-                                                    item.type === 'payable'
-                                                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
-                                                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                                                }`}>
+                                                <div
+                                                    className={`rounded-md p-1.5 ${
+                                                        item.type === 'payable'
+                                                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
+                                                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                                    }`}
+                                                >
                                                     {item.type === 'payable' ? (
                                                         <ArrowDownRight className="h-4 w-4" />
                                                     ) : (
@@ -253,19 +288,40 @@ export default function FinanceDashboard({
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-foreground text-xs leading-tight">
+                                                    <p className="text-xs leading-tight font-medium text-foreground">
                                                         {item.description}
                                                     </p>
-                                                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                        {item.supplier?.name || item.customer?.name || item.category?.name || 'Geral'} • Vence em {new Date(item.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                                        {item.supplier?.name ||
+                                                            item.customer
+                                                                ?.name ||
+                                                            item.category
+                                                                ?.name ||
+                                                            'Geral'}{' '}
+                                                        • Vence em{' '}
+                                                        {new Date(
+                                                            item.due_date +
+                                                                'T00:00:00',
+                                                        ).toLocaleDateString(
+                                                            'pt-BR',
+                                                        )}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <span className={`font-semibold text-xs ${
-                                                    item.type === 'payable' ? 'text-rose-600' : 'text-emerald-600'
-                                                }`}>
-                                                    {item.type === 'payable' ? '-' : '+'} {formatMoney(item.amount_cents)}
+                                                <span
+                                                    className={`text-xs font-semibold ${
+                                                        item.type === 'payable'
+                                                            ? 'text-rose-600'
+                                                            : 'text-emerald-600'
+                                                    }`}
+                                                >
+                                                    {item.type === 'payable'
+                                                        ? '-'
+                                                        : '+'}{' '}
+                                                    {formatMoney(
+                                                        item.amount_cents,
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
@@ -279,51 +335,83 @@ export default function FinanceDashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-3">
                             <div>
-                                <CardTitle className="text-base flex items-center gap-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
                                     <CheckCircle2 className="h-4 w-4 text-sky-600" />
                                     Últimas Liquidações
                                 </CardTitle>
                                 <CardDescription>
-                                    Histórico das contas liquidadas mais recentemente.
+                                    Histórico das contas liquidadas mais
+                                    recentemente.
                                 </CardDescription>
                             </div>
-                            <Button variant="ghost" size="sm" asChild className="text-xs">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                                className="text-xs"
+                            >
                                 <Link href="/finance/transactions?status=paid">
-                                    Ver histórico <ArrowRight className="h-3 w-3 ml-1" />
+                                    Ver histórico{' '}
+                                    <ArrowRight className="ml-1 h-3 w-3" />
                                 </Link>
                             </Button>
                         </CardHeader>
                         <CardContent>
                             {recentSettled.length === 0 ? (
-                                <p className="text-xs text-muted-foreground py-6 text-center">
+                                <p className="py-6 text-center text-xs text-muted-foreground">
                                     Nenhuma liquidação registrada recentemente.
                                 </p>
                             ) : (
                                 <div className="divide-y text-sm">
                                     {recentSettled.map((item) => (
-                                        <div key={item.id} className="py-2.5 flex items-center justify-between">
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between py-2.5"
+                                        >
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-1.5 rounded-md ${
-                                                    item.type === 'payable'
-                                                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
-                                                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                                                }`}>
+                                                <div
+                                                    className={`rounded-md p-1.5 ${
+                                                        item.type === 'payable'
+                                                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
+                                                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                                    }`}
+                                                >
                                                     <CheckCircle2 className="h-4 w-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-foreground text-xs leading-tight">
+                                                    <p className="text-xs leading-tight font-medium text-foreground">
                                                         {item.description}
                                                     </p>
-                                                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                        Pago em {item.paid_date ? new Date(item.paid_date + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} • {item.payment_method?.toUpperCase() || 'PIX'}
+                                                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                                        Pago em{' '}
+                                                        {item.paid_date
+                                                            ? new Date(
+                                                                  item.paid_date +
+                                                                      'T00:00:00',
+                                                              ).toLocaleDateString(
+                                                                  'pt-BR',
+                                                              )
+                                                            : '—'}{' '}
+                                                        •{' '}
+                                                        {item.payment_method?.toUpperCase() ||
+                                                            'PIX'}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <span className={`font-semibold text-xs ${
-                                                    item.type === 'payable' ? 'text-rose-600' : 'text-emerald-600'
-                                                }`}>
-                                                    {item.type === 'payable' ? '-' : '+'} {formatMoney(item.amount_cents)}
+                                                <span
+                                                    className={`text-xs font-semibold ${
+                                                        item.type === 'payable'
+                                                            ? 'text-rose-600'
+                                                            : 'text-emerald-600'
+                                                    }`}
+                                                >
+                                                    {item.type === 'payable'
+                                                        ? '-'
+                                                        : '+'}{' '}
+                                                    {formatMoney(
+                                                        item.amount_cents,
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
