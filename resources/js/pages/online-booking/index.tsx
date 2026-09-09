@@ -1,4 +1,4 @@
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, useHttp, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -302,22 +302,35 @@ function SectionVisibilityEditor({
         ),
     );
     const [saving, setSaving] = useState(false);
-    const save = (): void => {
+    const draftRequest = useHttp<
+        {
+            revision: number;
+            content: {
+                schema_version: number;
+                sections: { key: string; enabled: boolean }[];
+            };
+        },
+        { status: string }
+    >();
+    const save = async (): Promise<void> => {
         setSaving(true);
-        router.patch(
-            onlineBooking.draft.update.url(),
-            {
-                revision: draft.revision,
-                content: {
-                    schema_version: 1,
-                    sections: templateSections.map(([key]) => ({
-                        key,
-                        enabled: sections[key] ?? true,
-                    })),
-                },
+        draftRequest.setData({
+            revision: draft.revision,
+            content: {
+                schema_version: 1,
+                sections: templateSections.map(([key]) => ({
+                    key,
+                    enabled: sections[key] ?? true,
+                })),
             },
-            { preserveScroll: true, onFinish: () => setSaving(false) },
-        );
+        });
+
+        try {
+            await draftRequest.patch(onlineBooking.draft.update.url());
+            router.reload({ only: ['draft', 'publication', 'draftDiff'] });
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
