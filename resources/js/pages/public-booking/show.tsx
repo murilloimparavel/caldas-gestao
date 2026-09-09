@@ -456,6 +456,38 @@ export default function PublicBooking({
                                     </div>
                                 )}
                             </div>
+                            {unit.gallery?.length ? (
+                                <InfoCard title="Galeria">
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                        {unit.gallery.map((image, index) => (
+                                            <a
+                                                key={`${image.url}-${index}`}
+                                                href={image.url ?? undefined}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="group block overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700"
+                                            >
+                                                <img
+                                                    src={
+                                                        image.thumbnail_url ??
+                                                        image.url ??
+                                                        undefined
+                                                    }
+                                                    alt={
+                                                        image.alt_text ??
+                                                        `Imagem ${index + 1} de ${unit.name}`
+                                                    }
+                                                    width={400}
+                                                    height={400}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    className="aspect-square w-full object-cover transition group-hover:scale-105"
+                                                />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </InfoCard>
+                            ) : null}
                             <InfoCard title="Sobre o espaço">
                                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                                     {unit.description ||
