@@ -148,3 +148,11 @@ it('accepts a partial draft update without repeating the schema version', functi
 
     expect($draft['content']['schema_version'])->toBe(1);
 });
+
+it('exposes the named editor, publications, and links entry points', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)->get(route('online_booking.editor'))->assertSuccessful();
+    $this->actingAs($owner)->get(route('online_booking.publications.index'))->assertSuccessful();
+    $this->actingAs($owner)->get(route('online_booking.links'))->assertSuccessful();
+});
