@@ -8,6 +8,7 @@ use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSite;
 use App\Models\Professional;
 use App\Models\Service;
+use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -22,7 +23,6 @@ final class PublishOnlineBookingSite extends OperationalAction
         $unit = $this->unit($actor, $context, 'unit.update');
 
         return DB::transaction(function () use ($actor, $context, $unit, $expectedRevision): OnlineBookingPublication {
-            $this->assertReady($context, $unit);
             $site = OnlineBookingSite::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->lockForUpdate()->firstOrFail();
             $draft = $site->draft()->lockForUpdate()->firstOrFail();
 
@@ -31,6 +31,10 @@ final class PublishOnlineBookingSite extends OperationalAction
             }
 
             $active = $site->activePublication()->lockForUpdate()->first();
+            $this->assertReady($context, $unit, $site);
+            if ($active !== null && $active->source_revision === $draft->revision && $active->content_hash === $draft->content_hash) {
+                return $active;
+            }
             $active?->update(['superseded_at' => now()]);
             $version = ((int) OnlineBookingPublication::query()->where('site_id', $site->getKey())->max('version')) + 1;
             $publication = OnlineBookingPublication::query()->create([
@@ -45,13 +49,20 @@ final class PublishOnlineBookingSite extends OperationalAction
         });
     }
 
-    private function assertReady(TenantContext $context, Unit $unit): void
+    private function assertReady(TenantContext $context, Unit $unit, OnlineBookingSite $site): void
     {
         $hasService = Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->exists();
         $hasProfessional = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->exists();
         $hasPair = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->whereHas('services', fn ($query) => $query->where('services.online_booking_enabled', true)->where('services.status', 'active'))->exists();
 
-        if (! $unit->online_booking_enabled || ! $hasService || ! $hasProfessional || ! $hasPair) {
+        $domainReady = $site->public_domain_id === null || TenantDomain::query()
+            ->whereKey($site->public_domain_id)
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('kind', 'public')
+            ->where('status', 'active')
+            ->exists();
+
+        if (! $unit->online_booking_enabled || ! $hasService || ! $hasProfessional || ! $hasPair || ! $domainReady) {
             throw ValidationException::withMessages(['publication' => 'Ative a unidade, pelo menos um serviço e um profissional com vínculo antes de publicar.']);
         }
     }

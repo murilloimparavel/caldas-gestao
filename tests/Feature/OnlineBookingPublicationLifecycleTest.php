@@ -5,6 +5,7 @@ use App\Actions\OnlineBooking\RestoreOnlineBookingPublication;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
 use App\Enums\OnlineBookingPublicationStatus;
+use App\Models\OnlineBookingPublication;
 use App\Support\TenantContext;
 
 it('saves, publishes, unpublishes, and restores an online booking site', function () {
@@ -24,8 +25,11 @@ it('saves, publishes, unpublishes, and restores an online booking site', functio
 
     $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, $content, 0);
     $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+    $replayedPublication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
 
     expect($publication->version)->toBe(1)
+        ->and($replayedPublication->getKey())->toBe($publication->getKey())
+        ->and(OnlineBookingPublication::query()->count())->toBe(1)
         ->and($unit->refresh()->onlineBookingSetting)->toBeNull();
 
     $site = $publication->site()->firstOrFail();
