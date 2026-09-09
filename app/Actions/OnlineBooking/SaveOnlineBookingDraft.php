@@ -5,10 +5,13 @@ namespace App\Actions\OnlineBooking;
 use App\Actions\Operational\OperationalAction;
 use App\Models\OnlineBookingDraft;
 use App\Models\OnlineBookingSite;
+use App\Models\Professional;
+use App\Models\Service;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class SaveOnlineBookingDraft extends OperationalAction
@@ -26,6 +29,7 @@ final class SaveOnlineBookingDraft extends OperationalAction
                 throw new ConflictHttpException('O rascunho foi alterado em outra sessão.');
             }
 
+            $this->validateDocument($context, $unit, $content);
             $normalized = $this->normalize($content, is_array($draft?->content) ? $draft->content : []);
             $revision = ($draft?->revision ?? 0) + 1;
             $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR));
@@ -67,5 +71,21 @@ final class SaveOnlineBookingDraft extends OperationalAction
             ['tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey()],
             ['public_domain_id' => $setting?->public_domain_id, 'public_slug' => $setting?->public_slug ?? $unit->slug],
         );
+    }
+
+    /** @param array<string, mixed> $content */
+    private function validateDocument(TenantContext $context, Unit $unit, array $content): void
+    {
+        $serviceIds = array_values(array_filter($content['service_ids'] ?? [], 'is_string'));
+        $professionalIds = array_values(array_filter($content['professional_ids'] ?? [], 'is_string'));
+        $validServices = Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->whereIn('id', $serviceIds)->count();
+        $validProfessionals = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->whereIn('id', $professionalIds)->count();
+        $allowedSections = ['hero', 'services', 'professionals', 'gallery', 'hours', 'contact', 'confirmation', 'seo'];
+        $sections = is_array($content['sections'] ?? null) ? $content['sections'] : [];
+        $invalidSection = collect($sections)->first(fn (mixed $section): bool => ! is_array($section) || ! in_array($section['key'] ?? null, $allowedSections, true) || ! is_bool($section['enabled'] ?? null));
+
+        if ($validServices !== count($serviceIds) || $validProfessionals !== count($professionalIds) || $invalidSection !== null) {
+            throw ValidationException::withMessages(['content' => 'O rascunho contém serviços, profissionais ou seções inválidos para esta unidade.']);
+        }
     }
 }

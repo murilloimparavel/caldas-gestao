@@ -6,8 +6,12 @@ use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
 use App\Enums\OnlineBookingPublicationStatus;
 use App\Models\OnlineBookingPublication;
+use App\Models\Service;
+use App\Models\Tenant;
+use App\Models\Unit;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
 
 it('saves, publishes, unpublishes, and restores an online booking site', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
@@ -112,4 +116,16 @@ it('renders a signed preview from the draft without requiring publication', func
     $response = $this->actingAs($owner)->get(URL::signedRoute('online_booking.preview', [$tenant, $unit]));
 
     $response->assertSuccessful();
+});
+
+it('rejects draft selections and sections outside the active unit contract', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $otherTenant = Tenant::factory()->create();
+    $foreignService = Service::factory()->create(['tenant_id' => $otherTenant->getKey(), 'unit_id' => Unit::factory()->create(['tenant_id' => $otherTenant->getKey()])->getKey()]);
+
+    expect(fn () => app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'service_ids' => [$foreignService->getKey()],
+        'sections' => [['key' => 'unknown', 'enabled' => true]],
+    ], 0))->toThrow(ValidationException::class);
 });
