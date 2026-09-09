@@ -114,6 +114,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('online-booking/draft', [OnlineBookingSettingsController::class, 'saveDraft'])->name('online_booking.draft.update');
         Route::post('online-booking/publish', [OnlineBookingSettingsController::class, 'publish'])->name('online_booking.publish');
         Route::post('online-booking/unpublish', [OnlineBookingSettingsController::class, 'unpublish'])->name('online_booking.unpublish');
+        Route::post('online-booking/publications/{publication}/restore', [OnlineBookingSettingsController::class, 'restore'])->name('online_booking.publications.restore');
         Route::post('online-booking/cover', [OnlineBookingSettingsController::class, 'storeCover'])->name('online_booking.cover.store');
         Route::delete('online-booking/cover', [OnlineBookingSettingsController::class, 'destroyCover'])->name('online_booking.cover.destroy');
         Route::post('online-booking/gallery', [OnlineBookingSettingsController::class, 'storeGallery'])->name('online_booking.gallery.store');

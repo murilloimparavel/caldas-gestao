@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'active_publication_id', 'public_slug', 'template_key', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version'])]
@@ -56,5 +57,11 @@ class OnlineBookingSite extends Model
     public function activePublication(): BelongsTo
     {
         return $this->belongsTo(OnlineBookingPublication::class, 'active_publication_id');
+    }
+
+    /** @return HasMany<OnlineBookingPublication, $this> */
+    public function publications(): HasMany
+    {
+        return $this->hasMany(OnlineBookingPublication::class, 'site_id');
     }
 }

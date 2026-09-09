@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\OnlineBooking\EnsureOnlineBookingSite;
 use App\Actions\OnlineBooking\PublishOnlineBookingSite;
+use App\Actions\OnlineBooking\RestoreOnlineBookingPublication;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
 use App\Actions\OnlineBooking\UpdateOnlineBookingSettings;
@@ -17,6 +18,7 @@ use App\Http\Requests\Settings\OnlineBookingGalleryUpdateRequest;
 use App\Http\Requests\Settings\OnlineBookingPublishRequest;
 use App\Http\Requests\Settings\OnlineBookingSettingsRequest;
 use App\Models\OnlineBookingGalleryImage;
+use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
@@ -78,6 +80,7 @@ final class OnlineBookingSettingsController extends Controller
             'publication' => $site?->only(['id', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version']),
             'draft' => $site?->draft,
             'activePublication' => $site?->activePublication?->only(['id', 'version', 'source_revision', 'published_at', 'template_key']),
+            'publicationHistory' => $site?->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'published_by', 'published_at', 'superseded_at']),
         ];
 
         return request()->expectsJson()
@@ -104,6 +107,14 @@ final class OnlineBookingSettingsController extends Controller
         $site = $unpublish->handle(request()->user(), $context);
 
         return response()->json(['publication' => $site, 'status' => 'unpublished']);
+    }
+
+    public function restore(string $publication, TenantContext $context, RestoreOnlineBookingPublication $restore): JsonResponse
+    {
+        $record = OnlineBookingPublication::query()->findOrFail($publication);
+        $draft = $restore->handle(request()->user(), $context, $record);
+
+        return response()->json(['draft' => $draft, 'status' => 'draft_restored']);
     }
 
     private function publicBookingUrl(string $tenantId, Unit $unit, ?OnlineBookingSetting $setting, string $publicSlug): string

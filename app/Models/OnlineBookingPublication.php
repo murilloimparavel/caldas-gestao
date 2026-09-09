@@ -25,4 +25,10 @@ class OnlineBookingPublication extends Model
     {
         return $this->belongsTo(OnlineBookingSite::class, 'site_id');
     }
+
+    /** @return BelongsTo<User, $this> */
+    public function publishedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'published_by');
+    }
 }

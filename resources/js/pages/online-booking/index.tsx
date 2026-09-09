@@ -10,6 +10,7 @@ import {
     Copy,
     ExternalLink,
     GalleryHorizontalEnd,
+    History,
     Globe2,
     ImagePlus,
     Link2,
@@ -21,6 +22,7 @@ import {
     UsersRound,
     XCircle,
     Settings2,
+    RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -119,6 +121,14 @@ type Props = {
         published_at?: string | null;
         template_key: string;
     } | null;
+    publicationHistory?: {
+        id: string;
+        version: number;
+        source_revision: number;
+        published_at?: string | null;
+        superseded_at?: string | null;
+        published_by?: { name?: string | null } | null;
+    }[];
     settings?: PublicSettings | null;
     cover?: string | null;
     coverUploadUrl?: string | null;
@@ -538,6 +548,7 @@ export default function OnlineBookingIndex({
     publication = null,
     draft = null,
     activePublication = null,
+    publicationHistory = [],
     settings: rootSettings,
     gallery = [],
     cover,
@@ -795,6 +806,73 @@ export default function OnlineBookingIndex({
                         )}
                     </div>
                 </div>
+                {publicationHistory.length > 0 ? (
+                    <Card className="mb-5">
+                        <CardHeader className="border-b border-border/60 bg-muted/20">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <History
+                                    aria-hidden="true"
+                                    className="size-4 text-primary"
+                                />
+                                Histórico de publicações
+                            </CardTitle>
+                            <CardDescription>
+                                Cada versão é imutável. Restaurar cria um novo
+                                rascunho sem alterar o histórico.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="divide-y divide-border/60 p-0">
+                            {publicationHistory.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                                            v{item.version}
+                                        </span>
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                Publicada em{' '}
+                                                {item.published_at
+                                                    ? new Date(
+                                                          item.published_at,
+                                                      ).toLocaleString('pt-BR')
+                                                    : 'data indisponível'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Revisão {item.source_revision}
+                                                {item.published_by?.name
+                                                    ? ` · ${item.published_by.name}`
+                                                    : ''}
+                                                {item.superseded_at
+                                                    ? ' · substituída'
+                                                    : ' · ativa'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            router.post(
+                                                onlineBooking.publications.restore.url(
+                                                    item.id,
+                                                ),
+                                                {},
+                                                { preserveScroll: true },
+                                            )
+                                        }
+                                    >
+                                        <RotateCcw aria-hidden="true" />
+                                        Restaurar como rascunho
+                                    </Button>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                ) : null}
                 <Form
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}
