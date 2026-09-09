@@ -53,7 +53,7 @@ final class EnsureOnlineBookingSite
                     ],
                     'service_ids' => Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('online_booking_enabled', true)->pluck('id')->values()->all(),
                     'professional_ids' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('online_booking_enabled', true)->pluck('id')->values()->all(),
-                    'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['path' => $image->path, 'alt_text' => $image->alt_text])->values()->all(),
+                    'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['path' => $image->path, 'thumbnail_path' => $image->thumbnail_path, 'alt_text' => $image->alt_text])->values()->all(),
                     'public_hours' => $setting?->public_hours ?? [],
                     'booking_policy' => [
                         'booking_flow' => $setting?->booking_flow ?? 'service_first',

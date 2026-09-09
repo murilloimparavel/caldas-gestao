@@ -185,9 +185,13 @@ final class OnlineBookingSettingsController extends Controller
     {
         $image = $request->file('image');
         $path = 'online-booking/'.$context->unit->getKey().'/'.Str::random(40).'.webp';
-        app(UploadedImageOptimizer::class)->storeWebp($image, Storage::disk((string) config('filesystems.media_disk')), $path);
+        $thumbnailPath = 'online-booking/'.$context->unit->getKey().'/thumbs/'.Str::random(40).'.webp';
+        $disk = Storage::disk((string) config('filesystems.media_disk'));
+        $optimizer = app(UploadedImageOptimizer::class);
+        $optimizer->storeWebp($image, $disk, $path);
+        $optimizer->storeSquareWebp($image, $disk, $thumbnailPath);
         $gallery = $context->unit->onlineBookingGalleryImages()->create([
-            'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'path' => $path,
+            'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'path' => $path, 'thumbnail_path' => $thumbnailPath,
             'alt_text' => $request->validated('alt_text'), 'position' => (int) $context->unit->onlineBookingGalleryImages()->max('position') + 1,
         ]);
 
@@ -207,6 +211,9 @@ final class OnlineBookingSettingsController extends Controller
         Gate::authorize('update', $context->unit);
         $gallery = $this->galleryImage($context, $image);
         Storage::disk(config('filesystems.media_disk'))->delete($gallery->path);
+        if ($gallery->thumbnail_path !== null) {
+            Storage::disk(config('filesystems.media_disk'))->delete($gallery->thumbnail_path);
+        }
         $gallery->delete();
 
         return response()->json(['deleted' => true]);

@@ -76,8 +76,8 @@ final class PublicBookingController extends Controller
         $brandColor = $theme['brand_color'] ?? $setting?->brand_color;
         $publicHours = array_key_exists('public_hours', $content) ? $content['public_hours'] : $setting?->public_hours;
         $gallery = ($publication !== null || is_array($preview)) && is_array($content['gallery'] ?? null)
-            ? collect($content['gallery'])->map(fn (array $image): array => ['url' => MediaUrl::for((string) ($image['path'] ?? '')), 'alt_text' => $image['alt_text'] ?? null])->values()->all()
-            : $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => MediaUrl::for($image->path), 'alt_text' => $image->alt_text])->values()->all();
+            ? collect($content['gallery'])->map(fn (array $image): array => ['url' => MediaUrl::for((string) ($image['path'] ?? '')), 'thumbnail_url' => MediaUrl::for($image['thumbnail_path'] ?? ($image['path'] ?? null)), 'alt_text' => $image['alt_text'] ?? null])->values()->all()
+            : $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => MediaUrl::for($image->path), 'thumbnail_url' => MediaUrl::for($image->thumbnail_path ?? $image->path), 'alt_text' => $image->alt_text])->values()->all();
         $coverImagePath = $identity['cover_image_path'] ?? $setting?->cover_image_path;
         $payload = [
             'unit' => [
