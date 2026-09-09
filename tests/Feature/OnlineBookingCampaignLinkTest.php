@@ -1,6 +1,9 @@
 <?php
 
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
+use App\Enums\TenantDomainKind;
+use App\Enums\TenantDomainStatus;
+use App\Models\OnlineBookingSite;
 use App\Support\TenantContext;
 
 it('creates a tenant-scoped campaign link with normalized UTM parameters', function () {
@@ -32,4 +35,25 @@ it('toggles and deletes only links from the active unit', function () {
         ->assertOk()->assertJsonPath('status', 'inactive');
     $this->actingAs($owner)->deleteJson(route('online_booking.campaign_links.destroy', $created['id']))
         ->assertOk()->assertJsonPath('deleted', true);
+});
+
+it('generates campaign links on the active custom public domain', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [], 'professional_ids' => []], 0);
+    $domain = $tenant->domains()->create([
+        'hostname' => 'agenda.example.com',
+        'kind' => TenantDomainKind::Public,
+        'status' => TenantDomainStatus::Active,
+        'verification_token' => 'test-token',
+        'expected_cname' => 'vps.example.com',
+    ]);
+    OnlineBookingSite::query()->where('tenant_id', $tenant->getKey())->where('unit_id', $unit->getKey())->update(['public_domain_id' => $domain->getKey()]);
+
+    $response = $this->actingAs($owner)->postJson(route('online_booking.campaign_links.store'), [
+        'name' => 'Site oficial', 'utm_source' => 'site', 'utm_medium' => 'owned', 'utm_campaign' => 'home',
+    ]);
+
+    $response->assertCreated();
+    expect($response->json('campaign_link.url'))->toStartWith('https://agenda.example.com/book/');
 });
