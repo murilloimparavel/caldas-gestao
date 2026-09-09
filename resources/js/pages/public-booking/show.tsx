@@ -60,6 +60,8 @@ type Unit = {
         }
     >;
     booking_flow?: 'service_first' | 'professional_first';
+    seo?: { title?: string | null; description?: string | null };
+    canonical_url?: string | null;
 };
 type Professional = { id: string; name: string; avatar_url?: string | null };
 type Service = {
@@ -366,7 +368,34 @@ export default function PublicBooking({
 
     return (
         <PublicShell unit={unit}>
-            <Head title={`Agendar · ${unit.name}`} />
+            <Head title={unit.seo?.title || `Agendar · ${unit.name}`}>
+                <meta
+                    name="description"
+                    content={
+                        unit.seo?.description ||
+                        unit.description ||
+                        `Agende seu horário em ${unit.name}.`
+                    }
+                />
+                {unit.canonical_url ? (
+                    <link rel="canonical" href={unit.canonical_url} />
+                ) : null}
+                {unit.cover_image_url ? (
+                    <meta property="og:image" content={unit.cover_image_url} />
+                ) : null}
+                <meta
+                    property="og:title"
+                    content={unit.seo?.title || unit.name}
+                />
+                <meta
+                    property="og:description"
+                    content={
+                        unit.seo?.description ||
+                        unit.description ||
+                        `Agende seu horário em ${unit.name}.`
+                    }
+                />
+            </Head>
             <div className="mx-auto max-w-6xl space-y-6">
                 <header
                     className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900"
