@@ -129,3 +129,11 @@ it('rejects draft selections and sections outside the active unit contract', fun
         'sections' => [['key' => 'unknown', 'enabled' => true]],
     ], 0))->toThrow(ValidationException::class);
 });
+
+it('supports a dry-run for the idempotent legacy backfill', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $this->artisan('online-booking:backfill', ['user_id' => $owner->getKey(), '--dry-run' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain('would be provisioned');
+});
