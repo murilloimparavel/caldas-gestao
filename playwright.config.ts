@@ -15,6 +15,16 @@ export default defineConfig({
             process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8000',
         trace: 'on-first-retry',
     },
+    ...(process.env.PLAYWRIGHT_TEST_BASE_URL
+        ? {}
+        : {
+              webServer: {
+                  command: 'php artisan serve --host=127.0.0.1 --port=8000',
+                  url: 'http://127.0.0.1:8000',
+                  reuseExistingServer: true,
+                  timeout: 120_000,
+              },
+          }),
     projects: [
         {
             name: 'chromium',
