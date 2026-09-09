@@ -306,6 +306,7 @@ function SectionVisibilityEditor({
             {
                 revision: draft.revision,
                 content: {
+                    schema_version: 1,
                     sections: templateSections.map(([key]) => ({
                         key,
                         enabled: sections[key] ?? true,

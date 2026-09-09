@@ -30,7 +30,7 @@ final class OnlineBookingDraftRequest extends FormRequest
         return [
             'revision' => ['required', 'integer', 'min:0'],
             'content' => ['required', 'array'],
-            'content.schema_version' => ['required', 'integer', 'in:1'],
+            'content.schema_version' => ['sometimes', 'integer', 'in:1'],
             'content.theme' => ['sometimes', 'array'],
             'content.seo' => ['sometimes', 'array'],
             'content.sections' => ['sometimes', 'array', 'max:20'],

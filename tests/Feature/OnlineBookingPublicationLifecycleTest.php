@@ -137,3 +137,14 @@ it('supports a dry-run for the idempotent legacy backfill', function () {
         ->assertExitCode(0)
         ->expectsOutputToContain('would be provisioned');
 });
+
+it('accepts a partial draft update without repeating the schema version', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $draft = $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
+        'revision' => 0,
+        'content' => ['sections' => [['key' => 'hero', 'enabled' => true]]],
+    ])->assertOk()->json('draft');
+
+    expect($draft['content']['schema_version'])->toBe(1);
+});
