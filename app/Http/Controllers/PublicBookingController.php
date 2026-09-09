@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Actions\PublicBooking\CreatePublicAppointment;
 use App\Http\Requests\PublicBookingAppointmentRequest;
 use App\Http\Requests\PublicBookingAvailabilityRequest;
+use App\Jobs\RecordOnlineBookingVisit;
 use App\Models\Appointment;
 use App\Models\OnlineBookingCampaignLink;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
-use App\Models\OnlineBookingVisit;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -55,7 +55,7 @@ final class PublicBookingController extends Controller
         $sections += array_fill_keys(['hero', 'services', 'professionals', 'gallery', 'hours', 'contact'], true);
         if (! is_array($preview)) {
             $campaign = $this->campaignFromRequest($tenant, $unit);
-            OnlineBookingVisit::query()->create([
+            RecordOnlineBookingVisit::dispatch([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $tenant->getKey(),
                 'unit_id' => $unit->getKey(),
