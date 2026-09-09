@@ -1,4 +1,4 @@
-import { Form, Head, Link, router, useHttp, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -49,114 +49,15 @@ import coverRoutes from '@/routes/online_booking/cover';
 import galleryRoutes from '@/routes/online_booking/gallery';
 import tenantDomains from '@/routes/tenant-domains';
 import type { SharedPageProps } from '@/types';
+import { SectionVisibilityEditor } from './components/section-visibility-editor';
+import type {
+    BookingItem,
+    OnlineBookingProps,
+    PublicSettings,
+    TabKey,
+} from './types';
 
-type BookingItem = {
-    id: string;
-    name: string;
-    status: 'active' | 'inactive';
-    online_booking_enabled: boolean;
-    lock_version: number;
-    description?: string | null;
-    duration_minutes?: number;
-    price_cents?: number;
-    image_url?: string | null;
-    avatar_url?: string | null;
-};
-type Readiness = {
-    unit_enabled: boolean;
-    has_active_service: boolean;
-    has_active_professional: boolean;
-    has_service_professional_pair: boolean;
-    publishable: boolean;
-};
-type PublicSettings = {
-    public_domain_id?: string | null;
-    description?: string | null;
-    logo_url?: string | null;
-    cover_url?: string | null;
-    cover_image_url?: string | null;
-    whatsapp?: string | null;
-    phone?: string | null;
-    instagram?: string | null;
-    facebook?: string | null;
-    website?: string | null;
-    brand_color?: string | null;
-    accent_color?: string | null;
-    booking_flow?: 'service_first' | 'professional_first';
-    flow?: 'service_first' | 'professional_first';
-    minimum_notice_minutes?: number | null;
-    public_slug?: string | null;
-    public_hours?: Record<
-        string,
-        { enabled?: boolean; starts_at?: string; ends_at?: string }
-    > | null;
-};
-type Props = {
-    unit: {
-        id: string;
-        name: string;
-        slug: string;
-        online_booking_enabled: boolean;
-        lock_version: number;
-        address?: string | Record<string, string> | null;
-        settings?: PublicSettings | null;
-    };
-    publicUrl: string | null;
-    previewUrl?: string | null;
-    publicDomains: { id: string; hostname: string }[];
-    services: BookingItem[];
-    professionals: BookingItem[];
-    readiness: Readiness;
-    publication?: {
-        id: string;
-        status: 'unpublished' | 'published';
-        draft_revision: number;
-        published_at?: string | null;
-        unpublished_at?: string | null;
-        lock_version: number;
-    } | null;
-    draft?: {
-        revision: number;
-        content?: { sections?: { key: string; enabled: boolean }[] } | null;
-    } | null;
-    activePublication?: {
-        id: string;
-        version: number;
-        source_revision: number;
-        published_at?: string | null;
-        template_key: string;
-    } | null;
-    publicationHistory?: {
-        id: string;
-        version: number;
-        source_revision: number;
-        published_at?: string | null;
-        superseded_at?: string | null;
-        published_by?: { name?: string | null } | null;
-        preview_url?: string | null;
-    }[];
-    draftDiff?: string[];
-    settings?: PublicSettings | null;
-    cover?: string | null;
-    coverUploadUrl?: string | null;
-    coverDeleteUrl?: string | null;
-    gallery?: {
-        id: string;
-        url?: string | null;
-        path?: string | null;
-        alt?: string | null;
-        alt_text?: string | null;
-        position?: number;
-    }[];
-};
-type TabKey =
-    | 'details'
-    | 'settings'
-    | 'link'
-    | 'gallery'
-    | 'services'
-    | 'hours'
-    | 'confirmation';
+type Props = OnlineBookingProps;
 const tabs: { key: TabKey; label: string; icon: typeof Globe2 }[] = [
     { key: 'details', label: 'Detalhes', icon: Globe2 },
     { key: 'settings', label: 'Configurações', icon: Settings2 },
@@ -270,109 +171,6 @@ function SectionCard({
                 <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 pt-5">{children}</CardContent>
-        </Card>
-    );
-}
-
-const templateSections = [
-    ['hero', 'Capa e apresentação'],
-    ['services', 'Serviços'],
-    ['professionals', 'Profissionais'],
-    ['gallery', 'Galeria'],
-    ['hours', 'Horários'],
-    ['contact', 'Localização e contatos'],
-    ['confirmation', 'Confirmação'],
-    ['seo', 'SEO e compartilhamento'],
-] as const;
-
-function SectionVisibilityEditor({
-    draft,
-}: {
-    draft: NonNullable<Props['draft']>;
-}) {
-    const initial = new Map(
-        (draft.content?.sections ?? []).map((section) => [
-            section.key,
-            section.enabled,
-        ]),
-    );
-    const [sections, setSections] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(
-            templateSections.map(([key]) => [key, initial.get(key) ?? true]),
-        ),
-    );
-    const [saving, setSaving] = useState(false);
-    const draftRequest = useHttp<
-        {
-            revision: number;
-            content: {
-                schema_version: number;
-                sections: { key: string; enabled: boolean }[];
-            };
-        },
-        { status: string }
-    >();
-    const save = async (): Promise<void> => {
-        setSaving(true);
-        draftRequest.setData({
-            revision: draft.revision,
-            content: {
-                schema_version: 1,
-                sections: templateSections.map(([key]) => ({
-                    key,
-                    enabled: sections[key] ?? true,
-                })),
-            },
-        });
-
-        try {
-            await draftRequest.patch(onlineBooking.draft.update.url());
-            router.reload({ only: ['draft', 'publication', 'draftDiff'] });
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-base">Seções da página</CardTitle>
-                <CardDescription>
-                    Escolha o que aparece no canal público. Essas alterações
-                    ficam no rascunho até publicar.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                <div className="grid gap-2 sm:grid-cols-2">
-                    {templateSections.map(([key, label]) => (
-                        <label
-                            key={key}
-                            className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm hover:border-primary/50"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={sections[key] ?? true}
-                                onChange={(event) =>
-                                    setSections((current) => ({
-                                        ...current,
-                                        [key]: event.target.checked,
-                                    }))
-                                }
-                                className="size-4 accent-primary"
-                            />
-                            <span>{label}</span>
-                        </label>
-                    ))}
-                </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={save}
-                    disabled={saving}
-                >
-                    {saving ? 'Salvando…' : 'Salvar seções no rascunho'}
-                </Button>
-            </CardContent>
         </Card>
     );
 }
