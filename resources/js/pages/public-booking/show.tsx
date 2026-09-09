@@ -62,6 +62,7 @@ type Unit = {
     booking_flow?: 'service_first' | 'professional_first';
     seo?: { title?: string | null; description?: string | null };
     canonical_url?: string | null;
+    is_preview?: boolean;
     sections?: Partial<Record<'hero' | 'services' | 'professionals' | 'gallery' | 'hours' | 'contact', boolean>>;
 };
 type Professional = { id: string; name: string; avatar_url?: string | null };
@@ -382,6 +383,9 @@ export default function PublicBooking({
                 />
                 {unit.canonical_url ? (
                     <link rel="canonical" href={unit.canonical_url} />
+                ) : null}
+                {unit.is_preview ? (
+                    <meta name="robots" content="noindex,nofollow,noarchive" />
                 ) : null}
                 {unit.cover_image_url ? (
                     <meta property="og:image" content={unit.cover_image_url} />

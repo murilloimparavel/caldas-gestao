@@ -94,6 +94,7 @@ final class PublicBookingController extends Controller
                 'description' => $description,
                 'seo' => is_array($content['seo'] ?? null) ? $content['seo'] : ['title' => $unit->name, 'description' => $description],
                 'canonical_url' => url('/book/'.rawurlencode((string) ($publication?->public_slug ?? $unit->slug))),
+                'is_preview' => is_array($preview),
                 'cover_image_url' => $coverImagePath === null ? null : MediaUrl::for((string) $coverImagePath),
                 'brand_color' => $brandColor,
                 'booking_flow' => $policy['booking_flow'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->booking_flow ?? 'service_first') : 'service_first'),
