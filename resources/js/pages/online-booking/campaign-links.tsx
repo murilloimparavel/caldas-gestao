@@ -278,7 +278,9 @@ export default function CampaignLinks({ campaignLinks }: Props) {
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => void toggleQr(link)}
+                                                onClick={() =>
+                                                    void toggleQr(link)
+                                                }
                                             >
                                                 QR Code
                                             </Button>
@@ -305,8 +307,19 @@ export default function CampaignLinks({ campaignLinks }: Props) {
                                         </div>
                                         {qrLinkId === link.id && qrDataUrl ? (
                                             <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed bg-white p-4">
-                                                <img src={qrDataUrl} alt={`QR Code para ${link.name}`} width={256} height={256} />
-                                                <a className="text-sm font-medium text-primary underline underline-offset-4" href={qrDataUrl} download={`qr-${link.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}>Baixar QR Code</a>
+                                                <img
+                                                    src={qrDataUrl}
+                                                    alt={`QR Code para ${link.name}`}
+                                                    width={256}
+                                                    height={256}
+                                                />
+                                                <a
+                                                    className="text-sm font-medium text-primary underline underline-offset-4"
+                                                    href={qrDataUrl}
+                                                    download={`qr-${link.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}
+                                                >
+                                                    Baixar QR Code
+                                                </a>
                                             </div>
                                         ) : null}
                                     </div>

@@ -509,12 +509,34 @@ function PublicPreview({
                 <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <CardTitle className="text-base">Prévia pública</CardTitle>
-                            <CardDescription className="mt-1">Renderização real do rascunho atual.</CardDescription>
+                            <CardTitle className="text-base">
+                                Prévia pública
+                            </CardTitle>
+                            <CardDescription className="mt-1">
+                                Renderização real do rascunho atual.
+                            </CardDescription>
                         </div>
-                        <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1" role="group" aria-label="Tamanho da prévia">
-                            <button type="button" aria-pressed={viewport === 'mobile'} onClick={() => setViewport('mobile')} className={`rounded-md px-2 py-1 text-xs ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>Mobile</button>
-                            <button type="button" aria-pressed={viewport === 'desktop'} onClick={() => setViewport('desktop')} className={`rounded-md px-2 py-1 text-xs ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>Desktop</button>
+                        <div
+                            className="flex items-center gap-1 rounded-lg border border-border/70 p-1"
+                            role="group"
+                            aria-label="Tamanho da prévia"
+                        >
+                            <button
+                                type="button"
+                                aria-pressed={viewport === 'mobile'}
+                                onClick={() => setViewport('mobile')}
+                                className={`rounded-md px-2 py-1 text-xs ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                            >
+                                Mobile
+                            </button>
+                            <button
+                                type="button"
+                                aria-pressed={viewport === 'desktop'}
+                                onClick={() => setViewport('desktop')}
+                                className={`rounded-md px-2 py-1 text-xs ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                            >
+                                Desktop
+                            </button>
                         </div>
                     </div>
                 </CardHeader>
@@ -532,7 +554,7 @@ function PublicPreview({
     return (
         <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
             <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
-                    <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                     <div>
                         <CardTitle className="text-base">
                             Prévia pública
@@ -541,7 +563,11 @@ function PublicPreview({
                             Veja como o celular do cliente exibirá a unidade.
                         </CardDescription>
                     </div>
-                    <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1" role="group" aria-label="Tamanho da prévia">
+                    <div
+                        className="flex items-center gap-1 rounded-lg border border-border/70 p-1"
+                        role="group"
+                        aria-label="Tamanho da prévia"
+                    >
                         <button
                             type="button"
                             aria-pressed={viewport === 'mobile'}
@@ -564,8 +590,12 @@ function PublicPreview({
                 </div>
             </CardHeader>
             <CardContent className="flex justify-center bg-muted/10 p-5">
-                <div className={`w-full rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl transition-[max-width] dark:border-slate-700 ${viewport === 'mobile' ? 'max-w-[18rem]' : 'max-w-[42rem]'}`}>
-                    <div className={`relative flex flex-col overflow-hidden rounded-[1.45rem] bg-background ${viewport === 'mobile' ? 'h-[33rem]' : 'h-[28rem]'}`}>
+                <div
+                    className={`w-full rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl transition-[max-width] dark:border-slate-700 ${viewport === 'mobile' ? 'max-w-[18rem]' : 'max-w-[42rem]'}`}
+                >
+                    <div
+                        className={`relative flex flex-col overflow-hidden rounded-[1.45rem] bg-background ${viewport === 'mobile' ? 'h-[33rem]' : 'h-[28rem]'}`}
+                    >
                         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
                             <span className="max-w-[12rem] truncate text-xs font-semibold">
                                 {unit.name}
@@ -958,12 +988,28 @@ export default function OnlineBookingIndex({
                 {hasPendingChanges && draftDiff?.length ? (
                     <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
                         <div className="flex items-start gap-3">
-                            <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                            <AlertCircle
+                                className="mt-0.5 size-4 shrink-0"
+                                aria-hidden="true"
+                            />
                             <div>
-                                <p className="text-sm font-semibold">Alterações aguardando publicação</p>
-                                <p className="mt-1 text-xs opacity-80">A versão pública continua intacta até você publicar.</p>
+                                <p className="text-sm font-semibold">
+                                    Alterações aguardando publicação
+                                </p>
+                                <p className="mt-1 text-xs opacity-80">
+                                    A versão pública continua intacta até você
+                                    publicar.
+                                </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                    {draftDiff.map((label: string) => <Badge key={label} variant="outline" className="border-current/30">{label}</Badge>)}
+                                    {draftDiff.map((label: string) => (
+                                        <Badge
+                                            key={label}
+                                            variant="outline"
+                                            className="border-current/30"
+                                        >
+                                            {label}
+                                        </Badge>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -1015,8 +1061,17 @@ export default function OnlineBookingIndex({
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                        <Button type="button" variant="outline" size="sm" asChild>
-                                            <a href={item.preview_url ?? '#'} target="_blank" rel="noreferrer">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <a
+                                                href={item.preview_url ?? '#'}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
                                                 <ExternalLink aria-hidden="true" />
                                                 Visualizar
                                             </a>
@@ -1026,13 +1081,13 @@ export default function OnlineBookingIndex({
                                             variant="outline"
                                             size="sm"
                                             onClick={() =>
-                                            router.post(
-                                                onlineBooking.publications.restore.url(
-                                                    item.id,
-                                                ),
-                                                {},
-                                                { preserveScroll: true },
-                                            )
+                                                router.post(
+                                                    onlineBooking.publications.restore.url(
+                                                        item.id,
+                                                    ),
+                                                    {},
+                                                    { preserveScroll: true },
+                                                )
                                             }
                                         >
                                             <RotateCcw aria-hidden="true" />

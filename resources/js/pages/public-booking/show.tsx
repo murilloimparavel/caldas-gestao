@@ -63,7 +63,17 @@ type Unit = {
     seo?: { title?: string | null; description?: string | null };
     canonical_url?: string | null;
     is_preview?: boolean;
-    sections?: Partial<Record<'hero' | 'services' | 'professionals' | 'gallery' | 'hours' | 'contact', boolean>>;
+    sections?: Partial<
+        Record<
+            | 'hero'
+            | 'services'
+            | 'professionals'
+            | 'gallery'
+            | 'hours'
+            | 'contact',
+            boolean
+        >
+    >;
 };
 type Professional = { id: string; name: string; avatar_url?: string | null };
 type Service = {
@@ -222,8 +232,9 @@ export default function PublicBooking({
     const getInitials = useInitials();
     const args = routeArgs(unit);
     const bookingFlow = unit.booking_flow ?? 'service_first';
-    const sectionEnabled = (key: keyof NonNullable<Unit['sections']>): boolean =>
-        unit.sections?.[key] !== false;
+    const sectionEnabled = (
+        key: keyof NonNullable<Unit['sections']>,
+    ): boolean => unit.sections?.[key] !== false;
     const selectedService = useMemo(
         () => services.find((item) => item.id === serviceId) ?? null,
         [serviceId, services],
@@ -324,10 +335,12 @@ export default function PublicBooking({
     const focusBooking = (): void => {
         setTab('services');
         window.setTimeout(() => {
-            document.getElementById('public-booking-panel-services')?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-            });
+            document
+                .getElementById('public-booking-panel-services')
+                ?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                });
         }, 0);
     };
 
@@ -408,14 +421,22 @@ export default function PublicBooking({
                         '@type': 'BeautySalon',
                         name: unit.name,
                         description:
-                            unit.seo?.description || unit.description || undefined,
+                            unit.seo?.description ||
+                            unit.description ||
+                            undefined,
                         url: unit.canonical_url || undefined,
                         image: unit.cover_image_url || undefined,
-                        telephone: unit.contacts?.phone || unit.contacts?.whatsapp || undefined,
+                        telephone:
+                            unit.contacts?.phone ||
+                            unit.contacts?.whatsapp ||
+                            undefined,
                         address: unit.address
                             ? {
                                   '@type': 'PostalAddress',
-                                  streetAddress: [unit.address.street, unit.address.number]
+                                  streetAddress: [
+                                      unit.address.street,
+                                      unit.address.number,
+                                  ]
                                       .filter(Boolean)
                                       .join(', '),
                                   addressLocality: unit.address.city,
@@ -471,8 +492,17 @@ export default function PublicBooking({
                     {(
                         [
                             ['details', 'Detalhes'],
-                            ...(sectionEnabled('services') ? [['services', 'Serviços'] as [Tab, string]] : []),
-                            ...(sectionEnabled('professionals') ? [['professionals', 'Profissionais'] as [Tab, string]] : []),
+                            ...(sectionEnabled('services')
+                                ? [['services', 'Serviços'] as [Tab, string]]
+                                : []),
+                            ...(sectionEnabled('professionals')
+                                ? [
+                                      ['professionals', 'Profissionais'] as [
+                                          Tab,
+                                          string,
+                                      ],
+                                  ]
+                                : []),
                             ['reviews', 'Avaliações'],
                         ] as [Tab, string][]
                     ).map(([key, label]) => (
@@ -490,7 +520,10 @@ export default function PublicBooking({
                     ))}
                 </nav>
                 {tab === 'details' && (
-                    <section id="public-booking-panel-details" className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                    <section
+                        id="public-booking-panel-details"
+                        className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]"
+                    >
                         <div className="space-y-5">
                             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                                 {coverUrl ? (
@@ -518,7 +551,8 @@ export default function PublicBooking({
                                     </div>
                                 )}
                             </div>
-                            {sectionEnabled('gallery') && unit.gallery?.length ? (
+                            {sectionEnabled('gallery') &&
+                            unit.gallery?.length ? (
                                 <InfoCard title="Galeria">
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                         {unit.gallery.map((image, index) => (
@@ -556,94 +590,108 @@ export default function PublicBooking({
                                         'Conheça nosso espaço e escolha o melhor momento para seu atendimento.'}
                                 </p>
                             </InfoCard>
-                            {sectionEnabled('contact') && <InfoCard title="Contato">
-                                <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                                    {unit.contacts?.phone && (
-                                        <p>Telefone: {unit.contacts.phone}</p>
-                                    )}
-                                    {unit.contacts?.whatsapp && (
-                                        <p className="flex items-center gap-2">
-                                            <MessageCircle className="size-4" />
-                                            WhatsApp: {unit.contacts.whatsapp}
-                                        </p>
-                                    )}
-                                    {unit.contacts?.instagram_url && (
-                                        <a
-                                            href={unit.contacts.instagram_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 underline-offset-4 hover:underline"
-                                        >
-                                            <Instagram className="size-4" />
-                                            Instagram
-                                        </a>
-                                    )}
-                                    {unit.contacts?.website_url && (
-                                        <a
-                                            href={unit.contacts.website_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 underline-offset-4 hover:underline"
-                                        >
-                                            Site
-                                        </a>
-                                    )}
-                                    {!unit.contacts?.phone &&
-                                        !unit.contacts?.whatsapp &&
-                                        !unit.contacts?.instagram_url &&
-                                        !unit.contacts?.website_url && (
-                                            <p>Contato ainda não informado.</p>
+                            {sectionEnabled('contact') && (
+                                <InfoCard title="Contato">
+                                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                                        {unit.contacts?.phone && (
+                                            <p>
+                                                Telefone: {unit.contacts.phone}
+                                            </p>
                                         )}
-                                </div>
-                            </InfoCard>}
+                                        {unit.contacts?.whatsapp && (
+                                            <p className="flex items-center gap-2">
+                                                <MessageCircle className="size-4" />
+                                                WhatsApp:{' '}
+                                                {unit.contacts.whatsapp}
+                                            </p>
+                                        )}
+                                        {unit.contacts?.instagram_url && (
+                                            <a
+                                                href={
+                                                    unit.contacts.instagram_url
+                                                }
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 underline-offset-4 hover:underline"
+                                            >
+                                                <Instagram className="size-4" />
+                                                Instagram
+                                            </a>
+                                        )}
+                                        {unit.contacts?.website_url && (
+                                            <a
+                                                href={unit.contacts.website_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 underline-offset-4 hover:underline"
+                                            >
+                                                Site
+                                            </a>
+                                        )}
+                                        {!unit.contacts?.phone &&
+                                            !unit.contacts?.whatsapp &&
+                                            !unit.contacts?.instagram_url &&
+                                            !unit.contacts?.website_url && (
+                                                <p>
+                                                    Contato ainda não informado.
+                                                </p>
+                                            )}
+                                    </div>
+                                </InfoCard>
+                            )}
                         </div>
                         <div className="space-y-5">
-                            {sectionEnabled('hours') && <InfoCard title="Horário de atendimento">
-                                <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                                    <span
-                                        className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
-                                    />
-                                    <span>{businessStatus.label}</span>
-                                </div>
-                                <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                                    {Object.entries(unit.public_hours ?? {})
-                                        .sort(
-                                            ([first], [second]) =>
-                                                Number(first) - Number(second),
-                                        )
-                                        .map(([day, hours]) => {
-                                            const start =
-                                                hours.starts_at ?? hours.start;
-                                            const end =
-                                                hours.ends_at ?? hours.end;
+                            {sectionEnabled('hours') && (
+                                <InfoCard title="Horário de atendimento">
+                                    <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+                                        <span
+                                            className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                                        />
+                                        <span>{businessStatus.label}</span>
+                                    </div>
+                                    <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                                        {Object.entries(unit.public_hours ?? {})
+                                            .sort(
+                                                ([first], [second]) =>
+                                                    Number(first) -
+                                                    Number(second),
+                                            )
+                                            .map(([day, hours]) => {
+                                                const start =
+                                                    hours.starts_at ??
+                                                    hours.start;
+                                                const end =
+                                                    hours.ends_at ?? hours.end;
 
-                                            return hours.enabled !== false &&
-                                                start &&
-                                                end ? (
-                                                <p
-                                                    key={day}
-                                                    className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800"
-                                                >
-                                                    <span>
-                                                        {dayNames[
-                                                            Number(day)
-                                                        ] ?? day}
-                                                    </span>
-                                                    <span className="font-medium text-slate-950 dark:text-white">
-                                                        {start} – {end}
-                                                    </span>
-                                                </p>
-                                            ) : null;
-                                        })}
-                                    {!Object.keys(unit.public_hours ?? {})
-                                        .length && (
-                                        <p>
-                                            Consulte os horários disponíveis
-                                            durante o agendamento.
-                                        </p>
-                                    )}
-                                </div>
-                            </InfoCard>}
+                                                return hours.enabled !==
+                                                    false &&
+                                                    start &&
+                                                    end ? (
+                                                    <p
+                                                        key={day}
+                                                        className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800"
+                                                    >
+                                                        <span>
+                                                            {dayNames[
+                                                                Number(day)
+                                                            ] ?? day}
+                                                        </span>
+                                                        <span className="font-medium text-slate-950 dark:text-white">
+                                                            {start} – {end}
+                                                        </span>
+                                                    </p>
+                                                ) : null;
+                                            })}
+                                        {!Object.keys(unit.public_hours ?? {})
+                                            .length && (
+                                            <p>
+                                                Consulte os horários disponíveis
+                                                durante o agendamento.
+                                            </p>
+                                        )}
+                                    </div>
+                                </InfoCard>
+                            )}
                             {address && (
                                 <InfoCard title="Onde estamos">
                                     <p className="flex gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -656,7 +704,10 @@ export default function PublicBooking({
                     </section>
                 )}
                 {tab === 'reviews' && (
-                    <InfoCard id="public-booking-panel-reviews" title="Avaliações">
+                    <InfoCard
+                        id="public-booking-panel-reviews"
+                        title="Avaliações"
+                    >
                         <div className="flex items-center gap-3">
                             <Star className="size-5 fill-amber-400 text-amber-400" />
                             <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -666,7 +717,10 @@ export default function PublicBooking({
                     </InfoCard>
                 )}
                 {tab === 'professionals' && sectionEnabled('professionals') && (
-                    <InfoCard id="public-booking-panel-professionals" title="Nossa equipe">
+                    <InfoCard
+                        id="public-booking-panel-professionals"
+                        title="Nossa equipe"
+                    >
                         <div className="grid gap-3 sm:grid-cols-2">
                             {(professionals.length
                                 ? professionals
