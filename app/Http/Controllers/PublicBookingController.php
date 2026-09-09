@@ -19,6 +19,7 @@ use App\Support\CalendarAvailability;
 use App\Support\CalendarConflictException;
 use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
+use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
@@ -140,6 +141,20 @@ final class PublicBookingController extends Controller
         request()->attributes->set('online_booking_preview_content', $draft->content);
 
         return $this->show($tenant, $unit);
+    }
+
+    public function previewPublication(string $publication, TenantContext $context): Response|JsonResponse
+    {
+        abort_unless($context->unit instanceof Unit, 403);
+        Gate::authorize('view', $context->unit);
+        $record = OnlineBookingPublication::query()
+            ->whereKey($publication)
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $context->unit->getKey())
+            ->firstOrFail();
+        request()->attributes->set('online_booking_preview_content', $record->content);
+
+        return $this->show($context->tenant, $context->unit);
     }
 
     public function showBySlug(string $publicSlug): Response|JsonResponse

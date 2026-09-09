@@ -133,6 +133,7 @@ type Props = {
         published_at?: string | null;
         superseded_at?: string | null;
         published_by?: { name?: string | null } | null;
+        preview_url?: string | null;
     }[];
     draftDiff?: string[];
     settings?: PublicSettings | null;
@@ -985,11 +986,18 @@ export default function OnlineBookingIndex({
                                             </p>
                                         </div>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button type="button" variant="outline" size="sm" asChild>
+                                            <a href={item.preview_url ?? '#'} target="_blank" rel="noreferrer">
+                                                <ExternalLink aria-hidden="true" />
+                                                Visualizar
+                                            </a>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
                                             router.post(
                                                 onlineBooking.publications.restore.url(
                                                     item.id,
@@ -997,11 +1005,12 @@ export default function OnlineBookingIndex({
                                                 {},
                                                 { preserveScroll: true },
                                             )
-                                        }
-                                    >
-                                        <RotateCcw aria-hidden="true" />
-                                        Restaurar como rascunho
-                                    </Button>
+                                            }
+                                        >
+                                            <RotateCcw aria-hidden="true" />
+                                            Restaurar como rascunho
+                                        </Button>
+                                    </div>
                                 </div>
                             ))}
                         </CardContent>

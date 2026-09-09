@@ -119,6 +119,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware(['signed', PreventOnlineBookingPreviewCaching::class])
             ->name('online_booking.preview');
         Route::get('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.campaign_links.index');
+        Route::get('online-booking/publications/{publication}/preview', [PublicBookingController::class, 'previewPublication'])
+            ->middleware(PreventOnlineBookingPreviewCaching::class)
+            ->middleware('signed')
+            ->name('online_booking.publication_preview');
         Route::get('online-booking/links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.links');
         Route::post('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'store'])->name('online_booking.campaign_links.store');
         Route::patch('online-booking/campaign-links/{campaignLink}/toggle', [OnlineBookingCampaignLinkController::class, 'toggle'])->name('online_booking.campaign_links.toggle');

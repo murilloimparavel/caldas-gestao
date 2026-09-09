@@ -120,6 +120,20 @@ it('renders a signed preview from the draft without requiring publication', func
         ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
 });
 
+it('renders a signed preview of an immutable publication', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [], 'professional_ids' => []], 0);
+    $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    $this->actingAs($owner)->get(URL::signedRoute('online_booking.publication_preview', ['publication' => $publication->getKey()]))
+        ->assertSuccessful()
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+});
+
 it('rejects draft selections and sections outside the active unit contract', function () {
     [$owner, $tenant, $unit] = onlineBookingWorkspace();
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());

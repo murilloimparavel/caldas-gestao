@@ -33,6 +33,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -88,7 +89,10 @@ final class OnlineBookingSettingsController extends Controller
             'publication' => $site?->only(['id', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version']),
             'draft' => $site?->draft,
             'activePublication' => $site?->activePublication?->only(['id', 'version', 'source_revision', 'published_at', 'template_key']),
-            'publicationHistory' => $site?->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'published_by', 'published_at', 'superseded_at']),
+            'publicationHistory' => $site?->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'published_by', 'published_at', 'superseded_at'])->map(fn (OnlineBookingPublication $publication): array => [
+                ...$publication->toArray(),
+                'preview_url' => URL::signedRoute('online_booking.publication_preview', ['publication' => $publication->getKey()]),
+            ]),
             'draftDiff' => $draftDiff,
         ];
 
