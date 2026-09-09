@@ -31,6 +31,24 @@ final class OnlineBookingCampaignLinkController extends Controller
         return response()->json(['campaign_link' => [...$link->load('site')->toArray(), 'url' => $this->url($link)]], 201);
     }
 
+    public function toggle(TenantContext $context, OnlineBookingCampaignLink $campaignLink): JsonResponse
+    {
+        Gate::authorize('update', $context->unit);
+        abort_unless($campaignLink->tenant_id === $context->tenant->getKey() && $campaignLink->unit_id === $context->unit?->getKey(), 404);
+        $campaignLink->update(['is_active' => ! $campaignLink->is_active]);
+
+        return response()->json(['campaign_link' => $campaignLink->fresh(), 'status' => $campaignLink->is_active ? 'active' : 'inactive']);
+    }
+
+    public function destroy(TenantContext $context, OnlineBookingCampaignLink $campaignLink): JsonResponse
+    {
+        Gate::authorize('update', $context->unit);
+        abort_unless($campaignLink->tenant_id === $context->tenant->getKey() && $campaignLink->unit_id === $context->unit?->getKey(), 404);
+        $campaignLink->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
     private function url(OnlineBookingCampaignLink $link): string
     {
         return URL::route('public_booking.slug', ['public_slug' => $link->site->public_slug]).'?'.http_build_query(array_filter([

@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { Check, Copy, Link2, Plus, Share2 } from 'lucide-react';
+import { Check, Copy, Link2, Plus, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { PageCanvas, ResourceHeader } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,20 @@ export default function CampaignLinks({ campaignLinks }: Props) {
         await navigator.clipboard.writeText(link.url);
         setCopiedId(link.id);
         window.setTimeout(() => setCopiedId(null), 1800);
+    };
+    const toggle = (link: CampaignLink): void => {
+        router.patch(
+            onlineBooking.campaign_links.toggle.url(link.id),
+            {},
+            { preserveScroll: true },
+        );
+    };
+    const remove = (link: CampaignLink): void => {
+        if (window.confirm(`Excluir o link “${link.name}”?`)) {
+            router.delete(onlineBooking.campaign_links.destroy.url(link.id), {
+                preserveScroll: true,
+            });
+        }
     };
 
     return (
@@ -240,6 +254,26 @@ export default function CampaignLinks({ campaignLinks }: Props) {
                                                 {copiedId === link.id
                                                     ? 'Copiado'
                                                     : 'Copiar'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => toggle(link)}
+                                            >
+                                                {link.is_active
+                                                    ? 'Desativar'
+                                                    : 'Ativar'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-destructive"
+                                                onClick={() => remove(link)}
+                                            >
+                                                <Trash2 aria-hidden="true" />
+                                                Excluir
                                             </Button>
                                         </div>
                                     </div>

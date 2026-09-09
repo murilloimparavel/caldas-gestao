@@ -117,6 +117,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('online_booking.preview');
         Route::get('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.campaign_links.index');
         Route::post('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'store'])->name('online_booking.campaign_links.store');
+        Route::patch('online-booking/campaign-links/{campaignLink}/toggle', [OnlineBookingCampaignLinkController::class, 'toggle'])->name('online_booking.campaign_links.toggle');
+        Route::delete('online-booking/campaign-links/{campaignLink}', [OnlineBookingCampaignLinkController::class, 'destroy'])->name('online_booking.campaign_links.destroy');
         Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
         Route::patch('online-booking/draft', [OnlineBookingSettingsController::class, 'saveDraft'])->name('online_booking.draft.update');
         Route::post('online-booking/publish', [OnlineBookingSettingsController::class, 'publish'])->name('online_booking.publish');

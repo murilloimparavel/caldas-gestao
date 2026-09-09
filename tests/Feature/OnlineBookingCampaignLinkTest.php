@@ -19,3 +19,17 @@ it('creates a tenant-scoped campaign link with normalized UTM parameters', funct
     $response->assertCreated()->assertJsonPath('campaign_link.utm_source', 'instagram')->assertJsonPath('campaign_link.utm_campaign', 'setembro_barbearia');
     expect($response->json('campaign_link.url'))->toContain('utm_source=instagram')->toContain('utm_medium=social');
 });
+
+it('toggles and deletes only links from the active unit', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [], 'professional_ids' => []], 0);
+    $created = $this->actingAs($owner)->postJson(route('online_booking.campaign_links.store'), [
+        'name' => 'WhatsApp', 'utm_source' => 'whatsapp', 'utm_medium' => 'direct', 'utm_campaign' => 'bio',
+    ])->assertCreated()->json('campaign_link');
+
+    $this->actingAs($owner)->patchJson(route('online_booking.campaign_links.toggle', $created['id']))
+        ->assertOk()->assertJsonPath('status', 'inactive');
+    $this->actingAs($owner)->deleteJson(route('online_booking.campaign_links.destroy', $created['id']))
+        ->assertOk()->assertJsonPath('deleted', true);
+});
