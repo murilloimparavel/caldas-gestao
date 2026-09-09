@@ -135,6 +135,11 @@ final class PublicBookingController extends Controller
 
     public function showBySlug(string $publicSlug): Response|JsonResponse
     {
+        $site = OnlineBookingSite::query()->where('public_slug', $publicSlug)->with(['tenant', 'unit'])->first();
+        if ($site instanceof OnlineBookingSite) {
+            return $this->show($site->tenant, $site->unit);
+        }
+
         $setting = OnlineBookingSetting::query()->where('public_slug', $publicSlug)->with(['tenant', 'unit'])->firstOrFail();
 
         return $this->show($setting->tenant, $setting->unit);

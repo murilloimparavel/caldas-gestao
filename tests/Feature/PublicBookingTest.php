@@ -103,6 +103,17 @@ it('rejects disabled public booking and invalid relationship without enumeration
     $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $otherService->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString()]))->assertNotFound();
 });
 
+it('resolves the canonical public slug from the publication site registry', function () {
+    [$tenant, $unit] = publicBookingWorkspace();
+    OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => 'published-'.$unit->slug,
+    ]);
+
+    $this->getJson(route('public_booking.slug', ['public_slug' => 'published-'.$unit->slug]))->assertSuccessful();
+});
+
 it('returns availability without blocked or conflicting slots', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
     ScheduleBlock::factory()->create([
