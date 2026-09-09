@@ -106,6 +106,70 @@ Em deployment, substitua-os por variáveis injetadas pelo secret store da
 infraestrutura. Nunca coloque credenciais no `.env.example`, no README ou no
 Git.
 
+### Arquitetura de produção e deploy
+
+O deploy de produção acontece em duas etapas, sem credenciais no código:
+
+1. O workflow `Build and publish Caldas Gestão image` executa os checks,
+   constrói a imagem Docker e publica a tag de produção no registry.
+2. Após um build bem-sucedido da `main`, o workflow `Deploy Caldas Gestão no
+   Coolify` atualiza a imagem e dispara o deploy no Coolify.
+
+O Coolify executa a aplicação web e os processos auxiliares em containers
+separados. PostgreSQL, Redis e storage S3-compatible são configurados por
+variáveis injetadas pelo secret store. Para arquivos persistentes, use
+`FILESYSTEM_DISK=s3` com MinIO, Supabase Storage ou AWS S3; chaves nunca devem
+ser commitadas.
+
+Fluxo operacional:
+
+```text
+pull request -> checks -> merge na main -> build da imagem -> deploy Coolify
+                                                        -> health checks
+```
+
+Após um deploy, valide os endpoints de health e o status `healthy` do
+container. Não execute `migrate` genérico diretamente no servidor: migrations
+devem seguir o processo da conexão administrativa, com backup e janela de
+mudança.
+
+### Importação de serviços do Belasis
+
+O importador recebe somente um JSON sanitizado, respeita o tenant e a unidade
+ativa, evita duplicidades por nome normalizado e pode gerar um relatório:
+
+```bash
+php artisan app:import-services storage/app/import/belasis-services.json \
+  --tenant-email=admin@example.test \
+  --dry-run \
+  --report=storage/app/import/report.json
+```
+
+Depois de revisar o relatório e fazer backup, a gravação pode ser executada:
+
+```bash
+php artisan app:import-services storage/app/import/belasis-services.json \
+  --tenant-email=admin@example.test \
+  --report=storage/app/import/report.json
+```
+
+Imagens devem ser sanitizadas antes do uso, removendo metadados EXIF. O upload
+passa pelo `Storage` do Laravel e segue o disco configurado no ambiente. Não
+faça upload manual direto no bucket nem coloque chaves S3 no fixture. Clientes,
+tokens, cookies, senhas e respostas completas de APIs externas não fazem parte
+desse processo.
+
+### Segurança operacional
+
+- Nunca registre `.env`, tokens, cookies, senhas, URLs assinadas ou headers de
+  autorização em logs, issues ou documentação.
+- Use GitHub Secrets/Variables e o secret store do Coolify para credenciais.
+- Faça dry-run e backup antes de qualquer mutação em produção.
+- Prefira comandos Artisan e Actions a SQL direto, preservando autorização,
+  tenancy, auditoria e eventos de domínio.
+- Colete de sistemas externos somente os campos necessários para a migração e
+  mantenha exports sanitizados fora do Git.
+
 ### Supabase PostgreSQL
 
 Ative a conexão PostgreSQL com as variáveis abaixo (os valores são exemplos,

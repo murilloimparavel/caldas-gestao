@@ -1,160 +1,167 @@
-# Graph Report - caldas-gestao  (2026-08-26)
+# Graph Report - caldas-gestao  (2026-09-08)
 
 ## Corpus Check
-- 785 files · ~298,438 words
+- 995 files · ~380,044 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4951 nodes · 11852 edges · 373 communities (311 shown, 62 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 63 edges (avg confidence: 0.76)
+- 6108 nodes · 14994 edges · 456 communities (279 shown, 88 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 157 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `25dfa012`
+- Built from commit: `4dbf0740`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - react
-- Illuminate\Database\Eloquent\Relations\HasMany
-- professionals/index.tsx
-- ClosingSessionRequest
-- AvailabilityRule
-- cn
+- InboxEvent
+- public-booking/show.tsx
+- campaigns.tsx
+- Professional
+- Product
 - scripts
-- User
+- Sale
 - pages/calendar/index.tsx
-- SaleItem
-- OperationalAction
-- use-appearance.tsx
-- Customer
-- Illuminate\Database\Eloquent\Relations\BelongsTo
-- nav-main.tsx
-- utils.ts
-- app-logo-icon.tsx
-- customers/show.tsx
-- CommissionController.php
-- FinancialObligation
-- BuildDashboardSnapshot
-- types.ts
-- createIdempotencyKey
-- ui.ts
+- Illuminate\Database\Eloquent\Model
+- .app
 - SubscriptionPlan
-- Membership
+- LegalHold
+- User
+- Illuminate\Http\RedirectResponse
+- use-appearance.tsx
+- customers/show.tsx
+- PasswordValidationRules
+- AppServiceProvider.php
+- Customer
+- BuildDashboardSnapshot
+- online-booking/index.tsx
+- sales.ts
+- Entitlement
+- PackageTemplate
+- Illuminate\Console\Command
 - Arquitetura de dados do Caldas Gestão
 - compilerOptions
-- IdempotencyKey
-- PostgresGovernanceResilienceTest.php
+- CustomerSubscription
+- Closure
 - OutboxEventStore
-- manage-passkeys.tsx
-- OwnerPermissionCatalog
+- Estrutura da Página (10 Dobras)
+- CustomerPackagePolicy
 - components.json
-- PackageTemplate
-- CanonicalEmail
-- Illuminate\Foundation\Http\FormRequest
+- Plano de implementação — Google Calendar em domínios white label
+- SaleCategory
+- Illuminate\Support\Facades\Gate
 - devDependencies
-- commissions/show.tsx
-- OnlineBookingSettingsController.php
-- FortifyServiceProvider
+- PublicBookingAppointmentRequest
+- Implementing GitHub Advanced Security for Code Scanning
+- Illuminate\Foundation\Http\FormRequest
 - optionalDependencies
-- Unit
-- SubscriptionPlanController.php
-- Illuminate\Database\Eloquent\Model
+- FinancialObligation
+- PostgresGovernanceResilienceTest.php
+- Illuminate\Database\Eloquent\Relations\BelongsTo
 - require-dev
-- breadcrumbs.tsx
-- RefreshDatabase.php
-- UserFactory
-- PackageTemplateRequest
-- operational/index.tsx
-- BootstrapTenant
+- SubscriptionCycle
+- UploadedImageOptimizer
+- CommissionRule
+- Decisões
+- UpdateCustomerCommunicationPreferenceRequest.php
+- CanonicalEmail
 - composer.json
 - 🏗️ Fases de Execução
-- CustomerSubscription
+- cn
 - ADR-004 — RLS e contexto de tenant com Supabase Session Pooler
 - 📦 Alterações Efetuadas
-- Professional
-- TwoFactorChallengeTest
+- Appointment
+- implementing-github-advanced-security-for-code-scanning/scripts/agent.py
 - dependencies
 - scripts
-- ProfileUpdateTest
+- .config
 - Decisão
 - keywords
 - require
-- PackagePolicy
-- alert.tsx
-- AuthenticationTest
-- EmailVerificationTest
+- Fases de entrega
+- OperationalAction
+- GoogleCalendarOAuth
+- Illuminate\Http\JsonResponse
 - Decisões
-- PostgresBootstrapTenantTest.php
+- Throwable
 - config
-- toggle-group.tsx
+- ADR-009 — Integração outbound com Google Calendar
 - Illuminate\Database\Migrations\Migration
-- Illuminate\Support\Facades\Schema
 - EV-011 — Superfícies de arquivos, imagens e mídia
-- Illuminate\Http\RedirectResponse
-- MembershipUnitFactory
-- MembershipRoleFactory
+- RegistrationTest
+- OpenSaleRequest
+- Laravel\Fortify\Features
 - Plano de implementação frontend-first
-- PasswordResetTest
+- sale-categories/index.tsx
 - psr-4
 - laravel
 - MaskSensitiveDataProcessor
-- dashboard-header.tsx
+- TenantContext
 - AGENTS.md
 - CLAUDE.md
 - ADR-006 — Retenção legal, anonimização e legal hold (LGPD)
+- Illuminate\Support\Facades\Schema
 - Sprint 2 da Fase 6: Assinaturas Recorrentes
+- AvailabilityRuleRequest
+- Illuminate\Database\Schema\Blueprint
+- AvailabilityRule
+- FortifyServiceProvider.php
 - 📦 Entregas Realizadas
 - EV-010 — Sidebar compacta e flyout desktop
-- CommissionSettlement
-- Illuminate\Database\Schema\Blueprint
+- cash/show.tsx
+- Operação de produção — Caldas Gestão White Label
+- Plano de otimização de velocidade e fluidez
+- conducting-api-security-testing/scripts/agent.py
 - eslint.config.js
 - laravel-boost
 - icon.tsx
 - Inertia React Development
-- LazilyRefreshDatabase.php
+- LazilyRefreshDatabase
 - Inertia React Development
 - Sprint — Drag-to-Select e Responsividade Mobile da Agenda (Calendar)
-- PermissionFactory
+- Plano de evolução — Caldas Gestão como plataforma multiempresa por domínio
 - ADR-005 — Padronização de UUIDv7 para tabelas operacionais e de eventos
-- .app
-- dialog.tsx
+- Key Functions
+- operational/index.tsx
 - EV-009 — Site e páginas públicas de marketing
-- AuthorizationService
+- AuthenticationTest
 - Pest 5 Features
-- PasswordValidationRules.php
+- PackagePolicy
 - 📦 Entregas Realizadas
 - input-otp
-- Laravel\Fortify\Features
-- ProfileController.php
+- TwoFactorChallengeTest
+- AppointmentPolicy
 - Pest 5 Features
-- Illuminate\Database\Eloquent\Relations\BelongsToMany
-- TestCase
+- Conducting API Security Testing
+- ProfessionalPolicy
 - ADR-001 — Stack inicial do Caldas Gestão
 - PRD — Comandas, categorias e fechamento consolidado
 - Laravel Fortify Development
-- .imageUrl
+- Operação de outbox e inbox
 - 🏗️ Fases de Execução
-- Illuminate\Support\Str
+- Illuminate\Database\Eloquent\Factories\Factory
 - @radix-ui/react-toggle
-- TenantFactory
+- ServicePolicy
 - 🛠️ Fases de Execução
 - Laravel Fortify Development
-- SellCustomerPackageRequest.php
+- InvalidArgumentException
 - sonner
 - tailwindcss
-- .payload
+- Baseline de performance web
 - Sprint 4 - Fase 4: Fechamento Consolidado (ClosingSession), Recibo Interno e Auditoria
-- post-create-project-cmd
+- TwoFactorAuthenticationRequest
 - SCR-002 — Agenda semanal
 - @vitejs/plugin-react
 - ADR-002--fundacao-de-dados-e-tenancy.md
 - ADR-003 — Categorias de comanda e fechamento consolidado
+- InventoryPolicy
 - 3. Arquitetura Backend
 - Modelo de domínio inicial
 - SCR-013 — Experiência mobile e tablet transversal
 - SCR-014 — Site público e jornada de marketing
-- Papéis e permissões — proposta independente
+- RenewSubscriptionCycleRequest
 - Tailwind CSS Development
 - Tailwind CSS Development
 - Sprint 1 — Wave de Refinamento: Reativação de Cadastros e Filtros de Status na UI
@@ -180,8 +187,8 @@
 - Security Best Practices
 - UX/UI capture template
 - Reconstruct Web App
-- cash/index.tsx
-- AppointmentStatusHistory
+- Illuminate\Validation\Rules\Password
+- ClosingSessionPolicy
 - Sprint 3 - Wave de Refinamento: Histórico de Consumo do Cliente, Sinergia Caixa-Contas e Feedback de Conflitos na Agenda
 - Inventário de componentes
 - Contextos delimitados propostos
@@ -217,14 +224,14 @@
 - Sprint 1 da Fase 6: Pacotes de Serviços (PackageTemplate & CustomerPackage)
 - Sprint 3 — Categorias e Produtos Físicos (Fase 2 - Catálogo & Pessoas)
 - Engenharia reversa clean-room do Belasis
-- Roteiro de implementação — analytics e relatórios
+- ProfileUpdateTest
 - Governança de dados proposta
 - Banco relacional proposto
 - FLOW-001 — Abrir e abandonar novo agendamento
 - SCR-010 — Comandas e venda
-- Roteiro para recriar o produto com vibe coding
-- Fases
-- react-dom
+- EmailVerificationTest
+- 📦 Entregas Realizadas
+- PasswordResetTest
 - Blade & Views Best Practices
 - Error Handling Best Practices
 - Task Scheduling Best Practices
@@ -234,12 +241,12 @@
 - Task Scheduling Best Practices
 - Testing Best Practices
 - setup
-- InventoryMovement
+- commissions.ts
 - Sprint 4 — Fornecedores, Histórico de Atendimentos no Cliente e Governança
-- 3. Arquitetura de informação
+- PostgresBootstrapTenantTest.php
 - FLOW-003 — Agendamento para comanda
 - Questões abertas
-- Backlog priorizado para vibe coding
+- 2d05c1acd17e1dabb4aff69f7732ea6e639581ba.md
 - SCR-003 — Diálogo de novo agendamento
 - SCR-005 — Profissionais: lista e novo
 - SCR-007 — Painel principal
@@ -265,9 +272,10 @@
 - SCR-009 — Agenda operacional aprofundada
 - SCR-011 — Financeiro, caixa, fiscal e comissões
 - SCR-012 — Configurações, conta e módulos
-- Dossiê canônico de reconstrução
-- Bootstrap do banco de dados
-- Operação de outbox e inbox
+- c59c48fe2e84153a7c1a7fa9ce2839f88e33b962.md
+- performance-budget.spec.ts
+- .storeCover
+- RefreshDatabase
 - Bootstrap do primeiro tenant
 - Acessibilidade — observações iniciais
 - Design system observado
@@ -277,29 +285,34 @@
 - EV-005 — Comandas, vendas e pagamentos desktop
 - EV-006 — Financeiro, caixa, comissões e fiscal
 - EV-007 — Inteligência transversal do produto
-- CashShift
+- process.py
 - Q: analisa o progresso atual de desenvolvimento do app vs o backlog
-- Appointment
 - FLOW-005 — Lançamento, liquidação e reconciliação
-- Observações de rede sanitizadas
+- .storeGallery
 - 📦 Entregas Realizadas
 - 📦 Alterações Efetuadas
-- .responseRef
-- RegistrationTest
-- FinancialObligationFactory
+- GHAS Code Scanning Implementation Template
 - 🏗️ Arquitetura e Fases de Execução
-- SaleCategory
-- 7. Fluxos críticos a especificar
-- app-header.tsx
-- Sale
+- TestCase
+- SellCustomerPackageRequest
+- HandleInertiaRequests
 - @radix-ui/react-checkbox
 - Política de trabalho dos agentes
 - Eventos de domínio propostos
 - EV-001 — Shell e agenda desktop
 - @radix-ui/react-avatar
+- OnlineBookingSettingsRequest
+- IdempotencyKey
+- global.d.ts
+- SettleObligationRequest
+- ProvisionDatabaseSchema
 - @radix-ui/react-collapsible
+- CustomerSubscriptionFactory
+- TenantDomainStoreRequest
 - @radix-ui/react-navigation-menu
 - @radix-ui/react-slot
+- Illuminate\Support\Str
+- API Reference: Implementing GitHub Advanced Security for Code Scanning
 - Analytics/README.md
 - Calendar/README.md
 - Catalog/README.md
@@ -310,145 +323,190 @@
 - behavior-rules.md
 - glossary.md
 - @tailwindcss/vite
-- Incrementos de implementação
+- ConsumePackageSessionRequest
+- FinancialObligationFactory
 - tw-animate-css
 - @types/react-dom
 - vite
 - @radix-ui/react-select
 - @types/react
-- PostgresTenancyRbacTest.php
-- CustomerPackage
+- Standards and Frameworks Reference
+- SubscriptionPlanFactory
+- GHAS Implementation Workflows
 - 🏗️ Fases de Execução
 - Sprint — Seletores de Entidade e Cadastro Rápido Inline (`+ Novo`)
-- PayloadGovernance
-- SecurityTest
-- .metadata
-- Estrutura do projeto
-- .imageUrl
-- OperationalMutation
-- Product
+- 3. Decisões de arquitetura
+- 7. Testes obrigatórios
+- console.php
+- MembershipUnitFactory
+- 2. Estado atual identificado
+- EV-012 — Identificadores DOM em listagens autenticadas
+- CashMovementRequest
+- Sprint 2 — Infraestrutura de produção no Coolify
+- CheckInAppointmentRequest
+- RetentionCampaignRecipient
+- Observações de rede sanitizadas
+- IdempotencyService
+- Sprint 5 — Lastlink, webhooks e billing SaaS
+- Sprint 9 — CNAME, SSL e ativação de domínio Premium
+- CreateLegalHoldRequest.php
+- CreateRetentionCampaignRequest
 - @laravel/passkeys
+- DashboardRequest
+- FinancialObligationRequest
+- InventoryMovementRequest.php
+- OpenCashShiftRequest
+- 4. Modelo de ambientes
+- Sprint 0 — Pré-voo, decisões e proteção do estado atual
+- Sprint 1 — Containerização e pipeline GitHub/GHCR
+- ProductRequest
+- ClosingSessionRequest
+- Sprint 3 — Migração de tráfego cPanel → Coolify
+- Sprint 4 — Página de vendas e catálogo comercial
+- Sprint 6 — Provisionamento pós-compra
+- Sprint 7 — Primeiro acesso, senha temporária e onboarding
+- Sprint 8 — Modelo de domínios e resolução por hostname
+- Sprint 10 — Painel em domínio próprio
+- Sprint 11 — Site público e agendamento por domínio
+- PublicBookingAvailabilityRequest
+- ReleaseLegalHoldRequest
+- UpdateRetentionCampaignStatusRequest.php
+- ServiceShow
+- AdjustSaleRequest
+- AppointmentRequest
+- tailwind-merge
+- CommissionSettlementRequest
+- Unit
+- 6. Modelo mínimo de dados adicional
+- coming-soon.tsx
+- SaleItemRequest
+- SaleStatusTransitionRequest
+- post-update-cmd
 
 ## God Nodes (most connected - your core abstractions)
-1. `User` - 514 edges
-2. `TenantContext` - 426 edges
-3. `OperationalAction` - 150 edges
-4. `cn()` - 141 edges
-5. `Unit` - 140 edges
-6. `Tenant` - 129 edges
-7. `AuthorizationService` - 119 edges
-8. `Professional` - 106 edges
-9. `Service` - 100 edges
-10. `react` - 86 edges
+1. `User` - 615 edges
+2. `TenantContext` - 547 edges
+3. `OperationalAction` - 178 edges
+4. `Unit` - 165 edges
+5. `Tenant` - 149 edges
+6. `Customer` - 148 edges
+7. `AuthorizationService` - 147 edges
+8. `cn()` - 141 edges
+9. `Service` - 120 edges
+10. `Professional` - 111 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `catalogImageWorkspace()` --calls--> `User`  [EXTRACTED]
-  tests/Feature/CatalogImageUploadTest.php → app/Models/User.php
-- `dashboardTestWorkspace()` --calls--> `User`  [EXTRACTED]
-  tests/Feature/DashboardMetricsTest.php → app/Models/User.php
-- `globalQuickCreateTestWorkspace()` --calls--> `User`  [EXTRACTED]
-  tests/Feature/GlobalQuickCreateTest.php → app/Models/User.php
-- `professionalAvatarWorkspace()` --calls--> `User`  [EXTRACTED]
-  tests/Feature/ProfessionalAvatarUploadTest.php → app/Models/User.php
-- `quickCreateTestWorkspace()` --calls--> `User`  [EXTRACTED]
-  tests/Feature/QuickCreateTest.php → app/Models/User.php
+- `calendarOperationsWorkspace()` --calls--> `OnboardTenant`  [EXTRACTED]
+  tests/Feature/CalendarOperationsTest.php → app/Actions/Identity/OnboardTenant.php
+- `cashTestWorkspace()` --calls--> `OnboardTenant`  [EXTRACTED]
+  tests/Feature/CashShiftTest.php → app/Actions/Identity/OnboardTenant.php
+- `financialTestWorkspace()` --calls--> `OnboardTenant`  [EXTRACTED]
+  tests/Feature/FinancialObligationTest.php → app/Actions/Identity/OnboardTenant.php
+- `googleCalendarWorkspace()` --calls--> `OnboardTenant`  [EXTRACTED]
+  tests/Feature/GoogleCalendarIntegrationTest.php → app/Actions/Identity/OnboardTenant.php
+- `navTestWorkspace()` --calls--> `OnboardTenant`  [EXTRACTED]
+  tests/Feature/NavigationPermissionTest.php → app/Actions/Identity/OnboardTenant.php
 
 ## Import Cycles
 - None detected.
 
-## Communities (373 total, 62 thin omitted)
+## Communities (456 total, 88 thin omitted)
 
 ### Community 0 - "react"
-Cohesion: 0.08
-Nodes (36): react, InputError(), ManageTwoFactor(), Props, Props, PasskeyVerify(), Props, PasswordInput() (+28 more)
-
-### Community 1 - "Illuminate\Database\Eloquent\Relations\HasMany"
 Cohesion: 0.05
-Nodes (7): Illuminate\Contracts\Auth\MustVerifyEmail, Illuminate\Database\Eloquent\Attributes\Hidden, Illuminate\Database\Eloquent\Relations\HasMany, Illuminate\Notifications\Notifiable, Laravel\Fortify\Contracts\PasskeyUser, Laravel\Fortify\PasskeyAuthenticatable, Laravel\Fortify\TwoFactorAuthenticatable
+Nodes (53): react, DeleteUser(), Heading(), InputError(), ManagePasskeys(), Props, ManageTwoFactor(), Props (+45 more)
 
-### Community 2 - "professionals/index.tsx"
-Cohesion: 0.08
-Nodes (35): Avatar(), AvatarFallback(), AvatarImage(), ImageUploader(), ImageUploaderProps, getInitial(), GetInitialsFn, useInitials() (+27 more)
+### Community 1 - "InboxEvent"
+Cohesion: 0.23
+Nodes (4): InboxEvent, Attribute, InboxEventStore, Collection
 
-### Community 4 - "AvailabilityRule"
-Cohesion: 0.07
-Nodes (13): CreateAvailabilityRule, CreateScheduleBlock, DeleteAvailabilityRule, DeleteScheduleBlock, UpdateAvailabilityRule, UpdateScheduleBlock, CalendarAvailabilityController, AvailabilityRuleRequest (+5 more)
+### Community 2 - "public-booking/show.tsx"
+Cohesion: 0.09
+Nodes (30): Avatar(), AvatarFallback(), AvatarImage(), UserInfo(), getInitial(), GetInitialsFn, useInitials(), ProfessionalsIndex() (+22 more)
 
-### Community 5 - "cn"
-Cohesion: 0.11
-Nodes (36): mainNavGroups, NavUser(), DialogOverlay(), SheetDescription(), Sidebar(), SidebarContent(), SidebarContext, SidebarFooter() (+28 more)
+### Community 3 - "campaigns.tsx"
+Cohesion: 0.06
+Nodes (39): AlertError(), Alert(), AlertDescription(), AlertTitle(), alertVariants, Select(), SelectContent(), SelectItem() (+31 more)
+
+### Community 4 - "Professional"
+Cohesion: 0.04
+Nodes (7): Professional, AppointmentFactory, AvailabilityRuleFactory, CommissionSettlementFactory, ScheduleBlockFactory, Illuminate\Database\Eloquent\Relations\HasMany, calendarOperationsWorkspace()
+
+### Community 5 - "Product"
+Cohesion: 0.15
+Nodes (4): DeactivateProduct, AddSaleItem, Product, ProductPolicy
 
 ### Community 6 - "scripts"
 Cohesion: 0.10
-Nodes (20): scripts, lint, lint:check, post-autoload-dump, post-update-cmd, pre-package-uninstall, test, types:check (+12 more)
+Nodes (21): scripts, lint, lint:check, post-autoload-dump, post-create-project-cmd, pre-package-uninstall, test, types:check (+13 more)
 
-### Community 7 - "User"
-Cohesion: 0.03
-Nodes (35): CreateCategory, DeactivateCategory, ReactivateCategory, UpdateCategory, CreateCustomer, CreateSaleCategory, CreateSupplier, Category (+27 more)
+### Community 7 - "Sale"
+Cohesion: 0.10
+Nodes (5): Sale, SalePolicy, AppointmentSaleLinkFactory, CommissionAccrualFactory, SaleStatusHistoryFactory
 
 ### Community 8 - "pages/calendar/index.tsx"
-Cohesion: 0.09
-Nodes (54): addDays(), addMonths(), AppointmentCard(), asInstant(), CalendarError(), CalendarLoading(), CalendarToolbar(), dateKey() (+46 more)
+Cohesion: 0.08
+Nodes (56): addDays(), addMonths(), AppointmentCard(), asInstant(), CalendarError(), CalendarLoading(), CalendarToolbar(), dateKey() (+48 more)
 
-### Community 9 - "SaleItem"
-Cohesion: 0.09
-Nodes (6): AccrueCommissionsForSale, CommissionRule, SaleItem, CommissionPolicy, CommissionRuleFactory, Illuminate\Database\Eloquent\Collection
+### Community 9 - "Illuminate\Database\Eloquent\Model"
+Cohesion: 0.06
+Nodes (26): TenantStatus, AppointmentStatusHistory, Attribute, BillingWebhookEvent, CustomerRetentionEvent, OnlineBookingGalleryImage, Attribute, Attribute (+18 more)
 
-### Community 10 - "OperationalAction"
-Cohesion: 0.07
-Nodes (36): FinalizeClosingSession, CloseCashShift, OpenCashShift, RecordCashMovement, DeleteCommissionRule, CancelFinancialObligation, CreateFinancialObligation, SettleFinancialObligation (+28 more)
-
-### Community 11 - "use-appearance.tsx"
-Cohesion: 0.12
-Nodes (21): AppearanceToggleTab(), Toaster(), Appearance, applyTheme(), getStoredAppearance(), handleSystemThemeChange(), initializeTheme(), isDarkMode() (+13 more)
-
-### Community 12 - "Customer"
-Cohesion: 0.14
-Nodes (7): DeactivateCustomer, ReactivateCustomer, UpdateCustomer, Customer, CustomerPolicy, calendarOperationsWorkspace(), subscriptionTestWorkspace()
-
-### Community 13 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
-Cohesion: 0.03
-Nodes (6): AppointmentItem, AppointmentSaleLink, CashMovement, CommissionAccrual, PackageUsage, Illuminate\Database\Eloquent\Relations\BelongsTo
-
-### Community 14 - "nav-main.tsx"
+### Community 11 - "SubscriptionPlan"
 Cohesion: 0.10
-Nodes (23): NavMain(), NavMainProps, readPersistedState(), Collapsible(), CollapsibleContent(), CollapsibleTrigger(), DropdownMenu(), DropdownMenuCheckboxItem() (+15 more)
+Nodes (7): CreateSubscriptionPlan, DeactivateSubscriptionPlan, ReactivateSubscriptionPlan, UpdateSubscriptionPlan, SubscriptionPlanRequest, SubscriptionPlan, SubscriptionPlanPolicy
 
-### Community 15 - "utils.ts"
-Cohesion: 0.25
-Nodes (10): MobileBottomNav(), Separator(), IsCurrentOrParentUrlFn, IsCurrentUrlFn, useCurrentUrl(), UseCurrentUrlReturn, WhenCurrentUrlFn, SettingsLayout() (+2 more)
+### Community 12 - "LegalHold"
+Cohesion: 0.11
+Nodes (5): CreateLegalHold, ReleaseLegalHold, LegalRetentionController, LegalHold, LegalHoldPolicy
 
-### Community 16 - "app-logo-icon.tsx"
-Cohesion: 0.27
-Nodes (5): AppLogo(), AppLogoIcon(), AuthSimpleLayout(), AuthLayout(), AuthLayoutProps
+### Community 13 - "User"
+Cohesion: 0.05
+Nodes (25): CreateAvailabilityRule, CreateScheduleBlock, DeleteAvailabilityRule, DeleteScheduleBlock, UpdateAvailabilityRule, UpdateScheduleBlock, CloseCashShift, OpenCashShift (+17 more)
 
-### Community 17 - "customers/show.tsx"
+### Community 14 - "Illuminate\Http\RedirectResponse"
+Cohesion: 0.04
+Nodes (32): SettleCommissions, BillingController, CalendarController, CashShiftController, CategoryController, ClosingSessionController, CommissionController, Controller (+24 more)
+
+### Community 15 - "use-appearance.tsx"
+Cohesion: 0.10
+Nodes (23): AppLayout, AuthLayout, SettingsLayout, AppearanceToggleTab(), Toaster(), Appearance, applyTheme(), getStoredAppearance() (+15 more)
+
+### Community 16 - "customers/show.tsx"
 Cohesion: 0.13
 Nodes (15): statusLabels, ActiveSubscription, Customer, CustomerAppointment, CustomerPackageItem, CustomerPackageUsage, CustomerSale, CustomerSaleItem (+7 more)
 
-### Community 18 - "CommissionController.php"
-Cohesion: 0.21
-Nodes (3): SaveCommissionRule, CommissionController, CommissionRuleRequest
-
-### Community 21 - "types.ts"
-Cohesion: 0.06
-Nodes (52): Props, TwoFactorRecoveryCodes(), Card(), CardContent(), CardDescription(), CardFooter(), CardHeader(), CardTitle() (+44 more)
-
-### Community 22 - "createIdempotencyKey"
-Cohesion: 0.07
-Nodes (42): createIdempotencyKey(), CreatedEntity, QuickCreateCategoryModal(), QuickCreateCustomerModal(), QuickCreateModalProps, QuickCreateProductModal(), QuickCreateProfessionalModal(), QuickCreateServiceModal() (+34 more)
-
-### Community 23 - "ui.ts"
-Cohesion: 0.09
-Nodes (24): AppContent(), Props, AppShell(), Props, AppSidebar(), AppSidebarHeader(), Breadcrumbs(), getServerSnapshot() (+16 more)
-
-### Community 24 - "SubscriptionPlan"
-Cohesion: 0.08
-Nodes (8): CreateSubscriptionPlan, UpdateSubscriptionPlan, SubscriptionPlan, SubscriptionPlanPolicy, CustomerSubscriptionFactory, static, static, SubscriptionPlanFactory
-
-### Community 25 - "Membership"
+### Community 17 - "PasswordValidationRules"
 Cohesion: 0.15
-Nodes (12): OnboardTenant, AuditEvent, Membership, MembershipRole, MembershipUnit, Permission, Role, RolePermission (+4 more)
+Nodes (8): CreateNewUser, ResetUserPassword, PasswordValidationRules, PasswordUpdateRequest, ProfileDeleteRequest, Illuminate\Support\Facades\Validator, Laravel\Fortify\Contracts\CreatesNewUsers, Laravel\Fortify\Contracts\ResetsUserPasswords
+
+### Community 18 - "AppServiceProvider.php"
+Cohesion: 0.05
+Nodes (28): ActivateTenantDomain, DisableTenantDomain, MarkTenantDomainSslVerified, ProvisionTenantDomain, ReconcileTenantDomain, SuspendTenantDomain, VerifyTenantDomain, VerifyTenantDomainSsl (+20 more)
+
+### Community 19 - "Customer"
+Cohesion: 0.06
+Nodes (13): CreateCustomer, DeactivateCustomer, ReactivateCustomer, UpdateCustomer, MarkCustomerAtRisk, ReactivateCustomerRetention, UpdateCustomerCommunicationPreference, CustomerController (+5 more)
+
+### Community 21 - "online-booking/index.tsx"
+Cohesion: 0.04
+Nodes (60): Props, Card(), CardContent(), CardDescription(), CardFooter(), CardHeader(), CardTitle(), AttentionQueue() (+52 more)
+
+### Community 22 - "sales.ts"
+Cohesion: 0.10
+Nodes (19): ClosingSessionShow(), formatDateTime(), Props, AppointmentSaleLinkSummary, ClosingSession, ClosingSessionStatus, CustomerOption, ProductOption (+11 more)
+
+### Community 23 - "Entitlement"
+Cohesion: 0.07
+Nodes (14): GrantEntitlement, UpdateEntitlement, EntitlementSource, EntitlementStatus, UnitStatus, Entitlement, DateTimeInterface, PlatformPlan (+6 more)
+
+### Community 24 - "PackageTemplate"
+Cohesion: 0.09
+Nodes (8): CreatePackageTemplate, DeactivatePackageTemplate, ReactivatePackageTemplate, UpdatePackageTemplate, PackageTemplateRequest, PackageTemplate, PackageTemplatePolicy, Carbon
+
+### Community 25 - "Illuminate\Console\Command"
+Cohesion: 0.09
+Nodes (16): AnonymizeExpiredCustomers, BuildRetentionCampaignAudience, DispatchRetentionCampaign, ExpireCustomerPackages, ImportServices, ProcessRetentionCampaignDeliveries, PumpOutbox, ReapInbox (+8 more)
 
 ### Community 26 - "Arquitetura de dados do Caldas Gestão"
 Cohesion: 0.04
@@ -458,89 +516,89 @@ Nodes (49): 10. RLS: decisão adiada, contrato para eventual adoção, 11. Gate 
 Cohesion: 0.10
 Nodes (20): resources/js/**/*.d.ts, resources/js/**/*.ts, resources/js/**/*.tsx, tests/**/*.ts, compilerOptions, allowJs, baseUrl, esModuleInterop (+12 more)
 
-### Community 28 - "IdempotencyKey"
-Cohesion: 0.13
-Nodes (9): IdempotencyKey, DateTimeInterface, IdempotencyResult, IdempotencyService, IdempotencyKeyFactory, DateTimeInterface, Illuminate\Database\QueryException, Illuminate\Support\Arr (+1 more)
+### Community 28 - "CustomerSubscription"
+Cohesion: 0.06
+Nodes (19): CancelSubscription, ConsumeSubscriptionUsage, EnsureSubscriptionCycle, CarbonImmutable, PauseSubscription, CarbonImmutable, Throwable, RenewSubscriptionCycle (+11 more)
 
-### Community 29 - "PostgresGovernanceResilienceTest.php"
-Cohesion: 0.05
-Nodes (28): ProvisionDatabaseSchema, PumpOutbox, ReapInbox, ReconcileOwnerPermissions, DispatchOutboxEvent, Attribute, InboxEvent, Attribute (+20 more)
+### Community 29 - "Closure"
+Cohesion: 0.15
+Nodes (12): EnforceSaaSAccess, EnsureFirstLoginComplete, HandleAppearance, ResolveTenantContext, Closure, Illuminate\Console\Scheduling\Schedule, Illuminate\Foundation\Application, Illuminate\Foundation\Configuration\Exceptions (+4 more)
 
 ### Community 30 - "OutboxEventStore"
-Cohesion: 0.13
-Nodes (6): OutboxEvent, OutboxEventStore, OutboxEventFactory, Illuminate\Database\Eloquent\ModelNotFoundException, Illuminate\Foundation\Inspiring, Illuminate\Support\Facades\Artisan
+Cohesion: 0.14
+Nodes (6): AnonymizeExpiredCustomers, OutboxEvent, Attribute, OutboxEventStore, Collection, Illuminate\Database\Eloquent\ModelNotFoundException
 
-### Community 31 - "manage-passkeys.tsx"
-Cohesion: 0.17
-Nodes (10): ManagePasskeys(), Props, PasskeyItem(), PasskeyRegistration(), Auth, Entitlement, Passkey, TwoFactorSecretKey (+2 more)
-
-### Community 32 - "OwnerPermissionCatalog"
-Cohesion: 0.19
-Nodes (6): OwnerPermissionCatalog, Carbon\CarbonInterface, DatabaseSeeder, PermissionCatalogSeeder, Illuminate\Database\Console\Seeds\WithoutModelEvents, Illuminate\Database\Seeder
+### Community 31 - "Estrutura da Página (10 Dobras)"
+Cohesion: 0.06
+Nodes (33): Copy Completa da Página Home — Caldas Gestão, Dobra 10: Chamada Final (Fechamento sem Risco), Dobra 1: Hero Section (A Primeira Impressão), Dobra 2: A Quebra de Paradigma (O erro na bio do Instagram), Dobra 3: Você se identifica com isso? (Os 4 problemas do dia a dia), Dobra 4: Como funciona a transformação (Os 4 Pilares), Dobra 5: O que você tem em mãos (Os 6 Recursos Essenciais), Dobra 6: Feito para quem atende sozinho ou tem equipe (+25 more)
 
 ### Community 33 - "components.json"
 Cohesion: 0.11
 Nodes (17): aliases, components, hooks, lib, ui, utils, iconLibrary, rsc (+9 more)
 
-### Community 34 - "PackageTemplate"
-Cohesion: 0.12
-Nodes (6): CreatePackageTemplate, SellCustomerPackage, UpdatePackageTemplate, PackageTemplate, PackageTemplatePolicy, Carbon
+### Community 34 - "Plano de implementação — Google Calendar em domínios white label"
+Cohesion: 0.29
+Nodes (6): Decisões, Fora de escopo, Implementação e operação, Objetivo, Plano de implementação — Google Calendar em domínios white label, Verificação
 
-### Community 35 - "CanonicalEmail"
-Cohesion: 0.07
-Nodes (20): NormalizedEmailUserProvider, HandleAppearance, HandleInertiaRequests, ResolveTenantContext, Attribute, UniqueNormalizedEmail, CanonicalEmail, Closure (+12 more)
+### Community 35 - "SaleCategory"
+Cohesion: 0.10
+Nodes (8): CreateSaleCategory, DeactivateSaleCategory, ReactivateSaleCategory, UpdateSaleCategory, OpenSale, SaleCategoryRequest, SaleCategory, SaleCategoryPolicy
 
-### Community 36 - "Illuminate\Foundation\Http\FormRequest"
-Cohesion: 0.04
-Nodes (25): AdjustSaleRequest, AppointmentRequest, CalendarIndexRequest, CancelAppointmentRequest, CategoryRequest, CheckInAppointmentRequest, CommissionSettlementRequest, CustomerRequest (+17 more)
+### Community 36 - "Illuminate\Support\Facades\Gate"
+Cohesion: 0.19
+Nodes (4): Illuminate\Contracts\Validation\ValidationRule, Illuminate\Support\Facades\Gate, Illuminate\Validation\Rule, Illuminate\Validation\Validator
 
 ### Community 37 - "devDependencies"
 Cohesion: 0.06
 Nodes (31): babel-plugin-react-compiler, eslint-config-prettier, eslint-import-resolver-typescript, @eslint/js, eslint-plugin-import, eslint-plugin-react, eslint-plugin-react-hooks, @laravel/vite-plugin-wayfinder (+23 more)
 
-### Community 38 - "commissions/show.tsx"
-Cohesion: 0.19
-Nodes (11): formatDate(), formatDateTime(), Professional, ProfessionalCommissionShow(), Props, CommissionAccrual, CommissionAccrualStatus, CommissionRule (+3 more)
+### Community 39 - "Implementing GitHub Advanced Security for Code Scanning"
+Cohesion: 0.08
+Nodes (23): CodeQL Analysis Engine, Common Pitfalls, Core Concepts, Default Setup vs. Advanced Setup, Implementing GitHub Advanced Security for Code Scanning, Integration with Security Workflows, Monitoring and Metrics, Organization-Wide Rollout (+15 more)
 
-### Community 39 - "OnlineBookingSettingsController.php"
-Cohesion: 0.21
-Nodes (3): OnlineBookingSettingsController, OnlineBookingSettingsRequest, Illuminate\Support\Collection
-
-### Community 40 - "FortifyServiceProvider"
-Cohesion: 0.24
-Nodes (3): AppServiceProvider, FortifyServiceProvider, Illuminate\Support\ServiceProvider
+### Community 40 - "Illuminate\Foundation\Http\FormRequest"
+Cohesion: 0.06
+Nodes (10): CalendarIndexRequest, CancelAppointmentRequest, CloseCashShiftRequest, CommissionRuleRequest, ConsumeSubscriptionUsageRequest, ReversePackageUsageRequest, SaleDiscountRequest, OnlineBookingGalleryReorderRequest (+2 more)
 
 ### Community 41 - "optionalDependencies"
 Cohesion: 0.13
 Nodes (15): @laravel/multiplex, lightningcss-linux-x64-gnu, lightningcss-win32-x64-msvc, optionalDependencies, @laravel/multiplex, lightningcss-linux-x64-gnu, lightningcss-win32-x64-msvc, @rollup/rollup-linux-x64-gnu (+7 more)
 
-### Community 42 - "Unit"
-Cohesion: 0.08
-Nodes (13): GetDashboardSnapshot, PublicBookingController, Tenant, Unit, Carbon\CarbonImmutable, CarbonImmutable, MembershipFactory, RoleFactory (+5 more)
+### Community 42 - "FinancialObligation"
+Cohesion: 0.10
+Nodes (9): CreateFinancialObligation, SettleFinancialObligation, UpdateFinancialObligation, CreateSupplier, FinancialObligation, Supplier, FinancialObligationPolicy, SupplierPolicy (+1 more)
 
-### Community 44 - "Illuminate\Database\Eloquent\Model"
-Cohesion: 0.16
-Nodes (10): Carbon\Carbon, Illuminate\Database\Eloquent\Attributes\Fillable, Illuminate\Database\Eloquent\Attributes\UsePolicy, Illuminate\Database\Eloquent\Casts\Attribute, Illuminate\Database\Eloquent\Concerns\HasUuids, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Database\Eloquent\Model, Illuminate\Database\Eloquent\Relations\Pivot (+2 more)
+### Community 43 - "PostgresGovernanceResilienceTest.php"
+Cohesion: 0.24
+Nodes (7): governancePostgresPdo(), governancePrivilege(), PDO, seedGovernanceInbox(), seedGovernanceOutbox(), seedGovernanceTenant(), seedGovernanceUser()
+
+### Community 44 - "Illuminate\Database\Eloquent\Relations\BelongsTo"
+Cohesion: 0.02
+Nodes (16): AppointmentSaleLink, CashMovement, ClosingSession, CommissionAccrual, CommissionSettlement, CustomerPackage, DataRetentionPolicy, GoogleCalendarEvent (+8 more)
 
 ### Community 45 - "require-dev"
 Cohesion: 0.15
 Nodes (13): require-dev, fakerphp/faker, larastan/larastan, laravel/boost, laravel/pail, laravel/pao, laravel/pint, laravel/sail (+5 more)
 
-### Community 46 - "breadcrumbs.tsx"
-Cohesion: 0.39
-Nodes (7): Breadcrumb(), BreadcrumbEllipsis(), BreadcrumbItem(), BreadcrumbLink(), BreadcrumbList(), BreadcrumbPage(), BreadcrumbSeparator()
+### Community 46 - "SubscriptionCycle"
+Cohesion: 0.12
+Nodes (5): SubscriptionCycle, SubscriptionCycleUsage, SubscriptionCycleUsageFactory, SubscriptionRenewalAttemptFactory, SubscriptionUsageEntryFactory
 
-### Community 47 - "RefreshDatabase.php"
-Cohesion: 0.24
-Nodes (4): RefreshDatabase, databaseConnectionForSchemaChanges(), migrateFreshUsing(), PasswordConfirmationTest
+### Community 47 - "UploadedImageOptimizer"
+Cohesion: 0.09
+Nodes (11): CreateProduct, UpdateProduct, CreateProfessional, UpdateProfessional, CreateService, UpdateService, ServiceRequest, UploadedImageOptimizer (+3 more)
 
-### Community 50 - "operational/index.tsx"
-Cohesion: 0.05
-Nodes (73): StockAdjustableProduct, StockAdjustmentDialog(), EnhancedControl, formatMoney(), FormControlProps, PageCanvas(), Paginated, Pagination() (+65 more)
+### Community 48 - "CommissionRule"
+Cohesion: 0.11
+Nodes (9): FinalizeClosingSession, AccrueCommissionsForSale, Collection, DeleteCommissionRule, CarbonImmutable, RecordCustomerActivity, CommissionRule, CommissionPolicy (+1 more)
 
-### Community 51 - "BootstrapTenant"
-Cohesion: 0.22
-Nodes (5): BootstrapTenant, IdempotencyOperationFailed, Illuminate\Contracts\Console\PromptsForMissingInput, RuntimeException, Throwable
+### Community 49 - "Decisões"
+Cohesion: 0.10
+Nodes (21): 1. Escopo e fronteira de cobrança, 2. Pacotes: snapshot na venda e elegibilidade histórica, 3. Pacotes: ledger de uso, reversão e expiração, 4. Assinaturas: ciclo, franquia e ledger de consumo, 5. Pausa, cancelamento e situação de inadimplência, 6. Retenção comercial e reativação, 7. Retenção legal, legal hold e anonimização, 8. Auditoria, outbox e idempotência (+13 more)
+
+### Community 51 - "CanonicalEmail"
+Cohesion: 0.11
+Nodes (9): NormalizedEmailUserProvider, ProfileValidationRules, ProfileUpdateRequest, Attribute, UniqueNormalizedEmail, CanonicalEmail, Illuminate\Auth\EloquentUserProvider, Illuminate\Contracts\Auth\Authenticatable (+1 more)
 
 ### Community 52 - "composer.json"
 Cohesion: 0.18
@@ -550,9 +608,9 @@ Nodes (10): autoload-dev, psr-4, description, license, minimum-stability, name, 
 Cohesion: 0.25
 Nodes (7): Fase 1: Componente Reutilizável de Cadastro Inline & Seleção, Fase 2: Reformulação do `AppointmentForm` (`resources/js/pages/calendar/index.tsx`), Fase 3: Validação de Outras Telas (Comandas, Vendas, Assinaturas), Fase 4: Testes de Feature e Validação da Suíte, 🏗️ Fases de Execução, 🎯 Objetivos de UX, Plano de Implementação — Seletores de Entidade e Cadastro Rápido Inline (`+ Novo`)
 
-### Community 54 - "CustomerSubscription"
-Cohesion: 0.11
-Nodes (8): CancelSubscription, PauseSubscription, ResumeSubscription, SubscribeCustomer, CustomerSubscriptionRequest, CustomerSubscription, CustomerSubscriptionPolicy, Illuminate\Database\Eloquent\Builder
+### Community 54 - "cn"
+Cohesion: 0.03
+Nodes (123): AppContent(), Props, AppHeader(), mainNavItems, Props, AppLogo(), AppLogoIcon(), AppShell() (+115 more)
 
 ### Community 55 - "ADR-004 — RLS e contexto de tenant com Supabase Session Pooler"
 Cohesion: 0.20
@@ -562,13 +620,13 @@ Nodes (10): 1. Autoridade de Tenancy do Laravel e RLS como Defesa em Profundidad
 Cohesion: 0.25
 Nodes (7): 1. PHPStan & Backend (`vendor/bin/phpstan`), 2. ESLint & Frontend (`npm run lint:check`), 3. Acessibilidade (ARIA & Teclado), 📦 Alterações Efetuadas, 🎯 Objetivo, Sprint — Saneamento de Qualidade Estática, Linting e ARIA, 🧪 Suíte de Testes & Validação
 
-### Community 57 - "Professional"
-Cohesion: 0.06
-Nodes (17): SettleCommissions, CreateProfessional, DeactivateProfessional, UpdateProfessional, CreateService, DeactivateService, ReactivateService, UpdateService (+9 more)
+### Community 57 - "Appointment"
+Cohesion: 0.05
+Nodes (12): CreateAppointment, CreatePublicAppointment, PublicBookingController, Appointment, AppointmentItem, OnlineBookingSetting, CalendarAvailability, CalendarConflictException (+4 more)
 
-### Community 58 - "TwoFactorChallengeTest"
-Cohesion: 0.22
-Nodes (3): Laravel\Fortify\Fortify, PragmaRX\Google2FA\Google2FA, TwoFactorChallengeTest
+### Community 58 - "implementing-github-advanced-security-for-code-scanning/scripts/agent.py"
+Cohesion: 0.18
+Nodes (19): analyze_code_scanning_alerts(), analyze_dependabot_alerts(), analyze_secret_alerts(), full_security_audit(), generate_codeql_workflow(), get_code_scanning_alerts(), get_dependabot_alerts(), get_secret_scanning_alerts() (+11 more)
 
 ### Community 59 - "dependencies"
 Cohesion: 0.06
@@ -577,6 +635,10 @@ Nodes (35): class-variance-authority, clsx, concurrently, globals, @inertiajs/re
 ### Community 60 - "scripts"
 Cohesion: 0.14
 Nodes (13): private, $schema, scripts, build, build:ssr, dev, format, format:check (+5 more)
+
+### Community 61 - ".config"
+Cohesion: 0.11
+Nodes (14): BackfillServiceImages, DispatchOutboxEvent, SyncGoogleCalendarAppointment, Attribute, GoogleCalendarConnection, GoogleCalendarOAuthReturnUrl, Illuminate\Bus\Queueable, Illuminate\Contracts\Queue\ShouldBeUnique (+6 more)
 
 ### Community 62 - "Decisão"
 Cohesion: 0.15
@@ -587,40 +649,56 @@ Cohesion: 0.29
 Nodes (7): keywords, beleza, caldas-gestao, inertia, laravel, saas, typescript
 
 ### Community 64 - "require"
-Cohesion: 0.25
-Nodes (8): require, inertiajs/inertia-laravel, laravel/chisel, laravel/fortify, laravel/framework, laravel/tinker, laravel/wayfinder, php
+Cohesion: 0.22
+Nodes (9): require, inertiajs/inertia-laravel, laravel/chisel, laravel/fortify, laravel/framework, laravel/tinker, laravel/wayfinder, league/flysystem-aws-s3-v3 (+1 more)
 
-### Community 66 - "alert.tsx"
-Cohesion: 0.48
-Nodes (5): AlertError(), Alert(), AlertDescription(), AlertTitle(), alertVariants
+### Community 65 - "Fases de entrega"
+Cohesion: 0.11
+Nodes (18): Definition of Done, Documentos de apoio, Estado atual, Fase 0 — Descoberta e decisões, Fase 1 — Fundação segura, Fase 2 — Catálogo e pessoas, Fase 3 — Agenda MVP, Fase 4 — Atendimento e comanda — concluída (+10 more)
+
+### Community 66 - "OperationalAction"
+Cohesion: 0.04
+Nodes (27): CancelAppointment, UpdateAppointment, CheckInAppointment, CreateCategory, DeactivateCategory, ReactivateCategory, UpdateCategory, SaveCommissionRule (+19 more)
+
+### Community 67 - "GoogleCalendarOAuth"
+Cohesion: 0.21
+Nodes (4): GoogleCalendarNotConfigured, GoogleCalendarOAuth, GoogleCalendarOAuthException, RuntimeException
+
+### Community 68 - "Illuminate\Http\JsonResponse"
+Cohesion: 0.06
+Nodes (13): BuildRetentionCampaignAudience, CreateRetentionCampaign, DispatchRetentionCampaign, ProcessRetentionCampaignDeliveries, UpdateRetentionCampaignStatus, UpdateOnlineBookingSettings, GoogleCalendarController, OnlineBookingSettingsController (+5 more)
 
 ### Community 69 - "Decisões"
 Cohesion: 0.08
 Nodes (24): 1. Banco compartilhado + schema `app`, 2. Tenancy por coluna obrigatória, 3. Usuários globais + memberships, 4. UUIDv7 para users e agregados, 5. Idempotência, outbox/inbox e after-commit, 6. Session Pooler em runtime; conexão direta para migrations, 7. RLS adiada, 8. Auditoria append-only e produção com PII (+16 more)
 
-### Community 70 - "PostgresBootstrapTenantTest.php"
-Cohesion: 0.29
-Nodes (4): PDO, postgresBootstrapPdo(), postgresBootstrapProcessEnvironment(), startPostgresBootstrapProcess()
+### Community 70 - "Throwable"
+Cohesion: 0.15
+Nodes (6): HealthController, IdempotencyOperationFailed, Illuminate\Auth\Middleware\RequirePassword, Illuminate\Support\Facades\Redis, Illuminate\Support\Facades\Route, Throwable
 
 ### Community 71 - "config"
 Cohesion: 0.29
 Nodes (7): pestphp/pest-plugin, php-http/discovery, config, allow-plugins, optimize-autoloader, preferred-install, sort-packages
 
-### Community 72 - "toggle-group.tsx"
-Cohesion: 0.43
-Nodes (5): ToggleGroup(), ToggleGroupContext, ToggleGroupItem(), Toggle(), toggleVariants
+### Community 72 - "ADR-009 — Integração outbound com Google Calendar"
+Cohesion: 0.11
+Nodes (19): ADR-009 — Integração outbound com Google Calendar, Alternativas consideradas, Callback oficial e domínios white label, Consequências, Contexto, Credenciais globais da aplicação, Critérios para revisar este ADR, Custos e riscos (+11 more)
 
 ### Community 75 - "EV-011 — Superfícies de arquivos, imagens e mídia"
 Cohesion: 0.18
 Nodes (10): Avatares exibidos no shell e na agenda, Cliente: arquivos, imagens e anamneses após criação, Contexto e limites da evidência, Critérios de aceitação derivados, EV-011 — Superfícies de arquivos, imagens e mídia, Impactos propostos para ADR-007, Marketing: catálogo público, Observed (+2 more)
 
-### Community 76 - "Illuminate\Http\RedirectResponse"
-Cohesion: 0.08
-Nodes (8): FinancialObligationController, SupplierController, FinancialObligationRequest, SettleObligationRequest, SupplierRequest, Supplier, SupplierPolicy, Illuminate\Http\RedirectResponse
+### Community 78 - "Laravel\Fortify\Features"
+Cohesion: 0.22
+Nodes (6): Illuminate\Support\Facades\Event, Illuminate\Support\Facades\URL, Laravel\Fortify\Features, Laravel\Passkeys\Actions\VerifyPasskey, Laravel\Passkeys\Events\PasskeyDeleted, ParagonIE\ConstantTime\Base64UrlSafe
 
 ### Community 79 - "Plano de implementação frontend-first"
-Cohesion: 0.07
-Nodes (28): Arquitetura do frontend, Arquitetura responsiva obrigatória, Breakpoints de referência, Catálogo inicial do sistema visual, Contrato padrão de página, Convenções de implementação, Decisões pendentes antes da F0, Definition of Done por fatia (+20 more)
+Cohesion: 0.05
+Nodes (38): Arquitetura do frontend, Arquitetura responsiva obrigatória, Breakpoints de referência, Catálogo inicial do sistema visual, Contrato padrão de página, Convenções de implementação, Decisões pendentes antes da F0, Definition of Done por fatia (+30 more)
+
+### Community 80 - "sale-categories/index.tsx"
+Cohesion: 0.17
+Nodes (13): Collapsible(), CollapsibleContent(), CollapsibleTrigger(), Tooltip(), TooltipProvider(), TooltipTrigger(), Props, SaleCategoriesIndex() (+5 more)
 
 ### Community 81 - "psr-4"
 Cohesion: 0.40
@@ -634,9 +712,9 @@ Nodes (5): extra, laravel, post-create-project, dont-discover, installer
 Cohesion: 0.20
 Nodes (8): MaskSensitiveDataProcessor, Monolog\Handler\NullHandler, Monolog\Handler\StreamHandler, Monolog\Handler\SyslogUdpHandler, Monolog\Level, Monolog\LogRecord, Monolog\Processor\ProcessorInterface, Monolog\Processor\PsrLogMessageProcessor
 
-### Community 84 - "dashboard-header.tsx"
-Cohesion: 0.17
-Nodes (13): Select(), SelectContent(), SelectItem(), SelectLabel(), SelectScrollDownButton(), SelectScrollUpButton(), SelectSeparator(), SelectTrigger() (+5 more)
+### Community 84 - "TenantContext"
+Cohesion: 0.05
+Nodes (16): DeactivateProfessional, ReactivateProfessional, CreateTenantDomain, ProfessionalController, TenantDomainController, ProfessionalRequest, CustomerCommunicationPreferencePolicy, MembershipPolicy (+8 more)
 
 ### Community 85 - "AGENTS.md"
 Cohesion: 0.06
@@ -644,15 +722,19 @@ Nodes (33): APIs & Eloquent Resources, Application Structure & Architecture, Art
 
 ### Community 86 - "CLAUDE.md"
 Cohesion: 0.06
-Nodes (31): APIs & Eloquent Resources, Application Structure & Architecture, Artisan, Conventions, Deployment, Do Things the Laravel Way, Documentation Files, Foundational Context (+23 more)
+Nodes (32): APIs & Eloquent Resources, Application Structure & Architecture, Artisan, Conventions, Deployment, Do Things the Laravel Way, Documentation Files, Foundational Context (+24 more)
 
 ### Community 87 - "ADR-006 — Retenção legal, anonimização e legal hold (LGPD)"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (12): 1. Prazos de Retenção Legal, 2. Procedimento de Expurgo e Anonimização (Soft Delete + PII Scramble), 3. Mecanismo de Legal Hold (Congelamento de Expurgo), ADR-006 — Retenção legal, anonimização e legal hold (LGPD), Alternativas consideradas, Anonimização Imediata ao solicitar exclusão, Consequências, Contexto (+4 more)
 
 ### Community 90 - "Sprint 2 da Fase 6: Assinaturas Recorrentes"
 Cohesion: 0.29
 Nodes (6): Auditoria e permissões, Interface, Modelo e regras, Sprint 2 da Fase 6: Assinaturas Recorrentes, Verificação, Visão geral
+
+### Community 100 - "FortifyServiceProvider.php"
+Cohesion: 0.23
+Nodes (4): AppServiceProvider, FortifyServiceProvider, Illuminate\Cache\RateLimiting\Limit, Illuminate\Support\ServiceProvider
 
 ### Community 101 - "📦 Entregas Realizadas"
 Cohesion: 0.25
@@ -661,6 +743,22 @@ Nodes (7): 1. Backend, Agregador de Métricas e Requests, 2. Frontend React (`re
 ### Community 102 - "EV-010 — Sidebar compacta e flyout desktop"
 Cohesion: 0.29
 Nodes (6): Escopo, EV-010 — Sidebar compacta e flyout desktop, Implementado no Caldas, Limites, Observado na referência, Validação local
+
+### Community 104 - "cash/show.tsx"
+Cohesion: 0.22
+Nodes (9): CashShow(), formatDateTime(), movementTypeConfig, Props, CashMetrics, CashMovement, CashMovementType, CashShift (+1 more)
+
+### Community 105 - "Operação de produção — Caldas Gestão White Label"
+Cohesion: 0.17
+Nodes (11): Banco e TLS, Checklist pós-deploy, Domínio Premium, Fluxo de deploy, Health check, Itens ainda dependentes de configuração operacional, Operação de produção — Caldas Gestão White Label, Rollback (+3 more)
+
+### Community 106 - "Plano de otimização de velocidade e fluidez"
+Cohesion: 0.22
+Nodes (8): Diagnóstico, Metas, Ordem de execução, Plano de otimização de velocidade e fluidez, Sprint 1 — Instrumentação e contrato, Sprint 2 — Bundle inicial e carregamento percebido, Sprint 3 — Fluidez das superfícies pesadas, Sprint 4 — Rede, backend e produção Coolify
+
+### Community 108 - "conducting-api-security-testing/scripts/agent.py"
+Cohesion: 0.14
+Nodes (17): generate_report(), main(), Test for JWT 'none' algorithm bypass., Test if GraphQL introspection is enabled., Test for excessive data exposure in API responses., Test for Broken Object Level Authorization (BOLA/IDOR)., Generate API security testing report., Test for Broken Function Level Authorization (BFLA). (+9 more)
 
 ### Community 112 - "Inertia React Development"
 Cohesion: 0.07
@@ -674,57 +772,45 @@ Nodes (27): Basic Link Component, Basic Usage, Client-Side Navigation, Common Pi
 Cohesion: 0.29
 Nodes (6): 1. Funcionalidade Drag-to-Select (`resources/js/components/calendar/index.tsx`), 2. Responsividade Mobile & Usabilidade Touch (`resources/js/pages/calendar/index.tsx`), 📦 Entregas Realizadas, 🎯 Objetivo, Sprint — Drag-to-Select e Responsividade Mobile da Agenda (Calendar), 🧪 Suíte de Validação
 
+### Community 116 - "Plano de evolução — Caldas Gestão como plataforma multiempresa por domínio"
+Cohesion: 0.18
+Nodes (10): 10. Critério para liberar os primeiros clientes Premium, 11. Primeira fatia prática recomendada, 1. Objetivo, 5. Sprints, 8. Definition of Done global, 9. Ordem de execução recomendada, Entregas, Objetivo (+2 more)
+
 ### Community 117 - "ADR-005 — Padronização de UUIDv7 para tabelas operacionais e de eventos"
 Cohesion: 0.17
 Nodes (11): ADR-005 — Padronização de UUIDv7 para tabelas operacionais e de eventos, Alternativas consideradas, Auto-increment (BIGINT), Consequências, Contexto, Custos e riscos, Decisão, Positivas (+3 more)
 
-### Community 118 - ".app"
-Cohesion: 0.11
-Nodes (6): HealthController, ProfessionalRequest, ServiceRequest, Illuminate\Http\JsonResponse, Illuminate\Support\Facades\Redis, Mockery
+### Community 118 - "Key Functions"
+Cohesion: 0.13
+Nodes (14): API Reference: API Security Testing Agent, Arguments, CLI Usage, Dependencies, Key Functions, Overview, OWASP API Top 10 Coverage, `test_bfla(base_url, admin_endpoints, low_priv_token)` (+6 more)
 
-### Community 119 - "dialog.tsx"
-Cohesion: 0.06
-Nodes (69): DeleteUser(), Heading(), Props, EmptyState(), enhanceFormControl(), firstError(), FormActions(), FormErrorSummary() (+61 more)
+### Community 119 - "operational/index.tsx"
+Cohesion: 0.04
+Nodes (168): Props, StockAdjustableProduct, StockAdjustmentDialog(), createIdempotencyKey(), EmptyState(), EnhancedControl, enhanceFormControl(), firstError() (+160 more)
 
 ### Community 120 - "EV-009 — Site e páginas públicas de marketing"
 Cohesion: 0.09
 Nodes (21): Categoria, Catálogo de recursos, Conteúdo da home, Conteúdo e SEO, Conversões, Entradas, Escopo, EV-009 — Site e páginas públicas de marketing (+13 more)
 
-### Community 121 - "AuthorizationService"
-Cohesion: 0.08
-Nodes (13): RevokeEntitlement, ActivateMembership, ActivateVerifiedOwnerMemberships, AssignRole, InviteMembership, ResumeTenantOnboarding, RevokeMembership, RevokeRole (+5 more)
-
 ### Community 122 - "Pest 5 Features"
 Cohesion: 0.10
 Nodes (19): Architecture Testing, Assertions, Basic Test Structure, Basic Usage, Browser Test Example, Common Pitfalls, Creating Tests, Datasets (+11 more)
-
-### Community 123 - "PasswordValidationRules.php"
-Cohesion: 0.12
-Nodes (11): CreateNewUser, ResetUserPassword, emailRules(), nameRules(), profileRules(), PasswordUpdateRequest, Illuminate\Cache\RateLimiting\Limit, Illuminate\Support\Facades\Validator (+3 more)
 
 ### Community 124 - "📦 Entregas Realizadas"
 Cohesion: 0.25
 Nodes (7): 1. Novas Decisões Arquiteturais (ADRs), 2. Testes de Imutabilidade de Auditoria ([`tests/Feature/AuditImmutabilityTest.php`](file:///Users/murilloalves/Projects/caldas-gestao/tests/Feature/AuditImmutabilityTest.php)), 3. Mascaramento Automático de PII em Logs ([`app/Logging/MaskSensitiveDataProcessor.php`](file:///Users/murilloalves/Projects/caldas-gestao/app/Logging/MaskSensitiveDataProcessor.php)), 📦 Entregas Realizadas, 🎯 Objetivo, Sprint — Arquitetura, Resiliência, LGPD e Sanitização de Logs, 🧪 Validação Geral
 
-### Community 126 - "Laravel\Fortify\Features"
-Cohesion: 0.20
-Nodes (6): Illuminate\Support\Facades\Event, Illuminate\Support\Facades\URL, Laravel\Fortify\Features, Laravel\Passkeys\Actions\VerifyPasskey, Laravel\Passkeys\Events\PasskeyDeleted, ParagonIE\ConstantTime\Base64UrlSafe
-
-### Community 127 - "ProfileController.php"
-Cohesion: 0.17
-Nodes (5): ProfileController, ProfileDeleteRequest, Illuminate\Auth\Middleware\RequirePassword, Illuminate\Support\Facades\Auth, Illuminate\Support\Facades\Route
+### Community 126 - "TwoFactorChallengeTest"
+Cohesion: 0.22
+Nodes (3): Laravel\Fortify\Fortify, PragmaRX\Google2FA\Google2FA, TwoFactorChallengeTest
 
 ### Community 128 - "Pest 5 Features"
 Cohesion: 0.10
 Nodes (19): Architecture Testing, Assertions, Basic Test Structure, Basic Usage, Browser Test Example, Common Pitfalls, Creating Tests, Datasets (+11 more)
 
-### Community 129 - "Illuminate\Database\Eloquent\Relations\BelongsToMany"
-Cohesion: 0.09
-Nodes (3): ClosingSession, ClosingSessionPolicy, Illuminate\Database\Eloquent\Relations\BelongsToMany
-
-### Community 130 - "TestCase"
-Cohesion: 0.20
-Nodes (6): Illuminate\Auth\Notifications\ResetPassword, Illuminate\Auth\Notifications\VerifyEmail, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\Notification, VerificationNotificationTest, TestCase
+### Community 129 - "Conducting API Security Testing"
+Cohesion: 0.13
+Nodes (14): Common Scenarios, Conducting API Security Testing, Key Concepts, Output Format, Prerequisites, Scenario: API Security Assessment for a Fintech Mobile Application, Step 1: API Discovery and Documentation, Step 2: Authentication and Token Testing (+6 more)
 
 ### Community 131 - "ADR-001 — Stack inicial do Caldas Gestão"
 Cohesion: 0.11
@@ -738,13 +824,17 @@ Nodes (18): Abertura, Backlog por fases e dependências, Categorias, Critérios 
 Cohesion: 0.12
 Nodes (16): Available Features, Best Practices, Custom Authentication Logic, Documentation, Email Verification Setup, Key Endpoints, Laravel Fortify Development, Passkeys Setup (+8 more)
 
+### Community 134 - "Operação de outbox e inbox"
+Cohesion: 0.33
+Nodes (5): Contrato, Modelo de confiança do owner, Operação de outbox e inbox, Operação periódica, PostgreSQL e privilégio operacional
+
 ### Community 135 - "🏗️ Fases de Execução"
 Cohesion: 0.25
 Nodes (7): Fase 1: Atualização da Grade Temporal (`resources/js/components/calendar/index.tsx`), Fase 2: Polimento Visual dos Cards e Navegação, Fase 3: Ações por Clique e Fluxo de Cadastro, Fase 4: Testes e Validação de Suíte, 🏗️ Fases de Execução, 🎯 Objetivos de UX/UI, Plano de Implementação — Reformulação e Alinhamento da Agenda (Calendar)
 
-### Community 136 - "Illuminate\Support\Str"
-Cohesion: 0.04
-Nodes (30): AppointmentFactory, AppointmentItemFactory, AppointmentSaleLinkFactory, AppointmentStatusHistoryFactory, AuditEventFactory, AvailabilityRuleFactory, CashMovementFactory, CashShiftFactory (+22 more)
+### Community 136 - "Illuminate\Database\Eloquent\Factories\Factory"
+Cohesion: 0.02
+Nodes (43): InboxStatus, OutboxStatus, AuditEventFactory, BillingWebhookEventFactory, CashMovementFactory, CashShiftFactory, static, CategoryFactory (+35 more)
 
 ### Community 139 - "🛠️ Fases de Execução"
 Cohesion: 0.20
@@ -754,21 +844,29 @@ Nodes (9): 💡 Estratégia de Armazenamento (Local com Fallback S3), 📍 Estru
 Cohesion: 0.12
 Nodes (16): Available Features, Best Practices, Custom Authentication Logic, Documentation, Email Verification Setup, Key Endpoints, Laravel Fortify Development, Passkeys Setup (+8 more)
 
-### Community 141 - "SellCustomerPackageRequest.php"
-Cohesion: 0.15
-Nodes (3): CustomerPackageController, ConsumePackageSessionRequest, SellCustomerPackageRequest
+### Community 141 - "InvalidArgumentException"
+Cohesion: 0.10
+Nodes (7): BootstrapTenant, PayloadGovernance, Illuminate\Contracts\Console\PromptsForMissingInput, Illuminate\Support\Arr, InvalidArgumentException, identityActionScript(), startGovernanceStoreClaimProcess()
+
+### Community 144 - "Baseline de performance web"
+Cohesion: 0.33
+Nodes (5): Baseline de performance web, Critérios de aceite, Estado de publicação, Medição de produção (baseline observado), Melhorias implementadas
 
 ### Community 145 - "Sprint 4 - Fase 4: Fechamento Consolidado (ClosingSession), Recibo Interno e Auditoria"
 Cohesion: 0.12
 Nodes (15): 1. Visão Geral e Objetivos, 2. Invariantes de Domínio e Regras de Negócio, 3.1 Ação de Fechamento (`app/Actions/Closing/FinalizeClosingSession.php`), 3.2 Request e Policy, 3.3 Controller e Rotas, 3.4 Governança de Payload (`app/Support/PayloadGovernance.php`), 3. Arquitetura e Implementação Backend, 4.1 Visualização e Impressão do Recibo Interno (`resources/js/pages/closing-sessions/show.tsx`) (+7 more)
 
-### Community 146 - "post-create-project-cmd"
-Cohesion: 0.50
-Nodes (4): post-create-project-cmd, @php artisan key:generate --ansi, @php artisan migrate --graceful --ansi, @php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\
+### Community 146 - "TwoFactorAuthenticationRequest"
+Cohesion: 0.33
+Nodes (3): SecurityController, TwoFactorAuthenticationRequest, Laravel\Fortify\InteractsWithTwoFactorState
 
 ### Community 147 - "SCR-002 — Agenda semanal"
 Cohesion: 0.12
 Nodes (15): Configurações observadas, Contexto, Cores, Critérios de aceitação, Desconhecidos, Estados, Filtros observados, Geral (+7 more)
+
+### Community 149 - "ADR-002--fundacao-de-dados-e-tenancy.md"
+Cohesion: 0.11
+Nodes (12): Backend, Estrutura do projeto, Frontend, Operação, Bootstrap do banco de dados, Conexões, Desenvolvimento e CI, Fronteira dos testes de passkeys (+4 more)
 
 ### Community 150 - "ADR-003 — Categorias de comanda e fechamento consolidado"
 Cohesion: 0.13
@@ -789,10 +887,6 @@ Nodes (14): Acessibilidade observada, Componentes observados, Contexto, Critéri
 ### Community 167 - "SCR-014 — Site público e jornada de marketing"
 Cohesion: 0.13
 Nodes (14): Arquitetura da jornada, Contexto, Critérios de aceitação, Desconhecidos, Estados observados, Hierarquia observada, Home, Navegação (+6 more)
-
-### Community 168 - "Papéis e permissões — proposta independente"
-Cohesion: 0.40
-Nodes (4): Matriz mínima a validar, Modelo, Papéis e permissões — proposta independente, Papéis iniciais propostos
 
 ### Community 169 - "Tailwind CSS Development"
 Cohesion: 0.14
@@ -827,7 +921,7 @@ Cohesion: 0.15
 Nodes (11): Aggregate specification, Domain and data modeling checklist, Evidence-to-model matrix, State transition table, Table proposal, Validation scenarios, Inputs and epistemic rules, Model in this order (+3 more)
 
 ### Community 177 - "Modelagem e Banco de Dados"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (13): 1. Categorias de Comanda (`SaleCategory`), 2. Comandas (`Sale`), 3. Itens de Comanda (`SaleItem`), 4. Vínculo Agendamento-Comanda (`AppointmentSaleLink`), 5. Histórico de Transição de Status (`SaleStatusHistory`), 6. Sessões de Fechamento Consolidado (`ClosingSession` e Pivot `closing_session_sales`), Ações e Controladores (SaleCategory), Frontend (React 19, Inertia v3, Tailwind v4, Wayfinder) (+5 more)
 
 ### Community 178 - "Evidência observada"
@@ -894,10 +988,6 @@ Nodes (10): Design-token evidence, Screen specification, Screenshot naming, Stat
 Cohesion: 0.17
 Nodes (10): Claim ledger row, Coverage states, Dossier structure, Manifest minimum, Boundaries, Completion, Evidence standard, Investigation loop (+2 more)
 
-### Community 194 - "cash/index.tsx"
-Cohesion: 0.21
-Nodes (10): Textarea(), CashIndex(), formatDateTime(), movementTypeConfig, Props, CashMetrics, CashMovement, CashMovementType (+2 more)
-
 ### Community 196 - "Sprint 3 - Wave de Refinamento: Histórico de Consumo do Cliente, Sinergia Caixa-Contas e Feedback de Conflitos na Agenda"
 Cohesion: 0.17
 Nodes (11): 1. Visão Geral e Objetivos, 2. Invariantes de Domínio e Regras de Negócio, 3.1 Modelos e Relacionamentos, 3.2 Controlador de Clientes (`App\Http\Controllers\CustomerController@show`), 3.3 Action de Liquidação Financeira (`App\Actions\Finance\Transactions\SettleFinancialObligation`), 3. Arquitetura Backend, 4.1 Perfil do Cliente (`resources/js/pages/customers/show.tsx`), 4.2 Validação de Conflito na Agenda (`resources/js/pages/calendar/index.tsx`) (+3 more)
@@ -907,7 +997,7 @@ Cohesion: 0.17
 Nodes (11): Analytics e relatórios, Barra inferior contextual observada, Cadastros e catálogo, Cartão de entidade mobile observado, Complemento responsivo — EV-008, Componentes da agenda, Componentes globais, Inconsistências observadas (+3 more)
 
 ### Community 198 - "Contextos delimitados propostos"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (11): Catálogo, Contextos delimitados propostos, CRM, Estoque, Financeiro/comercial, Ownership e dependências, Plataforma, tenancy e acesso (F2), Relacionamento e prontuário (+3 more)
 
 ### Community 199 - "SCR-001 — Shell autenticado"
@@ -915,8 +1005,8 @@ Cohesion: 0.17
 Nodes (11): Acessibilidade observada, Complemento mobile/tablet, Componentes observados, Contexto, Critérios de aceitação, Desconhecidos, Estados, Hierarquia (+3 more)
 
 ### Community 200 - "Caldas Gestão"
-Cohesion: 0.17
-Nodes (12): Caldas Gestão, Configuração de produção, Decisões e plano, Desenvolvimento, Estrutura modular, Health checks, Redis, Requisitos (+4 more)
+Cohesion: 0.12
+Nodes (17): Arquitetura de produção e deploy, Caldas Gestão, Configuração de produção, Decisões e plano, Desenvolvimento, Estrutura modular, Fronteiras de negócio, Health checks (+9 more)
 
 ### Community 201 - "Queue & Job Best Practices"
 Cohesion: 0.18
@@ -1035,15 +1125,11 @@ Cohesion: 0.22
 Nodes (8): 1. Categorias (`Category`), 2. Produtos Físicos (`Product`), 3. Vínculo de Serviços com Categorias, Arquitetura e Modelagem, Frontend (React 19, Inertia v3, Tailwind v4), Sprint 3 — Categorias e Produtos Físicos (Fase 2 - Catálogo & Pessoas), Testes Automatizados (Pest), Visão Geral
 
 ### Community 230 - "Engenharia reversa clean-room do Belasis"
-Cohesion: 0.22
-Nodes (9): 10. Protocolo para os próximos passes, 1. Objetivo e limites, 2. Resumo do produto observado, 4. Padrões de interface observados, 5. Sinais técnicos observáveis, 6. Domínios e entidades candidatas, 8. Matriz de estados que o clone precisa definir, 9. Lacunas do levantamento inicial (+1 more)
-
-### Community 231 - "Roteiro de implementação — analytics e relatórios"
-Cohesion: 0.22
-Nodes (8): Critérios de pronto, Fase 1 — contratos de métricas, Fase 2 — camada de leitura, Fase 3 — painel MVP, Fase 4 — motor de relatórios, Fase 5 — metas, Princípio, Roteiro de implementação — analytics e relatórios
+Cohesion: 0.07
+Nodes (26): 10. Protocolo para os próximos passes, 1. Objetivo e limites, 2. Resumo do produto observado, 3. Arquitetura de informação, 4. Padrões de interface observados, 5. Sinais técnicos observáveis, 6. Domínios e entidades candidatas, 7. Fluxos críticos a especificar (+18 more)
 
 ### Community 232 - "Governança de dados proposta"
-Cohesion: 0.22
+Cohesion: 0.20
 Nodes (9): Cenários de validação, Ciclo de vida, Classificação, Direitos do titular, F2: controles de dados, Governança de dados proposta, Lacunas legais/técnicas, Princípios (+1 more)
 
 ### Community 233 - "Banco relacional proposto"
@@ -1058,13 +1144,13 @@ Nodes (8): Ator e precondições, FLOW-001 — Abrir e abandonar novo agendament
 Cohesion: 0.22
 Nodes (8): Ações, Comanda existente, Contexto do cliente, Corpo da venda, Inteligência UX proposta, Listagem, Nova comanda, SCR-010 — Comandas e venda
 
-### Community 236 - "Roteiro para recriar o produto com vibe coding"
-Cohesion: 0.22
-Nodes (9): Arquitetura recomendada, Backlog inicial em fatias verticais, Definition of Done, Estratégia de paridade, Guardrails para agentes de código, Ordem de entrega sugerida, Princípio, Roteiro para recriar o produto com vibe coding (+1 more)
+### Community 237 - "📦 Entregas Realizadas"
+Cohesion: 0.25
+Nodes (7): 1. Backend Controllers & API JSON, 2. Expansão dos Diálogos Globais (`resources/js/components/operational/quick-create-dialogs.tsx`), 3. Injeção de Cadastro Rápido nas Páginas do Sistema, 📦 Entregas Realizadas, 🎯 Objetivo, Sprint — Padronização Global de Seletores e Cadastros Rápido Inline (`+ Novo`), 🧪 Suíte de Validação
 
-### Community 237 - "Fases"
-Cohesion: 0.22
-Nodes (9): Fase 0 — Descoberta e decisões, Fase 1 — Fundação, Fase 2 — Catálogo e pessoas, Fase 3 — Agenda MVP, Fase 4 — Atendimento e comanda (Concluída ✅), Fase 5 — Financeiro, comissões e estoque (Concluída - 100%), Fase 6 — Pacotes, assinatura e retenção, Fase 7 — Relatórios e escala (+1 more)
+### Community 238 - "PasswordResetTest"
+Cohesion: 0.18
+Nodes (3): Illuminate\Auth\Notifications\ResetPassword, Illuminate\Support\Facades\Notification, PasswordResetTest
 
 ### Community 239 - "Blade & Views Best Practices"
 Cohesion: 0.25
@@ -1102,25 +1188,29 @@ Nodes (7): Call `Event::fake()` After Factory Setup, Testing Best Practices, Use
 Cohesion: 0.25
 Nodes (8): post-root-package-install, setup, composer install, npm ci, @php artisan db:provision-schema --database=migration --no-interaction, @php artisan key:generate, @php artisan migrate --database=migration --force, @php -r \"file_exists('.env') || copy('.env.example', '.env');\
 
+### Community 248 - "commissions.ts"
+Cohesion: 0.29
+Nodes (6): CommissionAccrual, CommissionAccrualStatus, CommissionRule, CommissionRuleType, CommissionSettlement, ProfessionalCommissionSummary
+
 ### Community 249 - "Sprint 4 — Fornecedores, Histórico de Atendimentos no Cliente e Governança"
 Cohesion: 0.25
 Nodes (7): 1. Fornecedores (`Supplier`), 2. Histórico de Atendimentos no Cliente (`Customer`), Arquitetura e Modelagem, Frontend (React 19, Inertia v3, Tailwind v4), Sprint 4 — Fornecedores, Histórico de Atendimentos no Cliente e Governança, Testes Automatizados (Pest), Visão Geral
 
-### Community 250 - "3. Arquitetura de informação"
-Cohesion: 0.25
-Nodes (8): 3. Arquitetura de informação, Cadastros, Conta e suporte, Controle, Financeiro e comissões, Marketing e relacionamento, Principal, Relatórios
+### Community 250 - "PostgresBootstrapTenantTest.php"
+Cohesion: 0.29
+Nodes (4): PDO, postgresBootstrapPdo(), postgresBootstrapProcessEnvironment(), startPostgresBootstrapProcess()
 
 ### Community 251 - "FLOW-003 — Agendamento para comanda"
-Cohesion: 0.25
-Nodes (7): Decisão proposta — múltiplas comandas (Proposed, ADR-003), Evidência observada, FLOW-003 — Agendamento para comanda, Fluxo inferido, Invariantes propostas, Máquina de estados proposta, Próximo experimento
+Cohesion: 0.14
+Nodes (11): Decisão proposta — múltiplas comandas (Proposed, ADR-003), Evidência observada, FLOW-003 — Agendamento para comanda, Fluxo inferido, Invariantes propostas, Máquina de estados proposta, Próximo experimento, Matriz mínima a validar (+3 more)
 
 ### Community 252 - "Questões abertas"
 Cohesion: 0.25
 Nodes (7): Agenda, Ambiente e papéis, Analytics, relatórios e metas, Cadastros e catálogo, Próximo experimento seguro, Questões abertas, UX e acessibilidade
 
-### Community 253 - "Backlog priorizado para vibe coding"
-Cohesion: 0.25
-Nodes (6): Backlog priorizado para vibe coding, Gates por fatia, P0 — Fundação segura, P1 — Operação completa, P2 — Expansão, Trilha pública de aquisição
+### Community 253 - "2d05c1acd17e1dabb4aff69f7732ea6e639581ba.md"
+Cohesion: 0.50
+Nodes (3): Error details, Instructions, Test info
 
 ### Community 254 - "SCR-003 — Diálogo de novo agendamento"
 Cohesion: 0.25
@@ -1222,17 +1312,13 @@ Nodes (6): Caixa, Fiscal e comissões, Painel financeiro, SCR-011 — Financeiro
 Cohesion: 0.29
 Nodes (6): Configurações organizacionais, Conta pessoal, Critérios de aceitação, Módulos e relacionamento, Proposta independente, SCR-012 — Configurações, conta e módulos
 
-### Community 279 - "Dossiê canônico de reconstrução"
-Cohesion: 0.33
-Nodes (4): Dossiê canônico de reconstrução, Estado atual, Ordem de leitura, Política de precedência
+### Community 279 - "c59c48fe2e84153a7c1a7fa9ce2839f88e33b962.md"
+Cohesion: 0.50
+Nodes (3): Error details, Instructions, Test info
 
-### Community 281 - "Bootstrap do banco de dados"
-Cohesion: 0.33
-Nodes (6): Bootstrap do banco de dados, Conexões, Desenvolvimento e CI, Fronteira dos testes de passkeys, Primeira instalação, Rollback controlado
-
-### Community 282 - "Operação de outbox e inbox"
-Cohesion: 0.33
-Nodes (5): Contrato, Modelo de confiança do owner, Operação de outbox e inbox, Operação periódica, PostgreSQL e privilégio operacional
+### Community 282 - "RefreshDatabase"
+Cohesion: 0.22
+Nodes (3): Illuminate\Foundation\Testing\RefreshDatabase, RefreshDatabase, SecurityTest
 
 ### Community 283 - "Bootstrap do primeiro tenant"
 Cohesion: 0.33
@@ -1270,25 +1356,17 @@ Nodes (5): EV-006 — Financeiro, caixa, comissões e fiscal, Evidência estrutu
 Cohesion: 0.33
 Nodes (5): Descobertas, EV-007 — Inteligência transversal do produto, Responsividade, Segurança, Superfícies
 
-### Community 292 - "CashShift"
-Cohesion: 0.11
-Nodes (6): CashShiftController, CashMovementRequest, CloseCashShiftRequest, OpenCashShiftRequest, CashShift, CashShiftPolicy
+### Community 292 - "process.py"
+Cohesion: 0.40
+Nodes (9): calculate_mttr(), categorize_alerts(), generate_org_report(), get_code_scanning_alerts(), get_github_headers(), github_api_get(), list_org_repos(), main() (+1 more)
 
 ### Community 293 - "Q: analisa o progresso atual de desenvolvimento do app vs o backlog"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: analisa o progresso atual de desenvolvimento do app vs o backlog, Source Nodes
 
-### Community 294 - "Appointment"
-Cohesion: 0.08
-Nodes (11): CancelAppointment, CreateAppointment, UpdateAppointment, CheckInAppointment, CreatePublicAppointment, Appointment, AppointmentPolicy, AppointmentStatusTransition (+3 more)
-
 ### Community 295 - "FLOW-005 — Lançamento, liquidação e reconciliação"
 Cohesion: 0.40
 Nodes (4): FLOW-005 — Lançamento, liquidação e reconciliação, Fluxo proposto a partir das evidências, Regras, Testes futuros seguros
-
-### Community 296 - "Observações de rede sanitizadas"
-Cohesion: 0.40
-Nodes (4): Estado, Interações candidatas para captura futura, Observações de rede sanitizadas, Protocolo
 
 ### Community 297 - "📦 Entregas Realizadas"
 Cohesion: 0.25
@@ -1298,25 +1376,17 @@ Nodes (7): 1. Testes de Permissão de Navegação (`tests/Feature/NavigationPerm
 Cohesion: 0.22
 Nodes (8): 1. Banco de Dados & Modelos, 2. Actions & Form Requests Backend, 3. Componentes e Páginas Frontend, 4. Testes de Feature (`tests/Feature/CatalogImageUploadTest.php`), 📦 Alterações Efetuadas, 🎯 Objetivo, Sprint — Implementação de Mídias e Fotos (Serviços e Produtos), 🧪 Suíte de Validação
 
+### Community 299 - "GHAS Code Scanning Implementation Template"
+Cohesion: 0.22
+Nodes (8): Alert Severity Gate Configuration, Custom Query Pack Registry, Escalation Matrix, GHAS Code Scanning Implementation Template, Organization Security Configuration, Repository Enablement Tracker, Secret Scanning Custom Patterns, Weekly Security Review Checklist
+
 ### Community 302 - "🏗️ Arquitetura e Fases de Execução"
 Cohesion: 0.25
 Nodes (7): 🏗️ Arquitetura e Fases de Execução, Fase 1: Agregador de Métricas e Data Provider Backend (Laravel), Fase 2: Componentes UI de Gráficos e Métricas Frontend (React), Fase 3: Montagem do Dashboard Responsivo (`resources/js/pages/dashboard.tsx`), Fase 4: Testes de Feature e Validação, Plano de Implementação — Reformulação do Dashboard Operacional (Visão de Hoje), 🎯 Visão Geral do Novo Dashboard
 
-### Community 303 - "SaleCategory"
-Cohesion: 0.13
-Nodes (5): ReactivateSaleCategory, UpdateSaleCategory, OpenSale, SaleCategory, SaleCategoryPolicy
-
-### Community 304 - "7. Fluxos críticos a especificar"
-Cohesion: 0.40
-Nodes (5): 7. Fluxos críticos a especificar, Agendamento até recebimento, Assinatura, Estoque, Pacote
-
-### Community 305 - "app-header.tsx"
-Cohesion: 0.12
-Nodes (19): AppHeader(), mainNavItems, Props, NavigationMenu(), NavigationMenuContent(), NavigationMenuIndicator(), NavigationMenuItem(), NavigationMenuLink() (+11 more)
-
-### Community 308 - "Sale"
-Cohesion: 0.13
-Nodes (3): Sale, SalePolicy, Illuminate\Database\Eloquent\Relations\HasOne
+### Community 304 - "TestCase"
+Cohesion: 0.18
+Nodes (5): Illuminate\Auth\Notifications\VerifyEmail, Illuminate\Foundation\Testing\TestCase, PasswordConfirmationTest, VerificationNotificationTest, TestCase
 
 ### Community 310 - "Política de trabalho dos agentes"
 Cohesion: 0.50
@@ -1330,13 +1400,29 @@ Nodes (3): Envelope e persistência, Eventos de domínio propostos, Validação
 Cohesion: 0.50
 Nodes (3): EV-001 — Shell e agenda desktop, Garantia de não persistência, Interações observadas
 
-### Community 351 - "Incrementos de implementação"
-Cohesion: 0.20
-Nodes (10): F0 — Decisões e scaffold, F1 — Fundação visual e shell, F2 — Identidade, tenant, unidade e autorização, F3 — CRM e catálogo, F4 — Agenda, F5 — Comanda e fechamento consolidado, F6 — Financeiro e comissões, F7 — Painel, relatórios e análise visual (+2 more)
+### Community 317 - "IdempotencyKey"
+Cohesion: 0.14
+Nodes (6): IdempotencyStatus, IdempotencyKey, Attribute, DateTimeInterface, IdempotencyResult, IdempotencyKeyFactory
 
-### Community 361 - "PostgresTenancyRbacTest.php"
-Cohesion: 0.27
-Nodes (5): PDO, postgresTenancyMigrationPdo(), postgresTenancyRuntimePdo(), seedPostgresActionWorkspace(), seedPostgresMembership()
+### Community 320 - "global.d.ts"
+Cohesion: 0.40
+Nodes (4): InertiaConfig, @inertiajs/core, InputHTMLAttributes, react
+
+### Community 332 - "Illuminate\Support\Str"
+Cohesion: 0.04
+Nodes (38): OnboardTenant, CustomerCommunicationPreference, Service, SaleItemFactory, Illuminate\Routing\Route, Illuminate\Support\Facades\Hash, Illuminate\Support\Str, Pdo\Mysql (+30 more)
+
+### Community 335 - "API Reference: Implementing GitHub Advanced Security for Code Scanning"
+Cohesion: 0.25
+Nodes (7): API Reference: Implementing GitHub Advanced Security for Code Scanning, CodeQL Query Suites, CodeQL Workflow (GitHub Actions), GitHub Code Scanning API, References, Secret Scanning API, Supported Languages
+
+### Community 361 - "Standards and Frameworks Reference"
+Cohesion: 0.33
+Nodes (5): CIS Software Supply Chain Security Guide, ISO 27001 Control Mapping, NIST SP 800-218 (SSDF) Alignment, OWASP Top 10 (2021) Coverage by CodeQL, Standards and Frameworks Reference
+
+### Community 363 - "GHAS Implementation Workflows"
+Cohesion: 0.33
+Nodes (5): GHAS Implementation Workflows, Workflow 1: Organization-Wide Enablement, Workflow 2: Pull Request Security Gate, Workflow 3: Custom CodeQL Query Development, Workflow 4: SARIF Integration with External Tools
 
 ### Community 365 - "🏗️ Fases de Execução"
 Cohesion: 0.25
@@ -1346,41 +1432,121 @@ Nodes (7): Fase 1: Expansão do Backend para JSON Quick Create, Fase 2: Expansã
 Cohesion: 0.29
 Nodes (6): 1. Backend (`CustomerController`, `ServiceController`, `ProfessionalController`), 2. Frontend React (`resources/js/components/operational/quick-create-dialogs.tsx`), 📦 Entregas Realizadas, 🎯 Objetivo, Sprint — Seletores de Entidade e Cadastro Rápido Inline (`+ Novo`), 🧪 Suíte de Validação
 
-### Community 370 - "PayloadGovernance"
-Cohesion: 0.09
-Nodes (8): GrantEntitlement, UpdateEntitlement, Entitlement, DateTimeInterface, EntitlementService, PayloadGovernance, EntitlementFactory, EntitlementStatus
+### Community 370 - "3. Decisões de arquitetura"
+Cohesion: 0.33
+Nodes (6): 3.1 Contextos de assinatura, 3.2 Identidade, 3.3 Billing, 3.4 Domínios, 3.5 Deploy, 3. Decisões de arquitetura
 
-### Community 378 - "Estrutura do projeto"
+### Community 372 - "7. Testes obrigatórios"
+Cohesion: 0.33
+Nodes (6): 7. Testes obrigatórios, Autenticação, Billing, Domínios, Infraestrutura, Provisionamento
+
+### Community 375 - "console.php"
+Cohesion: 0.50
+Nodes (3): Illuminate\Foundation\Inspiring, Illuminate\Support\Facades\Artisan, Illuminate\Support\Facades\Schedule
+
+### Community 377 - "2. Estado atual identificado"
 Cohesion: 0.40
-Nodes (4): Backend, Estrutura do projeto, Frontend, Operação
+Nodes (5): 2. Estado atual identificado, Aplicação, Cuidados iniciais, Fundação de domínio já existente, Infraestrutura atual
 
-### Community 380 - "OperationalMutation"
-Cohesion: 0.07
-Nodes (21): CalendarController, CategoryController, ClosingSessionController, Controller, CustomerController, CustomerSubscriptionController, DashboardController, FinanceDashboardController (+13 more)
+### Community 378 - "EV-012 — Identificadores DOM em listagens autenticadas"
+Cohesion: 0.40
+Nodes (4): EV-012 — Identificadores DOM em listagens autenticadas, Evidência, Implicação, Limitações
 
-### Community 383 - "Product"
-Cohesion: 0.11
-Nodes (9): CreateProduct, DeactivateProduct, ReactivateProduct, UpdateProduct, ProductController, ProductRequest, Product, ProductPolicy (+1 more)
+### Community 380 - "Sprint 2 — Infraestrutura de produção no Coolify"
+Cohesion: 0.40
+Nodes (5): Critérios de aceite, Entregas, Objetivo, Sprint 2 — Infraestrutura de produção no Coolify, Variáveis essenciais a validar
+
+### Community 382 - "RetentionCampaignRecipient"
+Cohesion: 0.15
+Nodes (3): RetentionCampaignRecipient, RetentionDeliveryFactory, Illuminate\Database\Eloquent\Relations\HasOne
+
+### Community 383 - "Observações de rede sanitizadas"
+Cohesion: 0.40
+Nodes (4): Estado, Interações candidatas para captura futura, Observações de rede sanitizadas, Protocolo
+
+### Community 384 - "IdempotencyService"
+Cohesion: 0.19
+Nodes (3): IdempotencyService, static, UserFactory
+
+### Community 385 - "Sprint 5 — Lastlink, webhooks e billing SaaS"
+Cohesion: 0.40
+Nodes (5): Critérios de aceite, Entregas, Estados sugeridos, Objetivo, Sprint 5 — Lastlink, webhooks e billing SaaS
+
+### Community 386 - "Sprint 9 — CNAME, SSL e ativação de domínio Premium"
+Cohesion: 0.40
+Nodes (5): Critérios de aceite, Entregas, Fluxo de cliente, Objetivo, Sprint 9 — CNAME, SSL e ativação de domínio Premium
+
+### Community 394 - "4. Modelo de ambientes"
+Cohesion: 0.50
+Nodes (4): 4. Modelo de ambientes, DNS, Domínios Premium, Domínios técnicos
+
+### Community 395 - "Sprint 0 — Pré-voo, decisões e proteção do estado atual"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 0 — Pré-voo, decisões e proteção do estado atual
+
+### Community 396 - "Sprint 1 — Containerização e pipeline GitHub/GHCR"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 1 — Containerização e pipeline GitHub/GHCR
+
+### Community 399 - "Sprint 3 — Migração de tráfego cPanel → Coolify"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 3 — Migração de tráfego cPanel → Coolify
+
+### Community 400 - "Sprint 4 — Página de vendas e catálogo comercial"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 4 — Página de vendas e catálogo comercial
+
+### Community 401 - "Sprint 6 — Provisionamento pós-compra"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 6 — Provisionamento pós-compra
+
+### Community 402 - "Sprint 7 — Primeiro acesso, senha temporária e onboarding"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 7 — Primeiro acesso, senha temporária e onboarding
+
+### Community 403 - "Sprint 8 — Modelo de domínios e resolução por hostname"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 8 — Modelo de domínios e resolução por hostname
+
+### Community 404 - "Sprint 10 — Painel em domínio próprio"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 10 — Painel em domínio próprio
+
+### Community 405 - "Sprint 11 — Site público e agendamento por domínio"
+Cohesion: 0.50
+Nodes (4): Critérios de aceite, Entregas, Objetivo, Sprint 11 — Site público e agendamento por domínio
+
+### Community 447 - "Unit"
+Cohesion: 0.04
+Nodes (46): GetDashboardSnapshot, CarbonImmutable, RevokeEntitlement, ActivateMembership, ActivateVerifiedOwnerMemberships, AssignRole, InviteMembership, ResumeTenantOnboarding (+38 more)
+
+### Community 449 - "6. Modelo mínimo de dados adicional"
+Cohesion: 0.67
+Nodes (3): 6. Modelo mínimo de dados adicional, Acesso temporário, `tenant_domains`
+
+### Community 467 - "post-update-cmd"
+Cohesion: 0.67
+Nodes (3): post-update-cmd, @php artisan boost:update --ansi, @php artisan vendor:publish --tag=laravel-assets --ansi --force
 
 ## Knowledge Gaps
-- **1702 isolated node(s):** `php`, `$schema`, `style`, `rsc`, `tsx` (+1697 more)
-  These have ≤1 connection - possible missing edges or undocumented components.
-- **62 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1948 isolated node(s):** `php`, `$schema`, `style`, `rsc`, `tsx` (+1943 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2650 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **88 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `User` to `Illuminate\Database\Eloquent\Relations\HasMany`, `Illuminate\Database\Eloquent\Relations\BelongsToMany`, `TestCase`, `AvailabilityRule`, `Illuminate\Support\Str`, `SaleItem`, `OperationalAction`, `Customer`, `FinancialObligation`, `SubscriptionPlan`, `Membership`, `IdempotencyKey`, `OutboxEventStore`, `OwnerPermissionCatalog`, `PackageTemplate`, `CanonicalEmail`, `CashShift`, `Appointment`, `Unit`, `Illuminate\Database\Eloquent\Model`, `RegistrationTest`, `SaleCategory`, `RefreshDatabase.php`, `UserFactory`, `BootstrapTenant`, `Sale`, `CustomerSubscription`, `Professional`, `TwoFactorChallengeTest`, `ProfileUpdateTest`, `PackagePolicy`, `AuthenticationTest`, `EmailVerificationTest`, `Illuminate\Http\RedirectResponse`, `PasswordResetTest`, `PostgresTenancyRbacTest.php`, `CustomerPackage`, `PayloadGovernance`, `SecurityTest`, `InventoryMovement`, `AuthorizationService`, `PasswordValidationRules.php`, `Laravel\Fortify\Features`, `Product`?**
+- **Why does `User` connect `User` to `IdempotencyService`, `ProfessionalPolicy`, `Professional`, `Product`, `Sale`, `Illuminate\Database\Eloquent\Factories\Factory`, `Illuminate\Database\Eloquent\Model`, `ServicePolicy`, `SubscriptionPlan`, `LegalHold`, `InvalidArgumentException`, `Illuminate\Http\RedirectResponse`, `PasswordValidationRules`, `AppServiceProvider.php`, `Customer`, `Entitlement`, `PackageTemplate`, `Illuminate\Console\Command`, `RefreshDatabase`, `CustomerSubscription`, `OutboxEventStore`, `InventoryPolicy`, `CustomerPackagePolicy`, `SaleCategory`, `FinancialObligation`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `UploadedImageOptimizer`, `CommissionRule`, `TestCase`, `CanonicalEmail`, `Appointment`, `IdempotencyKey`, `Unit`, `OperationalAction`, `ClosingSessionPolicy`, `Illuminate\Http\JsonResponse`, `Illuminate\Support\Str`, `RegistrationTest`, `Laravel\Fortify\Features`, `TenantContext`, `AvailabilityRule`, `ProfileUpdateTest`, `EmailVerificationTest`, `PasswordResetTest`, `AuthenticationTest`, `PackagePolicy`, `TwoFactorChallengeTest`, `AppointmentPolicy`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Why does `TenantContext` connect `TenantContext` to `ProfessionalPolicy`, `Product`, `Sale`, `ServicePolicy`, `SubscriptionPlan`, `LegalHold`, `User`, `InvalidArgumentException`, `Illuminate\Http\RedirectResponse`, `AppServiceProvider.php`, `Customer`, `Entitlement`, `PackageTemplate`, `Illuminate\Console\Command`, `.storeCover`, `CustomerSubscription`, `Closure`, `OutboxEventStore`, `InventoryPolicy`, `CustomerPackagePolicy`, `SaleCategory`, `Illuminate\Support\Facades\Gate`, `.storeGallery`, `Illuminate\Foundation\Http\FormRequest`, `FinancialObligation`, `UploadedImageOptimizer`, `CommissionRule`, `HandleInertiaRequests`, `Appointment`, `.config`, `Unit`, `OperationalAction`, `ClosingSessionPolicy`, `Illuminate\Http\JsonResponse`, `GoogleCalendarOAuth`, `Illuminate\Support\Str`, `AvailabilityRule`, `AppointmentPolicy`?**
   _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `TenantContext` connect `User` to `Illuminate\Database\Eloquent\Relations\BelongsToMany`, `ClosingSessionRequest`, `AvailabilityRule`, `SaleItem`, `OperationalAction`, `Customer`, `SellCustomerPackageRequest.php`, `CommissionController.php`, `FinancialObligation`, `SubscriptionPlan`, `Membership`, `OutboxEventStore`, `PackageTemplate`, `CanonicalEmail`, `CashShift`, `Illuminate\Foundation\Http\FormRequest`, `Appointment`, `OnlineBookingSettingsController.php`, `Unit`, `SubscriptionPlanController.php`, `SaleCategory`, `PackageTemplateRequest`, `BootstrapTenant`, `Sale`, `CustomerSubscription`, `Professional`, `Illuminate\Http\RedirectResponse`, `CustomerPackage`, `PayloadGovernance`, `.app`, `InventoryMovement`, `AuthorizationService`, `OperationalMutation`, `Product`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Why does `Unit` connect `Unit` to `Illuminate\Database\Eloquent\Relations\HasMany`, `Illuminate\Database\Eloquent\Relations\BelongsToMany`, `User`, `Illuminate\Support\Str`, `SaleItem`, `OperationalAction`, `Customer`, `Illuminate\Database\Eloquent\Relations\BelongsTo`, `SubscriptionPlan`, `Membership`, `CanonicalEmail`, `Appointment`, `OnlineBookingSettingsController.php`, `Illuminate\Database\Eloquent\Model`, `FinancialObligationFactory`, `SaleCategory`, `Professional`, `MembershipUnitFactory`, `PostgresTenancyRbacTest.php`, `PayloadGovernance`, `AuthorizationService`, `OperationalMutation`, `Product`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `Tenant` connect `Unit` to `IdempotencyService`, `OperationalAction`, `Professional`, `Illuminate\Database\Eloquent\Factories\Factory`, `Illuminate\Database\Eloquent\Model`, `FinancialObligation`, `PostgresGovernanceResilienceTest.php`, `Illuminate\Support\Str`, `InvalidArgumentException`, `User`, `AppServiceProvider.php`, `TenantContext`, `Entitlement`, `Appointment`, `CustomerSubscription`, `IdempotencyKey`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **What connects `php`, `$schema`, `style` to the rest of the system?**
-  _1702 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1948 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `react` be split into smaller, more focused modules?**
-  _Cohesion score 0.07800608828006088 - nodes in this community are weakly interconnected._
-- **Should `Illuminate\Database\Eloquent\Relations\HasMany` be split into smaller, more focused modules?**
-  _Cohesion score 0.05405405405405406 - nodes in this community are weakly interconnected._
-- **Should `professionals/index.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.07928118393234672 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05297876726448155 - nodes in this community are weakly interconnected._
+- **Should `public-booking/show.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.0873015873015873 - nodes in this community are weakly interconnected._
+- **Should `campaigns.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.061224489795918366 - nodes in this community are weakly interconnected._
