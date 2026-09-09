@@ -22,7 +22,7 @@ final class CreatePublicAppointment
 {
     public function __construct(private readonly CalendarAvailability $availability) {}
 
-    /** @param array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string} $data */
+    /** @param array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, online_booking_campaign_link_id?: string|null} $data */
     public function handle(Tenant $tenant, Unit $unit, array $data): Appointment
     {
         $service = Service::query()
@@ -122,6 +122,7 @@ final class CreatePublicAppointment
                     'timezone' => $timezone,
                     'status' => 'scheduled',
                     'source' => 'online',
+                    'online_booking_campaign_link_id' => $data['online_booking_campaign_link_id'] ?? null,
                     'reminder_enabled' => true,
                     'fit_in' => false,
                     'lock_version' => 0,

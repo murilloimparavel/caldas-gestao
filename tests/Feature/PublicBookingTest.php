@@ -2,6 +2,7 @@
 
 use App\Models\Appointment;
 use App\Models\AvailabilityRule;
+use App\Models\OnlineBookingCampaignLink;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
@@ -122,6 +123,21 @@ it('creates and replays a public appointment idempotently with a phone-scoped cu
     expect(Appointment::query()->count())->toBe(1)
         ->and(Appointment::query()->firstOrFail()->source)->toBe('online')
         ->and(Appointment::query()->firstOrFail()->customer->phone)->toBe('5511999991234');
+});
+
+it('attributes a public appointment to the matching campaign link', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $site = OnlineBookingSite::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => $unit->slug]);
+    $campaign = OnlineBookingCampaignLink::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(), 'created_by' => User::factory()->create()->getKey(),
+        'utm_source' => 'instagram', 'utm_medium' => 'social', 'utm_campaign' => 'setembro',
+    ]);
+    $payload = ['service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Campaign Customer', 'phone' => '+55 (11) 96666-1234'];
+
+    $response = $this->withHeader('X-Idempotency-Key', 'campaign-booking-1')->postJson(route('public_booking.appointments.store', [$tenant, $unit]).'?utm_source=instagram&utm_medium=social&utm_campaign=setembro', $payload);
+
+    $response->assertCreated();
+    expect(Appointment::query()->firstOrFail()->online_booking_campaign_link_id)->toBe($campaign->getKey());
 });
 
 it('rejects public appointments outside the unit timezone booking window', function () {

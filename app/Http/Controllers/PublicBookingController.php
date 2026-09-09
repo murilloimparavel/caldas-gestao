@@ -6,6 +6,7 @@ use App\Actions\PublicBooking\CreatePublicAppointment;
 use App\Http\Requests\PublicBookingAppointmentRequest;
 use App\Http\Requests\PublicBookingAvailabilityRequest;
 use App\Models\Appointment;
+use App\Models\OnlineBookingCampaignLink;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
@@ -163,6 +164,17 @@ final class PublicBookingController extends Controller
         }
 
         $data = $request->validated();
+        $campaign = OnlineBookingCampaignLink::query()
+            ->where('tenant_id', $tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->where('is_active', true)
+            ->where('utm_source', $request->query('utm_source'))
+            ->where('utm_medium', $request->query('utm_medium'))
+            ->where('utm_campaign', $request->query('utm_campaign'))
+            ->when($request->query('utm_term') !== null, fn ($query) => $query->where('utm_term', $request->query('utm_term')))
+            ->when($request->query('utm_content') !== null, fn ($query) => $query->where('utm_content', $request->query('utm_content')))
+            ->first();
+        $data['online_booking_campaign_link_id'] = $campaign?->getKey();
         $result = $this->idempotency->execute(
             $tenant,
             null,
