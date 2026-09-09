@@ -41,7 +41,7 @@ final class PublicBookingController extends Controller
             $this->assertPublicBookingEnabled($tenant, $unit);
         }
         $setting = $unit->onlineBookingSetting;
-        $publication = is_array($preview) ? null : OnlineBookingSite::query()
+        $publication = is_array($preview) || ! config('online_booking.use_publication_resolver', true) ? null : OnlineBookingSite::query()
             ->where('tenant_id', $tenant->getKey())
             ->where('unit_id', $unit->getKey())
             ->whereNotNull('active_publication_id')

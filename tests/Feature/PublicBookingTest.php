@@ -99,6 +99,38 @@ it('serves the selected catalog from the active publication snapshot', function 
         ->and($response->json('unit.sections.services'))->toBeTrue();
 });
 
+it('can roll back public reads to the legacy settings resolver', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'status' => 'published',
+    ]);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'version' => 1,
+        'source_revision' => 1,
+        'content_hash' => hash('sha256', 'rollback-snapshot'),
+        'template_key' => 'essential',
+        'public_slug' => $unit->slug,
+        'published_at' => now(),
+        'published_by' => User::factory()->create()->getKey(),
+        'content' => ['service_ids' => [], 'professional_ids' => []],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+    config(['online_booking.use_publication_resolver' => false]);
+
+    $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
+
+    $response->assertSuccessful();
+    expect(collect($response->json('services'))->pluck('id')->all())->toContain($service->getKey())
+        ->and($response->headers->get('ETag'))->toBeNull()
+        ->and($professional->getKey())->not->toBeEmpty();
+});
+
 it('rejects disabled public booking and invalid relationship without enumeration', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
     $unit->update(['online_booking_enabled' => false]);
