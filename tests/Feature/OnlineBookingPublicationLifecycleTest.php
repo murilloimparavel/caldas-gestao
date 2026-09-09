@@ -134,6 +134,14 @@ it('renders a signed preview of an immutable publication', function () {
         ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
 });
 
+it('rejects an expired online booking preview URL', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)
+        ->get(URL::temporarySignedRoute('online_booking.preview', now()->subMinute(), [$tenant, $unit]))
+        ->assertForbidden();
+});
+
 it('rejects draft selections and sections outside the active unit contract', function () {
     [$owner, $tenant, $unit] = onlineBookingWorkspace();
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
