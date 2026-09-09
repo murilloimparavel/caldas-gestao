@@ -81,6 +81,7 @@ final class OnlineBookingSettingsController extends Controller
             'cover' => $setting?->cover_image_url,
             'tenant' => ['slug' => $context->tenant->slug],
             'publicUrl' => $readiness['publishable'] ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug) : null,
+            'previewUrl' => $site?->draft ? URL::signedRoute('online_booking.preview', [$context->tenant, $context->unit]) : null,
             'canonicalUrl' => $readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $publicSlug]) : null,
             'publicDomains' => $publicDomains,
             'services' => $services,
