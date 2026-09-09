@@ -1,4 +1,4 @@
-import { Form, Head, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -765,6 +765,14 @@ export default function OnlineBookingIndex({
                                 {publicationError}
                             </p>
                         ) : null}
+                        <Button asChild type="button" variant="ghost">
+                            <Link
+                                href={onlineBooking.campaign_links.index.url()}
+                            >
+                                <Share2 aria-hidden="true" />
+                                Links de divulgação
+                            </Link>
+                        </Button>
                         <Button
                             type="button"
                             variant="outline"

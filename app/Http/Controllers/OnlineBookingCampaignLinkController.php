@@ -9,15 +9,19 @@ use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
+use Inertia\Inertia;
+use Inertia\Response;
 
 final class OnlineBookingCampaignLinkController extends Controller
 {
-    public function index(TenantContext $context): JsonResponse
+    public function index(TenantContext $context): Response|JsonResponse
     {
         Gate::authorize('view', $context->unit);
         $links = OnlineBookingCampaignLink::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->with('site')->latest()->get();
 
-        return response()->json(['campaign_links' => $links->map(fn (OnlineBookingCampaignLink $link): array => [...$link->toArray(), 'url' => $this->url($link)])->values()]);
+        $payload = ['campaignLinks' => $links->map(fn (OnlineBookingCampaignLink $link): array => [...$link->toArray(), 'url' => $this->url($link)])->values()->all()];
+
+        return request()->expectsJson() ? response()->json(['campaign_links' => $payload['campaignLinks']]) : Inertia::render('online-booking/campaign-links', $payload);
     }
 
     public function store(OnlineBookingCampaignLinkRequest $request, TenantContext $context, CreateOnlineBookingCampaignLink $create): JsonResponse
