@@ -42,7 +42,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
-import galleryRoutes from '@/routes/online_booking/gallery';
 import tenantDomains from '@/routes/tenant-domains';
 import type { SharedPageProps } from '@/types';
 import { SectionVisibilityEditor } from './components/section-visibility-editor';
@@ -54,6 +53,7 @@ import {
     SelectionCard,
 } from './components/booking-form-primitives';
 import { PublicPreview } from './components/public-preview';
+import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
 type Props = OnlineBookingProps;
@@ -89,12 +89,19 @@ export default function OnlineBookingIndex({
     const { flash } = usePage<SharedPageProps>().props;
     const settings = rootSettings ?? unit.settings ?? {};
     const [activeTab, setActiveTab] = useState<TabKey>('details');
-    const [copied, setCopied] = useState(false);
-    const [publicationError, setPublicationError] = useState<string | null>(
-        null,
-    );
-    const [publicationProcessing, setPublicationProcessing] = useState(false);
-    const [galleryItems, setGalleryItems] = useState(gallery);
+    const {
+        copied,
+        publicationError,
+        publicationProcessing,
+        galleryItems,
+        copyPublicUrl,
+        publishDraft,
+        unpublishSite,
+        uploadGalleryImage,
+        updateGalleryAlt,
+        deleteGalleryImage,
+        moveGalleryImage,
+    } = useOnlineBookingActions({ draft, publicUrl, gallery });
     const coverUrl =
         cover ??
         settings.cover_url ??
@@ -123,111 +130,6 @@ export default function OnlineBookingIndex({
             : hasPendingChanges
               ? 'Alterações para publicar'
               : 'Publicada';
-    const copyPublicUrl = async () => {
-        if (!publicUrl || !navigator.clipboard) {
-            return;
-        }
-
-        await navigator.clipboard.writeText(publicUrl);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2200);
-    };
-    const publishDraft = (): void => {
-        if (!draft) {
-            return;
-        }
-
-        setPublicationError(null);
-        setPublicationProcessing(true);
-        router.post(
-            onlineBooking.publish.url(),
-            { revision: draft.revision },
-            {
-                preserveScroll: true,
-                onError: (errors) =>
-                    setPublicationError(
-                        errors.publication ??
-                            'Não foi possível publicar. Revise os requisitos e tente novamente.',
-                    ),
-                onFinish: () => setPublicationProcessing(false),
-            },
-        );
-    };
-    const unpublishSite = (): void => {
-        if (!window.confirm('Retirar esta página do ar agora?')) {
-            return;
-        }
-
-        setPublicationError(null);
-        setPublicationProcessing(true);
-        router.post(
-            onlineBooking.unpublish.url(),
-            {},
-            {
-                preserveScroll: true,
-                onError: () =>
-                    setPublicationError(
-                        'Não foi possível retirar a página do ar. Tente novamente.',
-                    ),
-                onFinish: () => setPublicationProcessing(false),
-            },
-        );
-    };
-    const uploadGalleryImage = (file: File): void => {
-        const data = new FormData();
-        data.append('image', file);
-        router.post(galleryRoutes.store.url(), data, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['gallery'] }),
-        });
-    };
-    const updateGalleryAlt = (id: string, alt_text: string): void => {
-        router.patch(
-            galleryRoutes.update.url(id),
-            { alt_text },
-            {
-                preserveScroll: true,
-                onSuccess: () =>
-                    setGalleryItems((items) =>
-                        items.map((item) =>
-                            item.id === id
-                                ? { ...item, alt: alt_text, alt_text }
-                                : item,
-                        ),
-                    ),
-            },
-        );
-    };
-    const deleteGalleryImage = (id: string): void => {
-        router.delete(galleryRoutes.destroy.url(id), {
-            preserveScroll: true,
-            onSuccess: () =>
-                setGalleryItems((items) =>
-                    items.filter((item) => item.id !== id),
-                ),
-        });
-    };
-    const moveGalleryImage = (id: string, direction: -1 | 1): void => {
-        const index = galleryItems.findIndex((item) => item.id === id);
-        const nextIndex = index + direction;
-
-        if (index < 0 || nextIndex < 0 || nextIndex >= galleryItems.length) {
-            return;
-        }
-
-        const reordered = [...galleryItems];
-        [reordered[index], reordered[nextIndex]] = [
-            reordered[nextIndex],
-            reordered[index],
-        ];
-        setGalleryItems(reordered);
-        router.post(
-            galleryRoutes.reorder.url(),
-            { image_ids: reordered.map((item) => item.id) },
-            { preserveScroll: true, onError: () => setGalleryItems(gallery) },
-        );
-    };
 
     return (
         <>
