@@ -861,32 +861,59 @@ export default function OnlineBookingIndex({
                                                 placeholder="minha-unidade"
                                             />
                                             <div className="space-y-2">
-                                                <Label htmlFor="public_domain_id">Domínio do link</Label>
+                                                <Label htmlFor="public_domain_id">
+                                                    Domínio do link
+                                                </Label>
                                                 <select
                                                     id="public_domain_id"
                                                     name="public_domain_id"
-                                                    defaultValue={settings.public_domain_id ?? ''}
-                                                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                                    disabled={publicDomains.length === 0}
+                                                    defaultValue={
+                                                        settings.public_domain_id ??
+                                                        ''
+                                                    }
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                                    disabled={
+                                                        publicDomains.length ===
+                                                        0
+                                                    }
                                                 >
-                                                    <option value="">Domínio padrão do sistema</option>
-                                                    {publicDomains.map((domain) => (
-                                                        <option key={domain.id} value={domain.id}>
-                                                            {domain.hostname}
-                                                        </option>
-                                                    ))}
+                                                    <option value="">
+                                                        Domínio padrão do
+                                                        sistema
+                                                    </option>
+                                                    {publicDomains.map(
+                                                        (domain) => (
+                                                            <option
+                                                                key={domain.id}
+                                                                value={
+                                                                    domain.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    domain.hostname
+                                                                }
+                                                            </option>
+                                                        ),
+                                                    )}
                                                 </select>
                                                 {publicDomains.length > 0 ? (
-                                                    <p className="text-muted-foreground text-xs">
-                                                        O link será aberto neste domínio público ativo.
+                                                    <p className="text-xs text-muted-foreground">
+                                                        O link será aberto neste
+                                                        domínio público ativo.
                                                     </p>
                                                 ) : (
-                                                    <p className="text-muted-foreground text-xs">
-                                                        Cadastre e ative um domínio público em{' '}
-                                                        <a className="text-primary underline underline-offset-4" href={tenantDomains.index.url()}>
-                                                            Configurações → Domínios
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Cadastre e ative um
+                                                        domínio público em{' '}
+                                                        <a
+                                                            className="text-primary underline underline-offset-4"
+                                                            href={tenantDomains.index.url()}
+                                                        >
+                                                            Configurações →
+                                                            Domínios
                                                         </a>{' '}
-                                                        para personalizar este link.
+                                                        para personalizar este
+                                                        link.
                                                     </p>
                                                 )}
                                             </div>
