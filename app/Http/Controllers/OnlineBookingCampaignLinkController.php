@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\OnlineBooking\CreateOnlineBookingCampaignLink;
+use App\Enums\TenantDomainKind;
+use App\Enums\TenantDomainStatus;
 use App\Http\Requests\Settings\OnlineBookingCampaignLinkRequest;
 use App\Models\OnlineBookingCampaignLink;
 use App\Support\TenantContext;
@@ -17,7 +19,7 @@ final class OnlineBookingCampaignLinkController extends Controller
     public function index(TenantContext $context): Response|JsonResponse
     {
         Gate::authorize('view', $context->unit);
-        $links = OnlineBookingCampaignLink::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->with('site')->withCount(['visits', 'appointments'])->latest()->get();
+        $links = OnlineBookingCampaignLink::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->with('site.publicDomain')->withCount(['visits', 'appointments'])->latest()->get();
 
         $payload = ['campaignLinks' => $links->map(fn (OnlineBookingCampaignLink $link): array => [...$link->toArray(), 'url' => $this->url($link)])->values()->all()];
 
@@ -28,7 +30,7 @@ final class OnlineBookingCampaignLinkController extends Controller
     {
         $link = $create->handle($request->user(), $context, $request->validated());
 
-        return response()->json(['campaign_link' => [...$link->load('site')->toArray(), 'url' => $this->url($link)]], 201);
+        return response()->json(['campaign_link' => [...$link->load('site.publicDomain')->toArray(), 'url' => $this->url($link)]], 201);
     }
 
     public function toggle(TenantContext $context, OnlineBookingCampaignLink $campaignLink): JsonResponse
@@ -51,7 +53,12 @@ final class OnlineBookingCampaignLinkController extends Controller
 
     private function url(OnlineBookingCampaignLink $link): string
     {
-        return URL::route('public_booking.slug', ['public_slug' => $link->site->public_slug]).'?'.http_build_query(array_filter([
+        $domain = $link->site->publicDomain;
+        $base = $domain !== null && $domain->kind === TenantDomainKind::Public && $domain->status === TenantDomainStatus::Active
+            ? 'https://'.$domain->hostname.'/book/'.rawurlencode($link->site->public_slug)
+            : URL::route('public_booking.slug', ['public_slug' => $link->site->public_slug]);
+
+        return $base.'?'.http_build_query(array_filter([
             'utm_source' => $link->utm_source,
             'utm_medium' => $link->utm_medium,
             'utm_campaign' => $link->utm_campaign,
