@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\TenantDomainKind;
+use App\Enums\TenantDomainStatus;
 use App\Models\Service;
 use App\Models\Tenant;
+use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Models\User;
 
@@ -79,6 +82,29 @@ it('rejects stale versions and cross-scope selections', function () {
 
     $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertRedirect();
     $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertStatus(409);
+});
+
+it('uses an active public tenant domain for the booking link', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $domain = TenantDomain::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'hostname' => 'romawear.com.br',
+        'kind' => TenantDomainKind::Public,
+        'status' => TenantDomainStatus::Active,
+    ]);
+    $payload = [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_domain_id' => $domain->getKey(),
+        'lock_version' => $unit->lock_version,
+    ];
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertRedirect();
+
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertJsonPath('settings.public_domain_id', $domain->getKey())
+        ->assertJsonPath('publicUrl', 'https://romawear.com.br/book/'.$unit->slug);
 });
 
 it('redirects stale Inertia saves with a recoverable message', function () {

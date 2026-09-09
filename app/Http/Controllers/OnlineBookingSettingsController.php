@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\OnlineBooking\UpdateOnlineBookingSettings;
+use App\Enums\TenantDomainKind;
+use App\Enums\TenantDomainStatus;
 use App\Http\Requests\Settings\OnlineBookingCoverStoreRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryReorderRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryStoreRequest;
@@ -12,6 +14,7 @@ use App\Models\OnlineBookingGalleryImage;
 use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
+use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Support\Images\UploadedImageOptimizer;
 use App\Support\OperationalMutation;
@@ -46,6 +49,12 @@ final class OnlineBookingSettingsController extends Controller
             ->get(['id', 'name', 'phone', 'status', 'online_booking_enabled', 'lock_version']);
         $readiness = $this->readiness($context->unit, $services, $professionals);
         $setting = $context->unit->onlineBookingSetting;
+        $publicDomains = $context->tenant->domains()
+            ->where('kind', TenantDomainKind::Public->value)
+            ->where('status', TenantDomainStatus::Active->value)
+            ->orderBy('hostname')
+            ->get(['id', 'hostname', 'kind', 'status']);
+        $publicSlug = $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug;
 
         $props = [
             'unit' => $context->unit->only(['id', 'name', 'slug', 'online_booking_enabled', 'lock_version']),
@@ -53,8 +62,9 @@ final class OnlineBookingSettingsController extends Controller
             'gallery' => $context->unit->onlineBookingGalleryImages,
             'cover' => $setting?->cover_image_url,
             'tenant' => ['slug' => $context->tenant->slug],
-            'publicUrl' => $readiness['publishable'] ? route('public_booking.show', [$context->tenant, $context->unit]) : null,
-            'canonicalUrl' => $readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug]) : null,
+            'publicUrl' => $readiness['publishable'] ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug) : null,
+            'canonicalUrl' => $readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $publicSlug]) : null,
+            'publicDomains' => $publicDomains,
             'services' => $services,
             'professionals' => $professionals,
             'readiness' => $readiness,
@@ -63,6 +73,16 @@ final class OnlineBookingSettingsController extends Controller
         return request()->expectsJson()
             ? response()->json($props)
             : Inertia::render('online-booking/index', $props);
+    }
+
+    private function publicBookingUrl(string $tenantId, Unit $unit, ?OnlineBookingSetting $setting, string $publicSlug): string
+    {
+        $domain = $setting?->publicDomain;
+        if ($domain instanceof TenantDomain && $domain->tenant_id === $tenantId && $domain->kind === TenantDomainKind::Public && $domain->status === TenantDomainStatus::Active) {
+            return 'https://'.$domain->hostname.'/book/'.rawurlencode($publicSlug);
+        }
+
+        return route('public_booking.show', [$unit->tenant, $unit]);
     }
 
     public function storeCover(OnlineBookingCoverStoreRequest $request, TenantContext $context): JsonResponse

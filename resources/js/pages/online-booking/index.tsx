@@ -44,6 +44,7 @@ import { Textarea } from '@/components/ui/textarea';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
 import galleryRoutes from '@/routes/online_booking/gallery';
+import tenantDomains from '@/routes/tenant-domains';
 import type { SharedPageProps } from '@/types';
 
 type BookingItem = {
@@ -66,6 +67,7 @@ type Readiness = {
     publishable: boolean;
 };
 type PublicSettings = {
+    public_domain_id?: string | null;
     description?: string | null;
     logo_url?: string | null;
     cover_url?: string | null;
@@ -97,6 +99,7 @@ type Props = {
         settings?: PublicSettings | null;
     };
     publicUrl: string | null;
+    publicDomains: { id: string; hostname: string }[];
     services: BookingItem[];
     professionals: BookingItem[];
     readiness: Readiness;
@@ -512,6 +515,7 @@ function PublicPreview({
 export default function OnlineBookingIndex({
     unit,
     publicUrl,
+    publicDomains,
     services,
     professionals,
     readiness,
@@ -856,6 +860,36 @@ export default function OnlineBookingIndex({
                                                 }
                                                 placeholder="minha-unidade"
                                             />
+                                            <div className="space-y-2">
+                                                <Label htmlFor="public_domain_id">Domínio do link</Label>
+                                                <select
+                                                    id="public_domain_id"
+                                                    name="public_domain_id"
+                                                    defaultValue={settings.public_domain_id ?? ''}
+                                                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                                    disabled={publicDomains.length === 0}
+                                                >
+                                                    <option value="">Domínio padrão do sistema</option>
+                                                    {publicDomains.map((domain) => (
+                                                        <option key={domain.id} value={domain.id}>
+                                                            {domain.hostname}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {publicDomains.length > 0 ? (
+                                                    <p className="text-muted-foreground text-xs">
+                                                        O link será aberto neste domínio público ativo.
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-muted-foreground text-xs">
+                                                        Cadastre e ative um domínio público em{' '}
+                                                        <a className="text-primary underline underline-offset-4" href={tenantDomains.index.url()}>
+                                                            Configurações → Domínios
+                                                        </a>{' '}
+                                                        para personalizar este link.
+                                                    </p>
+                                                )}
+                                            </div>
                                             <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 font-mono text-sm break-all text-muted-foreground">
                                                 {publicUrl ??
                                                     'Disponível quando a unidade estiver pronta para publicar.'}

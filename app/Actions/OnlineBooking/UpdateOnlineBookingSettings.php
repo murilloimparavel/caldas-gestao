@@ -86,6 +86,7 @@ final class UpdateOnlineBookingSettings extends OperationalAction
             $setting = OnlineBookingSetting::query()->firstOrNew(['unit_id' => $lockedUnit->getKey()]);
             $setting->forceFill([
                 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $lockedUnit->getKey(),
+                'public_domain_id' => $data['public_domain_id'] ?? null,
                 'public_slug' => $data['public_slug'], 'description' => $data['description'] ?? null,
                 'whatsapp_phone' => $data['whatsapp_phone'] ?? null, 'phone' => $data['phone'] ?? null,
                 'instagram_url' => $data['instagram_url'] ?? null, 'facebook_url' => $data['facebook_url'] ?? null,

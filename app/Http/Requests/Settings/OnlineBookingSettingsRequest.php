@@ -5,6 +5,7 @@ namespace App\Http\Requests\Settings;
 use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
+use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Support\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -55,6 +56,7 @@ final class OnlineBookingSettingsRequest extends FormRequest
             ],
             'lock_version' => ['required', 'integer', 'min:0'],
             'public_slug' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique(OnlineBookingSetting::class, 'public_slug')->ignore($context?->unit?->onlineBookingSetting?->getKey())],
+            'public_domain_id' => ['nullable', 'uuid', Rule::exists(TenantDomain::class, 'id')->where('tenant_id', $tenantId)->where('kind', 'public')->where('status', 'active')],
             'description' => ['nullable', 'string', 'max:5000'],
             'whatsapp_phone' => ['nullable', 'string', 'max:40'],
             'phone' => ['nullable', 'string', 'max:40'],

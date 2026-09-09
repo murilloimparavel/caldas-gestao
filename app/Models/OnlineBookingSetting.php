@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tenant_id', 'unit_id', 'public_slug', 'description', 'cover_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
+#[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'public_slug', 'description', 'cover_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
 class OnlineBookingSetting extends Model
 {
     /** @use HasFactory<Factory> */
@@ -46,5 +46,11 @@ class OnlineBookingSetting extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** @return BelongsTo<TenantDomain, $this> */
+    public function publicDomain(): BelongsTo
+    {
+        return $this->belongsTo(TenantDomain::class, 'public_domain_id');
     }
 }
