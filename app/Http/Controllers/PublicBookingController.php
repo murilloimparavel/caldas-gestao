@@ -48,6 +48,11 @@ final class PublicBookingController extends Controller
             ->with('activePublication')
             ->first()?->activePublication;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
+        $sections = collect(is_array($content['sections'] ?? null) ? $content['sections'] : [])
+            ->filter(fn (mixed $section): bool => is_array($section) && isset($section['key']))
+            ->mapWithKeys(fn (array $section): array => [(string) $section['key'] => (bool) ($section['enabled'] ?? true)])
+            ->all();
+        $sections += array_fill_keys(['hero', 'services', 'professionals', 'gallery', 'hours', 'contact'], true);
         if (! is_array($preview)) {
             $campaign = $this->campaignFromRequest($tenant, $unit);
             OnlineBookingVisit::query()->create([
@@ -96,6 +101,7 @@ final class PublicBookingController extends Controller
                 'minimum_notice_minutes' => $policy['minimum_notice_minutes'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->minimum_notice_minutes ?? 0) : 0),
                 'contacts' => ['whatsapp' => $identity['whatsapp_phone'] ?? $setting?->whatsapp_phone, 'phone' => $identity['phone'] ?? $setting?->phone, 'instagram_url' => $identity['instagram_url'] ?? $setting?->instagram_url, 'facebook_url' => $identity['facebook_url'] ?? $setting?->facebook_url, 'website_url' => $identity['website_url'] ?? $setting?->website_url],
                 'gallery' => $gallery,
+                'sections' => $sections,
             ],
             ...$catalog,
         ];

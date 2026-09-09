@@ -80,6 +80,10 @@ it('serves the selected catalog from the active publication snapshot', function 
             'service_ids' => [$service->getKey()],
             'professional_ids' => [$professional->getKey()],
             'gallery' => [],
+            'sections' => [
+                ['key' => 'gallery', 'enabled' => false],
+                ['key' => 'hours', 'enabled' => true],
+            ],
         ],
     ]);
     $site->update(['active_publication_id' => $publication->getKey()]);
@@ -91,6 +95,8 @@ it('serves the selected catalog from the active publication snapshot', function 
         ->getJson(route('public_booking.show', [$tenant, $unit]))
         ->assertNotModified();
     expect(collect($response->json('services'))->pluck('id')->all())->toBe([$service->getKey()]);
+    expect($response->json('unit.sections.gallery'))->toBeFalse()
+        ->and($response->json('unit.sections.services'))->toBeTrue();
 });
 
 it('rejects disabled public booking and invalid relationship without enumeration', function () {

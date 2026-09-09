@@ -62,6 +62,7 @@ type Unit = {
     booking_flow?: 'service_first' | 'professional_first';
     seo?: { title?: string | null; description?: string | null };
     canonical_url?: string | null;
+    sections?: Partial<Record<'hero' | 'services' | 'professionals' | 'gallery' | 'hours' | 'contact', boolean>>;
 };
 type Professional = { id: string; name: string; avatar_url?: string | null };
 type Service = {
@@ -220,6 +221,8 @@ export default function PublicBooking({
     const getInitials = useInitials();
     const args = routeArgs(unit);
     const bookingFlow = unit.booking_flow ?? 'service_first';
+    const sectionEnabled = (key: keyof NonNullable<Unit['sections']>): boolean =>
+        unit.sections?.[key] !== false;
     const selectedService = useMemo(
         () => services.find((item) => item.id === serviceId) ?? null,
         [serviceId, services],
@@ -441,8 +444,8 @@ export default function PublicBooking({
                     {(
                         [
                             ['details', 'Detalhes'],
-                            ['services', 'Serviços'],
-                            ['professionals', 'Profissionais'],
+                            ...(sectionEnabled('services') ? [['services', 'Serviços'] as [Tab, string]] : []),
+                            ...(sectionEnabled('professionals') ? [['professionals', 'Profissionais'] as [Tab, string]] : []),
                             ['reviews', 'Avaliações'],
                         ] as [Tab, string][]
                     ).map(([key, label]) => (
@@ -485,7 +488,7 @@ export default function PublicBooking({
                                     </div>
                                 )}
                             </div>
-                            {unit.gallery?.length ? (
+                            {sectionEnabled('gallery') && unit.gallery?.length ? (
                                 <InfoCard title="Galeria">
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                         {unit.gallery.map((image, index) => (
@@ -523,7 +526,7 @@ export default function PublicBooking({
                                         'Conheça nosso espaço e escolha o melhor momento para seu atendimento.'}
                                 </p>
                             </InfoCard>
-                            <InfoCard title="Contato">
+                            {sectionEnabled('contact') && <InfoCard title="Contato">
                                 <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                                     {unit.contacts?.phone && (
                                         <p>Telefone: {unit.contacts.phone}</p>
@@ -562,10 +565,10 @@ export default function PublicBooking({
                                             <p>Contato ainda não informado.</p>
                                         )}
                                 </div>
-                            </InfoCard>
+                            </InfoCard>}
                         </div>
                         <div className="space-y-5">
-                            <InfoCard title="Horário de atendimento">
+                            {sectionEnabled('hours') && <InfoCard title="Horário de atendimento">
                                 <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
                                     <span
                                         className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
@@ -610,7 +613,7 @@ export default function PublicBooking({
                                         </p>
                                     )}
                                 </div>
-                            </InfoCard>
+                            </InfoCard>}
                             {address && (
                                 <InfoCard title="Onde estamos">
                                     <p className="flex gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -632,7 +635,7 @@ export default function PublicBooking({
                         </div>
                     </InfoCard>
                 )}
-                {tab === 'professionals' && (
+                {tab === 'professionals' && sectionEnabled('professionals') && (
                     <InfoCard title="Nossa equipe">
                         <div className="grid gap-3 sm:grid-cols-2">
                             {(professionals.length
@@ -671,7 +674,7 @@ export default function PublicBooking({
                         </div>
                     </InfoCard>
                 )}
-                {tab === 'services' && (
+                {tab === 'services' && sectionEnabled('services') && (
                     <form
                         id="booking-flow"
                         onSubmit={submit}
