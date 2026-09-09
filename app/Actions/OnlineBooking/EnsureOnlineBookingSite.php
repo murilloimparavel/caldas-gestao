@@ -30,36 +30,7 @@ final class EnsureOnlineBookingSite
             ])->save();
 
             if (! $site->draft()->exists()) {
-                $content = [
-                    'schema_version' => 1,
-                    'theme' => ['brand_color' => $setting?->brand_color ?? '#2563eb'],
-                    'seo' => ['title' => $unit->name, 'description' => $setting?->description],
-                    'identity' => [
-                        'description' => $setting?->description,
-                        'cover_image_path' => $setting?->cover_image_path,
-                        'whatsapp_phone' => $setting?->whatsapp_phone,
-                        'phone' => $setting?->phone,
-                        'instagram_url' => $setting?->instagram_url,
-                        'facebook_url' => $setting?->facebook_url,
-                        'website_url' => $setting?->website_url,
-                    ],
-                    'sections' => [
-                        ['key' => 'hero', 'enabled' => true],
-                        ['key' => 'services', 'enabled' => true],
-                        ['key' => 'professionals', 'enabled' => true],
-                        ['key' => 'gallery', 'enabled' => true],
-                        ['key' => 'hours', 'enabled' => true],
-                        ['key' => 'contact', 'enabled' => true],
-                    ],
-                    'service_ids' => Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('online_booking_enabled', true)->pluck('id')->values()->all(),
-                    'professional_ids' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('online_booking_enabled', true)->pluck('id')->values()->all(),
-                    'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['path' => $image->path, 'thumbnail_path' => $image->thumbnail_path, 'alt_text' => $image->alt_text])->values()->all(),
-                    'public_hours' => $setting?->public_hours ?? [],
-                    'booking_policy' => [
-                        'booking_flow' => $setting?->booking_flow ?? 'service_first',
-                        'minimum_notice_minutes' => $setting?->minimum_notice_minutes ?? 0,
-                    ],
-                ];
+                $content = $this->content($context);
                 $draft = new OnlineBookingDraft;
                 $draft->forceFill([
                     'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(),
@@ -71,5 +42,33 @@ final class EnsureOnlineBookingSite
 
             return $site->fresh(['draft', 'activePublication']);
         });
+    }
+
+    /** @return array<string, mixed> */
+    public function content(TenantContext $context): array
+    {
+        $unit = $context->unit;
+        abort_unless($unit instanceof Unit, 403);
+        $setting = $unit->onlineBookingSetting;
+
+        return [
+            'schema_version' => 1,
+            'theme' => ['brand_color' => $setting?->brand_color ?? '#2563eb'],
+            'seo' => ['title' => $unit->name, 'description' => $setting?->description],
+            'identity' => [
+                'description' => $setting?->description, 'cover_image_path' => $setting?->cover_image_path,
+                'whatsapp_phone' => $setting?->whatsapp_phone, 'phone' => $setting?->phone,
+                'instagram_url' => $setting?->instagram_url, 'facebook_url' => $setting?->facebook_url, 'website_url' => $setting?->website_url,
+            ],
+            'sections' => [
+                ['key' => 'hero', 'enabled' => true], ['key' => 'services', 'enabled' => true], ['key' => 'professionals', 'enabled' => true],
+                ['key' => 'gallery', 'enabled' => true], ['key' => 'hours', 'enabled' => true], ['key' => 'contact', 'enabled' => true],
+            ],
+            'service_ids' => Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('online_booking_enabled', true)->pluck('id')->values()->all(),
+            'professional_ids' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('online_booking_enabled', true)->pluck('id')->values()->all(),
+            'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['path' => $image->path, 'thumbnail_path' => $image->thumbnail_path, 'alt_text' => $image->alt_text])->values()->all(),
+            'public_hours' => $setting?->public_hours ?? [],
+            'booking_policy' => ['booking_flow' => $setting?->booking_flow ?? 'service_first', 'minimum_notice_minutes' => $setting?->minimum_notice_minutes ?? 0],
+        ];
     }
 }

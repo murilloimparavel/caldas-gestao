@@ -161,12 +161,14 @@ final class OnlineBookingSettingsController extends Controller
         return response()->json(['cover' => null]);
     }
 
-    public function update(OnlineBookingSettingsRequest $request, TenantContext $context, UpdateOnlineBookingSettings $update, OperationalMutation $mutation): RedirectResponse
+    public function update(OnlineBookingSettingsRequest $request, TenantContext $context, UpdateOnlineBookingSettings $update, EnsureOnlineBookingSite $ensureSite, SaveOnlineBookingDraft $saveDraft, OperationalMutation $mutation): RedirectResponse
     {
         $data = $request->validated();
         try {
-            $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $request, $context, $data): array {
+            $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $ensureSite, $saveDraft, $request, $context, $data): array {
                 $unit = $update->handle($request->user(), $context, $data);
+                $site = $ensureSite->handle($context);
+                $saveDraft->handle($request->user(), $context, $ensureSite->content($context), (int) $site->draft_revision);
 
                 return ['resource_id' => $unit->getKey(), 'resource_type' => 'unit'];
             });
