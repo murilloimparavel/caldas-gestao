@@ -17,7 +17,7 @@ final class OnlineBookingCampaignLinkController extends Controller
     public function index(TenantContext $context): Response|JsonResponse
     {
         Gate::authorize('view', $context->unit);
-        $links = OnlineBookingCampaignLink::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->with('site')->latest()->get();
+        $links = OnlineBookingCampaignLink::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $context->unit?->getKey())->with('site')->withCount(['visits', 'appointments'])->latest()->get();
 
         $payload = ['campaignLinks' => $links->map(fn (OnlineBookingCampaignLink $link): array => [...$link->toArray(), 'url' => $this->url($link)])->values()->all()];
 

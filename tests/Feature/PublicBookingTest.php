@@ -6,6 +6,7 @@ use App\Models\OnlineBookingCampaignLink;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
+use App\Models\OnlineBookingVisit;
 use App\Models\Professional;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
@@ -42,6 +43,8 @@ it('publishes only opted-in catalog data and isolates tenant units', function ()
     $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
 
     $response->assertSuccessful()->assertJsonPath('unit.slug', $unit->slug)->assertJsonMissing(['id' => $hiddenService->getKey()]);
+    expect(OnlineBookingVisit::query()->count())->toBe(1)
+        ->and(OnlineBookingVisit::query()->firstOrFail()->visitor_hash)->toHaveLength(64);
     expect($response->json('services.0.professionals.0.id'))->toBe($professional->getKey())
         ->and($response->json('unit'))->not->toHaveKey('email');
 });

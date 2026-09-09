@@ -10,6 +10,7 @@ use App\Models\OnlineBookingCampaignLink;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
+use App\Models\OnlineBookingVisit;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -47,6 +48,26 @@ final class PublicBookingController extends Controller
             ->with('activePublication')
             ->first()?->activePublication;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
+        if (! is_array($preview)) {
+            $campaign = $this->campaignFromRequest($tenant, $unit);
+            OnlineBookingVisit::query()->create([
+                'id' => (string) Str::uuid7(),
+                'tenant_id' => $tenant->getKey(),
+                'unit_id' => $unit->getKey(),
+                'publication_id' => $publication?->getKey(),
+                'campaign_link_id' => $campaign?->getKey(),
+                'visitor_hash' => hash('sha256', request()->session()->getId().'|'.request()->userAgent()),
+                'landing_path' => request()->path(),
+                'referer_host' => parse_url((string) request()->header('referer'), PHP_URL_HOST),
+                'utm_source' => $this->utm('utm_source'),
+                'utm_medium' => $this->utm('utm_medium'),
+                'utm_campaign' => $this->utm('utm_campaign'),
+                'utm_term' => $this->utm('utm_term'),
+                'utm_content' => $this->utm('utm_content'),
+                'consent' => false,
+                'occurred_at' => now(),
+            ]);
+        }
         $catalog = $this->catalog($tenant, $unit, $publication, $content, is_array($preview));
         $identity = is_array($content['identity'] ?? null) ? $content['identity'] : [];
         $theme = is_array($content['theme'] ?? null) ? $content['theme'] : [];
@@ -206,6 +227,38 @@ final class PublicBookingController extends Controller
     private function normalizePhone(?string $phone): string
     {
         return (string) preg_replace('/\D+/', '', (string) $phone);
+    }
+
+    private function utm(string $key): ?string
+    {
+        $value = request()->query($key);
+
+        return is_string($value) && preg_match('/^[a-zA-Z0-9_-]{1,150}$/', $value) === 1 ? $value : null;
+    }
+
+    private function campaignFromRequest(Tenant $tenant, Unit $unit): ?OnlineBookingCampaignLink
+    {
+        $source = $this->utm('utm_source');
+        $medium = $this->utm('utm_medium');
+        $campaign = $this->utm('utm_campaign');
+        if ($source === null || $medium === null || $campaign === null) {
+            return null;
+        }
+
+        return OnlineBookingCampaignLink::query()
+            ->where('tenant_id', $tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->where('is_active', true)
+            ->where('utm_source', $source)
+            ->where('utm_medium', $medium)
+            ->where('utm_campaign', $campaign)
+            ->where(function ($query): void {
+                $query->whereNull('utm_term')->orWhere('utm_term', $this->utm('utm_term'));
+            })
+            ->where(function ($query): void {
+                $query->whereNull('utm_content')->orWhere('utm_content', $this->utm('utm_content'));
+            })
+            ->first();
     }
 
     /**

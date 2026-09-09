@@ -25,6 +25,8 @@ type CampaignLink = {
     utm_content?: string | null;
     url: string;
     is_active: boolean;
+    visits_count: number;
+    appointments_count: number;
 };
 
 type Props = { campaignLinks: CampaignLink[] };
@@ -208,6 +210,18 @@ export default function CampaignLinks({ campaignLinks }: Props) {
                                                     {link.utm_medium} /{' '}
                                                     {link.utm_campaign}
                                                 </p>
+                                                <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
+                                                    <span>
+                                                        {link.visits_count}{' '}
+                                                        visitas
+                                                    </span>
+                                                    <span>
+                                                        {
+                                                            link.appointments_count
+                                                        }{' '}
+                                                        agendamentos
+                                                    </span>
+                                                </div>
                                                 <p className="mt-2 rounded-lg bg-muted/40 px-2 py-1.5 text-xs break-all">
                                                     {link.url}
                                                 </p>

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['tenant_id', 'unit_id', 'site_id', 'name', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'short_code', 'is_active', 'created_by'])]
 class OnlineBookingCampaignLink extends Model
@@ -30,5 +31,17 @@ class OnlineBookingCampaignLink extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return HasMany<OnlineBookingVisit, $this> */
+    public function visits(): HasMany
+    {
+        return $this->hasMany(OnlineBookingVisit::class, 'campaign_link_id');
+    }
+
+    /** @return HasMany<Appointment, $this> */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class, 'online_booking_campaign_link_id');
     }
 }
