@@ -7,6 +7,7 @@ use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
 use App\Enums\OnlineBookingPublicationStatus;
 use App\Models\OnlineBookingPublication;
 use App\Support\TenantContext;
+use Illuminate\Support\Facades\URL;
 
 it('saves, publishes, unpublishes, and restores an online booking site', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
@@ -97,4 +98,18 @@ it('preserves draft sections when saving a partial editor update', function () {
         'sections' => [['key' => 'hero', 'enabled' => true]],
         'theme' => ['brand_color' => '#0f766e'],
     ]);
+});
+
+it('renders a signed preview from the draft without requiring publication', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'identity' => ['description' => 'Prévia do rascunho'],
+        'service_ids' => [],
+        'professional_ids' => [],
+    ], 0);
+
+    $response = $this->actingAs($owner)->get(URL::signedRoute('online_booking.preview', [$tenant, $unit]));
+
+    $response->assertSuccessful();
 });

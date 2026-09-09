@@ -19,6 +19,7 @@ use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,23 +34,26 @@ final class PublicBookingController extends Controller
 
     public function show(Tenant $tenant, Unit $unit): Response|JsonResponse
     {
-        $this->assertPublicBookingEnabled($tenant, $unit);
+        $preview = request()->attributes->get('online_booking_preview_content');
+        if (! is_array($preview)) {
+            $this->assertPublicBookingEnabled($tenant, $unit);
+        }
         $setting = $unit->onlineBookingSetting;
-        $publication = OnlineBookingSite::query()
+        $publication = is_array($preview) ? null : OnlineBookingSite::query()
             ->where('tenant_id', $tenant->getKey())
             ->where('unit_id', $unit->getKey())
             ->whereNotNull('active_publication_id')
             ->with('activePublication')
             ->first()?->activePublication;
-        $catalog = $this->catalog($tenant, $unit, $publication);
-        $content = is_array($publication?->content) ? $publication->content : [];
+        $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
+        $catalog = $this->catalog($tenant, $unit, $publication, $content, is_array($preview));
         $identity = is_array($content['identity'] ?? null) ? $content['identity'] : [];
         $theme = is_array($content['theme'] ?? null) ? $content['theme'] : [];
         $policy = is_array($content['booking_policy'] ?? null) ? $content['booking_policy'] : [];
         $description = array_key_exists('description', $identity) ? $identity['description'] : $setting?->description;
         $brandColor = $theme['brand_color'] ?? $setting?->brand_color;
         $publicHours = array_key_exists('public_hours', $content) ? $content['public_hours'] : $setting?->public_hours;
-        $gallery = $publication !== null && is_array($content['gallery'] ?? null)
+        $gallery = ($publication !== null || is_array($preview)) && is_array($content['gallery'] ?? null)
             ? collect($content['gallery'])->map(fn (array $image): array => ['url' => MediaUrl::for((string) ($image['path'] ?? '')), 'alt_text' => $image['alt_text'] ?? null])->values()->all()
             : $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => MediaUrl::for($image->path), 'alt_text' => $image->alt_text])->values()->all();
         $coverImagePath = $identity['cover_image_path'] ?? $setting?->cover_image_path;
@@ -75,6 +79,22 @@ final class PublicBookingController extends Controller
         return request()->expectsJson()
             ? response()->json($payload)
             : Inertia::render('public-booking/show', $payload);
+    }
+
+    public function preview(Tenant $tenant, Unit $unit): Response|JsonResponse
+    {
+        Gate::authorize('view', $unit);
+        $draft = OnlineBookingSite::query()
+            ->where('tenant_id', $tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->with('draft')
+            ->firstOrFail()
+            ->draft;
+
+        abort_unless($draft !== null, 404);
+        request()->attributes->set('online_booking_preview_content', $draft->content);
+
+        return $this->show($tenant, $unit);
     }
 
     public function showBySlug(string $publicSlug): Response|JsonResponse
@@ -194,9 +214,8 @@ final class PublicBookingController extends Controller
     }
 
     /** @return array{services: array<int, array<string, mixed>>, professionals: array<int, array<string, mixed>>} */
-    private function catalog(Tenant $tenant, Unit $unit, ?OnlineBookingPublication $publication = null): array
+    private function catalog(Tenant $tenant, Unit $unit, ?OnlineBookingPublication $publication = null, array $content = [], bool $preview = false): array
     {
-        $content = is_array($publication?->content) ? $publication->content : [];
         $serviceIds = array_values(array_filter($content['service_ids'] ?? [], 'is_string'));
         $professionalIds = array_values(array_filter($content['professional_ids'] ?? [], 'is_string'));
         /** @var list<array<string, mixed>> $services */
@@ -205,7 +224,7 @@ final class PublicBookingController extends Controller
             ->whereBelongsTo($unit)
             ->where('status', 'active')
             ->where('online_booking_enabled', true)
-            ->when($publication !== null, fn ($query) => $query->whereIn('services.id', $serviceIds))
+            ->when($publication !== null || $preview, fn ($query) => $query->whereIn('services.id', $serviceIds))
             ->whereHas('professionals', fn ($query) => $query->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true))
             ->with(['professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name', 'professionals.avatar_path')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->orderBy('professionals.name')])
             ->orderBy('name')
@@ -220,7 +239,7 @@ final class PublicBookingController extends Controller
         /** @var list<array<string, mixed>> $professionals */
         $professionals = Professional::query()
             ->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)
-            ->when($publication !== null, fn ($query) => $query->whereIn('professionals.id', $professionalIds))
+            ->when($publication !== null || $preview, fn ($query) => $query->whereIn('professionals.id', $professionalIds))
             ->whereHas('services', fn ($query) => $query->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())->where('services.status', 'active')->where('services.online_booking_enabled', true))
             ->orderBy('name')->get(['id', 'name', 'avatar_path'])
             ->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all();

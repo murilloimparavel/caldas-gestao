@@ -110,6 +110,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/domains/{tenantDomain}/provision', [TenantDomainController::class, 'provision'])->name('tenant-domains.provision');
         Route::post('settings/domains/{tenantDomain}/activate', [TenantDomainController::class, 'activate'])->name('tenant-domains.activate');
         Route::get('online-booking', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.index');
+        Route::get('online-booking/preview/{tenant:slug}/{unit:slug}', [PublicBookingController::class, 'preview'])
+            ->scopeBindings()
+            ->middleware('signed')
+            ->name('online_booking.preview');
         Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
         Route::patch('online-booking/draft', [OnlineBookingSettingsController::class, 'saveDraft'])->name('online_booking.draft.update');
         Route::post('online-booking/publish', [OnlineBookingSettingsController::class, 'publish'])->name('online_booking.publish');

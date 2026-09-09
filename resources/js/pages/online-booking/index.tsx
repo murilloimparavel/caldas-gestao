@@ -101,6 +101,7 @@ type Props = {
         settings?: PublicSettings | null;
     };
     publicUrl: string | null;
+    previewUrl?: string | null;
     publicDomains: { id: string; hostname: string }[];
     services: BookingItem[];
     professionals: BookingItem[];
@@ -541,6 +542,7 @@ function PublicPreview({
 export default function OnlineBookingIndex({
     unit,
     publicUrl,
+    previewUrl: signedPreviewUrl = null,
     publicDomains,
     services,
     professionals,
@@ -601,9 +603,6 @@ export default function OnlineBookingIndex({
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2200);
     };
-    const previewUrl = publicUrl
-        ? `${publicUrl}${publicUrl.includes('?') ? '&' : '?'}utm_source=caldas_gestao&utm_medium=preview&utm_campaign=online_booking`
-        : null;
     const publishDraft = (): void => {
         if (!draft) {
             return;
@@ -772,7 +771,7 @@ export default function OnlineBookingIndex({
                             onClick={() =>
                                 publicUrl &&
                                 window.open(
-                                    previewUrl ?? publicUrl,
+                                    signedPreviewUrl ?? publicUrl,
                                     '_blank',
                                     'noopener,noreferrer',
                                 )
