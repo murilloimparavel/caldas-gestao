@@ -98,9 +98,23 @@ final class PublicBookingController extends Controller
             ...$catalog,
         ];
 
-        return request()->expectsJson()
-            ? response()->json($payload)
-            : Inertia::render('public-booking/show', $payload);
+        if (! request()->expectsJson()) {
+            return Inertia::render('public-booking/show', $payload);
+        }
+
+        $response = response()->json($payload);
+        if ($publication !== null) {
+            $etag = '"'.$publication->content_hash.'"';
+            $response->setEtag($publication->content_hash);
+            $response->setLastModified($publication->published_at);
+            $response->setPublic();
+            $response->setMaxAge(60);
+            if (request()->getEtags() !== [] && in_array($etag, request()->getEtags(), true)) {
+                $response->setNotModified();
+            }
+        }
+
+        return $response;
     }
 
     public function preview(Tenant $tenant, Unit $unit): Response|JsonResponse

@@ -86,7 +86,10 @@ it('serves the selected catalog from the active publication snapshot', function 
 
     $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
 
-    $response->assertSuccessful();
+    $response->assertSuccessful()->assertHeader('ETag');
+    $this->withHeader('If-None-Match', $response->headers->get('ETag'))
+        ->getJson(route('public_booking.show', [$tenant, $unit]))
+        ->assertNotModified();
     expect(collect($response->json('services'))->pluck('id')->all())->toBe([$service->getKey()]);
 });
 
