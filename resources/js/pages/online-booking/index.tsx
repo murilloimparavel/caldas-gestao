@@ -488,11 +488,13 @@ function PublicPreview({
     settings,
     gallery,
     services,
+    previewUrl,
 }: {
     unit: Props['unit'];
     settings: PublicSettings;
     gallery: NonNullable<Props['gallery']>;
     services: BookingItem[];
+    previewUrl?: string | null;
 }) {
     const [viewport, setViewport] = useState<'mobile' | 'desktop'>('mobile');
     const coverUrl =
@@ -500,6 +502,24 @@ function PublicPreview({
     const visibleServices = services.filter(
         (item) => item.status === 'active' && item.online_booking_enabled,
     );
+
+    if (previewUrl) {
+        return (
+            <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20">
+                <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
+                    <CardTitle className="text-base">Prévia pública</CardTitle>
+                    <CardDescription className="mt-1">Renderização real do rascunho atual.</CardDescription>
+                </CardHeader>
+                <CardContent className="bg-muted/10 p-3">
+                    <iframe
+                        title="Prévia pública do agendamento online"
+                        src={previewUrl}
+                        className="h-[36rem] w-full rounded-2xl border border-border bg-background"
+                    />
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
@@ -1708,6 +1728,7 @@ export default function OnlineBookingIndex({
                                         settings={settings}
                                         gallery={galleryItems}
                                         services={services}
+                                        previewUrl={signedPreviewUrl}
                                     />
                                     <Card>
                                         <CardContent className="pt-5">
