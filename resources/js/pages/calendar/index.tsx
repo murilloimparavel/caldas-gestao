@@ -287,6 +287,9 @@ function AppointmentForm({
     const [selectedDuration, setSelectedDuration] = useState<number>(
         appointment?.duration_minutes ?? defaultDurationMinutes ?? 30,
     );
+    const [reminderEnabled, setReminderEnabled] = useState(
+        appointment?.reminder_enabled ?? true,
+    );
 
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
     const [quickServiceOpen, setQuickServiceOpen] = useState(false);
@@ -633,11 +636,16 @@ function AppointmentForm({
                             </FormField>
                             <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-3.5 py-3 md:col-span-2">
                                 <input
-                                    id="reminder_enabled"
+                                    type="hidden"
                                     name="reminder_enabled"
+                                    value={reminderEnabled ? '1' : '0'}
+                                />
+                                <input
+                                    id="reminder_enabled"
                                     type="checkbox"
-                                    defaultChecked={
-                                        appointment?.reminder_enabled ?? true
+                                    checked={reminderEnabled}
+                                    onChange={(e) =>
+                                        setReminderEnabled(e.target.checked)
                                     }
                                     className="size-4 accent-primary"
                                 />

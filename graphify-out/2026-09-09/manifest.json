@@ -1590,9 +1590,9 @@
     "semantic_hash": ""
   },
   "resources/js/pages/calendar/index.tsx": {
-    "mtime": 1788967295.3196435,
-    "seen": 1788967360.1219578,
-    "ast_hash": "94ed855f418fb893775a935c1b8a730e",
+    "mtime": 1788913518.134256,
+    "seen": 1788913554.798458,
+    "ast_hash": "7c29715967660da119a01e23064f681c",
     "semantic_hash": ""
   },
   "resources/js/pages/customers/index.tsx": {
@@ -2334,9 +2334,9 @@
     "semantic_hash": ""
   },
   "app/Http/Requests/AppointmentRequest.php": {
-    "mtime": 1788967283.9259143,
-    "seen": 1788967360.1081622,
-    "ast_hash": "2bac4e73efebe26e507166d0c373d6ec",
+    "mtime": 1787688092.9557137,
+    "seen": 1787782868.5607738,
+    "ast_hash": "59da4416390c9e61b39bbfa671fd33c8",
     "semantic_hash": ""
   },
   "app/Http/Requests/AvailabilityRuleRequest.php": {
@@ -3126,9 +3126,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/CalendarAppointmentTest.php": {
-    "mtime": 1788967308.1494064,
-    "seen": 1788967360.12423,
-    "ast_hash": "a6a85fc3710f71de1ad220e481eb2efa",
+    "mtime": 1787689019.6719337,
+    "seen": 1787782868.5610821,
+    "ast_hash": "25beaa9f5d08a4b93307005928421161",
     "semantic_hash": ""
   },
   "tests/Feature/CalendarOperationsTest.php": {
@@ -5696,7 +5696,7 @@
   "supabase/migrations/20260825_f2_foundation.sql": {
     "mtime": 1787666957.197015,
     "seen": 1788960671.9463859,
-    "ast_hash": "",
+    "ast_hash": "8009e084f153c40998641af3310cf0f9",
     "semantic_hash": ""
   },
   "docs/architecture/plano-google-calendar-oauth-white-label.md": {
@@ -6471,114 +6471,6 @@
     "mtime": 1788960589.241577,
     "seen": 1788960658.511752,
     "ast_hash": "a3d09078e4a8709a500a65ff9a5b6b07",
-    "semantic_hash": ""
-  },
-  "app/Console/Commands/ImportBelasisTransactions.php": {
-    "mtime": 1788963065.9647522,
-    "seen": 1788967360.106109,
-    "ast_hash": "25d0db3c8faba2b49a93a4e805036eed",
-    "semantic_hash": ""
-  },
-  "database/migrations/2026_09_09_141105_add_belasis_source_fields_to_financial_records.php": {
-    "mtime": 1788963065.814099,
-    "seen": 1788967360.1185422,
-    "ast_hash": "efc2facd9f937e9930ffa0f500e2cd25",
-    "semantic_hash": ""
-  },
-  "tests/Feature/ImportBelasisTransactionsCommandTest.php": {
-    "mtime": 1788963066.1091754,
-    "seen": 1788967360.124924,
-    "ast_hash": "1f4578c6e6f2acac6d487b9320209162",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T13-45-20-679Z.yml": {
-    "mtime": 1788961520.6823323,
-    "seen": 1788967360.129054,
-    "ast_hash": "c5f1c2fd984ceb2573389fda2c5445b0",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T13-49-27-418Z.yml": {
-    "mtime": 1788961767.419159,
-    "seen": 1788967360.129055,
-    "ast_hash": "c5f1c2fd984ceb2573389fda2c5445b0",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T13-53-47-424Z.yml": {
-    "mtime": 1788962027.4248526,
-    "seen": 1788967360.129056,
-    "ast_hash": "3ebdc7119ca5bbd3e51a3cd955e0326e",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T13-54-15-921Z.yml": {
-    "mtime": 1788962055.921985,
-    "seen": 1788967360.129057,
-    "ast_hash": "3ebdc7119ca5bbd3e51a3cd955e0326e",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T13-59-31-481Z.yml": {
-    "mtime": 1788962371.481954,
-    "seen": 1788967360.129059,
-    "ast_hash": "6292db116d841c6875d42004bd3de56d",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T13-59-44-192Z.yml": {
-    "mtime": 1788962384.194016,
-    "seen": 1788967360.12906,
-    "ast_hash": "52a0f738f0fe28c3bee4c50963786071",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-01-25-796Z.yml": {
-    "mtime": 1788962485.7972093,
-    "seen": 1788967360.12906,
-    "ast_hash": "ced9a986d03425baed326469dc4854af",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-01-27-150Z.yml": {
-    "mtime": 1788962487.1508307,
-    "seen": 1788967360.1290612,
-    "ast_hash": "392c9c6bfb1d7a9bc7c959f533359c21",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-01-47-858Z.yml": {
-    "mtime": 1788962507.8594484,
-    "seen": 1788967360.129062,
-    "ast_hash": "c6d7c38c7707c1802e898654ae94e8dd",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-01-49-334Z.yml": {
-    "mtime": 1788962509.334406,
-    "seen": 1788967360.129063,
-    "ast_hash": "0f0ea750c31b3bb1c59d6077dc198729",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-02-03-058Z.yml": {
-    "mtime": 1788962523.058599,
-    "seen": 1788967360.1290638,
-    "ast_hash": "506dc4c4dfde2e74928006002778286a",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-02-14-318Z.yml": {
-    "mtime": 1788962534.3194406,
-    "seen": 1788967360.129065,
-    "ast_hash": "a16475f141b5f152df4a94db3bbb6d99",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-03-26-164Z.yml": {
-    "mtime": 1788962606.1649246,
-    "seen": 1788967360.129066,
-    "ast_hash": "b72c94b1631441cf5b2d65abb87b8720",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-03-47-318Z.yml": {
-    "mtime": 1788962627.318744,
-    "seen": 1788967360.129067,
-    "ast_hash": "f15f1f28924fb8551dee25eca3cbad92",
-    "semantic_hash": ""
-  },
-  ".playwright-cli/page-2026-09-09T14-09-19-150Z.yml": {
-    "mtime": 1788962959.1515377,
-    "seen": 1788967360.129067,
-    "ast_hash": "2ea6a63959ea605b23e77c0f164f43c5",
     "semantic_hash": ""
   }
 }

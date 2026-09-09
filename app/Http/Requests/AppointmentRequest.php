@@ -19,6 +19,21 @@ final class AppointmentRequest extends FormRequest
             : Gate::allows('create', Appointment::class);
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('reminder_enabled')) {
+            $this->merge([
+                'reminder_enabled' => $this->boolean('reminder_enabled'),
+            ]);
+        }
+
+        if ($this->has('fit_in')) {
+            $this->merge([
+                'fit_in' => $this->boolean('fit_in'),
+            ]);
+        }
+    }
+
     /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
