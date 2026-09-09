@@ -12,6 +12,7 @@ export type AppointmentStatus =
 
 export type CalendarOption = {
     avatar_url?: string | null;
+    duration_minutes?: number | null;
     id: string;
     name: string;
     phone?: string | null;

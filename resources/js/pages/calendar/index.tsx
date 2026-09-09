@@ -314,6 +314,18 @@ function AppointmentForm({
         }
     };
 
+    const handleServiceChange = (serviceId: string) => {
+        setSelectedService(serviceId);
+
+        const selectedServiceOption = serviceList.find(
+            (service) => service.id === serviceId,
+        );
+
+        if (selectedServiceOption?.duration_minutes) {
+            setSelectedDuration(selectedServiceOption.duration_minutes);
+        }
+    };
+
     const handleProfessionalCreated = (created: CreatedEntity) => {
         const newOpt: CalendarOption = { id: created.id, name: created.name };
         setProfessionalList((prev) => [
@@ -505,7 +517,7 @@ function AppointmentForm({
                                     name="service_id"
                                     value={selectedService}
                                     onChange={(e) =>
-                                        setSelectedService(e.target.value)
+                                        handleServiceChange(e.target.value)
                                     }
                                     required
                                     className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
