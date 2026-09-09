@@ -528,7 +528,7 @@ export default function Home({ branding }: HomeProps) {
 
                                     {/* 3 Pontos Rápidos de Benefício */}
                                     <ul className="mt-6 space-y-3 text-left sm:space-y-3.5">
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                                                 <Check className="size-3.5 stroke-[3]" />
                                             </span>
@@ -541,7 +541,7 @@ export default function Home({ branding }: HomeProps) {
                                                 divulgar concorrentes.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                                                 <Check className="size-3.5 stroke-[3]" />
                                             </span>
@@ -555,7 +555,7 @@ export default function Home({ branding }: HomeProps) {
                                                 os clientes.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                                                 <Check className="size-3.5 stroke-[3]" />
                                             </span>
@@ -590,7 +590,7 @@ export default function Home({ branding }: HomeProps) {
                                     <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row lg:items-start">
                                         <Link
                                             href={register()}
-                                            className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-[#3167d8] px-7 py-4 text-center text-base sm:text-lg font-bold text-white shadow-xl shadow-[#3167d8]/25 transition-all hover:bg-[#2551b3] hover:shadow-2xl hover:shadow-[#3167d8]/35 active:scale-98 sm:w-auto"
+                                            className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-[#3167d8] px-7 py-4 text-center text-base font-bold text-white shadow-xl shadow-[#3167d8]/25 transition-all hover:bg-[#2551b3] hover:shadow-2xl hover:shadow-[#3167d8]/35 active:scale-98 sm:w-auto sm:text-lg"
                                         >
                                             <span>
                                                 👉 Quero experimentar no meu
@@ -601,7 +601,7 @@ export default function Home({ branding }: HomeProps) {
                                     </div>
 
                                     {/* Micro-chamada de Confiança */}
-                                    <p className="mt-3.5 flex items-center justify-center gap-2 text-xs sm:text-sm font-medium text-[#65726e] lg:justify-start">
+                                    <p className="mt-3.5 flex items-center justify-center gap-2 text-xs font-medium text-[#65726e] sm:text-sm lg:justify-start">
                                         <Lock className="size-4 text-emerald-600" />
                                         <span>
                                             🔒 Não precisa de cartão de crédito.
@@ -619,90 +619,102 @@ export default function Home({ branding }: HomeProps) {
                                             {/* Header do Mockup */}
                                             <div className="flex items-center justify-between border-b border-[#f0eae0] pb-3.5 sm:pb-4">
                                                 <div className="flex items-center gap-2.5 sm:gap-3">
-                                                    <div className="flex size-10 sm:size-11 items-center justify-center rounded-2xl bg-[#3167d8] text-white shadow-xs">
+                                                    <div className="flex size-10 items-center justify-center rounded-2xl bg-[#3167d8] text-white shadow-xs sm:size-11">
                                                         <AppLogoIcon className="size-6 text-white" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] sm:text-xs font-semibold tracking-wider text-[#3167d8] uppercase">
+                                                        <p className="text-[10px] font-semibold tracking-wider text-[#3167d8] uppercase sm:text-xs">
                                                             Site Próprio
                                                             Exclusivo
                                                         </p>
-                                                        <p className="font-display text-sm sm:text-base font-bold text-[#17252a]">
+                                                        <p className="font-display text-sm font-bold text-[#17252a] sm:text-base">
                                                             Studio Bella &
                                                             Estética
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] sm:text-[11px] font-bold text-emerald-700">
+                                                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700 sm:text-[11px]">
                                                     Online 24h
                                                 </span>
                                             </div>
 
                                             {/* Preview: Agendamento Simples */}
-                                            <div className="mt-3.5 sm:mt-4 space-y-2.5 sm:space-y-3">
+                                            <div className="mt-3.5 space-y-2.5 sm:mt-4 sm:space-y-3">
                                                 <div className="rounded-2xl border border-[#e8e2d8] bg-[#f8f6f0] p-3 sm:p-3.5">
-                                                    <p className="text-[10px] sm:text-xs font-bold tracking-wider text-[#65726e] uppercase">
+                                                    <p className="text-[10px] font-bold tracking-wider text-[#65726e] uppercase sm:text-xs">
                                                         1. Escolha o serviço
                                                     </p>
-                                                    <div className="mt-2 flex items-center justify-between rounded-xl border border-[#ded5ca] bg-white p-2 sm:p-2.5 shadow-xs">
+                                                    <div className="mt-2 flex items-center justify-between rounded-xl border border-[#ded5ca] bg-white p-2 shadow-xs sm:p-2.5">
                                                         <div>
-                                                            <p className="text-xs sm:text-sm font-bold text-[#17252a]">
+                                                            <p className="text-xs font-bold text-[#17252a] sm:text-sm">
                                                                 Corte & Escova
                                                                 Modelada
                                                             </p>
-                                                            <p className="text-[11px] sm:text-xs text-[#717d79]">
+                                                            <p className="text-[11px] text-[#717d79] sm:text-xs">
                                                                 50 min • Com
                                                                 lavagem especial
                                                             </p>
                                                         </div>
-                                                        <span className="text-xs sm:text-sm font-bold text-[#3167d8]">
+                                                        <span className="text-xs font-bold text-[#3167d8] sm:text-sm">
                                                             R$ 130
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <div className="rounded-2xl border border-[#e8e2d8] bg-[#f8f6f0] p-3 sm:p-3.5">
-                                                    <p className="text-[10px] sm:text-xs font-bold tracking-wider text-[#65726e] uppercase">
+                                                    <p className="text-[10px] font-bold tracking-wider text-[#65726e] uppercase sm:text-xs">
                                                         2. Profissional &
                                                         Horário
                                                     </p>
                                                     <div className="mt-2 grid grid-cols-3 gap-2">
-                                                        <div className="rounded-xl border border-[#3167d8] bg-[#edf2ff] p-1.5 sm:p-2 text-center text-xs font-bold text-[#214fae]">
+                                                        <div className="rounded-xl border border-[#3167d8] bg-[#edf2ff] p-1.5 text-center text-xs font-bold text-[#214fae] sm:p-2">
                                                             14:30
                                                         </div>
-                                                        <div className="rounded-xl border border-[#ded5ca] bg-white p-1.5 sm:p-2 text-center text-xs font-medium text-[#65726e]">
+                                                        <div className="rounded-xl border border-[#ded5ca] bg-white p-1.5 text-center text-xs font-medium text-[#65726e] sm:p-2">
                                                             16:00
                                                         </div>
-                                                        <div className="rounded-xl border border-[#ded5ca] bg-white p-1.5 sm:p-2 text-center text-xs font-medium text-[#65726e]">
+                                                        <div className="rounded-xl border border-[#ded5ca] bg-white p-1.5 text-center text-xs font-medium text-[#65726e] sm:p-2">
                                                             17:15
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Lembrete no WhatsApp */}
-                                                <div className="rounded-2xl border border-emerald-300/80 bg-[#e7f8ef] p-3 sm:p-3.5 shadow-xs">
+                                                <div className="rounded-2xl border border-emerald-300/80 bg-[#e7f8ef] p-3 shadow-xs sm:p-3.5">
                                                     <div className="flex items-start gap-2.5">
-                                                        <div className="flex size-7 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0 mt-0.5">
+                                                        <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
                                                             <MessageSquare className="size-3.5" />
                                                         </div>
                                                         <div className="flex-1">
                                                             <div className="flex items-center justify-between">
                                                                 <p className="text-xs font-bold text-emerald-950">
-                                                                    WhatsApp • Lembrete Automático
+                                                                    WhatsApp •
+                                                                    Lembrete
+                                                                    Automático
                                                                 </p>
                                                                 <span className="text-[10px] font-medium text-emerald-800">
-                                                                    13:30 (1h antes)
+                                                                    13:30 (1h
+                                                                    antes)
                                                                 </span>
                                                             </div>
                                                             <p className="mt-1 text-xs leading-relaxed text-emerald-900">
-                                                                &ldquo;Oi Camila! Seu horário para Corte &amp; Escova está confirmado para hoje às 14:30. Esperamos você no Studio Bella!&rdquo;
+                                                                &ldquo;Oi
+                                                                Camila! Seu
+                                                                horário para
+                                                                Corte &amp;
+                                                                Escova está
+                                                                confirmado para
+                                                                hoje às 14:30.
+                                                                Esperamos você
+                                                                no Studio
+                                                                Bella!&rdquo;
                                                             </p>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Google Agenda */}
-                                                <div className="rounded-2xl border border-[#ded5ca] bg-white p-3 sm:p-3.5 shadow-xs">
+                                                <div className="rounded-2xl border border-[#ded5ca] bg-white p-3 shadow-xs sm:p-3.5">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className="flex size-8 items-center justify-center rounded-xl bg-[#edf2ff] text-[#3167d8]">
@@ -710,10 +722,15 @@ export default function Home({ branding }: HomeProps) {
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs font-bold text-[#17252a]">
-                                                                    Google Agenda Sincronizada
+                                                                    Google
+                                                                    Agenda
+                                                                    Sincronizada
                                                                 </p>
                                                                 <p className="text-[11px] text-[#65726e]">
-                                                                    14:30 – 15:20 • Camila F. • Sala 1
+                                                                    14:30 –
+                                                                    15:20 •
+                                                                    Camila F. •
+                                                                    Sala 1
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -726,18 +743,20 @@ export default function Home({ branding }: HomeProps) {
                                         </div>
 
                                         {/* Card Flutuante de Comanda & Pix */}
-                                        <div className="mt-3.5 sm:mt-4 rounded-2xl border border-[#ded5ca] bg-white p-3.5 sm:p-4 shadow-xl">
+                                        <div className="mt-3.5 rounded-2xl border border-[#ded5ca] bg-white p-3.5 shadow-xl sm:mt-4 sm:p-4">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2.5 sm:gap-3">
-                                                    <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                                                    <div className="flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 sm:size-10">
                                                         <Receipt className="size-4 sm:size-5" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-[11px] sm:text-xs font-medium text-[#65726e]">
-                                                            Comanda #1042 • Pix Recebido
+                                                        <p className="text-[11px] font-medium text-[#65726e] sm:text-xs">
+                                                            Comanda #1042 • Pix
+                                                            Recebido
                                                         </p>
-                                                        <p className="text-base sm:text-lg font-bold text-[#17252a]">
-                                                            R$ 130,00 • Caixa Fechado
+                                                        <p className="text-base font-bold text-[#17252a] sm:text-lg">
+                                                            R$ 130,00 • Caixa
+                                                            Fechado
                                                         </p>
                                                     </div>
                                                 </div>
@@ -775,7 +794,7 @@ export default function Home({ branding }: HomeProps) {
                                 </h2>
 
                                 {/* Texto de Apoio */}
-                                <div className="mt-5 space-y-3.5 text-sm sm:text-base leading-relaxed text-[#525f5a]">
+                                <div className="mt-5 space-y-3.5 text-sm leading-relaxed text-[#525f5a] sm:text-base">
                                     <p>
                                         Você passa a semana inteira postando
                                         fotos, gravando vídeos, pagando anúncios
@@ -790,7 +809,7 @@ export default function Home({ branding }: HomeProps) {
                                         mesma cidade, inclusive com promoções
                                         dos concorrentes na mesma tela.
                                     </p>
-                                    <p className="rounded-2xl border border-red-200 bg-red-50/80 p-4 font-semibold text-red-900 text-sm sm:text-base">
+                                    <p className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm font-semibold text-red-900 sm:text-base">
                                         Sem perceber,{' '}
                                         <span className="underline decoration-red-400 underline-offset-4">
                                             você pagou o marketing para mandar
@@ -801,7 +820,7 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Comparativo Visual Lado a Lado (Alto Contraste) */}
-                            <div className="mt-10 sm:mt-12 grid gap-6 md:grid-cols-2">
+                            <div className="mt-10 grid gap-6 sm:mt-12 md:grid-cols-2">
                                 {/* O que acontece hoje nos outros apps */}
                                 <div className="relative flex flex-col justify-between rounded-3xl border border-red-200 bg-white p-6 shadow-sm sm:p-8">
                                     <div>
@@ -814,7 +833,7 @@ export default function Home({ branding }: HomeProps) {
                                                 Perda de Clientes
                                             </span>
                                         </div>
-                                        <h3 className="mt-4 text-lg sm:text-xl font-bold text-[#17252a]">
+                                        <h3 className="mt-4 text-lg font-bold text-[#17252a] sm:text-xl">
                                             O cliente se perde e vê seus
                                             concorrentes
                                         </h3>
@@ -823,11 +842,12 @@ export default function Home({ branding }: HomeProps) {
                                                 <X className="mt-0.5 size-4 shrink-0 text-red-600" />
                                                 <span>
                                                     <strong className="text-[#17252a]">
-                                                        Concorrentes na mesma tela:
+                                                        Concorrentes na mesma
+                                                        tela:
                                                     </strong>{' '}
                                                     Seu cliente vê ofertas e
-                                                    promoções de outros salões ao
-                                                    lado do seu preço.
+                                                    promoções de outros salões
+                                                    ao lado do seu preço.
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2.5">
@@ -872,7 +892,7 @@ export default function Home({ branding }: HomeProps) {
                                                 100% Exclusivo
                                             </span>
                                         </div>
-                                        <h3 className="mt-4 text-lg sm:text-xl font-bold text-[#17252a]">
+                                        <h3 className="mt-4 text-lg font-bold text-[#17252a] sm:text-xl">
                                             No Caldas Gestão, a estrela é o seu
                                             espaço
                                         </h3>
@@ -883,9 +903,10 @@ export default function Home({ branding }: HomeProps) {
                                                     <strong className="text-[#17252a]">
                                                         100% a sua marca:
                                                     </strong>{' '}
-                                                    Apenas os seus serviços, seus
-                                                    preços, suas fotos e a sua
-                                                    equipe. Zero concorrência.
+                                                    Apenas os seus serviços,
+                                                    seus preços, suas fotos e a
+                                                    sua equipe. Zero
+                                                    concorrência.
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2.5">
@@ -950,7 +971,7 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* 4 Cards de Problemas */}
-                            <div className="mt-10 sm:mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="mt-10 grid gap-6 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
                                 {/* O cliente que fura */}
                                 <div className="flex flex-col justify-between rounded-3xl border border-[#ded5ca] bg-white p-6 shadow-sm transition hover:shadow-md">
                                     <div>
@@ -962,39 +983,48 @@ export default function Home({ branding }: HomeProps) {
                                                 Prejuízo direto
                                             </span>
                                         </div>
-                                        <h3 className="mt-5 text-base sm:text-lg font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-base font-bold text-[#17252a] sm:text-lg">
                                             O cliente que fura e deixa a cadeira
                                             vazia
                                         </h3>
-                                        <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-[#525f5a]">
+                                        <ul className="mt-4 space-y-2.5 text-xs text-[#525f5a] sm:text-sm">
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-red-500 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-red-500">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Horário em vão:
                                                     </strong>{' '}
-                                                    Você recusa outros agendamentos
-                                                    e a pessoa não comparece.
+                                                    Você recusa outros
+                                                    agendamentos e a pessoa não
+                                                    comparece.
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-red-500 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-red-500">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Sem aviso prévio:
                                                     </strong>{' '}
-                                                    Nem manda mensagem avisando do
-                                                    imprevisto de última hora.
+                                                    Nem manda mensagem avisando
+                                                    do imprevisto de última
+                                                    hora.
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-red-500 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-red-500">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Cadeira vazia:
                                                     </strong>{' '}
                                                     Dinheiro que sumiu do seu
-                                                    caixa sem volta no fim do dia.
+                                                    caixa sem volta no fim do
+                                                    dia.
                                                 </span>
                                             </li>
                                         </ul>
@@ -1015,12 +1045,14 @@ export default function Home({ branding }: HomeProps) {
                                                 Dor de cabeça
                                             </span>
                                         </div>
-                                        <h3 className="mt-5 text-base sm:text-lg font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-base font-bold text-[#17252a] sm:text-lg">
                                             O sufoco na hora de fechar o caixa
                                         </h3>
-                                        <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-[#525f5a]">
+                                        <ul className="mt-4 space-y-2.5 text-xs text-[#525f5a] sm:text-sm">
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-amber-600 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-amber-600">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Comandas rasuradas:
@@ -1030,7 +1062,9 @@ export default function Home({ branding }: HomeProps) {
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-amber-600 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-amber-600">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Calculadora e estresse:
@@ -1041,7 +1075,9 @@ export default function Home({ branding }: HomeProps) {
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-amber-600 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-amber-600">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Sexta exaustiva:
@@ -1069,13 +1105,15 @@ export default function Home({ branding }: HomeProps) {
                                                 Insegurança
                                             </span>
                                         </div>
-                                        <h3 className="mt-5 text-base sm:text-lg font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-base font-bold text-[#17252a] sm:text-lg">
                                             A renda montanha-russa todo início
                                             de mês
                                         </h3>
-                                        <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-[#525f5a]">
+                                        <ul className="mt-4 space-y-2.5 text-xs text-[#525f5a] sm:text-sm">
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-blue-600 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-blue-600">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Incerteza financeira:
@@ -1086,7 +1124,9 @@ export default function Home({ branding }: HomeProps) {
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-blue-600 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-blue-600">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Dependência da sorte:
@@ -1096,7 +1136,9 @@ export default function Home({ branding }: HomeProps) {
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-blue-600 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-blue-600">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Zero planejamento:
@@ -1124,13 +1166,15 @@ export default function Home({ branding }: HomeProps) {
                                                 Perda silenciosa
                                             </span>
                                         </div>
-                                        <h3 className="mt-5 text-base sm:text-lg font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-base font-bold text-[#17252a] sm:text-lg">
                                             O cliente que sumiu e ninguém
                                             percebeu
                                         </h3>
-                                        <ul className="mt-4 space-y-2.5 text-xs sm:text-sm text-[#525f5a]">
+                                        <ul className="mt-4 space-y-2.5 text-xs text-[#525f5a] sm:text-sm">
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-rose-500 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-rose-500">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Sumiço imperceptível:
@@ -1141,7 +1185,9 @@ export default function Home({ branding }: HomeProps) {
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-rose-500 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-rose-500">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Fuga para concorrente:
@@ -1151,13 +1197,16 @@ export default function Home({ branding }: HomeProps) {
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <span className="mt-0.5 text-rose-500 font-bold">•</span>
+                                                <span className="mt-0.5 font-bold text-rose-500">
+                                                    •
+                                                </span>
                                                 <span>
                                                     <strong className="text-[#17252a]">
                                                         Sem lembrete de retorno:
                                                     </strong>{' '}
                                                     Falta de convite carinhoso
-                                                    chamando a pessoa para voltar.
+                                                    chamando a pessoa para
+                                                    voltar.
                                                 </span>
                                             </li>
                                         </ul>
@@ -1169,8 +1218,8 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Fechamento da Dobra (Callout Empático) */}
-                            <div className="mx-auto mt-10 sm:mt-12 max-w-4xl rounded-3xl border border-[#ded5ca] bg-[#fffdf9] p-6 sm:p-8 text-center shadow-md">
-                                <p className="font-display text-base sm:text-lg leading-relaxed font-medium text-[#17252a] italic">
+                            <div className="mx-auto mt-10 max-w-4xl rounded-3xl border border-[#ded5ca] bg-[#fffdf9] p-6 text-center shadow-md sm:mt-12 sm:p-8">
+                                <p className="font-display text-base leading-relaxed font-medium text-[#17252a] italic sm:text-lg">
                                     “A culpa não é sua. Você aprendeu a ser um
                                     excelente profissional na sua arte, mas
                                     ninguém te deu uma ferramenta simples para o
@@ -1203,7 +1252,7 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Grid dos 4 Passos */}
-                            <div className="mt-10 sm:mt-12 grid gap-6 md:grid-cols-2">
+                            <div className="mt-10 grid gap-6 sm:mt-12 md:grid-cols-2">
                                 {/* 01. Seu próprio site na internet */}
                                 <div className="relative flex flex-col justify-between rounded-3xl border border-[#ded5ca] bg-white p-6 shadow-sm transition hover:shadow-md sm:p-8">
                                     <div>
@@ -1213,7 +1262,7 @@ export default function Home({ branding }: HomeProps) {
                                             </span>
                                             <Smartphone className="size-6 text-[#3167d8]" />
                                         </div>
-                                        <h3 className="mt-5 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-xl font-bold text-[#17252a] sm:text-2xl">
                                             01. Seu próprio site na internet
                                         </h3>
                                         <div className="mt-3 flex flex-wrap gap-2">
@@ -1231,9 +1280,10 @@ export default function Home({ branding }: HomeProps) {
                                                     <strong className="text-[#17252a]">
                                                         Página exclusiva:
                                                     </strong>{' '}
-                                                    O cliente clica no link da sua
-                                                    bio do Instagram ou WhatsApp
-                                                    com sua marca, logo e fotos.
+                                                    O cliente clica no link da
+                                                    sua bio do Instagram ou
+                                                    WhatsApp com sua marca, logo
+                                                    e fotos.
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
@@ -1271,7 +1321,7 @@ export default function Home({ branding }: HomeProps) {
                                             </span>
                                             <CalendarCheck className="size-6 text-emerald-600" />
                                         </div>
-                                        <h3 className="mt-5 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-xl font-bold text-[#17252a] sm:text-2xl">
                                             02. Agenda no celular de toda a
                                             equipe
                                         </h3>
@@ -1302,8 +1352,8 @@ export default function Home({ branding }: HomeProps) {
                                                         Avisos automáticos:
                                                     </strong>{' '}
                                                     O cliente recebe lembrete
-                                                    antes do horário e confirma a
-                                                    presença.
+                                                    antes do horário e confirma
+                                                    a presença.
                                                 </span>
                                             </li>
                                             <li className="flex items-start gap-2">
@@ -1330,7 +1380,7 @@ export default function Home({ branding }: HomeProps) {
                                             </span>
                                             <Repeat className="size-6 text-amber-700" />
                                         </div>
-                                        <h3 className="mt-5 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-xl font-bold text-[#17252a] sm:text-2xl">
                                             03. Dinheiro garantido todo mês
                                         </h3>
                                         <div className="mt-3 flex flex-wrap gap-2">
@@ -1388,7 +1438,7 @@ export default function Home({ branding }: HomeProps) {
                                             </span>
                                             <Receipt className="size-6 text-emerald-700" />
                                         </div>
-                                        <h3 className="mt-5 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                        <h3 className="mt-5 text-xl font-bold text-[#17252a] sm:text-2xl">
                                             04. Comanda única e comissão na hora
                                         </h3>
                                         <div className="mt-3 flex flex-wrap gap-2">
@@ -1468,7 +1518,7 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Seletor de Abas Interativo para Desktop & Mobile */}
-                            <div className="mt-10 sm:mt-12 flex overflow-x-auto pb-2 scrollbar-none snap-x sm:flex-wrap sm:justify-center gap-2 sm:gap-3">
+                            <div className="mt-10 flex snap-x scrollbar-none gap-2 overflow-x-auto pb-2 sm:mt-12 sm:flex-wrap sm:justify-center sm:gap-3">
                                 {features.map((feature, idx) => {
                                     const Icon = feature.icon;
                                     const isActive = activeFeature === idx;
@@ -1480,7 +1530,7 @@ export default function Home({ branding }: HomeProps) {
                                             onClick={() =>
                                                 setActiveFeature(idx)
                                             }
-                                            className={`flex snap-start shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
+                                            className={`flex shrink-0 snap-start items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
                                                 isActive
                                                     ? 'bg-[#17252a] text-white shadow-lg'
                                                     : 'border border-[#ded5ca] bg-white text-[#4f5d59] hover:bg-[#f3eee5] hover:text-[#17252a]'
@@ -1642,23 +1692,25 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Duas Colunas */}
-                            <div className="mt-10 sm:mt-14 grid gap-8 lg:grid-cols-2">
+                            <div className="mt-10 grid gap-8 sm:mt-14 lg:grid-cols-2">
                                 {/* Coluna 1 — Se você atende sozinho(a) */}
-                                <div className="rounded-3xl border border-[#ded5ca] bg-white p-6 sm:p-8 shadow-md">
-                                    <div className="flex size-12 sm:size-14 items-center justify-center rounded-2xl bg-[#edf2ff] text-[#3167d8]">
+                                <div className="rounded-3xl border border-[#ded5ca] bg-white p-6 shadow-md sm:p-8">
+                                    <div className="flex size-12 items-center justify-center rounded-2xl bg-[#edf2ff] text-[#3167d8] sm:size-14">
                                         <User className="size-6 sm:size-7" />
                                     </div>
-                                    <h3 className="mt-5 sm:mt-6 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                    <h3 className="mt-5 text-xl font-bold text-[#17252a] sm:mt-6 sm:text-2xl">
                                         Se você atende sozinho(a):
                                     </h3>
-                                    <ul className="mt-6 space-y-4 text-sm sm:text-base leading-relaxed text-[#525f5a]">
+                                    <ul className="mt-6 space-y-4 text-sm leading-relaxed text-[#525f5a] sm:text-base">
                                         <li className="flex items-start gap-3">
                                             <Check className="mt-1 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="text-[#17252a]">
                                                     Assistente digital 24h:
                                                 </strong>{' '}
-                                                seu site próprio recebe agendamentos sozinho enquanto você atende, sem interrupções.
+                                                seu site próprio recebe
+                                                agendamentos sozinho enquanto
+                                                você atende, sem interrupções.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-3">
@@ -1667,7 +1719,9 @@ export default function Home({ branding }: HomeProps) {
                                                 <strong className="text-[#17252a]">
                                                     Fim das mensagens picadas:
                                                 </strong>{' '}
-                                                economize até 2 horas por dia de conversas longas no WhatsApp tentando achar horários vagos.
+                                                economize até 2 horas por dia de
+                                                conversas longas no WhatsApp
+                                                tentando achar horários vagos.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-3">
@@ -1676,40 +1730,51 @@ export default function Home({ branding }: HomeProps) {
                                                 <strong className="text-[#17252a]">
                                                     Foco total no atendimento:
                                                 </strong>{' '}
-                                                encante quem senta na sua cadeira ou deita na sua maca sem a ansiedade do celular apitando.
+                                                encante quem senta na sua
+                                                cadeira ou deita na sua maca sem
+                                                a ansiedade do celular apitando.
                                             </span>
                                         </li>
                                     </ul>
                                     <div className="mt-6 rounded-2xl border border-blue-100 bg-[#edf2ff]/60 p-3.5 text-xs font-semibold text-[#214fae]">
-                                        💡 Comece sozinho e adicione profissionais conforme seu espaço crescer, com poucos cliques.
+                                        💡 Comece sozinho e adicione
+                                        profissionais conforme seu espaço
+                                        crescer, com poucos cliques.
                                     </div>
                                 </div>
 
                                 {/* Coluna 2 — Se você tem equipe ou várias cadeiras */}
-                                <div className="rounded-3xl border border-[#ded5ca] bg-white p-6 sm:p-8 shadow-md">
-                                    <div className="flex size-12 sm:size-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
+                                <div className="rounded-3xl border border-[#ded5ca] bg-white p-6 shadow-md sm:p-8">
+                                    <div className="flex size-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 sm:size-14">
                                         <Building2 className="size-6 sm:size-7" />
                                     </div>
-                                    <h3 className="mt-5 sm:mt-6 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                    <h3 className="mt-5 text-xl font-bold text-[#17252a] sm:mt-6 sm:text-2xl">
                                         Se você tem equipe ou várias cadeiras:
                                     </h3>
-                                    <ul className="mt-6 space-y-4 text-sm sm:text-base leading-relaxed text-[#525f5a]">
+                                    <ul className="mt-6 space-y-4 text-sm leading-relaxed text-[#525f5a] sm:text-base">
                                         <li className="flex items-start gap-3">
                                             <Check className="mt-1 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="text-[#17252a]">
-                                                    Acesso individual no celular:
+                                                    Acesso individual no
+                                                    celular:
                                                 </strong>{' '}
-                                                cada profissional visualiza apenas a própria agenda e seus atendimentos, sem confusão.
+                                                cada profissional visualiza
+                                                apenas a própria agenda e seus
+                                                atendimentos, sem confusão.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-3">
                                             <Check className="mt-1 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="text-[#17252a]">
-                                                    Comissões 100% transparentes:
+                                                    Comissões 100%
+                                                    transparentes:
                                                 </strong>{' '}
-                                                relatório pronto no final da semana ou mês, sem rasuras, sem calculadora e sem atrito na equipe.
+                                                relatório pronto no final da
+                                                semana ou mês, sem rasuras, sem
+                                                calculadora e sem atrito na
+                                                equipe.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-3">
@@ -1718,19 +1783,23 @@ export default function Home({ branding }: HomeProps) {
                                                 <strong className="text-[#17252a]">
                                                     Visão gerencial de dono:
                                                 </strong>{' '}
-                                                acompanhe em tempo real quem mais atende, o faturamento diário e o lucro seguro do espaço.
+                                                acompanhe em tempo real quem
+                                                mais atende, o faturamento
+                                                diário e o lucro seguro do
+                                                espaço.
                                             </span>
                                         </li>
                                     </ul>
                                     <div className="mt-6 rounded-2xl border border-amber-200/80 bg-amber-50/80 p-3.5 text-xs font-semibold text-amber-900">
-                                        🏢 Suporte para múltiplas unidades caso você decida expandir sua operação.
+                                        🏢 Suporte para múltiplas unidades caso
+                                        você decida expandir sua operação.
                                     </div>
                                 </div>
                             </div>
 
                             {/* Nota de Rodapé da Dobra */}
                             <div className="mt-8 text-center">
-                                <p className="text-xs sm:text-sm font-medium text-[#65726e] italic">
+                                <p className="text-xs font-medium text-[#65726e] italic sm:text-sm">
                                     (E quando você decidir abrir a sua segunda
                                     unidade, tudo continua integrado e
                                     organizado na mesma conta).
@@ -1762,9 +1831,9 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Comparativo Lado a Lado */}
-                            <div className="mt-10 sm:mt-14 grid gap-8 lg:grid-cols-2">
+                            <div className="mt-10 grid gap-8 sm:mt-14 lg:grid-cols-2">
                                 {/* É PARA VOCÊ que: */}
-                                <div className="rounded-3xl border-2 border-emerald-500/30 bg-emerald-50/40 p-6 sm:p-8 md:p-10 shadow-sm">
+                                <div className="rounded-3xl border-2 border-emerald-500/30 bg-emerald-50/40 p-6 shadow-sm sm:p-8 md:p-10">
                                     <div className="flex items-center gap-3">
                                         <span className="flex size-9 items-center justify-center rounded-full bg-emerald-600 text-white">
                                             <Check className="size-5 stroke-[3]" />
@@ -1774,56 +1843,71 @@ export default function Home({ branding }: HomeProps) {
                                         </h3>
                                     </div>
                                     <ul className="mt-6 space-y-4">
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="font-semibold text-emerald-950">
-                                                    Espaços de beleza e bem-estar:
+                                                    Espaços de beleza e
+                                                    bem-estar:
                                                 </strong>{' '}
-                                                salões, barbearias, clínicas de estética, estúdios de sobrancelhas, cílios, unhas e spas.
+                                                salões, barbearias, clínicas de
+                                                estética, estúdios de
+                                                sobrancelhas, cílios, unhas e
+                                                spas.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="font-semibold text-emerald-950">
-                                                    Fim do malabarismo no WhatsApp:
+                                                    Fim do malabarismo no
+                                                    WhatsApp:
                                                 </strong>{' '}
-                                                para quem cansou de perder horas preciosas tentando achar horário vago em agenda de papel.
+                                                para quem cansou de perder horas
+                                                preciosas tentando achar horário
+                                                vago em agenda de papel.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="font-semibold text-emerald-950">
                                                     Marca própria valorizada:
                                                 </strong>{' '}
-                                                quer ter o seu próprio site na internet e valorizar o nome do seu espaço como marca exclusiva.
+                                                quer ter o seu próprio site na
+                                                internet e valorizar o nome do
+                                                seu espaço como marca exclusiva.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="font-semibold text-emerald-950">
-                                                    Caixa e comissões no automático:
+                                                    Caixa e comissões no
+                                                    automático:
                                                 </strong>{' '}
-                                                busca acabar com discussões de repasse e ter certeza de quanto sobra de lucro real no caixa.
+                                                busca acabar com discussões de
+                                                repasse e ter certeza de quanto
+                                                sobra de lucro real no caixa.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#17252a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#17252a] sm:text-base">
                                             <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
                                             <span>
                                                 <strong className="font-semibold text-emerald-950">
                                                     Previsibilidade no dia 1º:
                                                 </strong>{' '}
-                                                sonha em ter receita recorrente garantida no começo do mês através de pacotes e planos mensais.
+                                                sonha em ter receita recorrente
+                                                garantida no começo do mês
+                                                através de pacotes e planos
+                                                mensais.
                                             </span>
                                         </li>
                                     </ul>
                                 </div>
 
                                 {/* NÃO É PARA VOCÊ que: */}
-                                <div className="rounded-3xl border border-red-200 bg-red-50/40 p-6 sm:p-8 md:p-10 shadow-sm">
+                                <div className="rounded-3xl border border-red-200 bg-red-50/40 p-6 shadow-sm sm:p-8 md:p-10">
                                     <div className="flex items-center gap-3">
                                         <span className="flex size-9 items-center justify-center rounded-full bg-red-600 text-white">
                                             <X className="size-5 stroke-[3]" />
@@ -1833,40 +1917,51 @@ export default function Home({ branding }: HomeProps) {
                                         </h3>
                                     </div>
                                     <ul className="mt-6 space-y-4">
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#525f5a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#525f5a] sm:text-base">
                                             <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
                                             <span>
                                                 <strong className="font-semibold text-red-950">
                                                     Apego ao caderno de papel:
                                                 </strong>{' '}
-                                                prefere o risco de anotações rasuradas, ilegíveis ou perdidas se o caderno molhar.
+                                                prefere o risco de anotações
+                                                rasuradas, ilegíveis ou perdidas
+                                                se o caderno molhar.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#525f5a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#525f5a] sm:text-base">
                                             <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
                                             <span>
                                                 <strong className="font-semibold text-red-950">
                                                     Aceita furos de horário:
                                                 </strong>{' '}
-                                                acha normal o cliente faltar sem avisar e prefere arcar sozinho com o prejuízo do horário ocioso.
+                                                acha normal o cliente faltar sem
+                                                avisar e prefere arcar sozinho
+                                                com o prejuízo do horário
+                                                ocioso.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#525f5a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#525f5a] sm:text-base">
                                             <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
                                             <span>
                                                 <strong className="font-semibold text-red-950">
-                                                    Divulga concorrentes de graça:
+                                                    Divulga concorrentes de
+                                                    graça:
                                                 </strong>{' '}
-                                                insiste em manter links de aplicativos de terceiros na bio, enviando clientes para o vizinho.
+                                                insiste em manter links de
+                                                aplicativos de terceiros na bio,
+                                                enviando clientes para o
+                                                vizinho.
                                             </span>
                                         </li>
-                                        <li className="flex items-start gap-3 text-sm sm:text-base text-[#525f5a]">
+                                        <li className="flex items-start gap-3 text-sm text-[#525f5a] sm:text-base">
                                             <XCircle className="mt-0.5 size-5 shrink-0 text-red-500" />
                                             <span>
                                                 <strong className="font-semibold text-red-950">
                                                     Descaso com o dinheiro:
                                                 </strong>{' '}
-                                                não se importa em saber se o espaço está dando lucro real ou prejuízo no fim do mês.
+                                                não se importa em saber se o
+                                                espaço está dando lucro real ou
+                                                prejuízo no fim do mês.
                                             </span>
                                         </li>
                                     </ul>
@@ -1901,7 +1996,7 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Acordeão Interativo */}
-                            <div className="mt-10 sm:mt-12 space-y-4">
+                            <div className="mt-10 space-y-4 sm:mt-12">
                                 {faqs.map((faq, index) => {
                                     const isOpen = openFaq === index;
 
@@ -1926,7 +2021,7 @@ export default function Home({ branding }: HomeProps) {
                                                 />
                                             </button>
                                             {isOpen && (
-                                                <div className="border-t border-[#f0eae0] px-5 pt-3 pb-6 text-sm sm:text-base leading-relaxed text-[#525f5a] sm:px-6 sm:pb-7">
+                                                <div className="border-t border-[#f0eae0] px-5 pt-3 pb-6 text-sm leading-relaxed text-[#525f5a] sm:px-6 sm:pb-7 sm:text-base">
                                                     <p>{faq.a}</p>
                                                 </div>
                                             )}
@@ -1945,8 +2040,8 @@ export default function Home({ branding }: HomeProps) {
                             <div className="mx-auto max-w-3xl text-center">
                                 {/* Chapeuzinho (Tag) */}
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f3eee5] px-3.5 py-1.5 text-xs font-bold text-[#17252a]">
-                                    <Clock className="size-4 text-[#efa83f]" />
-                                    A decisão em suas mãos
+                                    <Clock className="size-4 text-[#efa83f]" />A
+                                    decisão em suas mãos
                                 </span>
 
                                 {/* Título */}
@@ -1957,107 +2052,150 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Dois Caminhos */}
-                            <div className="mt-10 sm:mt-14 grid gap-8 lg:grid-cols-2">
+                            <div className="mt-10 grid gap-8 sm:mt-14 lg:grid-cols-2">
                                 {/* Opção 1: Sobrecarga */}
-                                <div className="rounded-3xl border border-stone-300 bg-stone-100/80 p-6 sm:p-8 md:p-10 shadow-xs">
+                                <div className="rounded-3xl border border-stone-300 bg-stone-100/80 p-6 shadow-xs sm:p-8 md:p-10">
                                     <span className="inline-block rounded-full bg-stone-200 px-3 py-1 text-xs font-bold text-stone-700">
                                         Rotina de Sobrecarga e Incerteza
                                     </span>
-                                    <h3 className="mt-4 text-xl sm:text-2xl font-bold text-stone-900">
+                                    <h3 className="mt-4 text-xl font-bold text-stone-900 sm:text-2xl">
                                         Continuar no sufoco do dia a dia
                                     </h3>
-                                    <ul className="mt-6 space-y-3.5 text-sm sm:text-base text-stone-700">
+                                    <ul className="mt-6 space-y-3.5 text-sm text-stone-700 sm:text-base">
                                         <li className="flex items-start gap-2.5">
-                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-stone-700 text-xs font-bold">
+                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-xs font-bold text-stone-700">
                                                 ×
                                             </span>
                                             <span>
-                                                <strong className="text-stone-900">Mensagens picadas:</strong> responder WhatsApp até tarde da noite tentando conciliar horários.
+                                                <strong className="text-stone-900">
+                                                    Mensagens picadas:
+                                                </strong>{' '}
+                                                responder WhatsApp até tarde da
+                                                noite tentando conciliar
+                                                horários.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2.5">
-                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-stone-700 text-xs font-bold">
+                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-xs font-bold text-stone-700">
                                                 ×
                                             </span>
                                             <span>
-                                                <strong className="text-stone-900">Furos e prejuízo:</strong> clientes faltando de última hora e deixando a cadeira vazia sem aviso.
+                                                <strong className="text-stone-900">
+                                                    Furos e prejuízo:
+                                                </strong>{' '}
+                                                clientes faltando de última hora
+                                                e deixando a cadeira vazia sem
+                                                aviso.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2.5">
-                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-stone-700 text-xs font-bold">
+                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-xs font-bold text-stone-700">
                                                 ×
                                             </span>
                                             <span>
-                                                <strong className="text-stone-900">Fins de semana perdidos:</strong> horas somando notas e recalculando comissões na ponta do lápis.
+                                                <strong className="text-stone-900">
+                                                    Fins de semana perdidos:
+                                                </strong>{' '}
+                                                horas somando notas e
+                                                recalculando comissões na ponta
+                                                do lápis.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2.5">
-                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-stone-700 text-xs font-bold">
+                                            <span className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full bg-stone-300 text-xs font-bold text-stone-700">
                                                 ×
                                             </span>
                                             <span>
-                                                <strong className="text-stone-900">Insegurança financeira:</strong> terminar o mês sem saber para onde foi o dinheiro e sem previsão de lucro.
+                                                <strong className="text-stone-900">
+                                                    Insegurança financeira:
+                                                </strong>{' '}
+                                                terminar o mês sem saber para
+                                                onde foi o dinheiro e sem
+                                                previsão de lucro.
                                             </span>
                                         </li>
                                     </ul>
                                     <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-200/70 p-3.5 text-xs font-semibold text-stone-800">
-                                        ⚠️ Mais um ano trabalhando sem parar e sem ver o dinheiro sobrar na conta.
+                                        ⚠️ Mais um ano trabalhando sem parar e
+                                        sem ver o dinheiro sobrar na conta.
                                     </div>
                                 </div>
 
                                 {/* Opção 2: Paz e Controle */}
-                                <div className="rounded-3xl border-2 border-[#3167d8] bg-linear-to-b from-white to-[#edf2ff]/70 p-6 sm:p-8 md:p-10 shadow-xl">
+                                <div className="rounded-3xl border-2 border-[#3167d8] bg-linear-to-b from-white to-[#edf2ff]/70 p-6 shadow-xl sm:p-8 md:p-10">
                                     <span className="inline-block rounded-full bg-[#3167d8] px-3 py-1 text-xs font-bold text-white">
                                         Rotina com Paz, Ordem e Lucro
                                     </span>
-                                    <h3 className="mt-4 text-xl sm:text-2xl font-bold text-[#17252a]">
+                                    <h3 className="mt-4 text-xl font-bold text-[#17252a] sm:text-2xl">
                                         Ter um espaço profissional e organizado
                                     </h3>
-                                    <ul className="mt-6 space-y-3.5 text-sm sm:text-base text-[#525f5a]">
+                                    <ul className="mt-6 space-y-3.5 text-sm text-[#525f5a] sm:text-base">
                                         <li className="flex items-start gap-2.5">
-                                            <Check className="mt-1 size-4 shrink-0 text-emerald-600 stroke-[3]" />
+                                            <Check className="mt-1 size-4 shrink-0 stroke-[3] text-emerald-600" />
                                             <span>
-                                                <strong className="text-[#17252a]">Site próprio 24h:</strong> seus clientes agendam sozinhos a qualquer hora, valorizando sua marca.
+                                                <strong className="text-[#17252a]">
+                                                    Site próprio 24h:
+                                                </strong>{' '}
+                                                seus clientes agendam sozinhos a
+                                                qualquer hora, valorizando sua
+                                                marca.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2.5">
-                                            <Check className="mt-1 size-4 shrink-0 text-emerald-600 stroke-[3]" />
+                                            <Check className="mt-1 size-4 shrink-0 stroke-[3] text-emerald-600" />
                                             <span>
-                                                <strong className="text-[#17252a]">Lembretes automáticos:</strong> fim definitivo dos furos com notificações diretas no WhatsApp.
+                                                <strong className="text-[#17252a]">
+                                                    Lembretes automáticos:
+                                                </strong>{' '}
+                                                fim definitivo dos furos com
+                                                notificações diretas no
+                                                WhatsApp.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2.5">
-                                            <Check className="mt-1 size-4 shrink-0 text-emerald-600 stroke-[3]" />
+                                            <Check className="mt-1 size-4 shrink-0 stroke-[3] text-emerald-600" />
                                             <span>
-                                                <strong className="text-[#17252a]">Comissões transparentes:</strong> relatórios prontos em segundos, sem estresse com colaboradores.
+                                                <strong className="text-[#17252a]">
+                                                    Comissões transparentes:
+                                                </strong>{' '}
+                                                relatórios prontos em segundos,
+                                                sem estresse com colaboradores.
                                             </span>
                                         </li>
                                         <li className="flex items-start gap-2.5">
-                                            <Check className="mt-1 size-4 shrink-0 text-emerald-600 stroke-[3]" />
+                                            <Check className="mt-1 size-4 shrink-0 stroke-[3] text-emerald-600" />
                                             <span>
-                                                <strong className="text-[#17252a]">Faturamento previsível:</strong> receita garantida no dia 1º do mês com pacotes e planos mensais.
+                                                <strong className="text-[#17252a]">
+                                                    Faturamento previsível:
+                                                </strong>{' '}
+                                                receita garantida no dia 1º do
+                                                mês com pacotes e planos
+                                                mensais.
                                             </span>
                                         </li>
                                     </ul>
                                     <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-semibold text-emerald-800">
-                                        ✅ Mais tempo com sua família, valorização da sua marca e tranquilidade financeira.
+                                        ✅ Mais tempo com sua família,
+                                        valorização da sua marca e tranquilidade
+                                        financeira.
                                     </div>
                                 </div>
                             </div>
 
                             {/* Frase de Impacto e CTA */}
-                            <div className="mt-12 sm:mt-14 text-center">
+                            <div className="mt-12 text-center sm:mt-14">
                                 <p className="font-display text-xl font-extrabold text-[#17252a] sm:text-2xl">
-                                    Qual dessas duas rotinas você escolhe para
-                                    o seu negócio a partir de hoje?
+                                    Qual dessas duas rotinas você escolhe para o
+                                    seu negócio a partir de hoje?
                                 </p>
                                 <div className="mt-6 flex justify-center">
                                     <Link
                                         href={register()}
-                                        className="group inline-flex w-full sm:w-auto items-center justify-center gap-3 rounded-2xl bg-[#3167d8] px-8 py-4 text-base sm:text-lg font-bold text-white shadow-xl shadow-[#3167d8]/20 transition-all hover:bg-[#2551b3] hover:shadow-2xl active:scale-98"
+                                        className="group inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#3167d8] px-8 py-4 text-base font-bold text-white shadow-xl shadow-[#3167d8]/20 transition-all hover:bg-[#2551b3] hover:shadow-2xl active:scale-98 sm:w-auto sm:text-lg"
                                     >
                                         <span>
-                                            Quero ter paz e controle no meu espaço
+                                            Quero ter paz e controle no meu
+                                            espaço
                                         </span>
                                         <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
                                     </Link>
@@ -2069,7 +2207,7 @@ export default function Home({ branding }: HomeProps) {
                     {/* =========================================================
                         DOBRA 10: CHAMADA FINAL (Fechamento sem Risco)
                     ========================================================= */}
-                    <section className="relative overflow-hidden bg-[#17252a] py-14 sm:py-20 lg:py-28 text-white">
+                    <section className="relative overflow-hidden bg-[#17252a] py-14 text-white sm:py-20 lg:py-28">
                         <div className="relative z-10 mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
                             {/* Título de Fechamento */}
                             <h2 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
@@ -2078,17 +2216,17 @@ export default function Home({ branding }: HomeProps) {
                             </h2>
 
                             {/* Subtítulo */}
-                            <p className="mx-auto mt-5 sm:mt-6 max-w-2xl text-base leading-relaxed text-stone-300 sm:text-lg">
+                            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-stone-300 sm:mt-6 sm:text-lg">
                                 Comece seu teste agora mesmo em menos de 2
                                 minutos. Veja como é fácil organizar sua agenda,
                                 sua equipe e suas finanças.
                             </p>
 
                             {/* Botão Principal de Ação (CTA Final) */}
-                            <div className="mt-8 sm:mt-10 flex justify-center">
+                            <div className="mt-8 flex justify-center sm:mt-10">
                                 <Link
                                     href={register()}
-                                    className="group inline-flex w-full sm:w-auto items-center justify-center gap-3 rounded-2xl bg-[#efa83f] px-9 py-4 sm:py-5 text-lg sm:text-xl font-bold text-[#17252a] shadow-2xl shadow-[#efa83f]/30 transition-all hover:bg-[#f3b55c] active:scale-98"
+                                    className="group inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#efa83f] px-9 py-4 text-lg font-bold text-[#17252a] shadow-2xl shadow-[#efa83f]/30 transition-all hover:bg-[#f3b55c] active:scale-98 sm:w-auto sm:py-5 sm:text-xl"
                                 >
                                     <span>
                                         👉 Criar Minha Conta Grátis Agora
@@ -2098,8 +2236,8 @@ export default function Home({ branding }: HomeProps) {
                             </div>
 
                             {/* Garantia e Micro-chamada de Alívio */}
-                            <div className="mt-6 flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-stone-300">
-                                <ShieldCheck className="size-4 sm:size-5 text-emerald-400 shrink-0" />
+                            <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-stone-300 sm:text-sm">
+                                <ShieldCheck className="size-4 shrink-0 text-emerald-400 sm:size-5" />
                                 <span>
                                     🛡️ Sem cartão de crédito necessário • Sem
                                     contratos de fidelidade • Cancele quando
