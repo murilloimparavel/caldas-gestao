@@ -103,6 +103,22 @@ type Props = {
     services: BookingItem[];
     professionals: BookingItem[];
     readiness: Readiness;
+    publication?: {
+        id: string;
+        status: 'unpublished' | 'published';
+        draft_revision: number;
+        published_at?: string | null;
+        unpublished_at?: string | null;
+        lock_version: number;
+    } | null;
+    draft?: { revision: number } | null;
+    activePublication?: {
+        id: string;
+        version: number;
+        source_revision: number;
+        published_at?: string | null;
+        template_key: string;
+    } | null;
     settings?: PublicSettings | null;
     cover?: string | null;
     coverUploadUrl?: string | null;
@@ -519,6 +535,9 @@ export default function OnlineBookingIndex({
     services,
     professionals,
     readiness,
+    publication = null,
+    draft = null,
+    activePublication = null,
     settings: rootSettings,
     gallery = [],
     cover,
@@ -544,6 +563,20 @@ export default function OnlineBookingIndex({
     const activeProfessionals = professionals.filter(
         (item) => item.status === 'active',
     );
+    const hasPendingChanges = Boolean(
+        publication?.status === 'published' &&
+        draft &&
+        activePublication &&
+        draft.revision > activePublication.source_revision,
+    );
+    const publicationLabel =
+        !publication || publication.status === 'unpublished'
+            ? draft
+                ? 'Rascunho salvo'
+                : 'Não publicada'
+            : hasPendingChanges
+              ? 'Alterações para publicar'
+              : 'Publicada';
     const copyPublicUrl = async () => {
         if (!publicUrl || !navigator.clipboard) {
             return;
@@ -636,6 +669,84 @@ export default function OnlineBookingIndex({
                         </div>
                     }
                 />
+                <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                    <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Globe2 aria-hidden="true" className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-foreground">
+                                    Página pública
+                                </p>
+                                <Badge
+                                    variant={
+                                        publication?.status === 'published' &&
+                                        !hasPendingChanges
+                                            ? 'default'
+                                            : 'secondary'
+                                    }
+                                >
+                                    {publicationLabel}
+                                </Badge>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {publication?.status === 'published' &&
+                                !hasPendingChanges
+                                    ? 'Seus clientes estão vendo a última versão publicada.'
+                                    : 'Suas alterações ficam no rascunho até você publicar.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                                publicUrl &&
+                                window.open(
+                                    publicUrl,
+                                    '_blank',
+                                    'noopener,noreferrer',
+                                )
+                            }
+                            disabled={!publicUrl}
+                        >
+                            <ExternalLink aria-hidden="true" />
+                            Visualizar página
+                        </Button>
+                        {publication?.status === 'published' ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() =>
+                                    router.post(
+                                        onlineBooking.unpublish.url(),
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                Retirar do ar
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                onClick={() =>
+                                    draft &&
+                                    router.post(
+                                        onlineBooking.publish.url(),
+                                        { revision: draft.revision },
+                                        { preserveScroll: true },
+                                    )
+                                }
+                                disabled={!draft || !readiness.publishable}
+                            >
+                                Publicar página
+                            </Button>
+                        )}
+                    </div>
+                </div>
                 <Form
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}

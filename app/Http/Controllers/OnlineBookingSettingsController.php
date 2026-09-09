@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\OnlineBooking\EnsureOnlineBookingSite;
+use App\Actions\OnlineBooking\PublishOnlineBookingSite;
+use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
+use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
 use App\Actions\OnlineBooking\UpdateOnlineBookingSettings;
 use App\Enums\TenantDomainKind;
 use App\Enums\TenantDomainStatus;
 use App\Http\Requests\Settings\OnlineBookingCoverStoreRequest;
+use App\Http\Requests\Settings\OnlineBookingDraftRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryReorderRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryStoreRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryUpdateRequest;
+use App\Http\Requests\Settings\OnlineBookingPublishRequest;
 use App\Http\Requests\Settings\OnlineBookingSettingsRequest;
 use App\Models\OnlineBookingGalleryImage;
 use App\Models\OnlineBookingSetting;
@@ -32,7 +38,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class OnlineBookingSettingsController extends Controller
 {
-    public function index(TenantContext $context): Response|JsonResponse
+    public function index(TenantContext $context, EnsureOnlineBookingSite $ensureSite): Response|JsonResponse
     {
         abort_unless($context->unit instanceof Unit, 403);
         Gate::authorize('view', $context->unit);
@@ -49,6 +55,7 @@ final class OnlineBookingSettingsController extends Controller
             ->get(['id', 'name', 'phone', 'status', 'online_booking_enabled', 'lock_version']);
         $readiness = $this->readiness($context->unit, $services, $professionals);
         $setting = $context->unit->onlineBookingSetting;
+        $site = $ensureSite->handle($context);
         $publicDomains = $context->tenant->domains()
             ->where('kind', TenantDomainKind::Public->value)
             ->where('status', TenantDomainStatus::Active->value)
@@ -68,11 +75,35 @@ final class OnlineBookingSettingsController extends Controller
             'services' => $services,
             'professionals' => $professionals,
             'readiness' => $readiness,
+            'publication' => $site?->only(['id', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version']),
+            'draft' => $site?->draft,
+            'activePublication' => $site?->activePublication?->only(['id', 'version', 'source_revision', 'published_at', 'template_key']),
         ];
 
         return request()->expectsJson()
             ? response()->json($props)
             : Inertia::render('online-booking/index', $props);
+    }
+
+    public function saveDraft(OnlineBookingDraftRequest $request, TenantContext $context, SaveOnlineBookingDraft $save): JsonResponse
+    {
+        $draft = $save->handle($request->user(), $context, $request->validated('content'), (int) $request->validated('revision'));
+
+        return response()->json(['draft' => $draft, 'status' => 'draft_saved']);
+    }
+
+    public function publish(OnlineBookingPublishRequest $request, TenantContext $context, PublishOnlineBookingSite $publish): JsonResponse
+    {
+        $publication = $publish->handle($request->user(), $context, (int) $request->validated('revision'));
+
+        return response()->json(['publication' => $publication, 'status' => 'published']);
+    }
+
+    public function unpublish(TenantContext $context, UnpublishOnlineBookingSite $unpublish): JsonResponse
+    {
+        $site = $unpublish->handle(request()->user(), $context);
+
+        return response()->json(['publication' => $site, 'status' => 'unpublished']);
     }
 
     private function publicBookingUrl(string $tenantId, Unit $unit, ?OnlineBookingSetting $setting, string $publicSlug): string
