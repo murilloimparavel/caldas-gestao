@@ -8,7 +8,11 @@ use App\Enums\OnlineBookingPublicationStatus;
 use App\Support\TenantContext;
 
 it('saves, publishes, unpublishes, and restores an online booking site', function () {
-    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     $content = [
         'schema_version' => 1,
@@ -38,7 +42,11 @@ it('saves, publishes, unpublishes, and restores an online booking site', functio
 });
 
 it('exposes the draft and publication lifecycle through the authorized routes', function () {
-    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
     $content = [
         'schema_version' => 1,
         'theme' => [],
@@ -66,4 +74,23 @@ it('exposes the draft and publication lifecycle through the authorized routes', 
         ->assertJsonPath('status', 'unpublished');
 
     expect($unit->refresh()->tenant_id)->toBe($tenant->getKey());
+});
+
+it('preserves draft sections when saving a partial editor update', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+
+    $first = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'identity' => ['description' => 'Página da unidade'],
+        'sections' => [['key' => 'hero', 'enabled' => true]],
+    ], 0);
+    $second = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'theme' => ['brand_color' => '#0f766e'],
+    ], $first->revision);
+
+    expect($second->content)->toMatchArray([
+        'identity' => ['description' => 'Página da unidade'],
+        'sections' => [['key' => 'hero', 'enabled' => true]],
+        'theme' => ['brand_color' => '#0f766e'],
+    ]);
 });

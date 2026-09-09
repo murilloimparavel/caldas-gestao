@@ -6,9 +6,13 @@ use App\Actions\Operational\OperationalAction;
 use App\Enums\OnlineBookingPublicationStatus;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSite;
+use App\Models\Professional;
+use App\Models\Service;
+use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class PublishOnlineBookingSite extends OperationalAction
@@ -18,6 +22,7 @@ final class PublishOnlineBookingSite extends OperationalAction
         $unit = $this->unit($actor, $context, 'unit.update');
 
         return DB::transaction(function () use ($actor, $context, $unit, $expectedRevision): OnlineBookingPublication {
+            $this->assertReady($context, $unit);
             $site = OnlineBookingSite::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->lockForUpdate()->firstOrFail();
             $draft = $site->draft()->lockForUpdate()->firstOrFail();
 
@@ -38,5 +43,16 @@ final class PublishOnlineBookingSite extends OperationalAction
 
             return $publication;
         });
+    }
+
+    private function assertReady(TenantContext $context, Unit $unit): void
+    {
+        $hasService = Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->exists();
+        $hasProfessional = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->exists();
+        $hasPair = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->whereHas('services', fn ($query) => $query->where('services.online_booking_enabled', true)->where('services.status', 'active'))->exists();
+
+        if (! $unit->online_booking_enabled || ! $hasService || ! $hasProfessional || ! $hasPair) {
+            throw ValidationException::withMessages(['publication' => 'Ative a unidade, pelo menos um serviço e um profissional com vínculo antes de publicar.']);
+        }
     }
 }

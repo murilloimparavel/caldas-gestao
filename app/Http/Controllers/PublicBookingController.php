@@ -7,6 +7,7 @@ use App\Http\Requests\PublicBookingAppointmentRequest;
 use App\Http\Requests\PublicBookingAvailabilityRequest;
 use App\Models\Appointment;
 use App\Models\OnlineBookingSetting;
+use App\Models\OnlineBookingSite;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -33,6 +34,20 @@ final class PublicBookingController extends Controller
     {
         $this->assertPublicBookingEnabled($tenant, $unit);
         $catalog = $this->catalog($tenant, $unit);
+        $setting = $unit->onlineBookingSetting;
+        $publication = OnlineBookingSite::query()
+            ->where('tenant_id', $tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->whereNotNull('active_publication_id')
+            ->with('activePublication')
+            ->first()?->activePublication;
+        $content = is_array($publication?->content) ? $publication->content : [];
+        $identity = is_array($content['identity'] ?? null) ? $content['identity'] : [];
+        $theme = is_array($content['theme'] ?? null) ? $content['theme'] : [];
+        $policy = is_array($content['booking_policy'] ?? null) ? $content['booking_policy'] : [];
+        $description = array_key_exists('description', $identity) ? $identity['description'] : $setting?->description;
+        $brandColor = $theme['brand_color'] ?? $setting?->brand_color;
+        $publicHours = array_key_exists('public_hours', $content) ? $content['public_hours'] : $setting?->public_hours;
         $payload = [
             'unit' => [
                 'tenant_slug' => $tenant->slug,
@@ -40,13 +55,13 @@ final class PublicBookingController extends Controller
                 'name' => $unit->name,
                 'timezone' => $unit->timezone ?? $tenant->timezone,
                 'address' => $this->safeAddress($unit->address),
-                'description' => $unit->onlineBookingSetting?->description,
-                'cover_image_url' => $unit->onlineBookingSetting?->cover_image_url,
-                'brand_color' => $unit->onlineBookingSetting?->brand_color,
-                'booking_flow' => $unit->onlineBookingSetting instanceof OnlineBookingSetting ? ($unit->onlineBookingSetting->booking_flow ?? 'service_first') : 'service_first',
-                'public_hours' => $unit->onlineBookingSetting?->public_hours,
-                'minimum_notice_minutes' => $unit->onlineBookingSetting instanceof OnlineBookingSetting ? ($unit->onlineBookingSetting->minimum_notice_minutes ?? 0) : 0,
-                'contacts' => ['whatsapp' => $unit->onlineBookingSetting?->whatsapp_phone, 'phone' => $unit->onlineBookingSetting?->phone, 'instagram_url' => $unit->onlineBookingSetting?->instagram_url, 'facebook_url' => $unit->onlineBookingSetting?->facebook_url, 'website_url' => $unit->onlineBookingSetting?->website_url],
+                'description' => $description,
+                'cover_image_url' => $setting?->cover_image_url,
+                'brand_color' => $brandColor,
+                'booking_flow' => $policy['booking_flow'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->booking_flow ?? 'service_first') : 'service_first'),
+                'public_hours' => $publicHours,
+                'minimum_notice_minutes' => $policy['minimum_notice_minutes'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->minimum_notice_minutes ?? 0) : 0),
+                'contacts' => ['whatsapp' => $identity['whatsapp_phone'] ?? $setting?->whatsapp_phone, 'phone' => $identity['phone'] ?? $setting?->phone, 'instagram_url' => $identity['instagram_url'] ?? $setting?->instagram_url, 'facebook_url' => $identity['facebook_url'] ?? $setting?->facebook_url, 'website_url' => $identity['website_url'] ?? $setting?->website_url],
                 'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => MediaUrl::for($image->path), 'alt_text' => $image->alt_text])->values()->all(),
             ],
             ...$catalog,
