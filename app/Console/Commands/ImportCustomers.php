@@ -130,7 +130,7 @@ final class ImportCustomers extends Command
         $metadata = [];
         $promotedKeys = ['id', 'source_id', 'name', 'email', 'phone', 'phone1', 'birthday', 'obs', 'active', '__typename', 'phone_normalized', 'birth_date', 'notes', 'status'];
         foreach ($source as $key => $value) {
-            if (is_string($key) && ! in_array($key, $promotedKeys, true)) {
+            if (! in_array($key, $promotedKeys, true)) {
                 $metadata[$key] = $value;
             }
         }
