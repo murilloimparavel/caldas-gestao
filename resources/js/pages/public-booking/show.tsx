@@ -402,6 +402,29 @@ export default function PublicBooking({
                         `Agende seu horário em ${unit.name}.`
                     }
                 />
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'BeautySalon',
+                        name: unit.name,
+                        description:
+                            unit.seo?.description || unit.description || undefined,
+                        url: unit.canonical_url || undefined,
+                        image: unit.cover_image_url || undefined,
+                        telephone: unit.contacts?.phone || unit.contacts?.whatsapp || undefined,
+                        address: unit.address
+                            ? {
+                                  '@type': 'PostalAddress',
+                                  streetAddress: [unit.address.street, unit.address.number]
+                                      .filter(Boolean)
+                                      .join(', '),
+                                  addressLocality: unit.address.city,
+                                  addressRegion: unit.address.state,
+                                  postalCode: unit.address.postal_code,
+                              }
+                            : undefined,
+                    })}
+                </script>
             </Head>
             <div className="mx-auto max-w-6xl space-y-6">
                 <header
