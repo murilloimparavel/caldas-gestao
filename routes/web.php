@@ -32,6 +32,7 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
+use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -115,7 +116,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('online-booking/publications', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.publications.index');
         Route::get('online-booking/preview/{tenant:slug}/{unit:slug}', [PublicBookingController::class, 'preview'])
             ->scopeBindings()
-            ->middleware('signed')
+            ->middleware(['signed', PreventOnlineBookingPreviewCaching::class])
             ->name('online_booking.preview');
         Route::get('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.campaign_links.index');
         Route::get('online-booking/links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.links');

@@ -115,7 +115,9 @@ it('renders a signed preview from the draft without requiring publication', func
 
     $response = $this->actingAs($owner)->get(URL::signedRoute('online_booking.preview', [$tenant, $unit]));
 
-    $response->assertSuccessful();
+    $response->assertSuccessful()
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
 });
 
 it('rejects draft selections and sections outside the active unit contract', function () {
