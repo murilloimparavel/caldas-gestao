@@ -1,12 +1,15 @@
 <?php
 
+use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Enums\TenantDomainKind;
 use App\Enums\TenantDomainStatus;
+use App\Models\OnlineBookingSite;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\TenantContext;
 
 it('requires authentication and exposes scoped readiness to the owner', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
@@ -60,6 +63,31 @@ it('updates publish flags, publishes the public link only for a valid pair, and 
 
     expect($service->fresh()->online_booking_enabled)->toBeFalse()
         ->and($professional->fresh()->online_booking_enabled)->toBeFalse();
+});
+
+it('preserves editor section visibility when legacy settings are synchronized', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'sections' => [['key' => 'gallery', 'enabled' => false]],
+    ], 0);
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_slug' => $unit->slug,
+        'lock_version' => $unit->lock_version,
+    ])->assertRedirect();
+
+    $draft = OnlineBookingSite::query()->where('unit_id', $unit->getKey())->firstOrFail()->draft;
+    expect($draft?->content['sections'])->toBe([
+        ['key' => 'gallery', 'enabled' => false],
+    ]);
+
+    $diff = $this->actingAs($owner)->getJson(route('online_booking.index'))->json('draftDiff');
+    expect($diff)->toContain('Seções visíveis');
+    expect($this->actingAs($owner)->getJson(route('online_booking.index'))->json('previewUrl'))->toContain('expires=');
 });
 
 it('rejects stale versions and cross-scope selections', function () {

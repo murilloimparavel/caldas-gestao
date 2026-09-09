@@ -1,0 +1,182 @@
+<?php
+
+use App\Actions\OnlineBooking\PublishOnlineBookingSite;
+use App\Actions\OnlineBooking\RestoreOnlineBookingPublication;
+use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
+use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
+use App\Enums\OnlineBookingPublicationStatus;
+use App\Models\OnlineBookingPublication;
+use App\Models\Service;
+use App\Models\Tenant;
+use App\Models\Unit;
+use App\Support\TenantContext;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
+
+it('saves, publishes, unpublishes, and restores an online booking site', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $content = [
+        'schema_version' => 1,
+        'theme' => ['brand_color' => '#2563eb'],
+        'sections' => [['key' => 'hero', 'enabled' => true]],
+        'service_ids' => [],
+        'professional_ids' => [],
+    ];
+
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, $content, 0);
+    $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+    $replayedPublication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    expect($publication->version)->toBe(1)
+        ->and($replayedPublication->getKey())->toBe($publication->getKey())
+        ->and(OnlineBookingPublication::query()->count())->toBe(1)
+        ->and($unit->refresh()->onlineBookingSetting)->toBeNull();
+
+    $site = $publication->site()->firstOrFail();
+    expect($site->status)->toBe(OnlineBookingPublicationStatus::Published)
+        ->and($site->active_publication_id)->toBe($publication->getKey());
+
+    app(UnpublishOnlineBookingSite::class)->handle($owner, $context);
+    expect($site->refresh()->status)->toBe(OnlineBookingPublicationStatus::Unpublished)
+        ->and($site->active_publication_id)->toBeNull();
+
+    $restored = app(RestoreOnlineBookingPublication::class)->handle($owner, $context, $publication);
+    expect($restored->revision)->toBe(2)
+        ->and($restored->content)->toMatchArray($content);
+});
+
+it('exposes the draft and publication lifecycle through the authorized routes', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
+    $content = [
+        'schema_version' => 1,
+        'theme' => [],
+        'sections' => [],
+        'service_ids' => [],
+        'professional_ids' => [],
+    ];
+
+    $draft = $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
+        'revision' => 0,
+        'content' => $content,
+    ])->assertOk()->json('draft');
+
+    $this->actingAs($owner)->postJson(route('online_booking.publish'), ['revision' => $draft['revision']])
+        ->assertOk()
+        ->assertJsonPath('status', 'published');
+
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertOk()
+        ->assertJsonPath('publication.status', 'published')
+        ->assertJsonPath('activePublication.version', 1);
+
+    $this->actingAs($owner)->postJson(route('online_booking.unpublish'))
+        ->assertOk()
+        ->assertJsonPath('status', 'unpublished');
+
+    expect($unit->refresh()->tenant_id)->toBe($tenant->getKey());
+});
+
+it('preserves draft sections when saving a partial editor update', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+
+    $first = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'identity' => ['description' => 'Página da unidade'],
+        'sections' => [['key' => 'hero', 'enabled' => true]],
+    ], 0);
+    $second = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'theme' => ['brand_color' => '#0f766e'],
+    ], $first->revision);
+
+    expect($second->content)->toMatchArray([
+        'identity' => ['description' => 'Página da unidade'],
+        'sections' => [['key' => 'hero', 'enabled' => true]],
+        'theme' => ['brand_color' => '#0f766e'],
+    ]);
+});
+
+it('renders a signed preview from the draft without requiring publication', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'identity' => ['description' => 'Prévia do rascunho'],
+        'service_ids' => [],
+        'professional_ids' => [],
+    ], 0);
+
+    $response = $this->actingAs($owner)->get(URL::signedRoute('online_booking.preview', [$tenant, $unit]));
+
+    $response->assertSuccessful()
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+});
+
+it('renders a signed preview of an immutable publication', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [], 'professional_ids' => []], 0);
+    $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    $this->actingAs($owner)->get(URL::signedRoute('online_booking.publication_preview', ['publication' => $publication->getKey()]))
+        ->assertSuccessful()
+        ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+});
+
+it('rejects an expired online booking preview URL', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)
+        ->get(URL::temporarySignedRoute('online_booking.preview', now()->subMinute(), [$tenant, $unit]))
+        ->assertForbidden();
+});
+
+it('rejects draft selections and sections outside the active unit contract', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $otherTenant = Tenant::factory()->create();
+    $foreignService = Service::factory()->create(['tenant_id' => $otherTenant->getKey(), 'unit_id' => Unit::factory()->create(['tenant_id' => $otherTenant->getKey()])->getKey()]);
+
+    expect(fn () => app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'service_ids' => [$foreignService->getKey()],
+        'sections' => [['key' => 'unknown', 'enabled' => true]],
+    ], 0))->toThrow(ValidationException::class);
+});
+
+it('supports a dry-run for the idempotent legacy backfill', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $this->artisan('online-booking:backfill', ['user_id' => $owner->getKey(), '--dry-run' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain('would be provisioned');
+});
+
+it('accepts a partial draft update without repeating the schema version', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $draft = $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
+        'revision' => 0,
+        'content' => ['sections' => [['key' => 'hero', 'enabled' => true]]],
+    ])->assertOk()->json('draft');
+
+    expect($draft['content']['schema_version'])->toBe(1);
+});
+
+it('exposes the named editor, publications, and links entry points', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)->get(route('online_booking.editor'))->assertSuccessful();
+    $this->actingAs($owner)->get(route('online_booking.publications.index'))->assertSuccessful();
+    $this->actingAs($owner)->get(route('online_booking.links'))->assertSuccessful();
+});

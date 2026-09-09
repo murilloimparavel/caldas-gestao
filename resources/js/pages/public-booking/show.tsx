@@ -44,7 +44,11 @@ type Unit = {
         facebook_url?: string | null;
         website_url?: string | null;
     };
-    gallery?: { url?: string | null; alt_text?: string | null }[];
+    gallery?: {
+        url?: string | null;
+        thumbnail_url?: string | null;
+        alt_text?: string | null;
+    }[];
     public_hours?: Record<
         string,
         {
@@ -56,6 +60,10 @@ type Unit = {
         }
     >;
     booking_flow?: 'service_first' | 'professional_first';
+    seo?: { title?: string | null; description?: string | null };
+    canonical_url?: string | null;
+    is_preview?: boolean;
+    sections?: Partial<Record<'hero' | 'services' | 'professionals' | 'gallery' | 'hours' | 'contact', boolean>>;
 };
 type Professional = { id: string; name: string; avatar_url?: string | null };
 type Service = {
@@ -214,6 +222,8 @@ export default function PublicBooking({
     const getInitials = useInitials();
     const args = routeArgs(unit);
     const bookingFlow = unit.booking_flow ?? 'service_first';
+    const sectionEnabled = (key: keyof NonNullable<Unit['sections']>): boolean =>
+        unit.sections?.[key] !== false;
     const selectedService = useMemo(
         () => services.find((item) => item.id === serviceId) ?? null,
         [serviceId, services],
@@ -314,7 +324,7 @@ export default function PublicBooking({
     const focusBooking = (): void => {
         setTab('services');
         window.setTimeout(() => {
-            document.getElementById('booking-flow')?.scrollIntoView({
+            document.getElementById('public-booking-panel-services')?.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start',
             });
@@ -362,7 +372,60 @@ export default function PublicBooking({
 
     return (
         <PublicShell unit={unit}>
-            <Head title={`Agendar · ${unit.name}`} />
+            <Head title={unit.seo?.title || `Agendar · ${unit.name}`}>
+                <meta
+                    name="description"
+                    content={
+                        unit.seo?.description ||
+                        unit.description ||
+                        `Agende seu horário em ${unit.name}.`
+                    }
+                />
+                {unit.canonical_url ? (
+                    <link rel="canonical" href={unit.canonical_url} />
+                ) : null}
+                {unit.is_preview ? (
+                    <meta name="robots" content="noindex,nofollow,noarchive" />
+                ) : null}
+                {unit.cover_image_url ? (
+                    <meta property="og:image" content={unit.cover_image_url} />
+                ) : null}
+                <meta
+                    property="og:title"
+                    content={unit.seo?.title || unit.name}
+                />
+                <meta
+                    property="og:description"
+                    content={
+                        unit.seo?.description ||
+                        unit.description ||
+                        `Agende seu horário em ${unit.name}.`
+                    }
+                />
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'BeautySalon',
+                        name: unit.name,
+                        description:
+                            unit.seo?.description || unit.description || undefined,
+                        url: unit.canonical_url || undefined,
+                        image: unit.cover_image_url || undefined,
+                        telephone: unit.contacts?.phone || unit.contacts?.whatsapp || undefined,
+                        address: unit.address
+                            ? {
+                                  '@type': 'PostalAddress',
+                                  streetAddress: [unit.address.street, unit.address.number]
+                                      .filter(Boolean)
+                                      .join(', '),
+                                  addressLocality: unit.address.city,
+                                  addressRegion: unit.address.state,
+                                  postalCode: unit.address.postal_code,
+                              }
+                            : undefined,
+                    })}
+                </script>
+            </Head>
             <div className="mx-auto max-w-6xl space-y-6">
                 <header
                     className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900"
@@ -408,14 +471,17 @@ export default function PublicBooking({
                     {(
                         [
                             ['details', 'Detalhes'],
-                            ['services', 'Serviços'],
-                            ['professionals', 'Profissionais'],
+                            ...(sectionEnabled('services') ? [['services', 'Serviços'] as [Tab, string]] : []),
+                            ...(sectionEnabled('professionals') ? [['professionals', 'Profissionais'] as [Tab, string]] : []),
                             ['reviews', 'Avaliações'],
                         ] as [Tab, string][]
                     ).map(([key, label]) => (
                         <button
                             key={key}
                             type="button"
+                            role="tab"
+                            aria-selected={tab === key}
+                            aria-controls={`public-booking-panel-${key}`}
                             onClick={() => setTab(key)}
                             className={`rounded-xl px-4 py-2.5 text-sm font-medium whitespace-nowrap transition ${tab === key ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950' : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}
                         >
@@ -424,13 +490,17 @@ export default function PublicBooking({
                     ))}
                 </nav>
                 {tab === 'details' && (
-                    <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                    <section id="public-booking-panel-details" className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
                         <div className="space-y-5">
                             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                                 {coverUrl ? (
                                     <img
                                         src={coverUrl}
                                         alt={`Imagem de ${unit.name}`}
+                                        width={1280}
+                                        height={640}
+                                        fetchPriority="high"
+                                        decoding="async"
                                         className="h-52 w-full object-cover sm:h-72"
                                     />
                                 ) : (
@@ -448,13 +518,45 @@ export default function PublicBooking({
                                     </div>
                                 )}
                             </div>
+                            {sectionEnabled('gallery') && unit.gallery?.length ? (
+                                <InfoCard title="Galeria">
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                        {unit.gallery.map((image, index) => (
+                                            <a
+                                                key={`${image.url}-${index}`}
+                                                href={image.url ?? undefined}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="group block overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700"
+                                            >
+                                                <img
+                                                    src={
+                                                        image.thumbnail_url ??
+                                                        image.url ??
+                                                        undefined
+                                                    }
+                                                    alt={
+                                                        image.alt_text ??
+                                                        `Imagem ${index + 1} de ${unit.name}`
+                                                    }
+                                                    width={400}
+                                                    height={400}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    className="aspect-square w-full object-cover transition group-hover:scale-105"
+                                                />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </InfoCard>
+                            ) : null}
                             <InfoCard title="Sobre o espaço">
                                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                                     {unit.description ||
                                         'Conheça nosso espaço e escolha o melhor momento para seu atendimento.'}
                                 </p>
                             </InfoCard>
-                            <InfoCard title="Contato">
+                            {sectionEnabled('contact') && <InfoCard title="Contato">
                                 <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                                     {unit.contacts?.phone && (
                                         <p>Telefone: {unit.contacts.phone}</p>
@@ -493,10 +595,10 @@ export default function PublicBooking({
                                             <p>Contato ainda não informado.</p>
                                         )}
                                 </div>
-                            </InfoCard>
+                            </InfoCard>}
                         </div>
                         <div className="space-y-5">
-                            <InfoCard title="Horário de atendimento">
+                            {sectionEnabled('hours') && <InfoCard title="Horário de atendimento">
                                 <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
                                     <span
                                         className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
@@ -541,7 +643,7 @@ export default function PublicBooking({
                                         </p>
                                     )}
                                 </div>
-                            </InfoCard>
+                            </InfoCard>}
                             {address && (
                                 <InfoCard title="Onde estamos">
                                     <p className="flex gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -554,7 +656,7 @@ export default function PublicBooking({
                     </section>
                 )}
                 {tab === 'reviews' && (
-                    <InfoCard title="Avaliações">
+                    <InfoCard id="public-booking-panel-reviews" title="Avaliações">
                         <div className="flex items-center gap-3">
                             <Star className="size-5 fill-amber-400 text-amber-400" />
                             <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -563,8 +665,8 @@ export default function PublicBooking({
                         </div>
                     </InfoCard>
                 )}
-                {tab === 'professionals' && (
-                    <InfoCard title="Nossa equipe">
+                {tab === 'professionals' && sectionEnabled('professionals') && (
+                    <InfoCard id="public-booking-panel-professionals" title="Nossa equipe">
                         <div className="grid gap-3 sm:grid-cols-2">
                             {(professionals.length
                                 ? professionals
@@ -602,9 +704,9 @@ export default function PublicBooking({
                         </div>
                     </InfoCard>
                 )}
-                {tab === 'services' && (
+                {tab === 'services' && sectionEnabled('services') && (
                     <form
-                        id="booking-flow"
+                        id="public-booking-panel-services"
                         onSubmit={submit}
                         className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.75fr)]"
                     >
@@ -649,6 +751,10 @@ export default function PublicBooking({
                                                             undefined
                                                         }
                                                         alt=""
+                                                        width={56}
+                                                        height={56}
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         className="size-14 shrink-0 rounded-xl object-cover"
                                                     />
                                                 )}
@@ -861,16 +967,19 @@ export default function PublicBooking({
 }
 
 function InfoCard({
+    id,
     className,
     title,
     children,
 }: {
+    id?: string;
     className?: string;
     title: string;
     children: React.ReactNode;
 }) {
     return (
         <section
+            id={id}
             className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 dark:border-slate-800 dark:bg-slate-900 ${className ?? ''}`}
         >
             <h2 className="font-display text-xl font-semibold text-slate-950 dark:text-white">

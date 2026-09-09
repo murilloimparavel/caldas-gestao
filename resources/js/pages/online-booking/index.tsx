@@ -1,4 +1,4 @@
-import { Form, Head, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -10,8 +10,10 @@ import {
     Copy,
     ExternalLink,
     GalleryHorizontalEnd,
+    History,
     Globe2,
     ImagePlus,
+    Monitor,
     Link2,
     Palette,
     Scissors,
@@ -21,6 +23,7 @@ import {
     UsersRound,
     XCircle,
     Settings2,
+    RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -99,10 +102,40 @@ type Props = {
         settings?: PublicSettings | null;
     };
     publicUrl: string | null;
+    previewUrl?: string | null;
     publicDomains: { id: string; hostname: string }[];
     services: BookingItem[];
     professionals: BookingItem[];
     readiness: Readiness;
+    publication?: {
+        id: string;
+        status: 'unpublished' | 'published';
+        draft_revision: number;
+        published_at?: string | null;
+        unpublished_at?: string | null;
+        lock_version: number;
+    } | null;
+    draft?: {
+        revision: number;
+        content?: { sections?: { key: string; enabled: boolean }[] } | null;
+    } | null;
+    activePublication?: {
+        id: string;
+        version: number;
+        source_revision: number;
+        published_at?: string | null;
+        template_key: string;
+    } | null;
+    publicationHistory?: {
+        id: string;
+        version: number;
+        source_revision: number;
+        published_at?: string | null;
+        superseded_at?: string | null;
+        published_by?: { name?: string | null } | null;
+        preview_url?: string | null;
+    }[];
+    draftDiff?: string[];
     settings?: PublicSettings | null;
     cover?: string | null;
     coverUploadUrl?: string | null;
@@ -241,6 +274,96 @@ function SectionCard({
     );
 }
 
+const templateSections = [
+    ['hero', 'Capa e apresentação'],
+    ['services', 'Serviços'],
+    ['professionals', 'Profissionais'],
+    ['gallery', 'Galeria'],
+    ['hours', 'Horários'],
+    ['contact', 'Localização e contatos'],
+    ['confirmation', 'Confirmação'],
+    ['seo', 'SEO e compartilhamento'],
+] as const;
+
+function SectionVisibilityEditor({
+    draft,
+}: {
+    draft: NonNullable<Props['draft']>;
+}) {
+    const initial = new Map(
+        (draft.content?.sections ?? []).map((section) => [
+            section.key,
+            section.enabled,
+        ]),
+    );
+    const [sections, setSections] = useState<Record<string, boolean>>(() =>
+        Object.fromEntries(
+            templateSections.map(([key]) => [key, initial.get(key) ?? true]),
+        ),
+    );
+    const [saving, setSaving] = useState(false);
+    const save = (): void => {
+        setSaving(true);
+        router.patch(
+            onlineBooking.draft.update.url(),
+            {
+                revision: draft.revision,
+                content: {
+                    schema_version: 1,
+                    sections: templateSections.map(([key]) => ({
+                        key,
+                        enabled: sections[key] ?? true,
+                    })),
+                },
+            },
+            { preserveScroll: true, onFinish: () => setSaving(false) },
+        );
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base">Seções da página</CardTitle>
+                <CardDescription>
+                    Escolha o que aparece no canal público. Essas alterações
+                    ficam no rascunho até publicar.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                    {templateSections.map(([key, label]) => (
+                        <label
+                            key={key}
+                            className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm hover:border-primary/50"
+                        >
+                            <input
+                                type="checkbox"
+                                checked={sections[key] ?? true}
+                                onChange={(event) =>
+                                    setSections((current) => ({
+                                        ...current,
+                                        [key]: event.target.checked,
+                                    }))
+                                }
+                                className="size-4 accent-primary"
+                            />
+                            <span>{label}</span>
+                        </label>
+                    ))}
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={save}
+                    disabled={saving}
+                >
+                    {saving ? 'Salvando…' : 'Salvar seções no rascunho'}
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
 type CoverEditorProps = {
     url?: string | null;
     uploadUrl?: string | null;
@@ -365,22 +488,51 @@ function PublicPreview({
     settings,
     gallery,
     services,
+    previewUrl,
 }: {
     unit: Props['unit'];
     settings: PublicSettings;
     gallery: NonNullable<Props['gallery']>;
     services: BookingItem[];
+    previewUrl?: string | null;
 }) {
+    const [viewport, setViewport] = useState<'mobile' | 'desktop'>('mobile');
     const coverUrl =
         settings.cover_url ?? settings.cover_image_url ?? settings.logo_url;
     const visibleServices = services.filter(
         (item) => item.status === 'active' && item.online_booking_enabled,
     );
 
+    if (previewUrl) {
+        return (
+            <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20">
+                <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <CardTitle className="text-base">Prévia pública</CardTitle>
+                            <CardDescription className="mt-1">Renderização real do rascunho atual.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1" role="group" aria-label="Tamanho da prévia">
+                            <button type="button" aria-pressed={viewport === 'mobile'} onClick={() => setViewport('mobile')} className={`rounded-md px-2 py-1 text-xs ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>Mobile</button>
+                            <button type="button" aria-pressed={viewport === 'desktop'} onClick={() => setViewport('desktop')} className={`rounded-md px-2 py-1 text-xs ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>Desktop</button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex justify-center bg-muted/10 p-3">
+                    <iframe
+                        title="Prévia pública do agendamento online"
+                        src={previewUrl}
+                        className={`h-[36rem] rounded-2xl border border-border bg-background transition-[width] ${viewport === 'mobile' ? 'w-[20rem]' : 'w-full'}`}
+                    />
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
             <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
-                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-3">
                     <div>
                         <CardTitle className="text-base">
                             Prévia pública
@@ -389,15 +541,31 @@ function PublicPreview({
                             Veja como o celular do cliente exibirá a unidade.
                         </CardDescription>
                     </div>
-                    <Smartphone
-                        aria-hidden="true"
-                        className="size-4 text-primary"
-                    />
+                    <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1" role="group" aria-label="Tamanho da prévia">
+                        <button
+                            type="button"
+                            aria-pressed={viewport === 'mobile'}
+                            aria-label="Prévia em celular"
+                            onClick={() => setViewport('mobile')}
+                            className={`rounded-md p-1.5 ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                        >
+                            <Smartphone aria-hidden="true" className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={viewport === 'desktop'}
+                            aria-label="Prévia em desktop"
+                            onClick={() => setViewport('desktop')}
+                            className={`rounded-md p-1.5 ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                        >
+                            <Monitor aria-hidden="true" className="size-4" />
+                        </button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="flex justify-center bg-muted/10 p-5">
-                <div className="w-full max-w-[18rem] rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl dark:border-slate-700">
-                    <div className="relative flex h-[33rem] flex-col overflow-hidden rounded-[1.45rem] bg-background">
+                <div className={`w-full rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl transition-[max-width] dark:border-slate-700 ${viewport === 'mobile' ? 'max-w-[18rem]' : 'max-w-[42rem]'}`}>
+                    <div className={`relative flex flex-col overflow-hidden rounded-[1.45rem] bg-background ${viewport === 'mobile' ? 'h-[33rem]' : 'h-[28rem]'}`}>
                         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
                             <span className="max-w-[12rem] truncate text-xs font-semibold">
                                 {unit.name}
@@ -515,10 +683,16 @@ function PublicPreview({
 export default function OnlineBookingIndex({
     unit,
     publicUrl,
+    previewUrl: signedPreviewUrl = null,
     publicDomains,
     services,
     professionals,
     readiness,
+    publication = null,
+    draft = null,
+    activePublication = null,
+    publicationHistory = [],
+    draftDiff = [],
     settings: rootSettings,
     gallery = [],
     cover,
@@ -529,6 +703,10 @@ export default function OnlineBookingIndex({
     const settings = rootSettings ?? unit.settings ?? {};
     const [activeTab, setActiveTab] = useState<TabKey>('details');
     const [copied, setCopied] = useState(false);
+    const [publicationError, setPublicationError] = useState<string | null>(
+        null,
+    );
+    const [publicationProcessing, setPublicationProcessing] = useState(false);
     const [galleryItems, setGalleryItems] = useState(gallery);
     const coverUrl =
         cover ??
@@ -544,6 +722,20 @@ export default function OnlineBookingIndex({
     const activeProfessionals = professionals.filter(
         (item) => item.status === 'active',
     );
+    const hasPendingChanges = Boolean(
+        publication?.status === 'published' &&
+        draft &&
+        activePublication &&
+        draft.revision > activePublication.source_revision,
+    );
+    const publicationLabel =
+        !publication || publication.status === 'unpublished'
+            ? draft
+                ? 'Rascunho salvo'
+                : 'Não publicada'
+            : hasPendingChanges
+              ? 'Alterações para publicar'
+              : 'Publicada';
     const copyPublicUrl = async () => {
         if (!publicUrl || !navigator.clipboard) {
             return;
@@ -552,6 +744,47 @@ export default function OnlineBookingIndex({
         await navigator.clipboard.writeText(publicUrl);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2200);
+    };
+    const publishDraft = (): void => {
+        if (!draft) {
+            return;
+        }
+
+        setPublicationError(null);
+        setPublicationProcessing(true);
+        router.post(
+            onlineBooking.publish.url(),
+            { revision: draft.revision },
+            {
+                preserveScroll: true,
+                onError: (errors) =>
+                    setPublicationError(
+                        errors.publication ??
+                            'Não foi possível publicar. Revise os requisitos e tente novamente.',
+                    ),
+                onFinish: () => setPublicationProcessing(false),
+            },
+        );
+    };
+    const unpublishSite = (): void => {
+        if (!window.confirm('Retirar esta página do ar agora?')) {
+            return;
+        }
+
+        setPublicationError(null);
+        setPublicationProcessing(true);
+        router.post(
+            onlineBooking.unpublish.url(),
+            {},
+            {
+                preserveScroll: true,
+                onError: () =>
+                    setPublicationError(
+                        'Não foi possível retirar a página do ar. Tente novamente.',
+                    ),
+                onFinish: () => setPublicationProcessing(false),
+            },
+        );
     };
     const uploadGalleryImage = (file: File): void => {
         const data = new FormData();
@@ -636,6 +869,182 @@ export default function OnlineBookingIndex({
                         </div>
                     }
                 />
+                <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                    <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Globe2 aria-hidden="true" className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-foreground">
+                                    Página pública
+                                </p>
+                                <Badge
+                                    variant={
+                                        publication?.status === 'published' &&
+                                        !hasPendingChanges
+                                            ? 'default'
+                                            : 'secondary'
+                                    }
+                                >
+                                    {publicationLabel}
+                                </Badge>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {publication?.status === 'published' &&
+                                !hasPendingChanges
+                                    ? 'Seus clientes estão vendo a última versão publicada.'
+                                    : 'Suas alterações ficam no rascunho até você publicar.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                        {publicationError ? (
+                            <p
+                                role="alert"
+                                className="text-sm text-destructive sm:mr-2 sm:self-center"
+                            >
+                                {publicationError}
+                            </p>
+                        ) : null}
+                        <Button asChild type="button" variant="ghost">
+                            <Link
+                                href={onlineBooking.campaign_links.index.url()}
+                            >
+                                <Share2 aria-hidden="true" />
+                                Links de divulgação
+                            </Link>
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                                publicUrl &&
+                                window.open(
+                                    signedPreviewUrl ?? publicUrl,
+                                    '_blank',
+                                    'noopener,noreferrer',
+                                )
+                            }
+                            disabled={!publicUrl}
+                        >
+                            <ExternalLink aria-hidden="true" />
+                            Visualizar página
+                        </Button>
+                        {publication?.status === 'published' ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={unpublishSite}
+                                disabled={publicationProcessing}
+                            >
+                                Retirar do ar
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                onClick={publishDraft}
+                                disabled={
+                                    !draft ||
+                                    !readiness.publishable ||
+                                    publicationProcessing
+                                }
+                            >
+                                Publicar página
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                {hasPendingChanges && draftDiff?.length ? (
+                    <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                            <div>
+                                <p className="text-sm font-semibold">Alterações aguardando publicação</p>
+                                <p className="mt-1 text-xs opacity-80">A versão pública continua intacta até você publicar.</p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {draftDiff.map((label: string) => <Badge key={label} variant="outline" className="border-current/30">{label}</Badge>)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+                {publicationHistory.length > 0 ? (
+                    <Card className="mb-5">
+                        <CardHeader className="border-b border-border/60 bg-muted/20">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <History
+                                    aria-hidden="true"
+                                    className="size-4 text-primary"
+                                />
+                                Histórico de publicações
+                            </CardTitle>
+                            <CardDescription>
+                                Cada versão é imutável. Restaurar cria um novo
+                                rascunho sem alterar o histórico.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="divide-y divide-border/60 p-0">
+                            {publicationHistory.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                                            v{item.version}
+                                        </span>
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                Publicada em{' '}
+                                                {item.published_at
+                                                    ? new Date(
+                                                          item.published_at,
+                                                      ).toLocaleString('pt-BR')
+                                                    : 'data indisponível'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Revisão {item.source_revision}
+                                                {item.published_by?.name
+                                                    ? ` · ${item.published_by.name}`
+                                                    : ''}
+                                                {item.superseded_at
+                                                    ? ' · substituída'
+                                                    : ' · ativa'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button type="button" variant="outline" size="sm" asChild>
+                                            <a href={item.preview_url ?? '#'} target="_blank" rel="noreferrer">
+                                                <ExternalLink aria-hidden="true" />
+                                                Visualizar
+                                            </a>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                            router.post(
+                                                onlineBooking.publications.restore.url(
+                                                    item.id,
+                                                ),
+                                                {},
+                                                { preserveScroll: true },
+                                            )
+                                            }
+                                        >
+                                            <RotateCcw aria-hidden="true" />
+                                            Restaurar como rascunho
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                ) : null}
+                {draft ? <SectionVisibilityEditor draft={draft} /> : null}
                 <Form
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}
@@ -1327,6 +1736,7 @@ export default function OnlineBookingIndex({
                                         settings={settings}
                                         gallery={galleryItems}
                                         services={services}
+                                        previewUrl={signedPreviewUrl}
                                     />
                                     <Card>
                                         <CardContent className="pt-5">
