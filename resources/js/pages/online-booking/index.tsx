@@ -548,6 +548,10 @@ export default function OnlineBookingIndex({
     const settings = rootSettings ?? unit.settings ?? {};
     const [activeTab, setActiveTab] = useState<TabKey>('details');
     const [copied, setCopied] = useState(false);
+    const [publicationError, setPublicationError] = useState<string | null>(
+        null,
+    );
+    const [publicationProcessing, setPublicationProcessing] = useState(false);
     const [galleryItems, setGalleryItems] = useState(gallery);
     const coverUrl =
         cover ??
@@ -585,6 +589,50 @@ export default function OnlineBookingIndex({
         await navigator.clipboard.writeText(publicUrl);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2200);
+    };
+    const previewUrl = publicUrl
+        ? `${publicUrl}${publicUrl.includes('?') ? '&' : '?'}utm_source=caldas_gestao&utm_medium=preview&utm_campaign=online_booking`
+        : null;
+    const publishDraft = (): void => {
+        if (!draft) {
+            return;
+        }
+
+        setPublicationError(null);
+        setPublicationProcessing(true);
+        router.post(
+            onlineBooking.publish.url(),
+            { revision: draft.revision },
+            {
+                preserveScroll: true,
+                onError: (errors) =>
+                    setPublicationError(
+                        errors.publication ??
+                            'Não foi possível publicar. Revise os requisitos e tente novamente.',
+                    ),
+                onFinish: () => setPublicationProcessing(false),
+            },
+        );
+    };
+    const unpublishSite = (): void => {
+        if (!window.confirm('Retirar esta página do ar agora?')) {
+            return;
+        }
+
+        setPublicationError(null);
+        setPublicationProcessing(true);
+        router.post(
+            onlineBooking.unpublish.url(),
+            {},
+            {
+                preserveScroll: true,
+                onError: () =>
+                    setPublicationError(
+                        'Não foi possível retirar a página do ar. Tente novamente.',
+                    ),
+                onFinish: () => setPublicationProcessing(false),
+            },
+        );
     };
     const uploadGalleryImage = (file: File): void => {
         const data = new FormData();
@@ -699,13 +747,21 @@ export default function OnlineBookingIndex({
                         </div>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                        {publicationError ? (
+                            <p
+                                role="alert"
+                                className="text-sm text-destructive sm:mr-2 sm:self-center"
+                            >
+                                {publicationError}
+                            </p>
+                        ) : null}
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() =>
                                 publicUrl &&
                                 window.open(
-                                    publicUrl,
+                                    previewUrl ?? publicUrl,
                                     '_blank',
                                     'noopener,noreferrer',
                                 )
@@ -719,28 +775,20 @@ export default function OnlineBookingIndex({
                             <Button
                                 type="button"
                                 variant="destructive"
-                                onClick={() =>
-                                    router.post(
-                                        onlineBooking.unpublish.url(),
-                                        {},
-                                        { preserveScroll: true },
-                                    )
-                                }
+                                onClick={unpublishSite}
+                                disabled={publicationProcessing}
                             >
                                 Retirar do ar
                             </Button>
                         ) : (
                             <Button
                                 type="button"
-                                onClick={() =>
-                                    draft &&
-                                    router.post(
-                                        onlineBooking.publish.url(),
-                                        { revision: draft.revision },
-                                        { preserveScroll: true },
-                                    )
+                                onClick={publishDraft}
+                                disabled={
+                                    !draft ||
+                                    !readiness.publishable ||
+                                    publicationProcessing
                                 }
-                                disabled={!draft || !readiness.publishable}
                             >
                                 Publicar página
                             </Button>
