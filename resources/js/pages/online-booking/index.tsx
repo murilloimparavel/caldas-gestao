@@ -1,4 +1,4 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -44,6 +44,7 @@ import { Textarea } from '@/components/ui/textarea';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
 import galleryRoutes from '@/routes/online_booking/gallery';
+import type { SharedPageProps } from '@/types';
 
 type BookingItem = {
     id: string;
@@ -520,6 +521,7 @@ export default function OnlineBookingIndex({
     coverUploadUrl: coverUploadUrlProp,
     coverDeleteUrl: coverDeleteUrlProp,
 }: Props) {
+    const { flash } = usePage<SharedPageProps>().props;
     const settings = rootSettings ?? unit.settings ?? {};
     const [activeTab, setActiveTab] = useState<TabKey>('details');
     const [copied, setCopied] = useState(false);
@@ -638,6 +640,26 @@ export default function OnlineBookingIndex({
                     {({ errors, processing, wasSuccessful }) => (
                         <>
                             <FormErrorSummary errors={errors} />
+                            {flash.error ? (
+                                <div
+                                    role="alert"
+                                    className="flex items-start gap-3 rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200"
+                                >
+                                    <AlertCircle
+                                        aria-hidden="true"
+                                        className="mt-0.5 size-4 shrink-0"
+                                    />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Configuração atualizada em outro
+                                            lugar
+                                        </p>
+                                        <p className="mt-0.5 text-xs leading-5 opacity-90">
+                                            {flash.error}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : null}
                             <input
                                 type="hidden"
                                 name="online_booking_enabled"

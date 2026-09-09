@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class OnlineBookingSettingsController extends Controller
 {
@@ -101,11 +102,19 @@ final class OnlineBookingSettingsController extends Controller
     public function update(OnlineBookingSettingsRequest $request, TenantContext $context, UpdateOnlineBookingSettings $update, OperationalMutation $mutation): RedirectResponse
     {
         $data = $request->validated();
-        $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $request, $context, $data): array {
-            $unit = $update->handle($request->user(), $context, $data);
+        try {
+            $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $request, $context, $data): array {
+                $unit = $update->handle($request->user(), $context, $data);
 
-            return ['resource_id' => $unit->getKey(), 'resource_type' => 'unit'];
-        });
+                return ['resource_id' => $unit->getKey(), 'resource_type' => 'unit'];
+            });
+        } catch (ConflictHttpException $exception) {
+            if ($request->header('X-Inertia') === 'true') {
+                return to_route('online_booking.index')->with('error', 'Esta tela estava desatualizada. Recarregamos as configurações atuais; revise e salve novamente.');
+            }
+
+            throw $exception;
+        }
 
         return to_route('online_booking.index')->with('success', 'Agendamento online atualizado.');
     }

@@ -81,6 +81,24 @@ it('rejects stale versions and cross-scope selections', function () {
     $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertStatus(409);
 });
 
+it('redirects stale Inertia saves with a recoverable message', function () {
+    [$owner, , $unit, $service, $professional] = onlineBookingWorkspace();
+    $payload = [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'lock_version' => $unit->lock_version,
+    ];
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertRedirect();
+
+    $this->actingAs($owner)
+        ->withHeader('X-Inertia', 'true')
+        ->patch(route('online_booking.update'), $payload)
+        ->assertRedirect(route('online_booking.index'))
+        ->assertSessionHas('error', 'Esta tela estava desatualizada. Recarregamos as configurações atuais; revise e salve novamente.');
+});
+
 it('rejects a user without unit update permission', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
     $user = User::factory()->create();
