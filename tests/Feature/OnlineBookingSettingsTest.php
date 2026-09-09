@@ -84,6 +84,9 @@ it('preserves editor section visibility when legacy settings are synchronized', 
     expect($draft?->content['sections'])->toBe([
         ['key' => 'gallery', 'enabled' => false],
     ]);
+
+    $diff = $this->actingAs($owner)->getJson(route('online_booking.index'))->json('draftDiff');
+    expect($diff)->toContain('Seções visíveis');
 });
 
 it('rejects stale versions and cross-scope selections', function () {
