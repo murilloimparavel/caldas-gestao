@@ -134,6 +134,7 @@ type Props = {
         superseded_at?: string | null;
         published_by?: { name?: string | null } | null;
     }[];
+    draftDiff?: string[];
     settings?: PublicSettings | null;
     cover?: string | null;
     coverUploadUrl?: string | null;
@@ -662,6 +663,7 @@ export default function OnlineBookingIndex({
     draft = null,
     activePublication = null,
     publicationHistory = [],
+    draftDiff = [],
     settings: rootSettings,
     gallery = [],
     cover,
@@ -924,6 +926,20 @@ export default function OnlineBookingIndex({
                         )}
                     </div>
                 </div>
+                {hasPendingChanges && draftDiff?.length ? (
+                    <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                            <div>
+                                <p className="text-sm font-semibold">Alterações aguardando publicação</p>
+                                <p className="mt-1 text-xs opacity-80">A versão pública continua intacta até você publicar.</p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {draftDiff.map((label: string) => <Badge key={label} variant="outline" className="border-current/30">{label}</Badge>)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
                 {publicationHistory.length > 0 ? (
                     <Card className="mb-5">
                         <CardHeader className="border-b border-border/60 bg-muted/20">

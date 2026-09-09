@@ -64,6 +64,14 @@ final class OnlineBookingSettingsController extends Controller
             ->orderBy('hostname')
             ->get(['id', 'hostname', 'kind', 'status']);
         $publicSlug = $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug;
+        $draftContent = is_array($site?->draft?->content) ? $site->draft->content : [];
+        $publishedContent = is_array($site?->activePublication?->content) ? $site->activePublication->content : [];
+        $diffLabels = [
+            'identity' => 'Identidade e contato', 'theme' => 'Cores e aparência', 'sections' => 'Seções visíveis',
+            'service_ids' => 'Serviços', 'professional_ids' => 'Profissionais', 'gallery' => 'Galeria',
+            'public_hours' => 'Horários', 'booking_policy' => 'Regras de agendamento', 'seo' => 'SEO',
+        ];
+        $draftDiff = collect($diffLabels)->filter(fn (string $label, string $key): bool => ($draftContent[$key] ?? null) !== ($publishedContent[$key] ?? null))->values()->all();
 
         $props = [
             'unit' => $context->unit->only(['id', 'name', 'slug', 'online_booking_enabled', 'lock_version']),
@@ -81,6 +89,7 @@ final class OnlineBookingSettingsController extends Controller
             'draft' => $site?->draft,
             'activePublication' => $site?->activePublication?->only(['id', 'version', 'source_revision', 'published_at', 'template_key']),
             'publicationHistory' => $site?->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'published_by', 'published_at', 'superseded_at']),
+            'draftDiff' => $draftDiff,
         ];
 
         return request()->expectsJson()
