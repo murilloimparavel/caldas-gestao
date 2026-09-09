@@ -13,6 +13,7 @@ import {
     History,
     Globe2,
     ImagePlus,
+    Monitor,
     Link2,
     Palette,
     Scissors,
@@ -491,6 +492,7 @@ function PublicPreview({
     gallery: NonNullable<Props['gallery']>;
     services: BookingItem[];
 }) {
+    const [viewport, setViewport] = useState<'mobile' | 'desktop'>('mobile');
     const coverUrl =
         settings.cover_url ?? settings.cover_image_url ?? settings.logo_url;
     const visibleServices = services.filter(
@@ -500,7 +502,7 @@ function PublicPreview({
     return (
         <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
             <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
-                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-3">
                     <div>
                         <CardTitle className="text-base">
                             Prévia pública
@@ -509,15 +511,31 @@ function PublicPreview({
                             Veja como o celular do cliente exibirá a unidade.
                         </CardDescription>
                     </div>
-                    <Smartphone
-                        aria-hidden="true"
-                        className="size-4 text-primary"
-                    />
+                    <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1" role="group" aria-label="Tamanho da prévia">
+                        <button
+                            type="button"
+                            aria-pressed={viewport === 'mobile'}
+                            aria-label="Prévia em celular"
+                            onClick={() => setViewport('mobile')}
+                            className={`rounded-md p-1.5 ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                        >
+                            <Smartphone aria-hidden="true" className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={viewport === 'desktop'}
+                            aria-label="Prévia em desktop"
+                            onClick={() => setViewport('desktop')}
+                            className={`rounded-md p-1.5 ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                        >
+                            <Monitor aria-hidden="true" className="size-4" />
+                        </button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="flex justify-center bg-muted/10 p-5">
-                <div className="w-full max-w-[18rem] rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl dark:border-slate-700">
-                    <div className="relative flex h-[33rem] flex-col overflow-hidden rounded-[1.45rem] bg-background">
+                <div className={`w-full rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl transition-[max-width] dark:border-slate-700 ${viewport === 'mobile' ? 'max-w-[18rem]' : 'max-w-[42rem]'}`}>
+                    <div className={`relative flex flex-col overflow-hidden rounded-[1.45rem] bg-background ${viewport === 'mobile' ? 'h-[33rem]' : 'h-[28rem]'}`}>
                         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
                             <span className="max-w-[12rem] truncate text-xs font-semibold">
                                 {unit.name}
