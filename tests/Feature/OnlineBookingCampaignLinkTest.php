@@ -1,0 +1,21 @@
+<?php
+
+use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
+use App\Support\TenantContext;
+
+it('creates a tenant-scoped campaign link with normalized UTM parameters', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [], 'professional_ids' => []], 0);
+
+    $response = $this->actingAs($owner)->postJson(route('online_booking.campaign_links.store'), [
+        'name' => 'Instagram campanha setembro',
+        'utm_source' => 'instagram',
+        'utm_medium' => 'social',
+        'utm_campaign' => 'setembro_barbearia',
+        'utm_content' => 'bio',
+    ]);
+
+    $response->assertCreated()->assertJsonPath('campaign_link.utm_source', 'instagram')->assertJsonPath('campaign_link.utm_campaign', 'setembro_barbearia');
+    expect($response->json('campaign_link.url'))->toContain('utm_source=instagram')->toContain('utm_medium=social');
+});
