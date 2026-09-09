@@ -44,7 +44,11 @@ type Unit = {
         facebook_url?: string | null;
         website_url?: string | null;
     };
-    gallery?: { url?: string | null; alt_text?: string | null }[];
+    gallery?: {
+        url?: string | null;
+        thumbnail_url?: string | null;
+        alt_text?: string | null;
+    }[];
     public_hours?: Record<
         string,
         {
@@ -431,6 +435,10 @@ export default function PublicBooking({
                                     <img
                                         src={coverUrl}
                                         alt={`Imagem de ${unit.name}`}
+                                        width={1280}
+                                        height={640}
+                                        fetchPriority="high"
+                                        decoding="async"
                                         className="h-52 w-full object-cover sm:h-72"
                                     />
                                 ) : (
@@ -649,6 +657,10 @@ export default function PublicBooking({
                                                             undefined
                                                         }
                                                         alt=""
+                                                        width={56}
+                                                        height={56}
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         className="size-14 shrink-0 rounded-xl object-cover"
                                                     />
                                                 )}
