@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Check, Copy, Link2, Plus, Share2, Trash2 } from 'lucide-react';
+import QRCode from 'qrcode';
 import { useState } from 'react';
 import { PageCanvas, ResourceHeader } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
@@ -33,10 +34,28 @@ type Props = { campaignLinks: CampaignLink[] };
 
 export default function CampaignLinks({ campaignLinks }: Props) {
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [qrLinkId, setQrLinkId] = useState<string | null>(null);
+    const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const copy = async (link: CampaignLink): Promise<void> => {
         await navigator.clipboard.writeText(link.url);
         setCopiedId(link.id);
         window.setTimeout(() => setCopiedId(null), 1800);
+    };
+    const toggleQr = async (link: CampaignLink): Promise<void> => {
+        if (qrLinkId === link.id) {
+            setQrLinkId(null);
+            setQrDataUrl(null);
+
+            return;
+        }
+
+        const dataUrl = await QRCode.toDataURL(link.url, {
+            errorCorrectionLevel: 'M',
+            margin: 2,
+            width: 256,
+        });
+        setQrLinkId(link.id);
+        setQrDataUrl(dataUrl);
     };
     const toggle = (link: CampaignLink): void => {
         router.patch(
@@ -257,6 +276,14 @@ export default function CampaignLinks({ campaignLinks }: Props) {
                                             </Button>
                                             <Button
                                                 type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => void toggleQr(link)}
+                                            >
+                                                QR Code
+                                            </Button>
+                                            <Button
+                                                type="button"
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => toggle(link)}
@@ -276,6 +303,12 @@ export default function CampaignLinks({ campaignLinks }: Props) {
                                                 Excluir
                                             </Button>
                                         </div>
+                                        {qrLinkId === link.id && qrDataUrl ? (
+                                            <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed bg-white p-4">
+                                                <img src={qrDataUrl} alt={`QR Code para ${link.name}`} width={256} height={256} />
+                                                <a className="text-sm font-medium text-primary underline underline-offset-4" href={qrDataUrl} download={`qr-${link.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`}>Baixar QR Code</a>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 ))
                             )}
