@@ -2,12 +2,15 @@
 
 use App\Models\Appointment;
 use App\Models\AvailabilityRule;
+use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
+use App\Models\OnlineBookingSite;
 use App\Models\Professional;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
@@ -40,6 +43,47 @@ it('publishes only opted-in catalog data and isolates tenant units', function ()
     $response->assertSuccessful()->assertJsonPath('unit.slug', $unit->slug)->assertJsonMissing(['id' => $hiddenService->getKey()]);
     expect($response->json('services.0.professionals.0.id'))->toBe($professional->getKey())
         ->and($response->json('unit'))->not->toHaveKey('email');
+});
+
+it('serves the selected catalog from the active publication snapshot', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $newService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'online_booking_enabled' => true,
+    ]);
+    $newService->professionals()->attach($professional, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'status' => 'published',
+    ]);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'version' => 1,
+        'source_revision' => 1,
+        'content_hash' => hash('sha256', 'snapshot'),
+        'template_key' => 'essential',
+        'public_slug' => $unit->slug,
+        'published_at' => now(),
+        'published_by' => User::factory()->create()->getKey(),
+        'content' => [
+            'schema_version' => 1,
+            'identity' => ['cover_image_path' => null],
+            'service_ids' => [$service->getKey()],
+            'professional_ids' => [$professional->getKey()],
+            'gallery' => [],
+        ],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+
+    $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
+
+    $response->assertSuccessful();
+    expect(collect($response->json('services'))->pluck('id')->all())->toBe([$service->getKey()]);
 });
 
 it('rejects disabled public booking and invalid relationship without enumeration', function () {
