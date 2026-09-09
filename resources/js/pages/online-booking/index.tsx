@@ -6,7 +6,6 @@ import {
     Check,
     CheckCircle2,
     ClipboardCheck,
-    Clock3,
     Copy,
     ExternalLink,
     GalleryHorizontalEnd,
@@ -19,7 +18,6 @@ import {
     Share2,
     UserRound,
     UsersRound,
-    Settings2,
     RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -53,19 +51,11 @@ import {
     SelectionCard,
 } from './components/booking-form-primitives';
 import { PublicPreview } from './components/public-preview';
+import { TabNavigation } from './components/tab-navigation';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
 type Props = OnlineBookingProps;
-const tabs: { key: TabKey; label: string; icon: typeof Globe2 }[] = [
-    { key: 'details', label: 'Detalhes', icon: Globe2 },
-    { key: 'settings', label: 'Configurações', icon: Settings2 },
-    { key: 'link', label: 'Link público', icon: Link2 },
-    { key: 'gallery', label: 'Galeria', icon: GalleryHorizontalEnd },
-    { key: 'services', label: 'Serviços', icon: Scissors },
-    { key: 'hours', label: 'Horários', icon: Clock3 },
-    { key: 'confirmation', label: 'Confirmação', icon: BellRing },
-];
 
 export default function OnlineBookingIndex({
     unit,
@@ -404,30 +394,10 @@ export default function OnlineBookingIndex({
                                     Configurações salvas com sucesso.
                                 </div>
                             )}
-                            <div className="overflow-x-auto border-b border-border/70">
-                                <nav
-                                    aria-label="Configuração do agendamento online"
-                                    className="flex min-w-max gap-1"
-                                    role="tablist"
-                                >
-                                    {tabs.map(({ key, label, icon: Icon }) => (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={activeTab === key}
-                                            onClick={() => setActiveTab(key)}
-                                            className={`relative flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 ${activeTab === key ? 'text-primary after:bg-primary' : 'text-muted-foreground after:bg-transparent hover:text-foreground'}`}
-                                        >
-                                            <Icon
-                                                aria-hidden="true"
-                                                className="size-4"
-                                            />
-                                            {label}
-                                        </button>
-                                    ))}
-                                </nav>
-                            </div>
+                            <TabNavigation
+                                activeTab={activeTab}
+                                onChange={setActiveTab}
+                            />
                             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] xl:items-start">
                                 <div className="space-y-5">
                                     {activeTab === 'details' && (
