@@ -507,14 +507,22 @@ function PublicPreview({
         return (
             <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20">
                 <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
-                    <CardTitle className="text-base">Prévia pública</CardTitle>
-                    <CardDescription className="mt-1">Renderização real do rascunho atual.</CardDescription>
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <CardTitle className="text-base">Prévia pública</CardTitle>
+                            <CardDescription className="mt-1">Renderização real do rascunho atual.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-1 rounded-lg border border-border/70 p-1" role="group" aria-label="Tamanho da prévia">
+                            <button type="button" aria-pressed={viewport === 'mobile'} onClick={() => setViewport('mobile')} className={`rounded-md px-2 py-1 text-xs ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>Mobile</button>
+                            <button type="button" aria-pressed={viewport === 'desktop'} onClick={() => setViewport('desktop')} className={`rounded-md px-2 py-1 text-xs ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>Desktop</button>
+                        </div>
+                    </div>
                 </CardHeader>
-                <CardContent className="bg-muted/10 p-3">
+                <CardContent className="flex justify-center bg-muted/10 p-3">
                     <iframe
                         title="Prévia pública do agendamento online"
                         src={previewUrl}
-                        className="h-[36rem] w-full rounded-2xl border border-border bg-background"
+                        className={`h-[36rem] rounded-2xl border border-border bg-background transition-[width] ${viewport === 'mobile' ? 'w-[20rem]' : 'w-full'}`}
                     />
                 </CardContent>
             </Card>
