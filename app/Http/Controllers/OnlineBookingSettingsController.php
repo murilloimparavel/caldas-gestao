@@ -168,7 +168,12 @@ final class OnlineBookingSettingsController extends Controller
             $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $ensureSite, $saveDraft, $request, $context, $data): array {
                 $unit = $update->handle($request->user(), $context, $data);
                 $site = $ensureSite->handle($context);
-                $saveDraft->handle($request->user(), $context, $ensureSite->content($context), (int) $site->draft_revision);
+                $content = $ensureSite->content($context);
+                $existingSections = $site->draft?->content['sections'] ?? null;
+                if (is_array($existingSections)) {
+                    $content['sections'] = $existingSections;
+                }
+                $saveDraft->handle($request->user(), $context, $content, (int) $site->draft_revision);
 
                 return ['resource_id' => $unit->getKey(), 'resource_type' => 'unit'];
             });
