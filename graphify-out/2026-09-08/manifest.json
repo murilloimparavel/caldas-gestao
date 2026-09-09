@@ -5574,9 +5574,9 @@
     "semantic_hash": ""
   },
   "resources/js/pages/marketing/home.tsx": {
-    "mtime": 1788827713.69767,
-    "seen": 1788827753.550733,
-    "ast_hash": "a5efdf55c87770d6849aaeaef7c8ddaf",
+    "mtime": 1788918343.5868692,
+    "seen": 1788918667.563632,
+    "ast_hash": "32c2341f0ff52bd2e2ea5e92c86e5e1e",
     "semantic_hash": ""
   },
   "resources/js/pages/retention/campaigns.tsx": {
@@ -5695,7 +5695,7 @@
   },
   "supabase/migrations/20260825_f2_foundation.sql": {
     "mtime": 1787666957.197015,
-    "seen": 1788877072.719253,
+    "seen": 1788919956.777022,
     "ast_hash": "8009e084f153c40998641af3310cf0f9",
     "semantic_hash": ""
   },
@@ -6435,6 +6435,18 @@
     "mtime": 1788883593.145878,
     "seen": 1788890367.257733,
     "ast_hash": "fff2c380a69f8667fa6005c5eef902a4",
+    "semantic_hash": ""
+  },
+  "docs/copy/copy-home-pagina-vendas.md": {
+    "mtime": 1788918023.1020823,
+    "seen": 1788918667.575928,
+    "ast_hash": "a11f8c9030093ed7bc6cbf9443af6724",
+    "semantic_hash": ""
+  },
+  "docs/marketing/nova-home-copy-white-label.md": {
+    "mtime": 1788918639.985402,
+    "seen": 1788918667.5759292,
+    "ast_hash": "9c21bb049b10584f6bd340fd27c1a9b3",
     "semantic_hash": ""
   }
 }

@@ -1698,9 +1698,9 @@
     "semantic_hash": "0352474ba2918efe13895edbc3780d94"
   },
   "resources/views/app.blade.php": {
-    "mtime": 1788788384.1417663,
-    "seen": 1788788392.384376,
-    "ast_hash": "cc3a0ac78e6a3b7c216ad6b0cd916946",
+    "mtime": 1788921472.0285852,
+    "seen": 1788921858.609177,
+    "ast_hash": "09c111d173f043b02fa40be263f823f6",
     "semantic_hash": ""
   },
   "routes/console.php": {
@@ -4404,9 +4404,9 @@
     "semantic_hash": ""
   },
   "public/favicon.svg": {
-    "mtime": 1787315451.0,
-    "seen": 1787782868.56128,
-    "ast_hash": "6d65603fc671e2ab354f3ff070494594",
+    "mtime": 1788921464.539262,
+    "seen": 1788921858.6204731,
+    "ast_hash": "ef45047a0fb5a8c45e0acec51267d3f7",
     "semantic_hash": ""
   },
   "app/Actions/Marketing/Subscriptions/CancelSubscription.php": {
@@ -5574,9 +5574,9 @@
     "semantic_hash": ""
   },
   "resources/js/pages/marketing/home.tsx": {
-    "mtime": 1788918343.5868692,
-    "seen": 1788918667.563632,
-    "ast_hash": "32c2341f0ff52bd2e2ea5e92c86e5e1e",
+    "mtime": 1788921675.9406261,
+    "seen": 1788921858.608027,
+    "ast_hash": "f980dfbe186a595f5b6e3474a7125fdd",
     "semantic_hash": ""
   },
   "resources/js/pages/retention/campaigns.tsx": {
@@ -5695,7 +5695,7 @@
   },
   "supabase/migrations/20260825_f2_foundation.sql": {
     "mtime": 1787666957.197015,
-    "seen": 1788877072.719253,
+    "seen": 1788919956.777022,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -6438,15 +6438,15 @@
     "semantic_hash": ""
   },
   "docs/copy/copy-home-pagina-vendas.md": {
-    "mtime": 1788918023.1020823,
-    "seen": 1788918667.575928,
-    "ast_hash": "a11f8c9030093ed7bc6cbf9443af6724",
+    "mtime": 1788921302.4734263,
+    "seen": 1788921858.618026,
+    "ast_hash": "0aaedc482df4e80973483e235f5f8e35",
     "semantic_hash": ""
   },
   "docs/marketing/nova-home-copy-white-label.md": {
-    "mtime": 1788918639.985402,
-    "seen": 1788918667.5759292,
-    "ast_hash": "9c21bb049b10584f6bd340fd27c1a9b3",
+    "mtime": 1788921836.118259,
+    "seen": 1788921858.618027,
+    "ast_hash": "1fa05dabcbfd2ac67dccd24b5b2e1273",
     "semantic_hash": ""
   }
 }
