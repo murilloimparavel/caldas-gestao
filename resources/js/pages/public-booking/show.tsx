@@ -324,7 +324,7 @@ export default function PublicBooking({
     const focusBooking = (): void => {
         setTab('services');
         window.setTimeout(() => {
-            document.getElementById('booking-flow')?.scrollIntoView({
+            document.getElementById('public-booking-panel-services')?.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start',
             });
@@ -490,7 +490,7 @@ export default function PublicBooking({
                     ))}
                 </nav>
                 {tab === 'details' && (
-                    <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                    <section id="public-booking-panel-details" className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
                         <div className="space-y-5">
                             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                                 {coverUrl ? (
@@ -656,7 +656,7 @@ export default function PublicBooking({
                     </section>
                 )}
                 {tab === 'reviews' && (
-                    <InfoCard title="Avaliações">
+                    <InfoCard id="public-booking-panel-reviews" title="Avaliações">
                         <div className="flex items-center gap-3">
                             <Star className="size-5 fill-amber-400 text-amber-400" />
                             <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -666,7 +666,7 @@ export default function PublicBooking({
                     </InfoCard>
                 )}
                 {tab === 'professionals' && sectionEnabled('professionals') && (
-                    <InfoCard title="Nossa equipe">
+                    <InfoCard id="public-booking-panel-professionals" title="Nossa equipe">
                         <div className="grid gap-3 sm:grid-cols-2">
                             {(professionals.length
                                 ? professionals
@@ -706,7 +706,7 @@ export default function PublicBooking({
                 )}
                 {tab === 'services' && sectionEnabled('services') && (
                     <form
-                        id="booking-flow"
+                        id="public-booking-panel-services"
                         onSubmit={submit}
                         className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.75fr)]"
                     >
@@ -967,16 +967,19 @@ export default function PublicBooking({
 }
 
 function InfoCard({
+    id,
     className,
     title,
     children,
 }: {
+    id?: string;
     className?: string;
     title: string;
     children: React.ReactNode;
 }) {
     return (
         <section
+            id={id}
             className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 dark:border-slate-800 dark:bg-slate-900 ${className ?? ''}`}
         >
             <h2 className="font-display text-xl font-semibold text-slate-950 dark:text-white">
