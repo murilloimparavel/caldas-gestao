@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /**
  * @property string $id
+ * @property string|null $source_id
  * @property string $tenant_id
  * @property string $unit_id
  * @property string|null $category_id
@@ -30,7 +31,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property string|null $image_path
  * @property-read string|null $image_url
  */
-#[Fillable(['tenant_id', 'unit_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status', 'online_booking_enabled', 'image_path', 'thumbnail_path'])]
+#[Fillable(['tenant_id', 'unit_id', 'source_id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'status', 'online_booking_enabled', 'image_path', 'thumbnail_path'])]
 #[UsePolicy(ServicePolicy::class)]
 class Service extends Model
 {

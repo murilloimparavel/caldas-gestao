@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property string $id
+ * @property string|null $source_id
  * @property string $tenant_id
  * @property string $unit_id
  * @property string|null $customer_id
@@ -32,8 +33,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $final_amount_cents
  * @property string|null $notes
  * @property int $lock_version
+ * @property array<string, mixed>|null $source_metadata
  */
 #[Fillable([
+    'source_id',
     'tenant_id',
     'unit_id',
     'customer_id',
@@ -49,6 +52,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'final_amount_cents',
     'notes',
     'lock_version',
+    'source_metadata',
 ])]
 #[UsePolicy(SalePolicy::class)]
 class Sale extends Model
@@ -72,6 +76,7 @@ class Sale extends Model
             'discount_amount_cents' => 'integer',
             'final_amount_cents' => 'integer',
             'lock_version' => 'integer',
+            'source_metadata' => 'array',
         ];
     }
 

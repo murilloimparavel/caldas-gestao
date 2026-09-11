@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property string $id
+ * @property string|null $source_id
  * @property string $tenant_id
  * @property string $unit_id
  * @property string|null $category_id
@@ -36,6 +37,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'tenant_id',
     'unit_id',
+    'source_id',
     'category_id',
     'name',
     'sku',

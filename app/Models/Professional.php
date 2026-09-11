@@ -16,8 +16,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
-/** @property int $lock_version */
-#[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'avatar_path', 'status', 'online_booking_enabled'])]
+/**
+ * @property string|null $source_id
+ * @property int $lock_version
+ */
+#[Fillable(['tenant_id', 'unit_id', 'source_id', 'name', 'email', 'phone', 'avatar_path', 'status', 'online_booking_enabled'])]
 #[UsePolicy(ProfessionalPolicy::class)]
 class Professional extends Model
 {
