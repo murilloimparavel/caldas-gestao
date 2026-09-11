@@ -27,16 +27,12 @@ final class ImportBelasisTransactions extends Command
     /** @var array<string, int> */
     private array $summary = ['found' => 0, 'exported' => 0, 'ignored' => 0, 'failed' => 0, 'pending' => 0];
 
-    /** @var list<array<string, mixed>> */
-    private array $rows = [];
-
     /** @var array<string, true> */
     private array $seenSourceIds = [];
 
     public function handle(): int
     {
         $this->summary = ['found' => 0, 'exported' => 0, 'ignored' => 0, 'failed' => 0, 'pending' => 0];
-        $this->rows = [];
         $this->seenSourceIds = [];
 
         if (! $this->option('dry-run')) {
@@ -94,7 +90,6 @@ final class ImportBelasisTransactions extends Command
             $mapped = $this->mapRecord($record, $sourceId, $tenantId, $unitId);
             if ($mapped === null) {
                 $this->summary['pending']++;
-                $this->rows[] = ['row' => $position, 'source_id' => $sourceId, 'status' => 'pending', 'reason' => 'customer_source_id_not_confirmed'];
 
                 return;
             }
@@ -106,25 +101,20 @@ final class ImportBelasisTransactions extends Command
                 ->first();
             if (! $this->option('write')) {
                 $this->summary['exported']++;
-                $this->rows[] = ['row' => $position, 'source_id' => $sourceId, 'status' => $existing === null ? 'would_create' : 'would_update'];
 
                 return;
             }
 
-            DB::transaction(function () use ($mapped, $existing, $position, $sourceId): void {
+            DB::transaction(function () use ($mapped, $existing): void {
                 if ($existing === null) {
                     FinancialObligation::query()->forceCreate($mapped + ['id' => (string) Str::uuid7()]);
-                    $status = 'created';
                 } else {
                     $existing->forceFill($mapped + ['lock_version' => $existing->lock_version + 1])->save();
-                    $status = 'updated';
                 }
                 $this->summary['exported']++;
-                $this->rows[] = ['row' => $position, 'source_id' => $sourceId, 'status' => $status];
             }, 5);
         } catch (Throwable $exception) {
             $this->summary['failed']++;
-            $this->rows[] = ['row' => $position, 'source_id' => $sourceId, 'status' => 'failed', 'reason' => 'row_rolled_back', 'error' => class_basename($exception)];
         }
     }
 
@@ -334,10 +324,5 @@ final class ImportBelasisTransactions extends Command
     private function ignored(int $position, ?string $sourceId, string $reason): void
     {
         $this->summary['ignored']++;
-        $row = ['row' => $position, 'status' => 'ignored', 'reason' => $reason];
-        if ($sourceId !== null) {
-            $row['source_id'] = $sourceId;
-        }
-        $this->rows[] = $row;
     }
 }

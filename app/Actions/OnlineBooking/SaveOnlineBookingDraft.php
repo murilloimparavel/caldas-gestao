@@ -4,6 +4,7 @@ namespace App\Actions\OnlineBooking;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\OnlineBookingDraft;
+use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
 use App\Models\Professional;
 use App\Models\Service;
@@ -31,7 +32,7 @@ final class SaveOnlineBookingDraft extends OperationalAction
 
             $this->validateDocument($context, $unit, $content);
             $normalized = $this->normalize($content, is_array($draft?->content) ? $draft->content : []);
-            $revision = ($draft?->revision ?? 0) + 1;
+            $revision = ($draft !== null ? $draft->revision : 0) + 1;
             $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR));
             $draft ??= new OnlineBookingDraft;
             $draft->forceFill([
@@ -44,8 +45,11 @@ final class SaveOnlineBookingDraft extends OperationalAction
         });
     }
 
-    /** @param array<string, mixed> $content */
-    /** @param array<string, mixed> $content @param array<string, mixed> $base */
+    /**
+     * @param  array<string, mixed>  $content
+     * @param  array<string, mixed>  $base
+     * @return array<string, mixed>
+     */
     private function normalize(array $content, array $base = []): array
     {
         $merged = array_replace($base, $content);
@@ -65,11 +69,13 @@ final class SaveOnlineBookingDraft extends OperationalAction
 
     private function site(TenantContext $context, Unit $unit): OnlineBookingSite
     {
-        $setting = $unit->onlineBookingSetting;
+        $setting = $unit->onlineBookingSetting()->first();
+        $publicDomainId = $setting instanceof OnlineBookingSetting ? $setting->public_domain_id : null;
+        $publicSlug = $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $unit->slug) : $unit->slug;
 
         return OnlineBookingSite::query()->firstOrCreate(
             ['tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey()],
-            ['public_domain_id' => $setting?->public_domain_id, 'public_slug' => $setting?->public_slug ?? $unit->slug],
+            ['public_domain_id' => $publicDomainId, 'public_slug' => $publicSlug],
         );
     }
 

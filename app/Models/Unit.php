@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 /**
  * @property UnitStatus $status
  * @property int $lock_version
+ * @property-read OnlineBookingSetting|null $onlineBookingSetting
  */
 #[Fillable(['tenant_id', 'slug', 'name', 'status', 'timezone', 'address', 'online_booking_enabled'])]
 class Unit extends Model

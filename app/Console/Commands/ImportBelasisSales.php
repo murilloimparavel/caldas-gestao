@@ -163,6 +163,7 @@ final class ImportBelasisSales extends Command
     }
 
     /**
+     * @param  array<string, mixed>  $record
      * @return array{sale:array<string,mixed>,items:list<array<string,mixed>>,payment_scope:array<string,mixed>|null}
      */
     private function mapSale(array $record, string $tenantId, string $unitId, SaleCategory $category): array
@@ -238,7 +239,10 @@ final class ImportBelasisSales extends Command
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
     private function mapItem(array $item, string $tenantId, string $unitId): array
     {
         $sourceId = $this->sourceId($item['source_id'] ?? null, 'missing_item_source_id');
@@ -384,7 +388,11 @@ final class ImportBelasisSales extends Command
         ];
     }
 
-    /** @param array<string, mixed> $record */
+    /**
+     * @param  array<string, mixed>  $record
+     * @param  array<string, mixed>|null  $paymentScope
+     * @return array<string, mixed>|null
+     */
     private function saleMetadata(array $record, ?array $paymentScope): ?array
     {
         $metadata = [];
@@ -400,7 +408,10 @@ final class ImportBelasisSales extends Command
         return $metadata === [] ? null : $metadata;
     }
 
-    /** @param array<string, mixed> $item */
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>|null
+     */
     private function itemMetadata(array $item): ?array
     {
         $metadata = [];
@@ -449,7 +460,7 @@ final class ImportBelasisSales extends Command
             }
         }
 
-        return array_values($payload['records']);
+        return $payload['records'];
     }
 
     private function assertDestination(string $tenantId, string $unitId): void
@@ -478,12 +489,16 @@ final class ImportBelasisSales extends Command
         return $value;
     }
 
+    /** @param array<string, mixed> $record */
     private function requiredAmount(array $record, string $key): int
     {
         return $this->amountCents($record[$key] ?? null);
     }
 
-    /** @param list<string> $keys */
+    /**
+     * @param  array<string, mixed>  $record
+     * @param  list<string>  $keys
+     */
     private function requiredAmountFromKeys(array $record, array $keys, string $reason): int
     {
         foreach ($keys as $key) {
@@ -495,6 +510,7 @@ final class ImportBelasisSales extends Command
         throw new RuntimeException($reason);
     }
 
+    /** @param array<string, mixed> $record */
     private function optionalAmount(array $record, string $key): ?int
     {
         return array_key_exists($key, $record) ? $this->amountCents($record[$key]) : null;
@@ -533,7 +549,7 @@ final class ImportBelasisSales extends Command
             throw new RuntimeException('invalid_source_date');
         }
         $date = Carbon::createFromFormat('!Y-m-d', $value);
-        if ($date === false || $date->format('Y-m-d') !== $value) {
+        if (! $date instanceof Carbon || $date->format('Y-m-d') !== $value) {
             throw new RuntimeException('invalid_source_date');
         }
 

@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<int|string, mixed>|null $public_hours
+ */
 #[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'public_slug', 'description', 'cover_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
 class OnlineBookingSetting extends Model
 {

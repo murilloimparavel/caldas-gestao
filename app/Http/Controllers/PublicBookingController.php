@@ -48,6 +48,7 @@ final class PublicBookingController extends Controller
             ->whereNotNull('active_publication_id')
             ->with('activePublication')
             ->first()?->activePublication;
+        $publicSlug = $publication instanceof OnlineBookingPublication ? ($publication->public_slug ?? $unit->slug) : $unit->slug;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
         $sections = collect(is_array($content['sections'] ?? null) ? $content['sections'] : [])
             ->filter(fn (mixed $section): bool => is_array($section) && isset($section['key']))
@@ -94,7 +95,7 @@ final class PublicBookingController extends Controller
                 'address' => $this->safeAddress($unit->address),
                 'description' => $description,
                 'seo' => is_array($content['seo'] ?? null) ? $content['seo'] : ['title' => $unit->name, 'description' => $description],
-                'canonical_url' => url('/book/'.rawurlencode((string) ($publication?->public_slug ?? $unit->slug))),
+                'canonical_url' => url('/book/'.rawurlencode($publicSlug)),
                 'is_preview' => is_array($preview),
                 'cover_image_url' => $coverImagePath === null ? null : MediaUrl::for((string) $coverImagePath),
                 'brand_color' => $brandColor,
@@ -116,7 +117,7 @@ final class PublicBookingController extends Controller
         if ($publication !== null) {
             $etag = '"'.$publication->content_hash.'"';
             $response->setEtag($publication->content_hash);
-            $response->setLastModified($publication->published_at);
+            $response->setLastModified(CarbonImmutable::parse($publication->published_at));
             $response->setPublic();
             $response->setMaxAge(60);
             if (request()->getEtags() !== [] && in_array($etag, request()->getEtags(), true)) {
@@ -321,7 +322,10 @@ final class PublicBookingController extends Controller
         return ['starts_at' => (string) $window['starts_at'], 'ends_at' => (string) $window['ends_at']];
     }
 
-    /** @return array{services: array<int, array<string, mixed>>, professionals: array<int, array<string, mixed>>} */
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array{services: array<int, array<string, mixed>>, professionals: array<int, array<string, mixed>>}
+     */
     private function catalog(Tenant $tenant, Unit $unit, ?OnlineBookingPublication $publication = null, array $content = [], bool $preview = false): array
     {
         $serviceIds = array_values(array_filter($content['service_ids'] ?? [], 'is_string'));

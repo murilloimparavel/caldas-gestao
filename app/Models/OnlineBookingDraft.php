@@ -9,6 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<string, mixed>|null $content
+ * @property int $revision
+ */
 #[Fillable(['tenant_id', 'unit_id', 'site_id', 'revision', 'content', 'content_hash', 'updated_by'])]
 class OnlineBookingDraft extends Model
 {

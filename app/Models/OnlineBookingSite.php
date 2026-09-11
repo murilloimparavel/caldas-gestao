@@ -12,6 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property-read OnlineBookingDraft|null $draft
+ * @property-read OnlineBookingPublication|null $activePublication
+ */
 #[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'active_publication_id', 'public_slug', 'template_key', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version'])]
 class OnlineBookingSite extends Model
 {
