@@ -165,9 +165,7 @@ function dateOnlyParts(
 
 export function dateKey(value: string, timeZone = 'UTC'): string {
     const hasTime = value.includes('T') || /\s\d{1,2}:\d{2}/.test(value);
-    const parts = hasTime
-        ? partsFor(value, timeZone)
-        : dateOnlyParts(value);
+    const parts = hasTime ? partsFor(value, timeZone) : dateOnlyParts(value);
 
     return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
 }
@@ -1048,9 +1046,15 @@ export function WeekCalendar({
                                                     e.stopPropagation();
                                                     onOpenBlock?.(block);
                                                 }}
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                onPointerDown={(e) => e.stopPropagation()}
-                                                onTouchStart={(e) => e.stopPropagation()}
+                                                onMouseDown={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                                onPointerDown={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                                onTouchStart={(e) =>
+                                                    e.stopPropagation()
+                                                }
                                                 className="group absolute inset-x-1 z-10 flex min-h-[44px] flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
                                                 style={style}
                                                 title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
@@ -1120,9 +1124,15 @@ export function WeekCalendar({
                                                 key={appointment.id}
                                                 className="absolute inset-x-1 z-10 min-h-[44px]"
                                                 style={style}
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                onPointerDown={(e) => e.stopPropagation()}
-                                                onTouchStart={(e) => e.stopPropagation()}
+                                                onMouseDown={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                                onPointerDown={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                                onTouchStart={(e) =>
+                                                    e.stopPropagation()
+                                                }
                                             >
                                                 <AppointmentCard
                                                     appointment={appointment}
@@ -1820,9 +1830,15 @@ export function MonthAgenda({
                                                     e.stopPropagation();
                                                     onOpenBlock?.(block);
                                                 }}
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                onPointerDown={(e) => e.stopPropagation()}
-                                                onTouchStart={(e) => e.stopPropagation()}
+                                                onMouseDown={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                                onPointerDown={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                                onTouchStart={(e) =>
+                                                    e.stopPropagation()
+                                                }
                                                 className="flex w-full items-center gap-1 rounded border border-dashed border-amber-500/50 bg-amber-50/80 px-1.5 py-0.5 text-left text-[10px] font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200"
                                             >
                                                 <Lock

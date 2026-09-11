@@ -1191,7 +1191,7 @@ function AppointmentSummaryHeader({
                         {(customerObj?.name || 'C').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                        <h3 className="truncate text-base font-semibold leading-tight text-foreground">
+                        <h3 className="truncate text-base leading-tight font-semibold text-foreground">
                             {customerObj?.name || 'Cliente não identificado'}
                         </h3>
                         {customerPhone ? (
@@ -1280,9 +1280,7 @@ function AppointmentSummaryHeader({
                             className="h-6 px-1.5 text-xs font-medium text-primary hover:text-primary/80"
                         >
                             <Link
-                                href={sales.show(
-                                    appointment.sale_link.sale.id,
-                                )}
+                                href={sales.show(appointment.sale_link.sale.id)}
                             >
                                 Ver Comanda →
                             </Link>
