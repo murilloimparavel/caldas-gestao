@@ -88,8 +88,35 @@ function getInitials(name: string): string {
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-function asInstant(value: string): Date {
-    const parsed = new Date(value.includes('T') ? value : `${value}T12:00:00Z`);
+export function asInstant(value: string): Date {
+    if (!value || typeof value !== 'string') {
+        return new Date(0);
+    }
+
+    const trimmed = value.trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return new Date(`${trimmed}T12:00:00Z`);
+    }
+
+    const normalized = trimmed.replace(
+        /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)/,
+        '$1T$2',
+    );
+
+    const hasTimezone = /(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(normalized);
+
+    let parsed = new Date(normalized);
+
+    if (
+        Number.isNaN(parsed.getTime()) ||
+        (!hasTimezone && !normalized.includes('Z'))
+    ) {
+        const utcParsed = new Date(`${normalized}Z`);
+        if (!Number.isNaN(utcParsed.getTime())) {
+            parsed = utcParsed;
+        }
+    }
 
     return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
 }
@@ -136,7 +163,8 @@ function dateOnlyParts(
 }
 
 export function dateKey(value: string, timeZone = 'UTC'): string {
-    const parts = value.includes('T')
+    const hasTime = value.includes('T') || /\s\d{1,2}:\d{2}/.test(value);
+    const parts = hasTime
         ? partsFor(value, timeZone)
         : dateOnlyParts(value);
 
@@ -146,7 +174,7 @@ export function dateKey(value: string, timeZone = 'UTC'): string {
 export function dateTimeValue(value: string, timeZone = 'UTC'): string {
     const parts = partsFor(value, timeZone);
 
-    return `${dateKey(value, timeZone)}T${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+    return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}T${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
 }
 
 export function zonedTimeParts(
@@ -167,7 +195,8 @@ export function formatTime(value: string, timeZone = 'UTC'): string {
 }
 
 export function formatDay(value: string, timeZone = 'UTC'): string {
-    const displayTimeZone = value.includes('T') ? timeZone : 'UTC';
+    const hasTime = value.includes('T') || /\s\d{1,2}:\d{2}/.test(value);
+    const displayTimeZone = hasTime ? timeZone : 'UTC';
 
     return new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',
@@ -461,6 +490,9 @@ export function AppointmentCard({
                 e.stopPropagation();
                 onOpen(appointment);
             }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className={cn(
                 'group w-full rounded-lg border p-2 text-left shadow-xs transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden',
                 statusClasses[appointment.status] ??
@@ -516,6 +548,9 @@ export function ScheduleBlockCard({
                 e.stopPropagation();
                 onOpen?.(block);
             }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="group flex w-full items-start justify-between rounded-lg border border-slate-300 bg-slate-100/90 p-3 text-left text-slate-800 shadow-2xs transition hover:border-slate-400 hover:bg-slate-200/90 hover:shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
         >
             <div className="flex items-start gap-3">
@@ -1012,6 +1047,9 @@ export function WeekCalendar({
                                                     e.stopPropagation();
                                                     onOpenBlock?.(block);
                                                 }}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onPointerDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
                                                 className="group absolute inset-x-1 z-10 flex min-h-[44px] flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
                                                 style={style}
                                                 title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
@@ -1079,8 +1117,11 @@ export function WeekCalendar({
                                         return (
                                             <div
                                                 key={appointment.id}
-                                                className="absolute inset-x-1 z-0 min-h-[44px]"
+                                                className="absolute inset-x-1 z-10 min-h-[44px]"
                                                 style={style}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onPointerDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
                                             >
                                                 <AppointmentCard
                                                     appointment={appointment}
@@ -1510,6 +1551,9 @@ export function DayAgenda({
                                         e.stopPropagation();
                                         onOpenBlock?.(block);
                                     }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
                                     className="group absolute inset-x-1 z-10 flex min-h-[44px] flex-col justify-between overflow-hidden rounded-md border border-slate-300 bg-slate-100/95 p-1.5 text-left text-slate-800 shadow-2xs backdrop-blur-xs transition hover:border-slate-400 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200 dark:hover:bg-slate-800"
                                     style={style}
                                     title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
@@ -1568,8 +1612,11 @@ export function DayAgenda({
                             return (
                                 <div
                                     key={appointment.id}
-                                    className="absolute inset-x-1 z-0 min-h-[44px]"
+                                    className="absolute inset-x-1 z-10 min-h-[44px]"
                                     style={style}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
                                 >
                                     <AppointmentCard
                                         appointment={appointment}
@@ -1768,9 +1815,13 @@ export function MonthAgenda({
                                             <button
                                                 key={block.id}
                                                 type="button"
-                                                onClick={() =>
-                                                    onOpenBlock?.(block)
-                                                }
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onOpenBlock?.(block);
+                                                }}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onPointerDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
                                                 className="flex w-full items-center gap-1 rounded border border-dashed border-amber-500/50 bg-amber-50/80 px-1.5 py-0.5 text-left text-[10px] font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200"
                                             >
                                                 <Lock

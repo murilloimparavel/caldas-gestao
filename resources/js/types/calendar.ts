@@ -16,10 +16,13 @@ export type CalendarOption = {
     id: string;
     name: string;
     phone?: string | null;
+    price_cents?: number | null;
     status?: string;
 };
 
 export type CalendarAppointmentItem = {
+    duration_minutes?: number | null;
+    price_cents?: number | null;
     service?: CalendarOption | null;
     service_id?: string | null;
 };
@@ -37,6 +40,8 @@ export type CalendarAppointmentSaleLink = {
 };
 
 export type CalendarAppointment = {
+    cancel_reason?: string | null;
+    cancelled_at?: string | null;
     color?: string | null;
     customer?: CalendarOption | null;
     customer_id?: string | null;

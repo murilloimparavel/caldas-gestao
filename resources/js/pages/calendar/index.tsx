@@ -1,13 +1,19 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    Ban,
+    Calendar,
     CalendarCheck2,
     CheckCircle2,
+    Clock,
     Lock,
+    MessageCircle,
+    Phone,
     Plus,
-    RefreshCw,
     Receipt,
+    RefreshCw,
     SlidersHorizontal,
+    XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
@@ -22,6 +28,7 @@ import {
     StatusChip,
     WeekCalendar,
     addDays,
+    asInstant,
     dateKey,
     dateTimeValue,
     formatDay,
@@ -35,6 +42,7 @@ import {
     FormField,
     PageCanvas,
 } from '@/components/operational';
+import { cn } from '@/lib/utils';
 import {
     QuickCreateCustomerModal,
     QuickCreateProfessionalModal,
@@ -92,6 +100,86 @@ const statusOptions: AppointmentStatus[] = [
     'no_show',
     'cancelled',
 ];
+
+const CREATABLE_STATUSES: AppointmentStatus[] = [
+    'draft',
+    'scheduled',
+    'confirmed',
+];
+
+const STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+    draft: ['draft', 'scheduled', 'confirmed', 'cancelled'],
+    scheduled: ['scheduled', 'confirmed', 'checked_in', 'no_show', 'cancelled'],
+    confirmed: ['confirmed', 'checked_in', 'no_show', 'cancelled'],
+    checked_in: ['checked_in', 'in_service', 'cancelled'],
+    in_service: ['in_service', 'completed'],
+    completed: ['completed'],
+    no_show: ['no_show'],
+    cancelled: ['cancelled'],
+};
+
+function getWhatsAppUrl(phone: string | null | undefined): string | null {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) return null;
+    const fullDigits =
+        digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
+    return `https://wa.me/${fullDigits}`;
+}
+
+function formatAppointmentHeaderDate(
+    startsAt: string,
+    endsAt?: string | null,
+    durationMinutes?: number | null,
+    timeZone = 'UTC',
+): string {
+    const instant = asInstant(startsAt);
+    if (!instant || Number.isNaN(instant.getTime())) {
+        return '';
+    }
+
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone,
+    });
+
+    const rawDate = formatter.format(instant);
+    const cleanedDate = rawDate.replace('-feira', '');
+    const capitalized =
+        cleanedDate.charAt(0).toUpperCase() + cleanedDate.slice(1);
+
+    const startTime = formatTime(startsAt, timeZone);
+    const endTime = endsAt ? formatTime(endsAt, timeZone) : '';
+
+    let durationStr = '';
+    if (durationMinutes && durationMinutes > 0) {
+        durationStr = ` (${durationMinutes} min)`;
+    } else if (endsAt) {
+        const endInstant = asInstant(endsAt);
+        const diffMin = Math.round(
+            (endInstant.getTime() - instant.getTime()) / 60000,
+        );
+        if (diffMin > 0) {
+            durationStr = ` (${diffMin} min)`;
+        }
+    }
+
+    if (startTime && endTime) {
+        return `${capitalized} • ${startTime} às ${endTime}${durationStr}`;
+    }
+
+    return `${capitalized} • ${startTime}`;
+}
+
+function formatPriceCents(cents: number | null | undefined): string | null {
+    if (cents == null) return null;
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    }).format(cents / 100);
+}
 
 function optionList(
     primary: CalendarOption[] | undefined,
@@ -237,6 +325,7 @@ function AppointmentForm({
     existingAppointments = [],
     existingScheduleBlocks = [],
     onClose,
+    onTriggerCancel,
     professionals: initialProfessionals,
     services: initialServices,
     unitTimezone,
@@ -249,6 +338,7 @@ function AppointmentForm({
     existingAppointments?: CalendarAppointment[];
     existingScheduleBlocks?: ScheduleBlock[];
     onClose: () => void;
+    onTriggerCancel?: () => void;
     professionals: CalendarOption[];
     services: CalendarOption[];
     unitTimezone: string;
@@ -272,7 +362,10 @@ function AppointmentForm({
         appointment?.customer_id ?? appointment?.customer?.id ?? '',
     );
     const [selectedService, setSelectedService] = useState(
-        appointment?.service_id ?? appointment?.service?.id ?? '',
+        appointment?.service_id ??
+            appointment?.service?.id ??
+            appointment?.items?.[0]?.service_id ??
+            '',
     );
     const [selectedProfessional, setSelectedProfessional] = useState(
         appointment?.professional_id ??
@@ -285,8 +378,15 @@ function AppointmentForm({
             : defaultStartsAt,
     );
     const [selectedDuration, setSelectedDuration] = useState<number>(
-        appointment?.duration_minutes ?? defaultDurationMinutes ?? 30,
+        appointment?.duration_minutes ??
+            appointment?.items?.[0]?.duration_minutes ??
+            defaultDurationMinutes ??
+            30,
     );
+    const [selectedStatus, setSelectedStatus] = useState<AppointmentStatus>(
+        appointment?.status ?? 'scheduled',
+    );
+    const [notes, setNotes] = useState(appointment?.notes ?? '');
     const [reminderEnabled, setReminderEnabled] = useState(
         appointment?.reminder_enabled ?? true,
     );
@@ -294,6 +394,48 @@ function AppointmentForm({
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
     const [quickServiceOpen, setQuickServiceOpen] = useState(false);
     const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
+
+    const isEditing = appointment !== null;
+    const isCancelled = isEditing && appointment?.status === 'cancelled';
+    const isCompleted = isEditing && appointment?.status === 'completed';
+    const isReadOnlyStatus =
+        isEditing &&
+        ['completed', 'no_show', 'cancelled'].includes(
+            appointment?.status ?? '',
+        );
+
+    const availableStatuses = useMemo(() => {
+        if (!isEditing || !appointment) {
+            return CREATABLE_STATUSES;
+        }
+        return STATUS_TRANSITIONS[appointment.status] ?? [appointment.status];
+    }, [isEditing, appointment]);
+
+    const estimatedEndTime = useMemo(() => {
+        if (!selectedStartsAt || !selectedDuration) {
+            return null;
+        }
+        const start = new Date(selectedStartsAt);
+        if (Number.isNaN(start.getTime())) {
+            return null;
+        }
+        const end = new Date(
+            start.getTime() + Number(selectedDuration) * 60 * 1000,
+        );
+        const hours = String(end.getHours()).padStart(2, '0');
+        const minutes = String(end.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }, [selectedStartsAt, selectedDuration]);
+
+    const handleStatusChange = (newStatus: AppointmentStatus) => {
+        if (newStatus === 'cancelled') {
+            if (onTriggerCancel) {
+                onTriggerCancel();
+            }
+            return;
+        }
+        setSelectedStatus(newStatus);
+    };
 
     const handleCustomerCreated = (created: CreatedEntity) => {
         const newOpt: CalendarOption = { id: created.id, name: created.name };
@@ -339,7 +481,12 @@ function AppointmentForm({
     };
 
     const conflict = useMemo(() => {
-        if (!selectedProfessional || !selectedStartsAt || !selectedDuration) {
+        if (
+            isCancelled ||
+            !selectedProfessional ||
+            !selectedStartsAt ||
+            !selectedDuration
+        ) {
             return null;
         }
 
@@ -412,6 +559,7 @@ function AppointmentForm({
 
         return null;
     }, [
+        isCancelled,
         selectedProfessional,
         selectedStartsAt,
         selectedDuration,
@@ -421,7 +569,6 @@ function AppointmentForm({
         unitTimezone,
     ]);
 
-    const isEditing = appointment !== null;
     const route = isEditing
         ? updateAppointment.form(appointment.id)
         : storeAppointment.form();
@@ -438,8 +585,47 @@ function AppointmentForm({
                     <>
                         <FormErrorSummary errors={errors} />
 
+                        {/* Bloqueio amigável para cancelado */}
+                        {isCancelled && (
+                            <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive dark:border-destructive/40 dark:bg-destructive/15">
+                                <XCircle className="mt-0.5 size-5 shrink-0" />
+                                <div className="space-y-1 text-sm">
+                                    <p className="font-semibold text-destructive">
+                                        Este agendamento está cancelado e não
+                                        pode ser editado.
+                                    </p>
+                                    {appointment?.cancel_reason && (
+                                        <p className="text-xs text-muted-foreground">
+                                            <strong className="font-medium text-foreground">
+                                                Motivo registrado:
+                                            </strong>{' '}
+                                            {appointment.cancel_reason}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Bloqueio amigável para concluído */}
+                        {isCompleted && (
+                            <div className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <div className="space-y-1 text-sm">
+                                    <p className="font-semibold">
+                                        Este agendamento já foi concluído e seu
+                                        histórico está registrado.
+                                    </p>
+                                    <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                                        Os dados operacionais estão bloqueados;
+                                        apenas o campo de observações pode ser
+                                        atualizado.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Aviso amigável de conflito de horário */}
-                        {conflict && (
+                        {!isCancelled && conflict && (
                             <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -457,6 +643,44 @@ function AppointmentForm({
                             </div>
                         )}
 
+                        {/* Hidden inputs para preservar integridade quando campos estiverem desabilitados */}
+                        {(isCompleted || isCancelled) && (
+                            <>
+                                <input
+                                    type="hidden"
+                                    name="customer_id"
+                                    value={selectedCustomer}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="service_id"
+                                    value={selectedService}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="professional_id"
+                                    value={selectedProfessional}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="starts_at"
+                                    value={selectedStartsAt}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="duration_minutes"
+                                    value={selectedDuration}
+                                />
+                            </>
+                        )}
+                        {(isCompleted || isCancelled || isReadOnlyStatus) && (
+                            <input
+                                type="hidden"
+                                name="status"
+                                value={selectedStatus}
+                            />
+                        )}
+
                         <div className="grid min-w-0 gap-5 md:grid-cols-2">
                             <div className="min-w-0 md:col-span-2">
                                 <FormField
@@ -464,15 +688,17 @@ function AppointmentForm({
                                     name="customer_id"
                                     error={errors.customer_id}
                                     action={
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setQuickCustomerOpen(true)
-                                            }
-                                            className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                                        >
-                                            + Novo Cliente
-                                        </button>
+                                        !isCancelled && !isCompleted ? (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setQuickCustomerOpen(true)
+                                                }
+                                                className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                                            >
+                                                + Novo Cliente
+                                            </button>
+                                        ) : undefined
                                     }
                                 >
                                     <select
@@ -482,8 +708,9 @@ function AppointmentForm({
                                         onChange={(e) =>
                                             setSelectedCustomer(e.target.value)
                                         }
+                                        disabled={isCancelled || isCompleted}
                                         required
-                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
                                     >
                                         <option value="">
                                             Selecione um cliente
@@ -504,15 +731,17 @@ function AppointmentForm({
                                 name="service_id"
                                 error={errors.service_id}
                                 action={
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setQuickServiceOpen(true)
-                                        }
-                                        className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                                    >
-                                        + Novo Serviço
-                                    </button>
+                                    !isCancelled && !isCompleted ? (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setQuickServiceOpen(true)
+                                            }
+                                            className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                                        >
+                                            + Novo Serviço
+                                        </button>
+                                    ) : undefined
                                 }
                             >
                                 <select
@@ -522,8 +751,9 @@ function AppointmentForm({
                                     onChange={(e) =>
                                         handleServiceChange(e.target.value)
                                     }
+                                    disabled={isCancelled || isCompleted}
                                     required
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     <option value="">
                                         Selecione um serviço
@@ -543,15 +773,17 @@ function AppointmentForm({
                                 name="professional_id"
                                 error={errors.professional_id}
                                 action={
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setQuickProfessionalOpen(true)
-                                        }
-                                        className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                                    >
-                                        + Novo Profissional
-                                    </button>
+                                    !isCancelled && !isCompleted ? (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setQuickProfessionalOpen(true)
+                                            }
+                                            className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                                        >
+                                            + Novo Profissional
+                                        </button>
+                                    ) : undefined
                                 }
                             >
                                 <select
@@ -561,8 +793,9 @@ function AppointmentForm({
                                     onChange={(e) =>
                                         setSelectedProfessional(e.target.value)
                                     }
+                                    disabled={isCancelled || isCompleted}
                                     required
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     <option value="">
                                         Selecione um profissional
@@ -590,6 +823,7 @@ function AppointmentForm({
                                     onChange={(e) =>
                                         setSelectedStartsAt(e.target.value)
                                     }
+                                    disabled={isCancelled || isCompleted}
                                     required
                                 />
                             </FormField>
@@ -611,8 +845,20 @@ function AppointmentForm({
                                             Number(e.target.value),
                                         )
                                     }
+                                    disabled={isCancelled || isCompleted}
                                     required
                                 />
+                                {estimatedEndTime && (
+                                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Clock className="size-3.5 shrink-0 text-primary" />
+                                        <span>
+                                            Término previsto:{' '}
+                                            <strong className="font-semibold text-foreground">
+                                                {estimatedEndTime}
+                                            </strong>
+                                        </span>
+                                    </p>
+                                )}
                             </FormField>
                             <FormField
                                 label="Status"
@@ -622,12 +868,20 @@ function AppointmentForm({
                                 <select
                                     id="status"
                                     name="status"
-                                    defaultValue={
-                                        appointment?.status ?? 'scheduled'
+                                    value={selectedStatus}
+                                    onChange={(e) =>
+                                        handleStatusChange(
+                                            e.target.value as AppointmentStatus,
+                                        )
                                     }
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    disabled={
+                                        isCancelled ||
+                                        isCompleted ||
+                                        isReadOnlyStatus
+                                    }
+                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
                                 >
-                                    {statusOptions.map((status) => (
+                                    {availableStatuses.map((status) => (
                                         <option key={status} value={status}>
                                             {statusLabel(status)}
                                         </option>
@@ -647,7 +901,8 @@ function AppointmentForm({
                                     onChange={(e) =>
                                         setReminderEnabled(e.target.checked)
                                     }
-                                    className="size-4 accent-primary"
+                                    disabled={isCancelled || isCompleted}
+                                    className="size-4 accent-primary disabled:opacity-70"
                                 />
                                 <label
                                     htmlFor="reminder_enabled"
@@ -670,8 +925,12 @@ function AppointmentForm({
                                         id="notes"
                                         name="notes"
                                         rows={3}
-                                        defaultValue={appointment?.notes ?? ''}
-                                        className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                        value={notes}
+                                        onChange={(e) =>
+                                            setNotes(e.target.value)
+                                        }
+                                        disabled={isCancelled}
+                                        className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
                                         placeholder="Informações úteis para o atendimento"
                                     />
                                 </FormField>
@@ -684,15 +943,31 @@ function AppointmentForm({
                                 value={appointment.lock_version}
                             />
                         ) : null}
-                        <FormActions
-                            processing={processing}
-                            onCancel={onClose}
-                            label={
-                                isEditing
-                                    ? 'Salvar agendamento'
-                                    : 'Criar agendamento'
-                            }
-                        />
+
+                        {isCancelled ? (
+                            <div className="flex justify-end border-t border-border pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={onClose}
+                                >
+                                    Fechar
+                                </Button>
+                            </div>
+                        ) : (
+                            <FormActions
+                                processing={processing}
+                                onCancel={onClose}
+                                cancelLabel="Cancelar"
+                                label={
+                                    isEditing
+                                        ? isCompleted
+                                            ? 'Salvar observações'
+                                            : 'Salvar alterações'
+                                        : 'Criar agendamento'
+                                }
+                            />
+                        )}
                     </>
                 )}
             </Form>
@@ -733,9 +1008,13 @@ function CancelAppointmentForm({
         <Form
             {...cancelAppointment.form(appointment.id)}
             headers={{ 'X-Idempotency-Key': mutationKey }}
-            className="mt-4"
+            className="space-y-3"
             onSubmit={(event) => {
-                if (!window.confirm('Cancelar este agendamento?')) {
+                if (
+                    !window.confirm(
+                        'Tem certeza de que deseja cancelar este agendamento?',
+                    )
+                ) {
                     event.preventDefault();
                 }
             }}
@@ -756,17 +1035,19 @@ function CancelAppointmentForm({
                         <Input
                             id="cancel_reason"
                             name="cancel_reason"
-                            placeholder="Informe o motivo"
+                            placeholder="Informe o motivo do cancelamento"
                             required
+                            autoFocus
                         />
                     </FormField>
                     <Button
                         type="submit"
                         variant="destructive"
+                        size="sm"
                         disabled={processing}
-                        className="mt-3 w-full"
+                        className="w-full"
                     >
-                        {processing ? 'Cancelando…' : 'Cancelar agendamento'}
+                        {processing ? 'Cancelando…' : 'Confirmar cancelamento'}
                     </Button>
                 </>
             )}
@@ -774,12 +1055,12 @@ function CancelAppointmentForm({
     );
 }
 
-function CheckInAppointmentForm({
+function CheckInAppointmentButton({
     appointment,
-    onClose,
+    onSuccess,
 }: {
     appointment: CalendarAppointment;
-    onClose: () => void;
+    onSuccess: () => void;
 }) {
     const [mutationKey] = useState(() =>
         createIdempotencyKey(`appointment-checkin:${appointment.id}`),
@@ -789,8 +1070,7 @@ function CheckInAppointmentForm({
         <Form
             {...checkInAppointment.form(appointment.id)}
             headers={{ 'X-Idempotency-Key': mutationKey }}
-            className="mt-3"
-            onSuccess={onClose}
+            onSuccess={onSuccess}
         >
             {({ processing }) => (
                 <>
@@ -801,20 +1081,250 @@ function CheckInAppointmentForm({
                     />
                     <Button
                         type="submit"
+                        size="sm"
                         disabled={processing}
-                        className="w-full bg-emerald-600 font-medium text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                        className="bg-emerald-600 font-medium text-white shadow-xs hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
                     >
                         <CheckCircle2
-                            className="mr-2 size-4"
+                            className="mr-1.5 size-4"
                             aria-hidden="true"
                         />
-                        {processing
-                            ? 'Registrando check-in…'
-                            : 'Registrar Check-in (Cliente presente)'}
+                        {processing ? 'Registrando…' : 'Marcar Presença'}
                     </Button>
                 </>
             )}
         </Form>
+    );
+}
+
+function AppointmentSummaryHeader({
+    appointment,
+    cancelSectionOpen,
+    canManage,
+    canManageSales,
+    customers,
+    onClose,
+    onOpenSaleDialog,
+    onToggleCancel,
+    services,
+    unitTimezone,
+}: {
+    appointment: CalendarAppointment;
+    cancelSectionOpen: boolean;
+    canManage: boolean;
+    canManageSales: boolean;
+    customers: CalendarOption[];
+    onClose: () => void;
+    onOpenSaleDialog: () => void;
+    onToggleCancel: () => void;
+    services: CalendarOption[];
+    unitTimezone: string;
+}) {
+    const customerObj = useMemo(() => {
+        const custId = appointment.customer_id ?? appointment.customer?.id;
+        return customers.find((c) => c.id === custId) ?? appointment.customer;
+    }, [customers, appointment]);
+
+    const customerPhone = customerObj?.phone ?? appointment.customer?.phone;
+    const waUrl = useMemo(() => getWhatsAppUrl(customerPhone), [customerPhone]);
+
+    const serviceObj = useMemo(() => {
+        const serviceId =
+            appointment.service_id ??
+            appointment.service?.id ??
+            appointment.items?.[0]?.service_id;
+        return (
+            services.find((s) => s.id === serviceId) ??
+            appointment.service ??
+            appointment.items?.[0]?.service
+        );
+    }, [services, appointment]);
+
+    const priceCents =
+        serviceObj?.price_cents ?? appointment.items?.[0]?.price_cents;
+    const formattedPrice = useMemo(
+        () => formatPriceCents(priceCents),
+        [priceCents],
+    );
+
+    const formattedDateTime = useMemo(
+        () =>
+            formatAppointmentHeaderDate(
+                appointment.starts_at,
+                appointment.ends_at,
+                appointment.duration_minutes ??
+                    appointment.items?.[0]?.duration_minutes,
+                unitTimezone,
+            ),
+        [appointment, unitTimezone],
+    );
+
+    return (
+        <div className="space-y-3 rounded-xl border border-border/80 bg-muted/30 p-4 shadow-2xs">
+            {/* Resumo do Cliente e Status */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                        {(customerObj?.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="truncate text-base font-semibold leading-tight text-foreground">
+                            {customerObj?.name || 'Cliente não identificado'}
+                        </h3>
+                        {customerPhone ? (
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                    <Phone className="size-3 text-muted-foreground/70" />
+                                    {customerPhone}
+                                </span>
+                                {waUrl && (
+                                    <a
+                                        href={waUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 hover:bg-emerald-100 hover:underline dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                                        title="Abrir WhatsApp com o cliente"
+                                    >
+                                        <MessageCircle className="size-3 text-emerald-600 dark:text-emerald-400" />
+                                        <span>WhatsApp</span>
+                                    </a>
+                                )}
+                            </div>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">
+                                Sem telefone cadastrado
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="shrink-0">
+                    <StatusChip status={appointment.status} />
+                </div>
+            </div>
+
+            {/* Serviço & Valor + Data & Horário */}
+            <div className="grid grid-cols-1 gap-2 border-t border-border/60 pt-2.5 text-xs sm:grid-cols-2">
+                <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-semibold text-foreground">
+                        {serviceObj?.name || 'Serviço'}
+                    </span>
+                    {formattedPrice && (
+                        <Badge
+                            variant="secondary"
+                            className="shrink-0 border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        >
+                            {formattedPrice}
+                        </Badge>
+                    )}
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground sm:justify-end">
+                    <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="font-medium text-foreground">
+                        {formattedDateTime}
+                    </span>
+                </div>
+            </div>
+
+            {/* Barra de Ações Rápidas */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2.5">
+                {/* Marcar Presença */}
+                {canManage &&
+                    ['scheduled', 'confirmed'].includes(appointment.status) && (
+                        <CheckInAppointmentButton
+                            appointment={appointment}
+                            onSuccess={onClose}
+                        />
+                    )}
+
+                {/* Comanda & Faturamento */}
+                {appointment.sale_link?.sale ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-2.5 py-1 text-xs shadow-2xs">
+                        <Receipt className="size-3.5 shrink-0 text-primary" />
+                        <span className="max-w-[140px] truncate font-medium">
+                            {appointment.sale_link.sale.reference_label ||
+                                'Comanda'}
+                        </span>
+                        <Badge
+                            variant="outline"
+                            className="px-1.5 py-0 text-[10px] capitalize"
+                        >
+                            {appointment.sale_link.sale.status}
+                        </Badge>
+                        <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-1.5 text-xs font-medium text-primary hover:text-primary/80"
+                        >
+                            <Link
+                                href={sales.show(
+                                    appointment.sale_link.sale.id,
+                                )}
+                            >
+                                Ver Comanda →
+                            </Link>
+                        </Button>
+                    </div>
+                ) : canManageSales && appointment.status !== 'cancelled' ? (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={onOpenSaleDialog}
+                    >
+                        <Receipt className="size-3.5 text-primary" />
+                        Abrir Comanda
+                    </Button>
+                ) : null}
+
+                {/* Cancelar Agendamento */}
+                {canManage && appointment.status !== 'cancelled' && (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={cn(
+                            'gap-1.5 transition-colors sm:ml-auto',
+                            cancelSectionOpen
+                                ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                                : 'text-muted-foreground hover:border-destructive/40 hover:text-destructive',
+                        )}
+                        onClick={onToggleCancel}
+                    >
+                        <Ban className="size-3.5" />
+                        {cancelSectionOpen
+                            ? 'Fechar cancelamento'
+                            : 'Cancelar agendamento'}
+                    </Button>
+                )}
+            </div>
+
+            {/* Seção retrátil de cancelamento */}
+            {cancelSectionOpen && (
+                <div className="mt-2 space-y-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3.5">
+                    <div className="flex items-center justify-between">
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
+                            <AlertTriangle className="size-3.5" />
+                            Confirmar cancelamento do agendamento
+                        </p>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={onToggleCancel}
+                        >
+                            Fechar
+                        </Button>
+                    </div>
+                    <CancelAppointmentForm
+                        appointment={appointment}
+                        onClose={onClose}
+                    />
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -1106,6 +1616,7 @@ export default function CalendarIndex(props: CalendarProps) {
     const [blockCreateOpen, setBlockCreateOpen] = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
     const [editing, setEditing] = useState<CalendarAppointment | null>(null);
+    const [cancelSectionOpen, setCancelSectionOpen] = useState(false);
     const [openSaleDialogOpen, setOpenSaleDialogOpen] = useState(false);
     const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(
         null,
@@ -1191,6 +1702,13 @@ export default function CalendarIndex(props: CalendarProps) {
         );
     });
 
+    const handleOpenAppointment = (appointment: CalendarAppointment) => {
+        setCreateOpen(false);
+        setPrefilledSlot(null);
+        setCancelSectionOpen(false);
+        setEditing(appointment);
+    };
+
     const handleSlotClick = ({
         date,
         time,
@@ -1204,6 +1722,8 @@ export default function CalendarIndex(props: CalendarProps) {
             return;
         }
 
+        setEditing(null);
+        setCancelSectionOpen(false);
         setPrefilledSlot({ date, professionalId, time });
         setCreateOpen(true);
     };
@@ -1237,6 +1757,7 @@ export default function CalendarIndex(props: CalendarProps) {
         const endsAt = `${selection.date}T${endTimeStr}`;
 
         if (action === 'appointment') {
+            setEditing(null);
             setPrefilledSlot({
                 date: selection.date,
                 durationMinutes,
@@ -1444,7 +1965,7 @@ export default function CalendarIndex(props: CalendarProps) {
                     ) : (
                         <MonthAgenda
                             appointments={visibleAppointments}
-                            onOpen={setEditing}
+                            onOpen={handleOpenAppointment}
                             onOpenBlock={setSelectedBlock}
                             range={range}
                             scheduleBlocks={visibleScheduleBlocks}
@@ -1456,7 +1977,7 @@ export default function CalendarIndex(props: CalendarProps) {
                         appointments={visibleAppointments}
                         date={selectedDate}
                         onDragSelect={handleDragSelect}
-                        onOpen={setEditing}
+                        onOpen={handleOpenAppointment}
                         onOpenBlock={setSelectedBlock}
                         onSlotClick={handleSlotClick}
                         professionals={professionals}
@@ -1483,7 +2004,7 @@ export default function CalendarIndex(props: CalendarProps) {
                                 appointments={visibleAppointments}
                                 date={selectedDate}
                                 onDragSelect={handleDragSelect}
-                                onOpen={setEditing}
+                                onOpen={handleOpenAppointment}
                                 onOpenBlock={setSelectedBlock}
                                 onSlotClick={handleSlotClick}
                                 professionals={professionals}
@@ -1522,7 +2043,7 @@ export default function CalendarIndex(props: CalendarProps) {
                             <WeekCalendar
                                 appointments={visibleAppointments}
                                 onDragSelect={handleDragSelect}
-                                onOpen={setEditing}
+                                onOpen={handleOpenAppointment}
                                 onOpenBlock={setSelectedBlock}
                                 onSlotClick={handleSlotClick}
                                 professionals={activeProfessionalsForHeader}
@@ -1549,6 +2070,7 @@ export default function CalendarIndex(props: CalendarProps) {
                         setCreateOpen(false);
                         setEditing(null);
                         setPrefilledSlot(null);
+                        setCancelSectionOpen(false);
                     }
                 }}
             >
@@ -1565,7 +2087,35 @@ export default function CalendarIndex(props: CalendarProps) {
                                 : 'Preencha os dados essenciais para reservar um horário na agenda.'}
                         </DialogDescription>
                     </DialogHeader>
+
+                    {editing ? (
+                        <AppointmentSummaryHeader
+                            appointment={editing}
+                            cancelSectionOpen={cancelSectionOpen}
+                            canManage={canManage}
+                            canManageSales={canManageSales}
+                            customers={customers}
+                            onClose={() => {
+                                setCreateOpen(false);
+                                setEditing(null);
+                                setPrefilledSlot(null);
+                                setCancelSectionOpen(false);
+                            }}
+                            onOpenSaleDialog={() => setOpenSaleDialogOpen(true)}
+                            onToggleCancel={() =>
+                                setCancelSectionOpen((prev) => !prev)
+                            }
+                            services={services}
+                            unitTimezone={unitTimezone}
+                        />
+                    ) : null}
+
                     <AppointmentForm
+                        key={
+                            editing
+                                ? `appointment-edit-${editing.id}-${editing.lock_version}`
+                                : `appointment-create-${prefilledSlot?.date ?? ''}-${prefilledSlot?.time ?? ''}`
+                        }
                         appointment={editing}
                         customers={customers}
                         defaultDurationMinutes={prefilledSlot?.durationMinutes}
@@ -1581,107 +2131,13 @@ export default function CalendarIndex(props: CalendarProps) {
                             setCreateOpen(false);
                             setEditing(null);
                             setPrefilledSlot(null);
+                            setCancelSectionOpen(false);
                         }}
+                        onTriggerCancel={() => setCancelSectionOpen(true)}
                         professionals={professionals}
                         services={services}
                         unitTimezone={unitTimezone}
                     />
-                    {editing ? (
-                        <div className="border-t border-border pt-4">
-                            <p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Comanda & Faturamento
-                            </p>
-                            {editing.sale_link?.sale ? (
-                                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3.5 text-sm">
-                                    <div className="flex min-w-0 items-center gap-2.5">
-                                        <Receipt className="size-4 shrink-0 text-primary" />
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="truncate font-semibold text-foreground">
-                                                    {editing.sale_link.sale
-                                                        .reference_label ||
-                                                        'Comanda Vinculada'}
-                                                </span>
-                                                <Badge
-                                                    variant="outline"
-                                                    className="shrink-0 text-[11px] capitalize"
-                                                >
-                                                    {
-                                                        editing.sale_link.sale
-                                                            .status
-                                                    }
-                                                </Badge>
-                                            </div>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                Comanda já vinculada a este
-                                                agendamento.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        asChild
-                                        size="sm"
-                                        variant="outline"
-                                        className="shrink-0"
-                                    >
-                                        <Link
-                                            href={sales.show(
-                                                editing.sale_link.sale.id,
-                                            )}
-                                        >
-                                            Ver Comanda →
-                                        </Link>
-                                    </Button>
-                                </div>
-                            ) : canManageSales &&
-                              editing.status !== 'cancelled' ? (
-                                <div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full gap-2 border-dashed"
-                                        onClick={() =>
-                                            setOpenSaleDialogOpen(true)
-                                        }
-                                    >
-                                        <Receipt className="size-4" />
-                                        Abrir Comanda para este Agendamento
-                                    </Button>
-                                </div>
-                            ) : (
-                                <p className="text-xs text-muted-foreground">
-                                    Nenhuma comanda vinculada a este
-                                    agendamento.
-                                </p>
-                            )}
-                        </div>
-                    ) : null}
-
-                    {editing &&
-                    canManage &&
-                    ['scheduled', 'confirmed'].includes(editing.status) ? (
-                        <div className="border-t border-border pt-4">
-                            <p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Ação rápida de presença
-                            </p>
-                            <CheckInAppointmentForm
-                                appointment={editing}
-                                onClose={() => {
-                                    setEditing(null);
-                                    setCreateOpen(false);
-                                }}
-                            />
-                        </div>
-                    ) : null}
-                    {editing && canManage && editing.status !== 'cancelled' ? (
-                        <CancelAppointmentForm
-                            appointment={editing}
-                            onClose={() => {
-                                setEditing(null);
-                                setCreateOpen(false);
-                            }}
-                        />
-                    ) : null}
                 </DialogContent>
             </Dialog>
 
