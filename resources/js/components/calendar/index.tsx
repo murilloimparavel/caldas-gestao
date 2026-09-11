@@ -113,6 +113,7 @@ export function asInstant(value: string): Date {
         (!hasTimezone && !normalized.includes('Z'))
     ) {
         const utcParsed = new Date(`${normalized}Z`);
+
         if (!Number.isNaN(utcParsed.getTime())) {
             parsed = utcParsed;
         }

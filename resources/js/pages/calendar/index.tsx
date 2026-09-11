@@ -119,11 +119,19 @@ const STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
 };
 
 function getWhatsAppUrl(phone: string | null | undefined): string | null {
-    if (!phone) return null;
+    if (!phone) {
+        return null;
+    }
+
     const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) return null;
+
+    if (digits.length < 10) {
+        return null;
+    }
+
     const fullDigits =
         digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
+
     return `https://wa.me/${fullDigits}`;
 }
 
@@ -134,6 +142,7 @@ function formatAppointmentHeaderDate(
     timeZone = 'UTC',
 ): string {
     const instant = asInstant(startsAt);
+
     if (!instant || Number.isNaN(instant.getTime())) {
         return '';
     }
@@ -154,6 +163,7 @@ function formatAppointmentHeaderDate(
     const endTime = endsAt ? formatTime(endsAt, timeZone) : '';
 
     let durationStr = '';
+
     if (durationMinutes && durationMinutes > 0) {
         durationStr = ` (${durationMinutes} min)`;
     } else if (endsAt) {
@@ -161,6 +171,7 @@ function formatAppointmentHeaderDate(
         const diffMin = Math.round(
             (endInstant.getTime() - instant.getTime()) / 60000,
         );
+
         if (diffMin > 0) {
             durationStr = ` (${diffMin} min)`;
         }
@@ -174,7 +185,10 @@ function formatAppointmentHeaderDate(
 }
 
 function formatPriceCents(cents: number | null | undefined): string | null {
-    if (cents == null) return null;
+    if (cents == null) {
+        return null;
+    }
+
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
@@ -408,6 +422,7 @@ function AppointmentForm({
         if (!isEditing || !appointment) {
             return CREATABLE_STATUSES;
         }
+
         return STATUS_TRANSITIONS[appointment.status] ?? [appointment.status];
     }, [isEditing, appointment]);
 
@@ -415,15 +430,19 @@ function AppointmentForm({
         if (!selectedStartsAt || !selectedDuration) {
             return null;
         }
+
         const start = new Date(selectedStartsAt);
+
         if (Number.isNaN(start.getTime())) {
             return null;
         }
+
         const end = new Date(
             start.getTime() + Number(selectedDuration) * 60 * 1000,
         );
         const hours = String(end.getHours()).padStart(2, '0');
         const minutes = String(end.getMinutes()).padStart(2, '0');
+
         return `${hours}:${minutes}`;
     }, [selectedStartsAt, selectedDuration]);
 
@@ -432,8 +451,10 @@ function AppointmentForm({
             if (onTriggerCancel) {
                 onTriggerCancel();
             }
+
             return;
         }
+
         setSelectedStatus(newStatus);
     };
 
@@ -1122,6 +1143,7 @@ function AppointmentSummaryHeader({
 }) {
     const customerObj = useMemo(() => {
         const custId = appointment.customer_id ?? appointment.customer?.id;
+
         return customers.find((c) => c.id === custId) ?? appointment.customer;
     }, [customers, appointment]);
 
@@ -1133,6 +1155,7 @@ function AppointmentSummaryHeader({
             appointment.service_id ??
             appointment.service?.id ??
             appointment.items?.[0]?.service_id;
+
         return (
             services.find((s) => s.id === serviceId) ??
             appointment.service ??
