@@ -107,7 +107,7 @@ final class ImportServices extends Command
             return;
         }
 
-        $normalizedName = Str::lower($name);
+        $normalizedName = $this->normalizeName($name);
         if (isset($this->seenNames[$normalizedName])) {
             $this->line("Skipped duplicate in import: {$name}");
             $this->summary['skipped']++;
@@ -117,30 +117,37 @@ final class ImportServices extends Command
         }
         $this->seenNames[$normalizedName] = true;
 
-        $existingService = Service::query()
+        $sourceId = $this->nullableString($source['source_id'] ?? null);
+        $existingService = $sourceId === null ? null : Service::query()
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit->getKey())
-            ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
-            ->first();
-        if ($existingService instanceof Service) {
-            if ($this->option('refresh-images') && ! $this->option('dry-run')) {
-                $existingImage = $source['image_path'] ?? null;
-                if (is_string($existingImage) && is_file($existingImage) && is_readable($existingImage)) {
-                    $updateService->handle($actor, $context, $existingService, [
-                        'image' => new UploadedFile($existingImage, basename($existingImage), mime_content_type($existingImage) ?: null, null, true),
-                        'lock_version' => $existingService->lock_version,
-                    ]);
-                    $this->summary['updated'] = ($this->summary['updated'] ?? 0) + 1;
-                    $this->report[] = ['name' => $name, 'status' => 'image_updated'];
+            ->where('source_id', $sourceId)
+            ->first(['id', 'tenant_id', 'unit_id', 'source_id', 'name', 'description', 'duration_minutes', 'price_cents', 'category_id', 'status', 'online_booking_enabled', 'lock_version', 'image_path']);
 
-                    return;
-                }
+        if ($existingService === null) {
+            $nameCandidates = Service::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $context->unit->getKey())
+                ->when($sourceId !== null, fn ($query) => $query->whereNull('source_id'))
+                ->get(['id', 'tenant_id', 'unit_id', 'source_id', 'name', 'description', 'duration_minutes', 'price_cents', 'category_id', 'status', 'online_booking_enabled', 'lock_version', 'image_path'])
+                ->filter(fn (Service $service): bool => $this->normalizeName($service->name) === $normalizedName)
+                ->values();
+
+            if ($nameCandidates->count() > 1) {
+                $this->warn("Row {$position}: skipped because normalized name matches multiple existing services: {$name}");
+                $this->summary['skipped']++;
+                $this->report[] = [
+                    'name' => $name,
+                    'source_id' => $sourceId,
+                    'status' => 'skipped',
+                    'reason' => 'ambiguous_existing_name',
+                    'matches' => $nameCandidates->pluck('id')->values()->all(),
+                ];
+
+                return;
             }
-            $this->line("Skipped existing service: {$name}");
-            $this->summary['skipped']++;
-            $this->report[] = ['name' => $name, 'status' => 'skipped', 'reason' => 'already_exists'];
 
-            return;
+            $existingService = $nameCandidates->first();
         }
 
         $data = [
@@ -155,16 +162,58 @@ final class ImportServices extends Command
             'online_booking_enabled' => (bool) ($source['online_booking_enabled'] ?? $source['show_on_site'] ?? false),
             'professional_ids' => $this->resolveProfessionalIds($source['professional_names'] ?? [], $context),
         ];
+        if ($sourceId !== null) {
+            $data['source_id'] = $sourceId;
+        }
 
         $image = $source['image_path'] ?? null;
         if (is_string($image) && is_file($image) && is_readable($image)) {
             $data['image'] = new UploadedFile($image, basename($image), mime_content_type($image) ?: null, null, true);
         }
 
+        if ($existingService instanceof Service) {
+            unset($data['image']);
+
+            if ($this->option('dry-run')) {
+                $this->line("Would update: {$name}");
+                $this->summary['updated']++;
+                $this->report[] = [
+                    'name' => $name,
+                    'source_id' => $sourceId,
+                    'status' => 'would_update',
+                    'matched_by' => $existingService->source_id !== null && $existingService->source_id === $sourceId ? 'source_id' : 'normalized_name',
+                ];
+
+                return;
+            }
+
+            if ($this->option('refresh-images')) {
+                $image = $source['image_path'] ?? null;
+                if (is_string($image) && is_file($image) && is_readable($image)) {
+                    $data['image'] = new UploadedFile($image, basename($image), mime_content_type($image) ?: null, null, true);
+                }
+            }
+
+            $updateService->handle($actor, $context, $existingService, [
+                ...$data,
+                'lock_version' => $existingService->lock_version,
+            ]);
+            $this->line("Updated: {$name}");
+            $this->summary['updated']++;
+            $this->report[] = [
+                'name' => $name,
+                'source_id' => $sourceId,
+                'status' => 'updated',
+                'matched_by' => $existingService->source_id !== null && $existingService->source_id === $sourceId ? 'source_id' : 'normalized_name',
+            ];
+
+            return;
+        }
+
         if ($this->option('dry-run')) {
             $this->line("Would create: {$name}");
             $this->summary['created']++;
-            $this->report[] = ['name' => $name, 'status' => 'would_create', 'pending_relations' => $this->summary['pending']];
+            $this->report[] = ['name' => $name, 'source_id' => $sourceId, 'status' => 'would_create', 'pending_relations' => $this->summary['pending']];
 
             return;
         }
@@ -172,7 +221,12 @@ final class ImportServices extends Command
         $createService->handle($actor, $context, $data);
         $this->line("Created: {$name}");
         $this->summary['created']++;
-        $this->report[] = ['name' => $name, 'status' => 'created'];
+        $this->report[] = ['name' => $name, 'source_id' => $sourceId, 'status' => 'created'];
+    }
+
+    private function normalizeName(string $name): string
+    {
+        return (string) Str::of($name)->ascii()->lower()->squish();
     }
 
     private function durationMinutes(mixed $value): int
