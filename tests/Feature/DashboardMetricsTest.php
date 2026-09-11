@@ -63,7 +63,7 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
         'tenant_id' => $tenant->id,
         'unit_id' => $unit->id,
         'sale_category_id' => $category->id,
-        'status' => 'completed',
+        'status' => 'finalized',
         'final_amount_cents' => 15000,
         'created_at' => Carbon::parse('2026-08-26 14:30:00'),
     ]);
@@ -126,7 +126,7 @@ it('responds to preset date filters correctly', function () {
         'tenant_id' => $tenant->id,
         'unit_id' => $unit->id,
         'sale_category_id' => $category->id,
-        'status' => 'completed',
+        'status' => 'finalized',
         'final_amount_cents' => 5000,
         'created_at' => Carbon::parse('2026-08-26 09:00:00'),
     ]);
@@ -136,7 +136,7 @@ it('responds to preset date filters correctly', function () {
         'tenant_id' => $tenant->id,
         'unit_id' => $unit->id,
         'sale_category_id' => $category->id,
-        'status' => 'completed',
+        'status' => 'finalized',
         'final_amount_cents' => 8000,
         'created_at' => Carbon::parse('2026-08-21 15:00:00'),
     ]);

@@ -64,15 +64,15 @@ class GetDashboardSnapshot
         }
 
         // 2. Sales metrics
-        $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'completed')->sum('final_amount_cents');
-        $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'completed')->sum('final_amount_cents');
+        $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'finalized')->sum('final_amount_cents');
+        $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'finalized')->sum('final_amount_cents');
 
         $todayStart = CarbonImmutable::now()->startOfDay();
         $todayEnd = CarbonImmutable::now()->endOfDay();
         $todaySalesCents = (int) Sale::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->where('status', 'completed')
+            ->where('status', 'finalized')
             ->whereBetween('created_at', [$todayStart, $todayEnd])
             ->sum('final_amount_cents');
 
@@ -84,8 +84,8 @@ class GetDashboardSnapshot
         $growthRatePercentage = $this->calculateVariation($totalAppointments, $prevAppointments);
 
         // 4. Sales count & Conversion rate & Tickets (Comandas)
-        $totalSalesCount = (clone $currentSalesQuery)->where('status', 'completed')->count();
-        $prevSalesCount = (clone $prevSalesQuery)->where('status', 'completed')->count();
+        $totalSalesCount = (clone $currentSalesQuery)->where('status', 'finalized')->count();
+        $prevSalesCount = (clone $prevSalesQuery)->where('status', 'finalized')->count();
         $ticketsVariationPercentage = $this->calculateVariation($totalSalesCount, $prevSalesCount);
 
         $conversionRatePercentage = $totalAppointments > 0
@@ -220,7 +220,7 @@ class GetDashboardSnapshot
             ->selectRaw('DATE(created_at) as date_key, SUM(final_amount_cents) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->where('status', 'completed')
+            ->where('status', 'finalized')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date_key')
             ->pluck('aggregate', 'date_key');
@@ -269,7 +269,7 @@ class GetDashboardSnapshot
             ->selectRaw('DATE(created_at) as date_key, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->where('status', 'completed')
+            ->where('status', 'finalized')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date_key')
             ->pluck('aggregate', 'date_key');
@@ -302,7 +302,7 @@ class GetDashboardSnapshot
             ->selectRaw('DATE(created_at) as date_key, SUM(final_amount_cents) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->where('status', 'completed')
+            ->where('status', 'finalized')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date_key')
             ->pluck('aggregate', 'date_key');
@@ -393,7 +393,7 @@ class GetDashboardSnapshot
             ->selectRaw('sale_items.professional_id, SUM(sale_items.total_cents) as total_cents')
             ->where('sales.tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
-            ->where('sales.status', 'completed')
+            ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
             ->whereBetween('sales.created_at', [$startDate, $endDate])
@@ -436,7 +436,7 @@ class GetDashboardSnapshot
             ->selectRaw('sale_items.item_type, SUM(sale_items.total_cents) as total_cents')
             ->where('sales.tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
-            ->where('sales.status', 'completed')
+            ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
             ->whereBetween('sales.created_at', [$startDate, $endDate])
