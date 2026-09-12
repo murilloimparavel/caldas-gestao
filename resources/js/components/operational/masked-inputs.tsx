@@ -25,7 +25,7 @@ export function formatMoney(cents: number, prefix: string = ''): string {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
-    return prefix ? `${prefix}${formatted}` : formatted;
+    return prefix ? `${prefix}${prefix.endsWith(' ') ? '' : ' '}${formatted}` : formatted;
 }
 
 /**
