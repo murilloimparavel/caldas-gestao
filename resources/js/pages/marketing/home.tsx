@@ -19,9 +19,14 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import AppLogoIcon from '@/components/app-logo-icon';
+import { cn } from '@/lib/utils';
 import { login, register } from '@/routes';
 import type { Branding } from '@/types/ui';
+import { BrandMark } from './components/brand-mark';
+import { CalendarPreview } from './components/calendar-preview';
+import { CheckoutPreview } from './components/checkout-preview';
+import { ProductShell } from './components/product-shell';
+import { RetentionPreview } from './components/retention-preview';
 
 interface HomeProps {
     branding: Branding;
@@ -173,39 +178,6 @@ function buildRegisterHref(search: string): string {
     return register({ query }).url;
 }
 
-function BrandMark({
-    branding,
-    light = false,
-    compact = false,
-}: {
-    branding: Branding;
-    light?: boolean;
-    compact?: boolean;
-}) {
-    const brandName = branding?.name || 'Caldas Gestão';
-
-    return (
-        <span className="flex items-center gap-3" aria-label={brandName}>
-            {branding.logoUrl ? (
-                <img
-                    className="h-9 max-w-40 object-contain object-left"
-                    src={branding.logoUrl}
-                    alt=""
-                />
-            ) : (
-                <AppLogoIcon className="size-9 text-[#C8FF3D]" aria-label="" />
-            )}
-            {!compact && (
-                <span
-                    className={`text-[15px] font-bold tracking-[-0.03em] ${light ? 'text-[#F2EFE7]' : 'text-[#0A0C0B]'}`}
-                >
-                    {brandName}
-                </span>
-            )}
-        </span>
-    );
-}
-
 function Kicker({
     children,
     light = false,
@@ -239,6 +211,8 @@ function Home({ branding }: HomeProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [activeAudience, setActiveAudience] =
         useState<AudienceKey>('barbearia');
+    const [activePreview, setActivePreview] =
+        useState<'agenda' | 'comanda' | 'retencao'>('agenda');
     const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [registerHref, setRegisterHref] = useState(() => register().url);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -784,6 +758,100 @@ function Home({ branding }: HomeProps) {
                                             inativos com mais contexto.
                                         </p>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Live Interface Explorer */}
+                            <div className="mt-20 border-t border-white/10 pt-16">
+                                <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                                    <div>
+                                        <span className="text-3xs font-bold tracking-[0.2em] text-[#C8FF3D] uppercase">
+                                            A experiência em tela
+                                        </span>
+                                        <h3 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-[#F2EFE7] sm:text-3xl">
+                                            O produto desenhado para a velocidade do balcão.
+                                        </h3>
+                                    </div>
+
+                                    {/* Tab switcher */}
+                                    <div
+                                        className="flex flex-wrap gap-2 rounded-xl border border-white/15 bg-[#0A0C0B] p-1.5"
+                                        role="tablist"
+                                        aria-label="Demonstração do produto"
+                                    >
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={activePreview === 'agenda'}
+                                            onClick={() => setActivePreview('agenda')}
+                                            className={cn(
+                                                'rounded-lg px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-[#C8FF3D] focus-visible:outline-hidden',
+                                                activePreview === 'agenda'
+                                                    ? 'bg-[#C8FF3D] text-[#0A0C0B]'
+                                                    : 'text-[#A9A79D] hover:text-white',
+                                            )}
+                                        >
+                                            01. Agenda Multiprofissional
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={activePreview === 'comanda'}
+                                            onClick={() => setActivePreview('comanda')}
+                                            className={cn(
+                                                'rounded-lg px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-[#C8FF3D] focus-visible:outline-hidden',
+                                                activePreview === 'comanda'
+                                                    ? 'bg-[#C8FF3D] text-[#0A0C0B]'
+                                                    : 'text-[#A9A79D] hover:text-white',
+                                            )}
+                                        >
+                                            02. Comanda & Fechamento
+                                        </button>
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={activePreview === 'retencao'}
+                                            onClick={() => setActivePreview('retencao')}
+                                            className={cn(
+                                                'rounded-lg px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-[#C8FF3D] focus-visible:outline-hidden',
+                                                activePreview === 'retencao'
+                                                    ? 'bg-[#C8FF3D] text-[#0A0C0B]'
+                                                    : 'text-[#A9A79D] hover:text-white',
+                                            )}
+                                        >
+                                            03. Retenção & Retornos
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8">
+                                    {activePreview === 'agenda' && (
+                                        <ProductShell
+                                            title="Caldas / Agenda em Tempo Real"
+                                            url="caldas.app/agenda"
+                                            badge="Sem Conflitos"
+                                        >
+                                            <CalendarPreview />
+                                        </ProductShell>
+                                    )}
+                                    {activePreview === 'comanda' && (
+                                        <ProductShell
+                                            title="Caldas / Vendas & Comandas"
+                                            url="caldas.app/vendas/comandas"
+                                            badge="Caixa Integrado"
+                                        >
+                                            <CheckoutPreview />
+                                        </ProductShell>
+                                    )}
+                                    {activePreview === 'retencao' && (
+                                        <ProductShell
+                                            title="Caldas / Inteligência de Clientes"
+                                            url="caldas.app/clientes/retencao"
+                                            badge="Previsão de Retorno"
+                                        >
+                                            <RetentionPreview />
+                                        </ProductShell>
+                                    )}
                                 </div>
                             </div>
                         </div>
