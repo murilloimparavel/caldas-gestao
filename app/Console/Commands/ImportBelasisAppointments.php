@@ -84,9 +84,9 @@ final class ImportBelasisAppointments extends Command
             if ($sourceId === null) {
                 throw new RuntimeException('missing_source_id');
             }
-            $customer = $this->relation(Customer::class, $tenantId, $unitId, $record['client_source_id'] ?? null, 'missing_customer_relation');
-            $service = $this->relation(Service::class, $tenantId, $unitId, $record['service_source_id'] ?? null, 'missing_service_relation');
-            $professional = $this->relation(Professional::class, $tenantId, $unitId, $record['professional_source_id'] ?? null, 'missing_professional_relation');
+            $customer = $this->resolveCustomer($tenantId, $unitId, $record['client_source_id'] ?? null);
+            $service = $this->resolveService($tenantId, $unitId, $record['service_source_id'] ?? null);
+            $professional = $this->resolveProfessional($tenantId, $unitId, $record['professional_source_id'] ?? null);
             $startsAt = CarbonImmutable::parse((string) ($record['starts_at'] ?? ''));
             $endsAt = CarbonImmutable::parse((string) ($record['ends_at'] ?? ''));
             if ($endsAt->lessThanOrEqualTo($startsAt)) {
@@ -137,12 +137,34 @@ final class ImportBelasisAppointments extends Command
         };
     }
 
-    private function relation(string $model, string $tenantId, string $unitId, mixed $sourceId, string $reason): Customer|Service|Professional
+    private function resolveCustomer(string $tenantId, string $unitId, mixed $sourceId): Customer
     {
         $source = $this->stringValue($sourceId);
-        $record = $source === null ? null : $model::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', $source)->first();
+        $record = $source === null ? null : Customer::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', $source)->first();
         if ($record === null) {
-            throw new RuntimeException($reason);
+            throw new RuntimeException('missing_customer_relation');
+        }
+
+        return $record;
+    }
+
+    private function resolveService(string $tenantId, string $unitId, mixed $sourceId): Service
+    {
+        $source = $this->stringValue($sourceId);
+        $record = $source === null ? null : Service::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', $source)->first();
+        if ($record === null) {
+            throw new RuntimeException('missing_service_relation');
+        }
+
+        return $record;
+    }
+
+    private function resolveProfessional(string $tenantId, string $unitId, mixed $sourceId): Professional
+    {
+        $source = $this->stringValue($sourceId);
+        $record = $source === null ? null : Professional::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', $source)->first();
+        if ($record === null) {
+            throw new RuntimeException('missing_professional_relation');
         }
 
         return $record;
@@ -150,7 +172,10 @@ final class ImportBelasisAppointments extends Command
 
     private function stringValue(mixed $value): ?string
     {
-        $value = is_scalar($value) ? trim((string) $value) : null;
+        if (! is_scalar($value)) {
+            return null;
+        }
+        $value = trim((string) $value);
 
         return $value === '' ? null : $value;
     }
