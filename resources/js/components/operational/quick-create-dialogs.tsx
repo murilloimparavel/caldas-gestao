@@ -2,10 +2,13 @@ import { useHttp } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
+    DocumentInput,
     FormActions,
     FormErrorSummary,
     FormField,
+    MoneyInput,
     parseBrazilianCurrency,
+    PhoneInput,
 } from '@/components/operational';
 import {
     Dialog,
@@ -15,10 +18,12 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import categories from '@/routes/categories';
 import customers from '@/routes/customers';
 import products from '@/routes/products';
 import professionals from '@/routes/professionals';
 import services from '@/routes/services';
+import suppliers from '@/routes/suppliers';
 
 export type CreatedEntity = {
     id: string;
@@ -67,7 +72,7 @@ export function QuickCreateCustomerModal({
         form.transform((data) => ({
             name: data.name,
             email: data.email || null,
-            phone: data.phone || null,
+            phone: data.phone ? data.phone.replace(/\D/g, '') : null,
         }));
 
         try {
@@ -147,7 +152,7 @@ export function QuickCreateCustomerModal({
                         name="phone"
                         error={form.errors.phone}
                     >
-                        <Input
+                        <PhoneInput
                             id="quick_customer_phone"
                             value={form.data.phone}
                             onChange={(e) =>
@@ -200,7 +205,9 @@ export function QuickCreateServiceModal({
         e.preventDefault();
         form.clearErrors();
 
-        const priceCents = parseBrazilianCurrency(form.data.priceFormatted);
+        const priceCents =
+            form.data.price_cents ??
+            parseBrazilianCurrency(form.data.priceFormatted);
         const duration = Number.parseInt(form.data.durationMinutes, 10) || 30;
 
         form.transform((data) => ({
@@ -270,7 +277,7 @@ export function QuickCreateServiceModal({
                             error={form.errors.price_cents}
                             required
                         >
-                            <Input
+                            <MoneyInput
                                 id="quick_service_price"
                                 value={form.data.priceFormatted}
                                 onChange={(e) =>
@@ -279,7 +286,11 @@ export function QuickCreateServiceModal({
                                         e.target.value,
                                     )
                                 }
-                                placeholder="50,00"
+                                onValueChange={(cents, formatted) => {
+                                    form.setData('priceFormatted', formatted);
+                                    form.setData('price_cents', cents);
+                                }}
+                                placeholder="0,00"
                                 required
                             />
                         </FormField>
@@ -348,7 +359,7 @@ export function QuickCreateProfessionalModal({
         form.clearErrors();
         form.transform((data) => ({
             name: data.name,
-            phone: data.phone || null,
+            phone: data.phone ? data.phone.replace(/\D/g, '') : null,
         }));
 
         try {
@@ -412,7 +423,7 @@ export function QuickCreateProfessionalModal({
                         name="phone"
                         error={form.errors.phone}
                     >
-                        <Input
+                        <PhoneInput
                             id="quick_professional_phone"
                             value={form.data.phone}
                             onChange={(e) =>
@@ -467,13 +478,15 @@ export function QuickCreateSupplierModal({
         form.clearErrors();
         form.transform((data) => ({
             name: data.name,
-            document_number: data.documentNumber || null,
-            phone: data.phone || null,
+            document_number: data.documentNumber
+                ? data.documentNumber.replace(/\D/g, '')
+                : null,
+            phone: data.phone ? data.phone.replace(/\D/g, '') : null,
             email: data.email || null,
         }));
 
         try {
-            await form.post('/suppliers', {
+            await form.post(suppliers.store.url(), {
                 headers: {
                     'X-Idempotency-Key': mutationKey,
                 },
@@ -533,7 +546,7 @@ export function QuickCreateSupplierModal({
                         name="document_number"
                         error={form.errors.document_number}
                     >
-                        <Input
+                        <DocumentInput
                             id="quick_supplier_document"
                             value={form.data.documentNumber}
                             onChange={(e) =>
@@ -549,7 +562,7 @@ export function QuickCreateSupplierModal({
                             name="phone"
                             error={form.errors.phone}
                         >
-                            <Input
+                            <PhoneInput
                                 id="quick_supplier_phone"
                                 value={form.data.phone}
                                 onChange={(e) =>
@@ -617,7 +630,7 @@ export function QuickCreateCategoryModal({
         }));
 
         try {
-            await form.post('/categories', {
+            await form.post(categories.store.url(), {
                 headers: {
                     'X-Idempotency-Key': mutationKey,
                 },
@@ -682,9 +695,13 @@ export function QuickCreateCategoryModal({
 
 type ProductFormData = {
     name: string;
-    priceFormatted: string;
+    salePriceFormatted: string;
+    costPriceFormatted: string;
     sale_price_cents?: number;
+    cost_price_cents?: number;
     unit_of_measure?: string;
+    min_stock?: number;
+    current_stock?: number;
 };
 
 export function QuickCreateProductModal({
@@ -697,7 +714,8 @@ export function QuickCreateProductModal({
     );
     const form = useHttp<ProductFormData>({
         name: '',
-        priceFormatted: '',
+        salePriceFormatted: '',
+        costPriceFormatted: '',
     });
 
     const handleClose = () => {
@@ -709,12 +727,20 @@ export function QuickCreateProductModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         form.clearErrors();
-        const priceCents = parseBrazilianCurrency(form.data.priceFormatted);
+        const salePriceCents =
+            form.data.sale_price_cents ??
+            parseBrazilianCurrency(form.data.salePriceFormatted);
+        const costPriceCents =
+            form.data.cost_price_cents ??
+            parseBrazilianCurrency(form.data.costPriceFormatted);
 
         form.transform((data) => ({
             name: data.name,
-            sale_price_cents: priceCents,
+            sale_price_cents: salePriceCents,
+            cost_price_cents: costPriceCents,
             unit_of_measure: 'un',
+            min_stock: 0,
+            current_stock: 0,
         }));
 
         try {
@@ -726,7 +752,7 @@ export function QuickCreateProductModal({
                     const createdProduct: CreatedEntity = {
                         id: responseData?.id || responseData?.product?.id,
                         name: responseData?.name || responseData?.product?.name,
-                        price_cents: priceCents,
+                        price_cents: salePriceCents,
                         current_stock:
                             responseData?.current_stock ??
                             responseData?.product?.current_stock ??
@@ -773,22 +799,59 @@ export function QuickCreateProductModal({
                         />
                     </FormField>
 
-                    <FormField
-                        label="Preço de Venda (R$)"
-                        name="sale_price_cents"
-                        error={form.errors.sale_price_cents}
-                        required
-                    >
-                        <Input
-                            id="quick_product_price"
-                            value={form.data.priceFormatted}
-                            onChange={(e) =>
-                                form.setData('priceFormatted', e.target.value)
-                            }
-                            placeholder="35,00"
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                            label="Preço de Venda (R$)"
+                            name="sale_price_cents"
+                            error={form.errors.sale_price_cents}
                             required
-                        />
-                    </FormField>
+                        >
+                            <MoneyInput
+                                id="quick_product_sale_price"
+                                value={form.data.salePriceFormatted}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'salePriceFormatted',
+                                        e.target.value,
+                                    )
+                                }
+                                onValueChange={(cents, formatted) => {
+                                    form.setData(
+                                        'salePriceFormatted',
+                                        formatted,
+                                    );
+                                    form.setData('sale_price_cents', cents);
+                                }}
+                                placeholder="0,00"
+                                required
+                            />
+                        </FormField>
+
+                        <FormField
+                            label="Preço de Custo (R$)"
+                            name="cost_price_cents"
+                            error={form.errors.cost_price_cents}
+                        >
+                            <MoneyInput
+                                id="quick_product_cost_price"
+                                value={form.data.costPriceFormatted}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'costPriceFormatted',
+                                        e.target.value,
+                                    )
+                                }
+                                onValueChange={(cents, formatted) => {
+                                    form.setData(
+                                        'costPriceFormatted',
+                                        formatted,
+                                    );
+                                    form.setData('cost_price_cents', cents);
+                                }}
+                                placeholder="0,00"
+                            />
+                        </FormField>
+                    </div>
 
                     <FormActions
                         processing={form.processing}
