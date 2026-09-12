@@ -6,7 +6,10 @@ import { cn } from '@/lib/utils';
  * Remove any non-numeric characters from a string or number.
  */
 export function sanitizeDigits(value: string | number | null | undefined): string {
-    if (value === null || value === undefined) return '';
+    if (value === null || value === undefined) {
+return '';
+}
+
     return String(value).replace(/\D/g, '');
 }
 
@@ -21,10 +24,12 @@ export function formatMoney(cents: number, prefix: string = ''): string {
     if (!Number.isFinite(cents) || cents < 0) {
         cents = 0;
     }
+
     const formatted = (cents / 100).toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+
     return prefix ? `${prefix}${prefix.endsWith(' ') ? '' : ' '}${formatted}` : formatted;
 }
 
@@ -35,17 +40,23 @@ export function formatMoney(cents: number, prefix: string = ''): string {
  */
 export function formatPhone(value: string | number | null | undefined): string {
     const digits = sanitizeDigits(value).slice(0, 11);
-    if (!digits) return '';
+
+    if (!digits) {
+return '';
+}
 
     if (digits.length <= 2) {
         return `(${digits}`;
     }
+
     if (digits.length <= 6) {
         return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
     }
+
     if (digits.length <= 10) {
         return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
     }
+
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
@@ -60,26 +71,44 @@ export function formatDocument(
 ): string {
     const maxDigits = mode === 'cpf' ? 11 : 14;
     const digits = sanitizeDigits(value).slice(0, maxDigits);
-    if (!digits) return '';
+
+    if (!digits) {
+return '';
+}
 
     if (mode === 'cnpj' || (mode === 'auto' && digits.length > 11)) {
-        if (digits.length <= 2) return digits;
-        if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+        if (digits.length <= 2) {
+return digits;
+}
+
+        if (digits.length <= 5) {
+return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+}
+
         if (digits.length <= 8) {
             return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
         }
+
         if (digits.length <= 12) {
             return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
         }
+
         return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
     }
 
     // CPF
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 3) {
+return digits;
+}
+
+    if (digits.length <= 6) {
+return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+}
+
     if (digits.length <= 9) {
         return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
     }
+
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
@@ -117,13 +146,17 @@ export const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
                 if (c !== undefined && Number.isFinite(c)) {
                     return c > 0 || c === 0 ? formatMoney(c, prefix) : '';
                 }
+
                 const target = v !== undefined ? v : d;
+
                 if (target !== undefined && target !== '') {
                     const digits = sanitizeDigits(target);
+
                     if (digits) {
                         return formatMoney(Number.parseInt(digits, 10), prefix);
                     }
                 }
+
                 return '';
             },
             [prefix],
@@ -160,6 +193,7 @@ export const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
             // Keep cursor at the end for continuous right-to-left typing
             requestAnimationFrame(() => {
                 const element = localRef.current;
+
                 if (element) {
                     const len = element.value.length;
                     element.setSelectionRange(len, len);
@@ -170,6 +204,7 @@ export const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
         const setMergedRef = React.useCallback(
             (node: HTMLInputElement | null) => {
                 localRef.current = node;
+
                 if (typeof ref === 'function') {
                     ref(node);
                 } else if (ref && 'current' in ref) {

@@ -409,12 +409,18 @@ export function formatMoney(cents: number, prefix?: string): string {
         if (!Number.isFinite(cents) || cents < 0) {
             cents = 0;
         }
+
         const formatted = (cents / 100).toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
-        if (!prefix) return formatted;
+
+        if (!prefix) {
+return formatted;
+}
+
         const separator = prefix.endsWith(' ') ? '' : ' ';
+
         return `${prefix}${separator}${formatted}`;
     }
 
