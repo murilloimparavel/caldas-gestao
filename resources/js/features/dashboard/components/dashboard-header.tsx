@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,9 @@ export function DashboardHeader({
     const [startDate, setStartDate] = useState(initialStartDate);
     const [endDate, setEndDate] = useState(initialEndDate);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const hasValidCustomRange = Boolean(
+        startDate && endDate && startDate <= endDate,
+    );
 
     const handlePeriodChange = (newPeriod: PeriodFilter) => {
         setSelectedPeriod(newPeriod);
@@ -69,7 +72,7 @@ export function DashboardHeader({
     };
 
     return (
-        <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-6 border-b border-border/40 pb-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     Olá, {userName} 👋
@@ -79,62 +82,116 @@ export function DashboardHeader({
                 </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
-                <Select
-                    value={selectedPeriod}
-                    onValueChange={(v) => handlePeriodChange(v as PeriodFilter)}
-                >
-                    <SelectTrigger className="w-[150px] bg-background">
-                        <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
-                        <SelectValue placeholder="Selecione o período" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {PERIOD_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[min(100%,32rem)]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div className="flex-1 space-y-1.5">
+                        <label
+                            htmlFor="dashboard-period"
+                            className="text-[0.68rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
+                        >
+                            Período de análise
+                        </label>
+                        <Select
+                            value={selectedPeriod}
+                            onValueChange={(v) =>
+                                handlePeriodChange(v as PeriodFilter)
+                            }
+                        >
+                            <SelectTrigger
+                                id="dashboard-period"
+                                className="h-11 w-full bg-background/70 px-3.5 shadow-sm transition-colors hover:bg-background"
+                                aria-label="Período de análise"
+                            >
+                                <CalendarIcon className="mr-2.5 size-4 text-primary" />
+                                <SelectValue placeholder="Selecione o período" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {PERIOD_OPTIONS.map((opt) => (
+                                    <SelectItem
+                                        key={opt.value}
+                                        value={opt.value}
+                                    >
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleRefresh}
+                        title="Atualizar dados"
+                        aria-label="Atualizar dados do dashboard"
+                        className="size-11 shrink-0 bg-background/70 shadow-sm"
+                    >
+                        <RefreshCw
+                            className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                        />
+                    </Button>
+                </div>
 
                 {selectedPeriod === 'custom' && (
-                    <div className="flex items-center gap-2">
-                        <Input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="w-[135px] bg-background text-xs"
-                        />
-                        <span className="text-xs text-muted-foreground">
-                            até
-                        </span>
-                        <Input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="w-[135px] bg-background text-xs"
-                        />
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={handleApplyCustomDates}
-                        >
-                            Filtrar
-                        </Button>
+                    <div
+                        className="rounded-xl border border-border/70 bg-background/35 p-3 shadow-sm"
+                        role="group"
+                        aria-label="Intervalo personalizado"
+                    >
+                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                            <div className="space-y-1.5">
+                                <label
+                                    htmlFor="dashboard-start-date"
+                                    className="text-xs font-medium text-foreground"
+                                >
+                                    Data inicial
+                                </label>
+                                <Input
+                                    id="dashboard-start-date"
+                                    type="date"
+                                    value={startDate}
+                                    max={endDate || undefined}
+                                    onChange={(e) =>
+                                        setStartDate(e.target.value)
+                                    }
+                                    className="h-10 w-full bg-background text-sm shadow-none"
+                                    aria-label="Data inicial"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label
+                                    htmlFor="dashboard-end-date"
+                                    className="text-xs font-medium text-foreground"
+                                >
+                                    Data final
+                                </label>
+                                <Input
+                                    id="dashboard-end-date"
+                                    type="date"
+                                    value={endDate}
+                                    min={startDate || undefined}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="h-10 w-full bg-background text-sm shadow-none"
+                                    aria-label="Data final"
+                                />
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={handleApplyCustomDates}
+                                disabled={!hasValidCustomRange}
+                                className="h-10 gap-2 px-4 sm:mb-0"
+                                aria-label="Aplicar período personalizado"
+                            >
+                                <Check className="size-4" />
+                                Aplicar
+                            </Button>
+                        </div>
+                        <p className="mt-2 text-[0.7rem] text-muted-foreground">
+                            Escolha o intervalo para atualizar os indicadores.
+                        </p>
                     </div>
                 )}
-
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleRefresh}
-                    title="Atualizar dados"
-                    className="shrink-0 bg-background"
-                >
-                    <RefreshCw
-                        className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                    />
-                </Button>
             </div>
         </div>
     );
