@@ -1709,6 +1709,7 @@ export default function CalendarIndex(props: CalendarProps) {
             if (intervalId !== null) {
                 clearInterval(intervalId);
             }
+
             intervalId = setInterval(reloadData, 30000);
         };
 
