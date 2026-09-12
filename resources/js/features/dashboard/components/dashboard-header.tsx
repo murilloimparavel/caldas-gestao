@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,14 +39,9 @@ export function DashboardHeader({
     const [endDate, setEndDate] = useState(initialEndDate);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    useEffect(() => {
-        setSelectedPeriod(period);
-        setStartDate(initialStartDate);
-        setEndDate(initialEndDate);
-    }, [period, initialStartDate, initialEndDate]);
-
     const handlePeriodChange = (newPeriod: PeriodFilter) => {
         setSelectedPeriod(newPeriod);
+
         if (newPeriod !== 'custom') {
             router.get(
                 dashboard().url,
