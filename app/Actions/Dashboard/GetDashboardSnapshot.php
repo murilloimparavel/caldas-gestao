@@ -427,25 +427,47 @@ class GetDashboardSnapshot
     }
 
     /**
+     * Allocate each finalized sale's net amount across its item categories.
+     * This keeps the category cards mathematically consistent with totalSales.
+     *
      * @return list<array{category: string, label: string, totalAmount: string, percentage: float, color: string}>
      */
     private function calculateSalesByCategory(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
     {
         $items = DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
-            ->selectRaw('sale_items.item_type, SUM(sale_items.total_cents) as total_cents')
+            ->select(['sale_items.sale_id', 'sale_items.item_type', 'sale_items.total_cents', 'sales.final_amount_cents'])
             ->where('sales.tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
             ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
             ->whereBetween('sales.created_at', [$startDate, $endDate])
-            ->groupBy('sale_items.item_type')
-            ->pluck('total_cents', 'sale_items.item_type');
+            ->get();
 
-        $servicesCents = (int) ($items['service'] ?? 0);
-        $productsCents = (int) ($items['product'] ?? 0);
-        $packagesCents = (int) ($items['package'] ?? 0);
+        $categoryTotals = ['service' => 0, 'product' => 0, 'package' => 0];
+        foreach ($items->groupBy('sale_id') as $saleItems) {
+            $finalAmount = (int) $saleItems->first()->final_amount_cents;
+            $categoryItems = $saleItems->filter(fn ($item): bool => array_key_exists((string) $item->item_type, $categoryTotals))->values();
+            $grossAmount = (int) $categoryItems->sum('total_cents');
+            if ($grossAmount <= 0) {
+                continue;
+            }
+
+            $allocated = 0;
+            foreach ($categoryItems as $index => $item) {
+                $type = (string) $item->item_type;
+                $share = $index === $categoryItems->count() - 1
+                    ? $finalAmount - $allocated
+                    : (int) round($finalAmount * ((int) $item->total_cents / $grossAmount));
+                $categoryTotals[$type] += $share;
+                $allocated += $share;
+            }
+        }
+
+        $servicesCents = $categoryTotals['service'];
+        $productsCents = $categoryTotals['product'];
+        $packagesCents = $categoryTotals['package'];
 
         $totalCents = $servicesCents + $productsCents + $packagesCents;
 
@@ -487,6 +509,7 @@ class GetDashboardSnapshot
             4 => 'Qui',
             5 => 'Sex',
             6 => 'Sáb',
+            7 => 'Dom',
         ];
 
         $grid = [];
@@ -510,11 +533,21 @@ class GetDashboardSnapshot
             }
 
             $dayOfWeek = (int) $startsAt->dayOfWeekIso;
-            $hour = (int) $startsAt->hour;
-            $key = "{$dayOfWeek}_{$hour}";
+            /** @var CarbonInterface|null $endsAt */
+            $endsAt = $appointment->ends_at;
+            $end = $endsAt && $endsAt->greaterThan($startsAt)
+                ? $endsAt
+                : $startsAt->addHour();
 
-            if (isset($grid[$key])) {
-                $grid[$key]['count']++;
+            for ($hour = 8; $hour <= 19; $hour++) {
+                $slotStart = $startsAt->copy()->startOfDay()->addHours($hour);
+                $slotEnd = $slotStart->addHour();
+                if ($startsAt->lt($slotEnd) && $end->gt($slotStart)) {
+                    $key = "{$dayOfWeek}_{$hour}";
+                    if (isset($grid[$key])) {
+                        $grid[$key]['count']++;
+                    }
+                }
             }
         }
 

@@ -11,6 +11,7 @@ import { VisitsTrendChart } from '@/features/dashboard/components/visits-trend-c
 import type {
     DashboardSnapshot,
     KpiCardData,
+    PeriodFilter,
 } from '@/features/dashboard/types';
 import { dashboard } from '@/routes';
 
@@ -90,8 +91,9 @@ export default function Dashboard({ dashboard: snapshot }: Props) {
             <div className="dashboard-canvas flex min-h-full flex-1 flex-col gap-6 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
                 {/* 1. Header with greeting, filters and refresh */}
                 <DashboardHeader
+                    key={`${periodValue ?? '30d'}-${startDateValue ?? ''}-${endDateValue ?? ''}`}
                     userName={snapshot.userName ?? 'Usuário'}
-                    period={periodValue as any}
+                    period={(periodValue as PeriodFilter) ?? '30d'}
                     startDate={startDateValue}
                     endDate={endDateValue}
                 />

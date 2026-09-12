@@ -57,6 +57,15 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
         'status' => 'completed',
     ]);
 
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-23 10:00:00'),
+        'ends_at' => Carbon::parse('2026-08-23 12:00:00'),
+        'status' => 'confirmed',
+    ]);
+
     // Completed sale in current period
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->id, 'unit_id' => $unit->id]);
     $sale = Sale::factory()->create([
@@ -77,6 +86,14 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
         'total_cents' => 15000,
     ]);
 
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'sale_id' => $sale->id,
+        'item_type' => 'product',
+        'total_cents' => 5000,
+    ]);
+
     // Overdue financial obligation to trigger attention item
     FinancialObligation::factory()->create([
         'tenant_id' => $tenant->id,
@@ -94,19 +111,24 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
                 ->where('userName', 'João Dutra')
                 ->where('topKpis.totalSales.value', 'R$ 150,00')
                 ->where('topKpis.totalSales.todayValue', 'R$ 150,00')
-                ->where('topKpis.appointments.value', '2')
+                ->where('topKpis.appointments.value', '3')
                 ->where('topKpis.tickets.value', '1')
-                ->where('topKpis.tickets.conversionRate', 50)
+                ->where('topKpis.tickets.conversionRate', 33.3)
                 ->has('visitsTrend')
                 ->has('statusBreakdown')
                 ->has('professionalPerformance', 1, fn (Assert $prof) => $prof
                     ->where('name', 'Dr. Ana Silva')
-                    ->where('totalServices', 2)
-                    ->where('averageTicket', 'R$ 75,00')
+                    ->where('totalServices', 3)
+                    ->where('averageTicket', 'R$ 50,00')
                     ->etc()
                 )
                 ->has('salesCategoryBreakdown')
-                ->has('scheduleHeatmap')
+                ->where('salesCategoryBreakdown.0.totalAmount', 'R$ 112,50')
+                ->where('salesCategoryBreakdown.1.totalAmount', 'R$ 37,50')
+                ->where('salesCategoryBreakdown.0.percentage', 75)
+                ->where('salesCategoryBreakdown.1.percentage', 25)
+                ->where('scheduleHeatmap.74.count', 1)
+                ->where('scheduleHeatmap.75.count', 1)
                 ->has('appointments', 1)
                 ->has('attentionItems', 1)
                 ->etc()

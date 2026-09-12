@@ -30,22 +30,19 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 
 export function DashboardHeader({
     userName = 'Usuário',
-    period = '7d',
+    period = '30d',
     startDate: initialStartDate = '',
     endDate: initialEndDate = '',
 }: DashboardHeaderProps) {
-    const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>(period);
     const [startDate, setStartDate] = useState(initialStartDate);
     const [endDate, setEndDate] = useState(initialEndDate);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handlePeriodChange = (newPeriod: PeriodFilter) => {
-        setSelectedPeriod(newPeriod);
-
         if (newPeriod !== 'custom') {
             router.get(
                 dashboard().url,
-                { period: newPeriod },
+                { preset: newPeriod },
                 { preserveState: true, preserveScroll: true },
             );
         }
@@ -55,7 +52,7 @@ export function DashboardHeader({
         if (startDate && endDate) {
             router.get(
                 dashboard().url,
-                { period: 'custom', start_date: startDate, end_date: endDate },
+                { preset: 'custom', start_date: startDate, end_date: endDate },
                 { preserveState: true, preserveScroll: true },
             );
         }
@@ -81,7 +78,7 @@ export function DashboardHeader({
 
             <div className="flex flex-wrap items-center gap-2.5">
                 <Select
-                    value={selectedPeriod}
+                    value={period}
                     onValueChange={(v) => handlePeriodChange(v as PeriodFilter)}
                 >
                     <SelectTrigger className="w-[150px] bg-background">
@@ -97,7 +94,7 @@ export function DashboardHeader({
                     </SelectContent>
                 </Select>
 
-                {selectedPeriod === 'custom' && (
+                {period === 'custom' && (
                     <div className="flex items-center gap-2">
                         <Input
                             type="date"

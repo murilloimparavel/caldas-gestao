@@ -18,6 +18,7 @@ const DAYS = [
     { id: 4, label: 'Qui' },
     { id: 5, label: 'Sex' },
     { id: 6, label: 'Sáb' },
+    { id: 7, label: 'Dom' },
 ];
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h to 19h
@@ -143,7 +144,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                                     pct,
                                                 )}`}
                                             >
-                                                {pct > 0 ? `${pct}%` : '-'}
+                                                {pct > 0 ? `${pct}%` : 'Livre'}
                                                 {/* Tooltip */}
                                                 <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-[11px] font-medium whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
                                                     {day.label} às {hour}h:{' '}
