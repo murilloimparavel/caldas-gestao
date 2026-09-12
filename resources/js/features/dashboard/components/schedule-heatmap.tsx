@@ -25,8 +25,12 @@ const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h to 19h
 
 export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
     const getIntensityClass = (pct: number) => {
+        if (pct === 0) {
+            return 'border border-border/40 bg-muted/20 text-muted-foreground/60';
+        }
+
         if (pct < 20) {
-            return 'bg-muted/40 text-muted-foreground/60';
+            return 'bg-primary/15 text-primary dark:text-primary';
         }
 
         if (pct < 40) {
@@ -40,25 +44,30 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
         return 'bg-primary text-primary-foreground font-bold';
     };
 
-    // Calculate max count for scaling percentage if count is supplied by backend
-    let maxCount = 0;
+    const isDayGroupedData = (
+        value: ScheduleHeatmapCell | ScheduleHeatmapDay,
+    ): value is ScheduleHeatmapDay => 'hours' in value;
 
-    if (Array.isArray(data) && data.length > 0 && 'hours' in data[0]) {
-        (data as ScheduleHeatmapDay[]).forEach((day) => {
-            day.hours.forEach((h) => {
-                if (h.count > maxCount) {
-                    maxCount = h.count;
-                }
-            });
-        });
-    }
+    // The dashboard endpoint currently returns flat cells with `count`.
+    // Keep support for the previous grouped shape while using the real counts
+    // to calculate a relative heat scale.
+    const maxCount = data.reduce((max, entry) => {
+        if (isDayGroupedData(entry)) {
+            return Math.max(
+                max,
+                ...entry.hours.map((hourData) => hourData.count),
+            );
+        }
+
+        return Math.max(max, entry.count);
+    }, 0);
 
     const getOccupancyPercentage = (dayId: number, hour: number): number => {
         if (!data || data.length === 0) {
             return 0;
         }
 
-        if ('hours' in data[0]) {
+        if (isDayGroupedData(data[0])) {
             const dayData = (data as ScheduleHeatmapDay[]).find(
                 (d) => d.day_of_week === dayId,
             );
@@ -73,16 +82,45 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                 return 0;
             }
 
-            return maxCount > 0
-                ? Math.round((hourData.count / maxCount) * 100)
-                : 0;
+            return maxCount > 0 ? (hourData.count / maxCount) * 100 : 0;
         }
 
         const cell = (data as ScheduleHeatmapCell[]).find(
             (c) => c.dayOfWeek === dayId && c.hour === hour,
         );
 
-        return cell ? cell.occupancyPercentage : 0;
+        if (!cell || cell.count === 0) {
+            return 0;
+        }
+
+        return maxCount > 0 ? (cell.count / maxCount) * 100 : 0;
+    };
+
+    const getCellCount = (dayId: number, hour: number): number => {
+        if (data.length === 0) {
+            return 0;
+        }
+
+        if (isDayGroupedData(data[0])) {
+            const dayData = data.find(
+                (entry): entry is ScheduleHeatmapDay =>
+                    isDayGroupedData(entry) && entry.day_of_week === dayId,
+            );
+
+            return (
+                dayData?.hours.find((hourData) => hourData.hour === hour)
+                    ?.count ?? 0
+            );
+        }
+
+        return (
+            data.find(
+                (entry): entry is ScheduleHeatmapCell =>
+                    !isDayGroupedData(entry) &&
+                    entry.dayOfWeek === dayId &&
+                    entry.hour === hour,
+            )?.count ?? 0
+        );
     };
 
     return (
@@ -136,6 +174,10 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                             day.id,
                                             hour,
                                         );
+                                        const count = getCellCount(
+                                            day.id,
+                                            hour,
+                                        );
 
                                         return (
                                             <div
@@ -144,11 +186,15 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                                     pct,
                                                 )}`}
                                             >
-                                                {pct > 0 ? `${pct}%` : 'Livre'}
+                                                {count > 0
+                                                    ? `${Math.round(pct)}%`
+                                                    : 'Livre'}
                                                 {/* Tooltip */}
                                                 <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-[11px] font-medium whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
                                                     {day.label} às {hour}h:{' '}
-                                                    {pct}% de ocupação
+                                                    {count > 0
+                                                        ? `${count} ${count === 1 ? 'agendamento' : 'agendamentos'} · ${Math.round(pct)}% da faixa mais ocupada`
+                                                        : 'Nenhum agendamento'}
                                                 </div>
                                             </div>
                                         );

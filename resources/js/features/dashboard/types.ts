@@ -84,7 +84,8 @@ export type ScheduleHeatmapCell = {
     dayOfWeek: number;
     dayLabel: string;
     hour: number;
-    occupancyPercentage: number;
+    count: number;
+    occupancyPercentage?: number;
 };
 
 export type DashboardMode = 'empty' | 'active';
