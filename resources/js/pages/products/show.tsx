@@ -906,7 +906,7 @@ export default function ProductShow({
                                                 <td className="max-w-xs truncate px-3 py-3 text-xs text-foreground">
                                                     {m.reason}
                                                     {m.reference_type ? (
-                                                        <span className="block text-[11px] text-muted-foreground">
+                                                        <span className="block text-3xs text-muted-foreground">
                                                             Ref:{' '}
                                                             {m.reference_type}
                                                             {m.reference_id

@@ -91,7 +91,7 @@ export function ProfessionalPerformanceTable({
                                                         alt=""
                                                     />
                                                 )}
-                                                <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+                                                <AvatarFallback className="bg-primary/10 text-2xs font-semibold text-primary">
                                                     {initials || (
                                                         <User className="size-3.5" />
                                                     )}
@@ -209,7 +209,7 @@ export function ProfessionalPerformanceTable({
                                                                     }
                                                                 />
                                                             )}
-                                                            <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+                                                            <AvatarFallback className="bg-primary/10 text-2xs font-semibold text-primary">
                                                                 {initials || (
                                                                     <User className="size-3.5" />
                                                                 )}

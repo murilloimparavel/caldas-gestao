@@ -109,7 +109,7 @@ export function CoverEditor({
                         </Button>
                     )}
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-3xs text-muted-foreground">
                     JPG, PNG ou WEBP · até 5 MB
                 </p>
                 {message && (

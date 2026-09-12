@@ -137,7 +137,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                     </div>
                     {/* Legend scale */}
                     <div
-                        className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                        className="flex items-center gap-1.5 text-3xs text-muted-foreground"
                         aria-label="Escala de ocupação: menor para maior movimento"
                     >
                         <span>Menor movimento</span>
@@ -155,7 +155,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                 <div className="overflow-x-auto">
                     <div className="min-w-[500px]">
                         {/* Header Hours */}
-                        <div className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 pb-1.5 text-center text-[10px] font-medium text-muted-foreground">
+                        <div className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 pb-1.5 text-center text-2xs font-medium text-muted-foreground">
                             <div />
                             {HOURS.map((h) => (
                                 <div key={h}>{h}h</div>
@@ -190,7 +190,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                                 key={hour}
                                                 tabIndex={0}
                                                 aria-label={`${day.label}, ${hour} horas: ${count > 0 ? `${count} agendamentos, ${Math.round(pct)}% do maior movimento` : 'nenhum agendamento'}`}
-                                                className={`group relative flex h-7 items-center justify-center rounded text-[10px] transition-all hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:scale-105 ${getIntensityClass(
+                                                className={`group relative flex h-7 items-center justify-center rounded text-2xs transition-all hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:scale-105 ${getIntensityClass(
                                                     pct,
                                                 )}`}
                                             >
@@ -198,7 +198,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                                     ? `${Math.round(pct)}%`
                                                     : 'Livre'}
                                                 {/* Tooltip */}
-                                                <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-[11px] font-medium whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
+                                                <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-3xs font-medium whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
                                                     {day.label} às {hour}h:{' '}
                                                     {count > 0
                                                         ? `${count} ${count === 1 ? 'agendamento' : 'agendamentos'} · ${Math.round(pct)}% da faixa mais ocupada`

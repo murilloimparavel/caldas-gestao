@@ -54,7 +54,7 @@ export function NextAppointments({
                                 </span>
                             </span>
                             <span
-                                className={`col-start-2 w-fit rounded-full px-2 py-1 text-[10px] font-semibold sm:col-start-auto sm:px-2.5 sm:text-xs ${statusClass[appointment.status] ?? statusClass.scheduled}`}
+                                className={`col-start-2 w-fit rounded-full px-2 py-1 text-2xs font-semibold sm:col-start-auto sm:px-2.5 sm:text-xs ${statusClass[appointment.status] ?? statusClass.scheduled}`}
                             >
                                 {statusLabel[appointment.status] ??
                                     statusLabel.scheduled}

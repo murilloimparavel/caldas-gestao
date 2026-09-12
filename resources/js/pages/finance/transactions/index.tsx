@@ -414,7 +414,7 @@ export default function FinancialTransactionsIndex({
                                                                             true,
                                                                         )
                                                                     }
-                                                                    className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                    className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                                                 >
                                                                     + Nova
                                                                     Categoria
@@ -433,7 +433,7 @@ export default function FinancialTransactionsIndex({
                                                                             .value,
                                                                     )
                                                                 }
-                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                             >
                                                                 <option value="">
                                                                     Selecione
@@ -478,7 +478,7 @@ export default function FinancialTransactionsIndex({
                                                                                 true,
                                                                             )
                                                                         }
-                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                                                     >
                                                                         + Novo
                                                                         Fornecedor
@@ -500,7 +500,7 @@ export default function FinancialTransactionsIndex({
                                                                                 .value,
                                                                         )
                                                                     }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                                 >
                                                                     <option value="">
                                                                         Selecione
@@ -545,7 +545,7 @@ export default function FinancialTransactionsIndex({
                                                                                 true,
                                                                             )
                                                                         }
-                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                                                     >
                                                                         + Novo
                                                                         Cliente
@@ -567,7 +567,7 @@ export default function FinancialTransactionsIndex({
                                                                                 .value,
                                                                         )
                                                                     }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                                 >
                                                                     <option value="">
                                                                         Selecione
@@ -857,7 +857,7 @@ export default function FinancialTransactionsIndex({
                                         category_id: e.target.value,
                                     });
                                 }}
-                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:ring-1 focus:ring-ring focus:outline-none"
+                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                             >
                                 <option value="">Todas as categorias</option>
                                 {categories.map((cat) => (
@@ -998,7 +998,7 @@ export default function FinancialTransactionsIndex({
                                                         {overdue && (
                                                             <Badge
                                                                 variant="destructive"
-                                                                className="px-1.5 py-0 text-[10px]"
+                                                                className="px-1.5 py-0 text-2xs"
                                                             >
                                                                 Vencido
                                                             </Badge>
@@ -1033,7 +1033,7 @@ export default function FinancialTransactionsIndex({
                                                                 Liquidado
                                                             </Badge>
                                                             {item.paid_date && (
-                                                                <span className="text-[11px] text-muted-foreground">
+                                                                <span className="text-3xs text-muted-foreground">
                                                                     {new Date(
                                                                         item.paid_date +
                                                                             'T00:00:00',
@@ -1265,7 +1265,7 @@ export default function FinancialTransactionsIndex({
                                                             editingObligation.category_id ||
                                                             ''
                                                         }
-                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                     >
                                                         <option value="">
                                                             Selecione uma
@@ -1304,7 +1304,7 @@ export default function FinancialTransactionsIndex({
                                                                 editingObligation.supplier_id ||
                                                                 ''
                                                             }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                         >
                                                             <option value="">
                                                                 Selecione o
@@ -1346,7 +1346,7 @@ export default function FinancialTransactionsIndex({
                                                                 editingObligation.customer_id ||
                                                                 ''
                                                             }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                         >
                                                             <option value="">
                                                                 Selecione o
@@ -1470,7 +1470,7 @@ export default function FinancialTransactionsIndex({
                                                 name="payment_method"
                                                 required
                                                 defaultValue="pix"
-                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                             >
                                                 {PAYMENT_METHODS.map((pm) => (
                                                     <option

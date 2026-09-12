@@ -156,7 +156,7 @@ export function ImageUploader({
                                 ? 'Imagem indisponível — clique para substituir'
                                 : 'Clique para selecionar uma imagem'}
                         </p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">
+                        <p className="mt-1 text-3xs text-muted-foreground">
                             JPG, PNG ou WEBP
                         </p>
                     </div>

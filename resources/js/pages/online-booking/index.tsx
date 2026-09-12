@@ -743,7 +743,7 @@ export default function OnlineBookingIndex({
                                                                         )
                                                                     }
                                                                     placeholder="Texto alternativo"
-                                                                    className="h-7 text-[11px]"
+                                                                    className="h-7 text-3xs"
                                                                 />
                                                                 <div className="flex gap-1">
                                                                     <Button
@@ -807,7 +807,7 @@ export default function OnlineBookingIndex({
                                                     <span className="text-xs font-medium">
                                                         Adicionar foto
                                                     </span>
-                                                    <span className="text-[11px] text-muted-foreground">
+                                                    <span className="text-3xs text-muted-foreground">
                                                         JPG, PNG, WEBP até 5MB
                                                     </span>
                                                     <input

@@ -28,7 +28,7 @@ export function DashboardPanel({
             <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border/70 px-4 py-4 sm:px-5">
                 <div className="min-w-0">
                     {eyebrow && (
-                        <p className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                        <p className="text-2xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                             {eyebrow}
                         </p>
                     )}

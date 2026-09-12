@@ -159,7 +159,7 @@ export default function ClosingSessionShow({ session }: Props) {
                             {/* Client & Reference Summary */}
                             <div className="mt-6 grid gap-3 rounded-xl border border-border/80 bg-background/80 p-4 sm:grid-cols-2">
                                 <div>
-                                    <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                    <span className="text-2xs font-bold tracking-wider text-muted-foreground uppercase">
                                         Cliente / Identificador
                                     </span>
                                     <p className="text-sm font-semibold text-foreground">
@@ -172,7 +172,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                     ) : null}
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                    <span className="text-2xs font-bold tracking-wider text-muted-foreground uppercase">
                                         Assunto de Fechamento
                                     </span>
                                     <p className="font-mono text-xs text-muted-foreground">
@@ -228,7 +228,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                     <Badge
                                                         variant="secondary"
-                                                        className="py-0 text-[10px]"
+                                                        className="py-0 text-2xs"
                                                     >
                                                         {categoryName}
                                                     </Badge>
@@ -288,7 +288,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                                                         }
                                                                     </p>
                                                                     {itemProf ? (
-                                                                        <p className="text-[11px] text-muted-foreground">
+                                                                        <p className="text-3xs text-muted-foreground">
                                                                             Profissional:{' '}
                                                                             {
                                                                                 itemProf
@@ -304,7 +304,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                                                     </p>
                                                                     {item.discount_cents >
                                                                     0 ? (
-                                                                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                                                                        <p className="text-2xs text-emerald-600 dark:text-emerald-400">
                                                                             desc.{' '}
                                                                             {formatMoney(
                                                                                 item.discount_cents,
@@ -352,7 +352,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                         <span className="text-base font-bold text-foreground sm:text-lg">
                                             Total Geral Fechado
                                         </span>
-                                        <p className="text-[11px] text-muted-foreground">
+                                        <p className="text-3xs text-muted-foreground">
                                             Valor consolidado de encerramento da
                                             visita
                                         </p>
@@ -364,7 +364,7 @@ export default function ClosingSessionShow({ session }: Props) {
                             </div>
 
                             {/* Internal Disclaimer */}
-                            <p className="text-center text-[11px] text-muted-foreground">
+                            <p className="text-center text-3xs text-muted-foreground">
                                 Documento interno de conferência e encerramento
                                 operacional. Caldas Gestão SaaS.
                             </p>
@@ -379,12 +379,12 @@ export default function ClosingSessionShow({ session }: Props) {
                     <h1 className="text-sm font-bold uppercase">
                         {tenantName}
                     </h1>
-                    <p className="text-[11px]">{unitName}</p>
-                    <p className="mt-1 text-[10px]">
+                    <p className="text-3xs">{unitName}</p>
+                    <p className="mt-1 text-2xs">
                         *** RECIBO INTERNO OPERACIONAL ***
                     </p>
-                    <p className="text-[10px]">Nº {receiptNumber}</p>
-                    <p className="text-[10px]">{formatDateTime(issuedAt)}</p>
+                    <p className="text-2xs">Nº {receiptNumber}</p>
+                    <p className="text-2xs">{formatDateTime(issuedAt)}</p>
                 </div>
 
                 <div className="mb-3 border-b border-dashed border-black pb-2">
@@ -418,7 +418,7 @@ export default function ClosingSessionShow({ session }: Props) {
 
                         return (
                             <div key={idx} className="space-y-1">
-                                <div className="flex justify-between text-[11px] font-bold">
+                                <div className="flex justify-between text-3xs font-bold">
                                     <span>
                                         [{categoryName}] #{s.id.slice(0, 6)}
                                     </span>
@@ -433,7 +433,7 @@ export default function ClosingSessionShow({ session }: Props) {
                                     return (
                                         <div
                                             key={itemIdx}
-                                            className="flex justify-between pl-2 text-[10px]"
+                                            className="flex justify-between pl-2 text-2xs"
                                         >
                                             <span>
                                                 {item.quantity}x {itemName}

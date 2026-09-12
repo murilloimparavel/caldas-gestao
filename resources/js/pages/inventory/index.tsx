@@ -291,7 +291,7 @@ export default function InventoryIndex({
                                                         {m.product.name}
                                                     </Link>
                                                     {m.product.sku ? (
-                                                        <span className="block text-[11px] text-muted-foreground">
+                                                        <span className="block text-3xs text-muted-foreground">
                                                             SKU: {m.product.sku}
                                                         </span>
                                                     ) : null}
@@ -341,7 +341,7 @@ export default function InventoryIndex({
                                                 <td className="max-w-xs truncate px-4 py-3.5 text-xs text-foreground">
                                                     {m.reason}
                                                     {m.reference_type ? (
-                                                        <span className="block text-[11px] text-muted-foreground">
+                                                        <span className="block text-3xs text-muted-foreground">
                                                             Ref:{' '}
                                                             {m.reference_type}
                                                             {m.reference_id

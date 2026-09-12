@@ -1269,7 +1269,7 @@ function AppointmentSummaryHeader({
                         </span>
                         <Badge
                             variant="outline"
-                            className="px-1.5 py-0 text-[10px] capitalize"
+                            className="px-1.5 py-0 text-2xs capitalize"
                         >
                             {appointment.sale_link.sale.status}
                         </Badge>
@@ -1492,7 +1492,7 @@ function ScheduleBlockForm({
                                             onClick={() =>
                                                 setQuickProfessionalOpen(true)
                                             }
-                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                            className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                         >
                                             + Novo Profissional
                                         </button>

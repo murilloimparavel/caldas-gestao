@@ -283,7 +283,7 @@ export default function ProductsIndex({
                                                                                 true,
                                                                             )
                                                                         }
-                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                                                     >
                                                                         + Nova
                                                                         Categoria
@@ -571,7 +571,7 @@ export default function ProductsIndex({
                                                 }
                                             />
                                             {isLowStock ? (
-                                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-500">
+                                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-3xs font-semibold text-amber-500">
                                                     <AlertTriangle className="size-3" />
                                                     Estoque baixo
                                                 </span>

@@ -269,7 +269,7 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
             return (
                 <Badge
                     variant="outline"
-                    className="gap-1 border-blue-200 bg-blue-50 py-0 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                    className="gap-1 border-blue-200 bg-blue-50 py-0 text-3xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
                 >
                     <Scissors className="size-3" /> Serviço
                 </Badge>
@@ -278,7 +278,7 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
             return (
                 <Badge
                     variant="outline"
-                    className="gap-1 border-purple-200 bg-purple-50 py-0 text-[11px] text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
+                    className="gap-1 border-purple-200 bg-purple-50 py-0 text-3xs text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
                 >
                     <Package className="size-3" /> Produto
                 </Badge>
@@ -287,7 +287,7 @@ function ItemTypeBadge({ type }: { type: CustomerSaleItem['item_type'] }) {
             return (
                 <Badge
                     variant="outline"
-                    className="gap-1 border-border bg-muted py-0 text-[11px] text-muted-foreground"
+                    className="gap-1 border-border bg-muted py-0 text-3xs text-muted-foreground"
                 >
                     <Sparkles className="size-3" /> Item
                 </Badge>
@@ -621,7 +621,7 @@ export default function CustomerShow({
                                                             </p>
                                                             {sale.discount_amount_cents >
                                                                 0 && (
-                                                                <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                                                                <p className="text-3xs text-emerald-600 dark:text-emerald-400">
                                                                     Desc.{' '}
                                                                     {formatMoney(
                                                                         sale.discount_amount_cents,
@@ -1022,7 +1022,7 @@ export default function CustomerShow({
                                                                 }
                                                             />
                                                         </div>
-                                                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                                        <div className="flex flex-wrap gap-2 text-3xs text-muted-foreground">
                                                             <span className="rounded-md bg-muted px-2 py-1">
                                                                 {cp.validity_days_snapshot ??
                                                                     cp

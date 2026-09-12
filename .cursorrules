@@ -1,0 +1,59 @@
+# Caldas Gestão — Regras de Desenvolvimento Frontend (Cursor Rules)
+
+## 1. Stack Tecnológica
+- **Backend / Framework**: Laravel 12 (PHP 8.2+)
+- **Camada de Integração**: Inertia.js v3 (Protocolo v3, `<Form>`, `useHttp`, `router`)
+- **Frontend Core**: React 19 + TypeScript 5.7
+- **Estilização**: Tailwind CSS v4.0 (CSS-first sob `@theme` em `resources/css/app.css`)
+- **Roteamento Tipado**: Wayfinder (`@/wayfinder`, `resources/js/routes/*`)
+- **Componentes Base**: Radix UI / Shadcn UI estilizados em `resources/js/components/ui/`
+- **Ícones**: Lucide React (`lucide-react`)
+
+---
+
+## 2. React 19 & Compilador React (React Compiler)
+- **React Compiler ativo**: Não utilize `useMemo` ou `useCallback` prematuramente para memorização de funções simples ou valores computados comuns. O compilador infere dependências e memoriza automaticamente.
+- Utilize hooks padrão de React 19 e padrões idiomáticos funcionais.
+- Efeitos colaterais (`useEffect`) devem ser reservados estritamente para sincronização com sistemas externos ou APIs de terceiros.
+
+---
+
+## 3. Tailwind CSS v4 & Estilização
+- **Arquitetura CSS-First**: Configurações de tema pertencem exclusivamente ao `resources/css/app.css` dentro do bloco `@theme`.
+- **Zero `tailwind.config.js`**: Nenhuma configuração em JavaScript deve ser criada para o Tailwind v4.
+- **Utilitário de Classes**: Sempre utilize a função utilitária `cn(...)` importada de `@/lib/utils` para combinar classes condicionais ou mesclar classes herdadas. Nunca utilize concatenação manual via template strings (`${...}`) ou operadores ternários manuais para classes.
+- **Microcopy & Tipografia**:
+  - `text-2xs` (0.625rem / 10px, line-height 0.875rem)
+  - `text-3xs` (0.6875rem / 11px, line-height 1rem)
+  - Evite tamanhos arbitrários inline como `text-[10px]` ou `text-[11px]`.
+- **Modo Escuro**: Suporte nativo com `@custom-variant dark (&:is(.dark *));`. Garanta contraste adequado em temas claro e escuro.
+
+---
+
+## 4. Acessibilidade (WCAG 2.2 AA)
+- **Foco Visível (Critério 2.4.7)**:
+  - Nunca utilize `focus:outline-none` de forma isolada ou sem substituição acessível.
+  - Para elementos clicáveis/links de ação: use `focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs`.
+  - Para campos de formulário e seletores (`input`, `select`, `textarea`): use `focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring`.
+- **Botões e Ações Apenas com Ícone**:
+  - Todo botão com apenas ícone DEVE conter acessibilidade semântica via `<span className="sr-only">Descrição</span>` ou atributo `aria-label="Descrição"`.
+  - Ícones decorativos que acompanham texto devem ter `aria-hidden="true"`.
+- **Interações por Teclado**: Todo elemento interativo deve ser acessível via `Tab`, `Enter` e `Space`, e possuir indicadores de foco visíveis com contraste adequado.
+
+---
+
+## 5. Inertia.js v3 & Comunicação com API
+- **Formulários e Requisições**:
+  - Utilize sempre `<Form>` de `@inertiajs/react`, `useHttp`, ou `router` (`router.visit`, `router.post`, etc.).
+  - NUNCA utilize `fetch` nativo ou `axios` com consulta manual a `document.querySelector('meta[name="csrf-token"]')`.
+  - O Inertia v3 lida nativamente com tokens CSRF, headers de requisição e reconciliação de estado.
+- **Rotas**:
+  - Utilize geradores de rotas do Wayfinder para rotas tipadas e seguras (`index()`, `store()`, `update()`, etc.).
+
+---
+
+## 6. Qualidade de Código & Verificação
+- Execute verificações antes de concluir tarefas:
+  - `npm run lint:check` (ESLint flat config)
+  - `npm run types:check` (TypeScript tsc sem emissão)
+  - `npm run build` (Vite build de produção)

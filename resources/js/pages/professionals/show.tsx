@@ -641,7 +641,7 @@ export default function ProfessionalShow({
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 sm:min-w-48">
                                     <div className="rounded-lg bg-primary/10 px-3 py-2">
-                                        <p className="text-[10px] font-semibold tracking-wide text-primary uppercase">
+                                        <p className="text-2xs font-semibold tracking-wide text-primary uppercase">
                                             Dias ativos
                                         </p>
                                         <p className="mt-1 text-lg font-semibold">
@@ -652,7 +652,7 @@ export default function ProfessionalShow({
                                         </p>
                                     </div>
                                     <div className="rounded-lg bg-emerald-500/10 px-3 py-2">
-                                        <p className="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
+                                        <p className="text-2xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
                                             Horas/semana
                                         </p>
                                         <p className="mt-1 text-lg font-semibold">
@@ -696,7 +696,7 @@ export default function ProfessionalShow({
                                                     {weekday.name}
                                                 </span>
                                                 <span
-                                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${dayRules.length > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}
+                                                    className={`rounded-full px-1.5 py-0.5 text-2xs font-semibold ${dayRules.length > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}
                                                 >
                                                     {dayRules.length > 0
                                                         ? 'Ativo'
@@ -727,7 +727,7 @@ export default function ProfessionalShow({
                                                     </p>
                                                 )}
                                             </div>
-                                            <p className="mt-3 text-[10px] font-medium text-muted-foreground group-hover:text-primary">
+                                            <p className="mt-3 text-2xs font-medium text-muted-foreground group-hover:text-primary">
                                                 {canEdit
                                                     ? dayRules.length > 0
                                                         ? 'Editar horários'

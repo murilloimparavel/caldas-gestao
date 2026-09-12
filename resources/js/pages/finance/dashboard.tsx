@@ -291,7 +291,7 @@ export default function FinanceDashboard({
                                                     <p className="text-xs leading-tight font-medium text-foreground">
                                                         {item.description}
                                                     </p>
-                                                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                                    <p className="mt-0.5 text-3xs text-muted-foreground">
                                                         {item.supplier?.name ||
                                                             item.customer
                                                                 ?.name ||
@@ -382,7 +382,7 @@ export default function FinanceDashboard({
                                                     <p className="text-xs leading-tight font-medium text-foreground">
                                                         {item.description}
                                                     </p>
-                                                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                                    <p className="mt-0.5 text-3xs text-muted-foreground">
                                                         Pago em{' '}
                                                         {item.paid_date
                                                             ? new Date(

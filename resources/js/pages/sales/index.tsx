@@ -106,7 +106,7 @@ export function SaleStatusBadge({ status }: { status: SaleStatus }) {
     return (
         <Badge
             variant="outline"
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${config.bgClass}`}
+            className={`rounded-full px-2.5 py-0.5 text-3xs font-semibold ${config.bgClass}`}
         >
             <span
                 aria-hidden="true"
@@ -664,7 +664,7 @@ export default function SalesIndex({
                                 </Button>
                             ) : selectedIds.length > 1 &&
                               !canConsolidateSubject ? (
-                                <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                <span className="text-3xs font-medium text-amber-600 dark:text-amber-400">
                                     Clientes ou referências diferentes não podem
                                     ser consolidados juntos
                                 </span>
@@ -726,7 +726,7 @@ export default function SalesIndex({
                                                             s.customer?.name ||
                                                             `Comanda #${s.id.slice(0, 6)}`}
                                                     </p>
-                                                    <p className="text-[11px] text-muted-foreground">
+                                                    <p className="text-3xs text-muted-foreground">
                                                         {s.category_name_snapshot ||
                                                             s.category?.name ||
                                                             'Geral'}{' '}
@@ -905,7 +905,7 @@ export default function SalesIndex({
                                     {/* Bottom Row: Total & Action */}
                                     <div className="flex items-center justify-between gap-2 pt-1">
                                         <div>
-                                            <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                                            <span className="block text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
                                                 Total a Pagar
                                             </span>
                                             <span className="font-display text-lg font-bold text-foreground">

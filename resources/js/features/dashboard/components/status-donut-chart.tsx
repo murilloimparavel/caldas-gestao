@@ -106,7 +106,7 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                                 <span className="text-2xl font-bold tracking-tight text-foreground">
                                     {totalCount}
                                 </span>
-                                <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                                <span className="text-2xs font-medium text-muted-foreground uppercase">
                                     Total
                                 </span>
                             </div>

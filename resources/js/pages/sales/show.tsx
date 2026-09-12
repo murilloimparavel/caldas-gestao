@@ -730,7 +730,7 @@ export default function SalesShow({
                                             {latestAdjustment.reason}
                                         </p>
                                     ) : null}
-                                    <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
+                                    <p className="text-3xs text-rose-700/80 dark:text-rose-400/80">
                                         Estorno realizado por{' '}
                                         <span className="font-medium">
                                             {latestAdjustment?.user?.name ??
@@ -905,7 +905,7 @@ export default function SalesShow({
                                                                                     true,
                                                                                 )
                                                                             }
-                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                                                         >
                                                                             +
                                                                             Novo
@@ -1024,7 +1024,7 @@ export default function SalesShow({
                                                                                     true,
                                                                                 )
                                                                             }
-                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
                                                                         >
                                                                             +
                                                                             Novo
@@ -1737,7 +1737,7 @@ export default function SalesShow({
                                                 </p>
                                             ) : null}
                                             {history.user?.name ? (
-                                                <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+                                                <p className="mt-0.5 text-2xs text-muted-foreground/80">
                                                     Por {history.user.name}
                                                 </p>
                                             ) : null}

@@ -142,7 +142,7 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
                                                       )
                                                     : 'R$ 0,00')}
                                         </span>
-                                        <span className="text-[11px] font-medium text-muted-foreground">
+                                        <span className="text-3xs font-medium text-muted-foreground">
                                             {item.percentage}% do total
                                         </span>
                                     </div>

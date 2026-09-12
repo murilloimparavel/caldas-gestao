@@ -131,7 +131,7 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                                                 aria-hidden="true"
                                             />
                                         </div>
-                                        <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                                        <span className="text-2xs font-medium text-muted-foreground sm:text-xs">
                                             {dayLabel}
                                         </span>
                                     </div>

@@ -10,7 +10,7 @@ import customers from '@/routes/customers';
 import type { SharedPageProps } from '@/types';
 
 const itemClassName =
-    'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring';
+    'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-3xs font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring';
 
 export function MobileBottomNav() {
     const { isCurrentUrl } = useCurrentUrl();

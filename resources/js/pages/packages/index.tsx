@@ -326,7 +326,7 @@ export default function PackagesIndex({
                                                     <Badge
                                                         key={srv.id}
                                                         variant="secondary"
-                                                        className="text-[11px] font-normal"
+                                                        className="text-3xs font-normal"
                                                     >
                                                         <Scissors className="mr-1 h-3 w-3" />
                                                         {srv.name}
@@ -335,7 +335,7 @@ export default function PackagesIndex({
                                             {pkg.services.length > 3 && (
                                                 <Badge
                                                     variant="outline"
-                                                    className="text-[11px] font-normal"
+                                                    className="text-3xs font-normal"
                                                 >
                                                     +{pkg.services.length - 3}{' '}
                                                     mais

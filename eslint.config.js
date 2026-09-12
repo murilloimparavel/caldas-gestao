@@ -91,11 +91,17 @@ export default [
     },
     {
         ignores: [
+            '.worktrees/**',
+            '**/.worktrees/**',
             'vendor',
+            'vendor/**',
+            '**/vendor/**',
             'node_modules',
+            'node_modules/**',
             'public',
+            'public/**',
             'bootstrap/ssr',
-            'tailwind.config.js',
+            'bootstrap/ssr/**',
             'vite.config.ts',
             'resources/js/actions/**',
             'resources/js/components/ui/*',

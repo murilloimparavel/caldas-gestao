@@ -160,7 +160,7 @@ export function RelationCheckboxes({
                             {option.name}
                         </span>
                         {option.status === 'inactive' ? (
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                            <span className="text-2xs font-medium text-muted-foreground uppercase">
                                 Inativo
                             </span>
                         ) : null}
@@ -430,7 +430,7 @@ export function StatusBadge({ status }: { status: ResourceStatus }) {
         <Badge
             variant="outline"
             className={cn(
-                'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                'rounded-full px-2.5 py-1 text-3xs font-semibold',
                 status === 'active'
                     ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
                     : 'border-border bg-muted text-muted-foreground',

@@ -133,7 +133,7 @@ export function PublicPreview({
                                 />
                             </span>
                         </div>
-                        <div className="flex gap-4 overflow-hidden border-b border-border/70 px-4 pt-3 text-[11px] font-semibold text-muted-foreground">
+                        <div className="flex gap-4 overflow-hidden border-b border-border/70 px-4 pt-3 text-3xs font-semibold text-muted-foreground">
                             <span className="border-b-2 border-primary pb-2 text-foreground">
                                 Detalhes
                             </span>
@@ -167,23 +167,23 @@ export function PublicPreview({
                                     <p className="text-sm font-bold">
                                         {unit.name}
                                     </p>
-                                    <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                                    <p className="mt-1 line-clamp-2 text-3xs leading-4 text-muted-foreground">
                                         {settings.description ||
                                             'Escolha um serviço e reserve seu horário.'}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-border/70 p-3">
-                                    <p className="text-[11px] font-bold">
+                                    <p className="text-3xs font-bold">
                                         Contato
                                     </p>
-                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                    <p className="mt-1 text-3xs text-muted-foreground">
                                         {settings.whatsapp ||
                                             settings.phone ||
                                             'WhatsApp não informado'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-[11px] font-bold">
+                                    <p className="text-3xs font-bold">
                                         Serviços
                                     </p>
                                     <div className="mt-2 space-y-2">
@@ -194,12 +194,12 @@ export function PublicPreview({
                                                     key={service.id}
                                                     className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-2.5 py-2"
                                                 >
-                                                    <span className="truncate text-[11px] font-medium">
+                                                    <span className="truncate text-3xs font-medium">
                                                         {service.name}
                                                     </span>
                                                     {service.price_cents !==
                                                         undefined && (
-                                                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                                                        <span className="shrink-0 text-2xs text-muted-foreground">
                                                             {(
                                                                 service.price_cents /
                                                                 100
@@ -216,7 +216,7 @@ export function PublicPreview({
                                                 </div>
                                             ))}
                                         {!visibleServices.length && (
-                                            <p className="text-[11px] text-muted-foreground">
+                                            <p className="text-3xs text-muted-foreground">
                                                 Cadastre um serviço ativo.
                                             </p>
                                         )}

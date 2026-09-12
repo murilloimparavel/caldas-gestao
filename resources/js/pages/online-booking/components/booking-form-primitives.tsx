@@ -40,7 +40,7 @@ export function SelectionCard({
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 {item.name}
             </span>
-            <Badge variant="outline" className="shrink-0 text-[10px]">
+            <Badge variant="outline" className="shrink-0 text-2xs">
                 {active ? 'Ativo' : 'Inativo'}
             </Badge>
         </label>

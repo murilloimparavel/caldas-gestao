@@ -22,7 +22,7 @@ export default function AppLogo() {
                 <span className="truncate text-sm leading-tight font-semibold">
                     {branding.name}
                 </span>
-                <span className="mt-0.5 truncate text-[10px] tracking-[0.13em] text-sidebar-foreground/55 uppercase">
+                <span className="mt-0.5 truncate text-2xs tracking-[0.13em] text-sidebar-foreground/55 uppercase">
                     Operação diária
                 </span>
             </div>

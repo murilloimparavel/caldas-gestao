@@ -360,7 +360,7 @@ export default function SubscriptionsIndex({
                                     <div className="flex flex-wrap items-center gap-2 border-t pt-2 text-xs text-muted-foreground">
                                         <Badge
                                             variant="outline"
-                                            className="text-[11px] font-normal"
+                                            className="text-3xs font-normal"
                                         >
                                             <RefreshCw className="mr-1 h-3 w-3" />
                                             {billingCycleLabel[
@@ -390,7 +390,7 @@ export default function SubscriptionsIndex({
                                                     <Badge
                                                         key={srv.id}
                                                         variant="secondary"
-                                                        className="text-[11px] font-normal"
+                                                        className="text-3xs font-normal"
                                                     >
                                                         <Scissors className="mr-1 h-3 w-3" />
                                                         {srv.name}
@@ -399,7 +399,7 @@ export default function SubscriptionsIndex({
                                             {plan.services.length > 3 && (
                                                 <Badge
                                                     variant="outline"
-                                                    className="text-[11px] font-normal"
+                                                    className="text-3xs font-normal"
                                                 >
                                                     +{plan.services.length - 3}{' '}
                                                     mais

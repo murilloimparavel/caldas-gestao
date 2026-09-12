@@ -215,7 +215,7 @@ function Kicker({
 }) {
     return (
         <p
-            className={`flex items-center gap-3 text-[11px] font-bold tracking-[0.22em] uppercase ${light ? 'text-[#C8FF3D]' : 'text-[#52605A]'}`}
+            className={`flex items-center gap-3 text-3xs font-bold tracking-[0.22em] uppercase ${light ? 'text-[#C8FF3D]' : 'text-[#52605A]'}`}
         >
             <span
                 className={`h-px w-8 ${light ? 'bg-[#C8FF3D]' : 'bg-[#52605A]'}`}
@@ -404,7 +404,7 @@ function Home({ branding }: HomeProps) {
                         </a>
 
                         <nav
-                            className="hidden items-center gap-8 text-[11px] font-bold tracking-[0.1em] uppercase lg:flex"
+                            className="hidden items-center gap-8 text-3xs font-bold tracking-[0.1em] uppercase lg:flex"
                             aria-label="Links da página"
                         >
                             <a
@@ -429,13 +429,13 @@ function Home({ branding }: HomeProps) {
 
                         <div className="hidden items-center gap-5 lg:flex">
                             <Link
-                                className={`text-[11px] font-bold tracking-[0.1em] uppercase transition-colors hover:text-[#C8FF3D] ${focusRingDark}`}
+                                className={`text-3xs font-bold tracking-[0.1em] uppercase transition-colors hover:text-[#C8FF3D] ${focusRingDark}`}
                                 href={login()}
                             >
                                 Entrar
                             </Link>
                             <Link
-                                className={`inline-flex items-center gap-2 bg-[#C8FF3D] px-4 py-3 text-[11px] font-bold tracking-[0.08em] text-[#0A0C0B] uppercase transition hover:bg-[#F2EFE7] ${focusRingDark}`}
+                                className={`inline-flex items-center gap-2 bg-[#C8FF3D] px-4 py-3 text-3xs font-bold tracking-[0.08em] text-[#0A0C0B] uppercase transition hover:bg-[#F2EFE7] ${focusRingDark}`}
                                 href={registerHref}
                             >
                                 Teste grátis <ArrowUpRight className="size-4" />
@@ -495,14 +495,14 @@ function Home({ branding }: HomeProps) {
                                 </a>
                                 <div className="mt-5 grid grid-cols-2 gap-3">
                                     <Link
-                                        className={`border border-white/25 px-3 py-3 text-center text-[11px] font-bold tracking-[0.08em] uppercase transition hover:border-[#C8FF3D] hover:text-[#C8FF3D] ${focusRingDark}`}
+                                        className={`border border-white/25 px-3 py-3 text-center text-3xs font-bold tracking-[0.08em] uppercase transition hover:border-[#C8FF3D] hover:text-[#C8FF3D] ${focusRingDark}`}
                                         href={login()}
                                         onClick={closeMobileMenu}
                                     >
                                         Entrar
                                     </Link>
                                     <Link
-                                        className={`bg-[#C8FF3D] px-3 py-3 text-center text-[11px] font-bold tracking-[0.08em] text-[#0A0C0B] uppercase transition hover:bg-[#F2EFE7] ${focusRingDark}`}
+                                        className={`bg-[#C8FF3D] px-3 py-3 text-center text-3xs font-bold tracking-[0.08em] text-[#0A0C0B] uppercase transition hover:bg-[#F2EFE7] ${focusRingDark}`}
                                         href={registerHref}
                                         onClick={closeMobileMenu}
                                     >
@@ -563,7 +563,7 @@ function Home({ branding }: HomeProps) {
                                                 Testar grátis por 14 dias{' '}
                                                 <ArrowRight className="size-4" />
                                             </Link>
-                                            <span className="text-[11px] font-bold tracking-[0.12em] text-[#B6B2A8] uppercase">
+                                            <span className="text-3xs font-bold tracking-[0.12em] text-[#B6B2A8] uppercase">
                                                 14 dias para testar. Sem cartão.
                                             </span>
                                         </div>
@@ -571,14 +571,14 @@ function Home({ branding }: HomeProps) {
                                 </div>
 
                                 <div className="hidden border-l border-white/30 pl-6 lg:block">
-                                    <span className="text-[11px] font-bold tracking-[0.2em] text-[#C8FF3D] uppercase">
+                                    <span className="text-3xs font-bold tracking-[0.2em] text-[#C8FF3D] uppercase">
                                         Um sistema para o ritmo real
                                     </span>
                                     <p className="mt-5 text-3xl leading-none font-bold tracking-[-0.06em] text-[#F2EFE7]">
                                         Da primeira reserva ao próximo retorno.
                                     </p>
                                     <a
-                                        className={`mt-8 inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.12em] text-[#F2EFE7] uppercase transition hover:text-[#C8FF3D] ${focusRingDark}`}
+                                        className={`mt-8 inline-flex items-center gap-2 text-3xs font-bold tracking-[0.12em] text-[#F2EFE7] uppercase transition hover:text-[#C8FF3D] ${focusRingDark}`}
                                         href="#sistema"
                                     >
                                         Explorar o sistema{' '}
@@ -590,7 +590,7 @@ function Home({ branding }: HomeProps) {
                     </section>
 
                     <div className="overflow-hidden border-b border-[#0A0C0B]/20 bg-[#C8FF3D] text-[#0A0C0B]">
-                        <div className="flex min-w-max items-center gap-8 py-4 text-[11px] font-bold tracking-[0.2em] uppercase sm:gap-14 sm:py-5">
+                        <div className="flex min-w-max items-center gap-8 py-4 text-3xs font-bold tracking-[0.2em] uppercase sm:gap-14 sm:py-5">
                             <span className="pl-5 sm:pl-8">Barbearias</span>
                             <span aria-hidden="true">·</span>
                             <span>Salões</span>
@@ -688,7 +688,7 @@ function Home({ branding }: HomeProps) {
                                 <div className="order-2 space-y-7 lg:order-1">
                                     <div className="border-t border-white/20 pt-5">
                                         <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[11px] font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
+                                            <span className="text-3xs font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
                                                 01
                                             </span>
                                             <CalendarDays className="size-5 text-[#C8FF3D]" />
@@ -704,7 +704,7 @@ function Home({ branding }: HomeProps) {
                                     </div>
                                     <div className="border-t border-white/20 pt-5">
                                         <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[11px] font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
+                                            <span className="text-3xs font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
                                                 02
                                             </span>
                                             <UserRound className="size-5 text-[#C8FF3D]" />
@@ -720,10 +720,10 @@ function Home({ branding }: HomeProps) {
                                 </div>
 
                                 <div className="relative order-1 flex min-h-[390px] items-center justify-center overflow-hidden border border-white/15 bg-[#0A0C0B] lg:order-2 lg:min-h-[560px]">
-                                    <span className="absolute top-7 left-7 text-[11px] font-bold tracking-[0.2em] text-[#777A70] uppercase">
+                                    <span className="absolute top-7 left-7 text-3xs font-bold tracking-[0.2em] text-[#777A70] uppercase">
                                         Caldas / core
                                     </span>
-                                    <span className="absolute right-7 bottom-7 text-right text-[11px] font-bold tracking-[0.2em] text-[#777A70] uppercase">
+                                    <span className="absolute right-7 bottom-7 text-right text-3xs font-bold tracking-[0.2em] text-[#777A70] uppercase">
                                         A rotina
                                         <br />
                                         em movimento
@@ -756,7 +756,7 @@ function Home({ branding }: HomeProps) {
                                 <div className="order-3 space-y-7">
                                     <div className="border-t border-white/20 pt-5">
                                         <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[11px] font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
+                                            <span className="text-3xs font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
                                                 03
                                             </span>
                                             <WalletCards className="size-5 text-[#C8FF3D]" />
@@ -771,7 +771,7 @@ function Home({ branding }: HomeProps) {
                                     </div>
                                     <div className="border-t border-white/20 pt-5">
                                         <div className="flex items-center justify-between gap-4">
-                                            <span className="text-[11px] font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
+                                            <span className="text-3xs font-bold tracking-[0.18em] text-[#C8FF3D] uppercase">
                                                 04
                                             </span>
                                             <BarChart3 className="size-5 text-[#C8FF3D]" />
@@ -799,7 +799,7 @@ function Home({ branding }: HomeProps) {
                                     conversarem.
                                 </p>
                                 <Link
-                                    className={`mt-10 inline-flex items-center gap-2 border-b border-[#0A0C0B] pb-2 text-[11px] font-bold tracking-[0.12em] uppercase transition hover:gap-4 ${focusRingLight}`}
+                                    className={`mt-10 inline-flex items-center gap-2 border-b border-[#0A0C0B] pb-2 text-3xs font-bold tracking-[0.12em] uppercase transition hover:gap-4 ${focusRingLight}`}
                                     href={registerHref}
                                 >
                                     Começar pela minha rotina{' '}
@@ -901,7 +901,7 @@ function Home({ branding }: HomeProps) {
                                             >
                                                 <span className="flex items-center gap-4">
                                                     <span
-                                                        className={`text-[11px] tracking-[0.18em] ${isActive ? 'text-[#52605A]' : 'text-[#A4AAA1]'}`}
+                                                        className={`text-3xs tracking-[0.18em] ${isActive ? 'text-[#52605A]' : 'text-[#A4AAA1]'}`}
                                                     >
                                                         {item.number}
                                                     </span>
@@ -924,7 +924,7 @@ function Home({ branding }: HomeProps) {
                                     <div>
                                         <div className="flex items-center gap-4">
                                             <AudienceIcon className="size-6" />
-                                            <span className="text-[11px] font-bold tracking-[0.18em] text-[#52605A] uppercase">
+                                            <span className="text-3xs font-bold tracking-[0.18em] text-[#52605A] uppercase">
                                                 {audience.label}
                                             </span>
                                         </div>
@@ -942,7 +942,7 @@ function Home({ branding }: HomeProps) {
                                                     key={detail}
                                                     className="flex items-center justify-between gap-4 border-b border-[#0A0C0B]/20 py-5"
                                                 >
-                                                    <span className="text-[11px] font-bold tracking-[0.18em] text-[#87918F]">
+                                                    <span className="text-3xs font-bold tracking-[0.18em] text-[#87918F]">
                                                         0{index + 1}
                                                     </span>
                                                     <span className="flex-1 text-lg font-bold tracking-[-0.03em]">
@@ -982,7 +982,7 @@ function Home({ branding }: HomeProps) {
                                                 className="border-b border-white/20 py-7 sm:border-t sm:py-6 sm:pr-6 sm:pl-6 sm:not-last:border-r sm:first:border-l-0 sm:first:pl-0 sm:last:pr-0"
                                             >
                                                 <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[11px] font-bold tracking-[0.18em] text-[#C8FF3D]">
+                                                    <span className="text-3xs font-bold tracking-[0.18em] text-[#C8FF3D]">
                                                         {group.index}
                                                     </span>
                                                     <GroupIcon className="size-5 text-[#C8FF3D]" />
@@ -1088,7 +1088,7 @@ function Home({ branding }: HomeProps) {
                                     Testar grátis por 14 dias{' '}
                                     <ArrowUpRight className="size-4" />
                                 </Link>
-                                <p className="mt-4 text-[11px] font-bold tracking-[0.12em] text-[#52605A] uppercase">
+                                <p className="mt-4 text-3xs font-bold tracking-[0.12em] text-[#52605A] uppercase">
                                     14 dias para testar. Sem cartão.
                                 </p>
                             </div>
@@ -1103,7 +1103,7 @@ function Home({ branding }: HomeProps) {
                             light
                             compact
                         />
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] font-bold tracking-[0.1em] uppercase">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-3xs font-bold tracking-[0.1em] uppercase">
                             <a
                                 className={`transition-colors hover:text-[#C8FF3D] ${focusRingDark}`}
                                 href="#sistema"

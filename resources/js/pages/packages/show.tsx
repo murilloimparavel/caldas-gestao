@@ -630,7 +630,7 @@ export default function PackageShow({
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                            <div className="flex flex-wrap gap-2 text-3xs text-muted-foreground">
                                                 <span className="rounded-md bg-muted px-2 py-1">
                                                     Snapshot:{' '}
                                                     {cp.name_snapshot ??

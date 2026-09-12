@@ -235,7 +235,7 @@ export function StatusChip({ status }: { status: AppointmentStatus }) {
         <Badge
             variant="outline"
             className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                'rounded-full px-2 py-0.5 text-2xs font-semibold',
                 statusClasses[status] ??
                     'border-border bg-muted text-muted-foreground',
             )}
@@ -270,7 +270,7 @@ export function ProfessionalAvatarHeader({
                     {professional.name}
                 </p>
                 {subtitle ? (
-                    <p className="truncate text-[10px] text-muted-foreground">
+                    <p className="truncate text-2xs text-muted-foreground">
                         {subtitle}
                     </p>
                 ) : null}
@@ -501,7 +501,7 @@ export function AppointmentCard({
             aria-label={`${formatTime(appointment.starts_at, timeZone)}, ${customerName}, ${serviceName}, ${statusLabel(appointment.status)}`}
         >
             <div className="flex items-start justify-between gap-1">
-                <span className="text-[11px] leading-none font-semibold">
+                <span className="text-3xs leading-none font-semibold">
                     {formatTime(appointment.starts_at, timeZone)}
                     {appointment.ends_at
                         ? `–${formatTime(appointment.ends_at, timeZone)}`
@@ -515,9 +515,9 @@ export function AppointmentCard({
             <p className="mt-1 truncate text-xs leading-snug font-bold">
                 {customerName}
             </p>
-            <p className="truncate text-[11px] opacity-90">{serviceName}</p>
+            <p className="truncate text-3xs opacity-90">{serviceName}</p>
             {!compact && appointment.professional?.name ? (
-                <p className="mt-1 truncate text-[10px] opacity-75">
+                <p className="mt-1 truncate text-2xs opacity-75">
                     {appointment.professional.name}
                 </p>
             ) : null}
@@ -564,7 +564,7 @@ export function ScheduleBlockCard({
                         </span>
                         <Badge
                             variant="outline"
-                            className="border-slate-300 bg-slate-200/70 text-[10px] text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                            className="border-slate-300 bg-slate-200/70 text-2xs text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         >
                             Ocupado
                         </Badge>
@@ -859,7 +859,7 @@ export function WeekCalendar({
                             {timeSlots.map((minutes) => (
                                 <span
                                     key={minutes}
-                                    className="absolute right-2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground"
+                                    className="absolute right-2 -translate-y-1/2 text-2xs font-medium text-muted-foreground"
                                     style={{
                                         top:
                                             ((minutes - startHour * 60) / 30) *
@@ -1007,7 +1007,7 @@ export function WeekCalendar({
                                                 top: `${dragTop}px`,
                                             }}
                                         >
-                                            <span className="text-[11px] font-bold text-primary drop-shadow-xs dark:text-primary-foreground">
+                                            <span className="text-3xs font-bold text-primary drop-shadow-xs dark:text-primary-foreground">
                                                 {formatMinutes(dragMinMins)} -{' '}
                                                 {formatMinutes(dragMaxMins)} •{' '}
                                                 {formatDuration(dragDuration)}
@@ -1060,7 +1060,7 @@ export function WeekCalendar({
                                                 title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
                                             >
                                                 <div className="flex items-center justify-between gap-1">
-                                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+                                                    <span className="flex items-center gap-1 text-2xs font-semibold text-slate-700 dark:text-slate-300">
                                                         <Lock
                                                             className="size-3 shrink-0 text-slate-500 dark:text-slate-400"
                                                             aria-hidden="true"
@@ -1079,12 +1079,12 @@ export function WeekCalendar({
                                                         Ocupado
                                                     </span>
                                                 </div>
-                                                <p className="truncate text-[11px] font-medium text-slate-900 dark:text-slate-100">
+                                                <p className="truncate text-3xs font-medium text-slate-900 dark:text-slate-100">
                                                     {block.reason || 'Ocupado'}
                                                 </p>
                                                 {block.professional?.name &&
                                                 !col.professional ? (
-                                                    <p className="truncate text-[10px] text-slate-600 dark:text-slate-400">
+                                                    <p className="truncate text-2xs text-slate-600 dark:text-slate-400">
                                                         {
                                                             block.professional
                                                                 .name
@@ -1349,7 +1349,7 @@ export function DayAgenda({
             {/* Seletor de dias da semana para mobile */}
             {weekDates.length > 0 && onSelectDate ? (
                 <div className="mb-4 scrollbar-none overflow-x-auto pb-1 md:hidden">
-                    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                    <p className="mb-1.5 text-3xs font-semibold tracking-wider text-muted-foreground uppercase">
                         Dias da semana
                     </p>
                     <div className="flex items-center gap-1.5">
@@ -1368,7 +1368,7 @@ export function DayAgenda({
                                             : 'border-border bg-card text-foreground hover:bg-muted/50',
                                     )}
                                 >
-                                    <span className="text-[10px] uppercase opacity-80">
+                                    <span className="text-2xs uppercase opacity-80">
                                         {formatDay(d, timeZone).split(' ')[0]}
                                     </span>
                                     <span className="text-xs font-semibold">
@@ -1384,7 +1384,7 @@ export function DayAgenda({
             {/* Seletor/tabs de profissionais para mobile */}
             {professionals.length > 1 && onSelectProfessional ? (
                 <div className="mb-4 scrollbar-none overflow-x-auto pb-1 md:hidden">
-                    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                    <p className="mb-1.5 text-3xs font-semibold tracking-wider text-muted-foreground uppercase">
                         Filtrar Profissional
                     </p>
                     <div className="flex items-center gap-1.5">
@@ -1422,7 +1422,7 @@ export function DayAgenda({
                                                 alt={p.name}
                                             />
                                         ) : null}
-                                        <AvatarFallback className="bg-primary/20 text-[10px]">
+                                        <AvatarFallback className="bg-primary/20 text-2xs">
                                             {getInitials(p.name)}
                                         </AvatarFallback>
                                     </Avatar>
@@ -1467,7 +1467,7 @@ export function DayAgenda({
                         {timeSlots.map((minutes) => (
                             <span
                                 key={minutes}
-                                className="absolute right-2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground"
+                                className="absolute right-2 -translate-y-1/2 text-2xs font-medium text-muted-foreground"
                                 style={{
                                     top:
                                         ((minutes - startHour * 60) / 30) *
@@ -1527,7 +1527,7 @@ export function DayAgenda({
                                     top: `${dragTop}px`,
                                 }}
                             >
-                                <span className="text-[11px] font-bold text-primary drop-shadow-xs dark:text-primary-foreground">
+                                <span className="text-3xs font-bold text-primary drop-shadow-xs dark:text-primary-foreground">
                                     {formatMinutes(dragMinMins)} -{' '}
                                     {formatMinutes(dragMaxMins)} •{' '}
                                     {formatDuration(dragDuration)}
@@ -1570,7 +1570,7 @@ export function DayAgenda({
                                     title={`Ocupado: ${block.reason || 'Horário bloqueado'} (${formatTime(block.starts_at, timeZone)} - ${formatTime(block.ends_at, timeZone)})`}
                                 >
                                     <div className="flex items-center justify-between gap-1">
-                                        <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+                                        <span className="flex items-center gap-1 text-2xs font-semibold text-slate-700 dark:text-slate-300">
                                             <Lock
                                                 className="size-3 shrink-0 text-slate-500 dark:text-slate-400"
                                                 aria-hidden="true"
@@ -1589,11 +1589,11 @@ export function DayAgenda({
                                             Ocupado
                                         </span>
                                     </div>
-                                    <p className="truncate text-[11px] font-medium text-slate-900 dark:text-slate-100">
+                                    <p className="truncate text-3xs font-medium text-slate-900 dark:text-slate-100">
                                         {block.reason || 'Ocupado'}
                                     </p>
                                     {block.professional?.name ? (
-                                        <p className="truncate text-[10px] text-slate-600 dark:text-slate-400">
+                                        <p className="truncate text-2xs text-slate-600 dark:text-slate-400">
                                             {block.professional.name}
                                         </p>
                                     ) : null}
@@ -1839,7 +1839,7 @@ export function MonthAgenda({
                                                 onTouchStart={(e) =>
                                                     e.stopPropagation()
                                                 }
-                                                className="flex w-full items-center gap-1 rounded border border-dashed border-amber-500/50 bg-amber-50/80 px-1.5 py-0.5 text-left text-[10px] font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200"
+                                                className="flex w-full items-center gap-1 rounded border border-dashed border-amber-500/50 bg-amber-50/80 px-1.5 py-0.5 text-left text-2xs font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200"
                                             >
                                                 <Lock
                                                     className="size-2.5 shrink-0 text-amber-700 dark:text-amber-400"
@@ -1862,7 +1862,7 @@ export function MonthAgenda({
                                                 />
                                             ))}
                                         {dayAppointments.length > 3 ? (
-                                            <p className="text-[10px] text-muted-foreground">
+                                            <p className="text-2xs text-muted-foreground">
                                                 +{dayAppointments.length - 3}{' '}
                                                 outros
                                             </p>

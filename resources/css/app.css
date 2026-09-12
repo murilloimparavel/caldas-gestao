@@ -15,6 +15,11 @@
     --font-display: Inter, 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'SFMono-Regular', ui-monospace, monospace;
 
+    --text-2xs: 0.625rem;
+    --text-2xs--line-height: 0.875rem;
+    --text-3xs: 0.6875rem;
+    --text-3xs--line-height: 1rem;
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
