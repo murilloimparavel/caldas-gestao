@@ -197,7 +197,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         </DialogHeader>
 
                         <Form
-                            {...cashShifts.store.post()}
+                            {...cashShifts.store.form()}
                             headers={{
                                 'X-Idempotency-Key': createIdempotencyKey(
                                     'cash-shift-open',
@@ -447,7 +447,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.move.post({
+                                            {...cashShifts.move.form({
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
@@ -588,7 +588,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.move.post({
+                                            {...cashShifts.move.form({
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
@@ -740,7 +740,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.close.post({
+                                            {...cashShifts.close.form({
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
