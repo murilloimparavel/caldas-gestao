@@ -315,7 +315,7 @@ function BarberHome({ branding }: BarberHomeProps) {
                             <div className="mt-10 grid gap-px overflow-hidden border border-[#b9b9b4] bg-[#b9b9b4] lg:grid-cols-2">
                                 <div className="bg-[#d8d8d4] p-5 sm:p-7">
                                     <p className="text-xs font-semibold tracking-[0.18em] text-[#666661] uppercase">
-                                        Dor
+                                        Hoje
                                     </p>
                                     <h3 className="mt-4 text-2xl font-semibold tracking-[-0.06em] sm:text-3xl">
                                         No escuro
