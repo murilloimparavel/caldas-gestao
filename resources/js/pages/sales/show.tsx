@@ -8,9 +8,11 @@ import {
     Package,
     Percent,
     Plus,
+    Printer,
     Receipt,
     RotateCcw,
     Scissors,
+    Search,
     Sparkles,
     Trash2,
     Undo2,
@@ -209,6 +211,30 @@ export default function SalesShow({
     const isSaleActive =
         sale.status === 'open' || sale.status === 'ready_to_bill';
     const isSaleOpen = sale.status === 'open';
+    const isSaleClosed =
+        sale.status === 'finalized' || (sale.status as string) === 'closed';
+
+    const [catalogSearch, setCatalogSearch] = useState('');
+
+    const filteredServices = catalogSearch.trim()
+        ? services.filter(
+              (srv) =>
+                  srv.id === selectedServiceId ||
+                  srv.name
+                      .toLowerCase()
+                      .includes(catalogSearch.trim().toLowerCase()),
+          )
+        : services;
+
+    const filteredProducts = catalogSearch.trim()
+        ? products.filter(
+              (prod) =>
+                  prod.id === selectedProductId ||
+                  prod.name
+                      .toLowerCase()
+                      .includes(catalogSearch.trim().toLowerCase()),
+          )
+        : products;
 
     const selectedService = services.find((s) => s.id === selectedServiceId);
     const selectedProduct = products.find((p) => p.id === selectedProductId);
@@ -241,6 +267,7 @@ export default function SalesShow({
         setCustomPriceStr('');
         setQuantity(1);
         setItemDiscountStr('');
+        setCatalogSearch('');
     };
 
     const latestAdjustment = (sale.status_histories ?? [])
@@ -256,7 +283,7 @@ export default function SalesShow({
             <PageCanvas>
                 {/* Back Link & Header */}
                 <div className="flex flex-col gap-4">
-                    <div>
+                    <div className="print:hidden no-print">
                         <Button
                             asChild
                             variant="ghost"
@@ -300,7 +327,7 @@ export default function SalesShow({
 
                         {/* Status Transition Action Buttons */}
                         {canManage && isSaleActive ? (
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 print:hidden no-print">
                                 {isSaleOpen ? (
                                     <Form
                                         {...sales.transition.form(sale.id)}
@@ -566,8 +593,18 @@ export default function SalesShow({
                                     </DialogContent>
                                 </Dialog>
                             </div>
-                        ) : sale.status === 'finalized' ? (
-                            <div className="flex flex-wrap items-center gap-2">
+                        ) : isSaleClosed ? (
+                            <div className="flex flex-wrap items-center gap-2 print:hidden no-print">
+                                <Button
+                                    type="button"
+                                    onClick={() => window.print()}
+                                    variant="outline"
+                                    className="gap-2"
+                                >
+                                    <Printer className="size-4" />
+                                    Imprimir Recibo
+                                </Button>
+
                                 {sale.closing_sessions &&
                                 sale.closing_sessions.length > 0 ? (
                                     <Button
@@ -891,6 +928,19 @@ export default function SalesShow({
                                                         {itemType ===
                                                         'service' ? (
                                                             <div className="space-y-3">
+                                                                <div className="relative">
+                                                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Filtrar serviços por nome..."
+                                                                        value={catalogSearch}
+                                                                        onChange={(e) =>
+                                                                            setCatalogSearch(e.target.value)
+                                                                        }
+                                                                        className="pl-9 text-sm"
+                                                                    />
+                                                                </div>
+
                                                                 <FormField
                                                                     label="Serviço"
                                                                     name="service_id"
@@ -936,7 +986,7 @@ export default function SalesShow({
                                                                             o
                                                                             serviço
                                                                         </option>
-                                                                        {services.map(
+                                                                        {filteredServices.map(
                                                                             (
                                                                                 srv,
                                                                             ) => (
@@ -962,6 +1012,11 @@ export default function SalesShow({
                                                                                     min)
                                                                                 </option>
                                                                             ),
+                                                                        )}
+                                                                        {filteredServices.length === 0 && (
+                                                                            <option value="" disabled>
+                                                                                Nenhum serviço encontrado
+                                                                            </option>
                                                                         )}
                                                                     </select>
                                                                 </FormField>
@@ -1010,6 +1065,19 @@ export default function SalesShow({
                                                         {itemType ===
                                                         'product' ? (
                                                             <div className="space-y-3">
+                                                                <div className="relative">
+                                                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Filtrar produtos por nome..."
+                                                                        value={catalogSearch}
+                                                                        onChange={(e) =>
+                                                                            setCatalogSearch(e.target.value)
+                                                                        }
+                                                                        className="pl-9 text-sm"
+                                                                    />
+                                                                </div>
+
                                                                 <FormField
                                                                     label="Produto"
                                                                     name="product_id"
@@ -1055,7 +1123,7 @@ export default function SalesShow({
                                                                             o
                                                                             produto
                                                                         </option>
-                                                                        {products.map(
+                                                                        {filteredProducts.map(
                                                                             (
                                                                                 prd,
                                                                             ) => (
@@ -1078,10 +1146,14 @@ export default function SalesShow({
                                                                                     {
                                                                                         prd.current_stock
                                                                                     }
-
                                                                                     )
                                                                                 </option>
                                                                             ),
+                                                                        )}
+                                                                        {filteredProducts.length === 0 && (
+                                                                            <option value="" disabled>
+                                                                                Nenhum produto encontrado
+                                                                            </option>
                                                                         )}
                                                                     </select>
                                                                 </FormField>

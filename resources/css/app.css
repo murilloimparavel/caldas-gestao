@@ -216,3 +216,27 @@
         animation-iteration-count: 1 !important;
     }
 }
+
+@media print {
+    @page {
+        margin: 4mm;
+        size: auto;
+    }
+
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .no-print,
+    header,
+    nav,
+    aside,
+    [aria-label="Breadcrumb"],
+    [data-sidebar="sidebar"],
+    [data-slot="sidebar"] {
+        display: none !important;
+    }
+}

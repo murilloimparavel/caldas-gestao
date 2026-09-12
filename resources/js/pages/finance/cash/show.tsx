@@ -76,32 +76,58 @@ export default function CashShow({ shift }: Props) {
         window.print();
     };
 
-    return (
-        <PageCanvas>
-            <Head title={`Turno de Caixa #${shift.id.slice(0, 8)}`} />
+    const totalSuppliesCents =
+        shift.movements
+            ?.filter((m) => m.type === 'supply')
+            .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
 
-            <ResourceHeader
-                title={`Turno de Caixa #${shift.id.slice(0, 8)}`}
-                description={`Aberto em ${formatDateTime(shift.opened_at)} por ${shift.opened_by?.name ?? 'Operador'}`}
-                actions={
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={cashShifts.history()}>
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Voltar ao Histórico
-                            </Link>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handlePrint}
-                        >
-                            <Printer className="mr-2 h-4 w-4" />
-                            Imprimir Resumo
-                        </Button>
-                    </div>
-                }
-            />
+    const totalSalesInflowCents =
+        shift.movements
+            ?.filter((m) => m.type === 'sale_inflow')
+            .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
+
+    const totalBleedsCents =
+        shift.movements
+            ?.filter((m) => m.type === 'bleed')
+            .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
+
+    const totalCommissionsCents =
+        shift.movements
+            ?.filter((m) => m.type === 'commission_outflow')
+            .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
+
+    const totalExpensesCents =
+        shift.movements
+            ?.filter((m) => m.type === 'expense_outflow')
+            .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
+
+    return (
+        <>
+            <PageCanvas className="print:hidden no-print">
+                <Head title={`Turno de Caixa #${shift.id.slice(0, 8)}`} />
+
+                <ResourceHeader
+                    title={`Turno de Caixa #${shift.id.slice(0, 8)}`}
+                    description={`Aberto em ${formatDateTime(shift.opened_at)} por ${shift.opened_by?.name ?? 'Operador'}`}
+                    actions={
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={cashShifts.history()}>
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Voltar ao Histórico
+                                </Link>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handlePrint}
+                            >
+                                <Printer className="mr-2 h-4 w-4" />
+                                Imprimir Resumo
+                            </Button>
+                        </div>
+                    }
+                />
 
             {/* Resumo do Turno */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -270,6 +296,166 @@ export default function CashShow({ shift }: Props) {
                     </div>
                 )}
             </div>
-        </PageCanvas>
+            </PageCanvas>
+
+            {/* Layout de Impressão Térmica (80mm / 58mm) */}
+            <div className="mx-auto hidden max-w-[80mm] p-2 font-mono text-xs leading-relaxed text-black print:block">
+                <div className="mb-2 border-b border-dashed border-black pb-2 text-center">
+                    <h1 className="text-sm font-bold uppercase">
+                        Caldas Gestão
+                    </h1>
+                    <p className="text-2xs">
+                        Unidade Operacional
+                    </p>
+                    <p className="mt-1 font-bold text-2xs">
+                        {isClosed
+                            ? '*** FECHAMENTO DE TURNO ***'
+                            : '*** RESUMO DE TURNO (ABERTO) ***'}
+                    </p>
+                    <p className="text-2xs">
+                        Turno #{shift.id.slice(0, 8).toUpperCase()}
+                    </p>
+                    <p className="text-2xs">
+                        Aberto: {formatDateTime(shift.opened_at)}
+                    </p>
+                    <p className="text-2xs">
+                        Operador: {shift.opened_by?.name ?? 'Operador'}
+                    </p>
+                    {shift.closed_at && (
+                        <p className="text-2xs">
+                            Fechamento: {formatDateTime(shift.closed_at)}
+                        </p>
+                    )}
+                    {shift.closed_by?.name && (
+                        <p className="text-2xs">
+                            Fechado por: {shift.closed_by.name}
+                        </p>
+                    )}
+                </div>
+
+                <div className="mb-2 space-y-1 border-b border-dashed border-black pb-2 text-2xs">
+                    <div className="flex justify-between">
+                        <span>Fundo Inicial:</span>
+                        <span className="font-semibold">
+                            {formatMoney(shift.initial_amount_cents)}
+                        </span>
+                    </div>
+                    {totalSuppliesCents > 0 && (
+                        <div className="flex justify-between">
+                            <span>Suprimentos (+):</span>
+                            <span className="font-semibold">
+                                +{formatMoney(totalSuppliesCents)}
+                            </span>
+                        </div>
+                    )}
+                    {totalSalesInflowCents > 0 && (
+                        <div className="flex justify-between">
+                            <span>Entradas Vendas (+):</span>
+                            <span className="font-semibold">
+                                +{formatMoney(totalSalesInflowCents)}
+                            </span>
+                        </div>
+                    )}
+                    {totalBleedsCents > 0 && (
+                        <div className="flex justify-between">
+                            <span>Sangrias (-):</span>
+                            <span className="font-semibold">
+                                -{formatMoney(totalBleedsCents)}
+                            </span>
+                        </div>
+                    )}
+                    {totalCommissionsCents > 0 && (
+                        <div className="flex justify-between">
+                            <span>Comissões (-):</span>
+                            <span className="font-semibold">
+                                -{formatMoney(totalCommissionsCents)}
+                            </span>
+                        </div>
+                    )}
+                    {totalExpensesCents > 0 && (
+                        <div className="flex justify-between">
+                            <span>Despesas (-):</span>
+                            <span className="font-semibold">
+                                -{formatMoney(totalExpensesCents)}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex justify-between border-t border-black/40 pt-1 font-bold">
+                        <span>Saldo Esperado:</span>
+                        <span>{formatMoney(shift.expected_amount_cents)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold">
+                        <span>Saldo Apurado:</span>
+                        <span>
+                            {shift.final_amount_cents !== null &&
+                            shift.final_amount_cents !== undefined
+                                ? formatMoney(shift.final_amount_cents)
+                                : 'Em aberto'}
+                        </span>
+                    </div>
+                    {isClosed && (
+                        <div className="flex justify-between border-t border-dashed border-black pt-1 font-bold text-xs">
+                            <span>Diferença:</span>
+                            <span>
+                                {diff === 0
+                                    ? 'R$ 0,00 (Exato)'
+                                    : diff > 0
+                                      ? `+${formatMoney(diff)} (Sobra)`
+                                      : `${formatMoney(diff)} (Quebra)`}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {shift.movements && shift.movements.length > 0 && (
+                    <div className="mb-2 space-y-1 border-b border-dashed border-black pb-2">
+                        <p className="text-center font-bold text-2xs uppercase">
+                            Movimentações ({shift.movements.length})
+                        </p>
+                        {shift.movements.map((m) => {
+                            const config =
+                                movementTypeConfig[m.type] ??
+                                movementTypeConfig.supply;
+                            return (
+                                <div
+                                    key={m.id}
+                                    className="flex justify-between text-3xs"
+                                >
+                                    <span className="truncate pr-1">
+                                        {config.label.split(' ')[0]}: {m.reason}
+                                    </span>
+                                    <span className="shrink-0 font-semibold">
+                                        {config.isCredit ? '+' : '-'}
+                                        {formatMoney(m.amount_cents)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {shift.notes && (
+                    <div className="mb-2 border-b border-dashed border-black pb-2 text-3xs">
+                        <span className="font-bold">Obs: </span>
+                        <span>{shift.notes}</span>
+                    </div>
+                )}
+
+                <div className="mt-4 space-y-4 pt-2 text-center text-3xs">
+                    <div>
+                        <p>______________________________________</p>
+                        <p className="mt-0.5">Operador de Caixa</p>
+                    </div>
+                    <div>
+                        <p>______________________________________</p>
+                        <p className="mt-0.5">Gerente / Conferente</p>
+                    </div>
+                </div>
+
+                <div className="mt-4 border-t border-dashed border-black pt-2 text-center text-[9px] uppercase tracking-widest">
+                    - - - - - corte aqui - - - - -
+                </div>
+            </div>
+        </>
     );
 }

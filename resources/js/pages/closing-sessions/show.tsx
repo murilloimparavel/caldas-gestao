@@ -71,7 +71,7 @@ export default function ClosingSessionShow({ session }: Props) {
             <Head title={`Recibo Interno #${receiptNumber}`} />
 
             {/* Screen View */}
-            <PageCanvas className="print:hidden">
+            <PageCanvas className="print:hidden no-print">
                 <div className="space-y-6">
                     {/* Top Navigation & Actions */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -373,21 +373,21 @@ export default function ClosingSessionShow({ session }: Props) {
                 </div>
             </PageCanvas>
 
-            {/* Print-Only Layout (Optimized for thermal printer & standard A4/ticket print) */}
-            <div className="mx-auto hidden max-w-sm p-4 font-mono text-xs leading-relaxed text-black print:block">
-                <div className="mb-3 border-b border-dashed border-black pb-3 text-center">
+            {/* Print-Only Layout (Optimized for thermal printer 80mm / 58mm) */}
+            <div className="mx-auto hidden w-full max-w-[80mm] p-2 font-mono text-xs leading-relaxed text-black break-words tabular-nums print:block">
+                <div className="mb-2 border-b border-dashed border-black pb-2 text-center">
                     <h1 className="text-sm font-bold uppercase">
                         {tenantName}
                     </h1>
                     <p className="text-3xs">{unitName}</p>
-                    <p className="mt-1 text-2xs">
+                    <p className="mt-1 text-2xs font-bold">
                         *** RECIBO INTERNO OPERACIONAL ***
                     </p>
                     <p className="text-2xs">Nº {receiptNumber}</p>
                     <p className="text-2xs">{formatDateTime(issuedAt)}</p>
                 </div>
 
-                <div className="mb-3 border-b border-dashed border-black pb-2">
+                <div className="mb-2 border-b border-dashed border-black pb-2 text-2xs">
                     <p>
                         <span className="font-bold">Cliente:</span>{' '}
                         {customerName}
@@ -402,7 +402,7 @@ export default function ClosingSessionShow({ session }: Props) {
                     </p>
                 </div>
 
-                <div className="mb-3 space-y-3 border-b border-dashed border-black pb-2">
+                <div className="mb-2 space-y-2 border-b border-dashed border-black pb-2">
                     {salesList.map((s, idx) => {
                         const categoryName =
                             'category_name' in s
@@ -417,12 +417,12 @@ export default function ClosingSessionShow({ session }: Props) {
                                 : 0;
 
                         return (
-                            <div key={idx} className="space-y-1">
+                            <div key={idx} className="space-y-0.5">
                                 <div className="flex justify-between text-3xs font-bold">
-                                    <span>
+                                    <span className="truncate pr-1">
                                         [{categoryName}] #{s.id.slice(0, 6)}
                                     </span>
-                                    <span>{formatMoney(saleTotal)}</span>
+                                    <span className="shrink-0">{formatMoney(saleTotal)}</span>
                                 </div>
                                 {saleItems.map((item, itemIdx) => {
                                     const itemName =
@@ -433,12 +433,12 @@ export default function ClosingSessionShow({ session }: Props) {
                                     return (
                                         <div
                                             key={itemIdx}
-                                            className="flex justify-between pl-2 text-2xs"
+                                            className="flex justify-between pl-1 text-3xs"
                                         >
-                                            <span>
+                                            <span className="truncate pr-1">
                                                 {item.quantity}x {itemName}
                                             </span>
-                                            <span>
+                                            <span className="shrink-0">
                                                 {formatMoney(item.total_cents)}
                                             </span>
                                         </div>
@@ -449,26 +449,30 @@ export default function ClosingSessionShow({ session }: Props) {
                     })}
                 </div>
 
-                <div className="mb-4 space-y-1 pt-1 text-right">
+                <div className="mb-3 space-y-1 pt-1 text-right text-2xs">
                     <div className="flex justify-between">
                         <span>Subtotal Bruto:</span>
-                        <span>{formatMoney(totalGrossCents)}</span>
+                        <span className="font-semibold">{formatMoney(totalGrossCents)}</span>
                     </div>
                     {totalDiscountCents > 0 ? (
                         <div className="flex justify-between">
                             <span>Descontos:</span>
-                            <span>-{formatMoney(totalDiscountCents)}</span>
+                            <span className="font-semibold">-{formatMoney(totalDiscountCents)}</span>
                         </div>
                     ) : null}
-                    <div className="flex justify-between border-t border-black pt-1 text-sm font-bold">
+                    <div className="flex justify-between border-t border-black pt-1 text-xs font-bold">
                         <span>TOTAL:</span>
                         <span>{formatMoney(finalTotalCents)}</span>
                     </div>
                 </div>
 
-                <div className="border-t border-dashed border-black pt-3 text-center text-[9px]">
+                <div className="border-t border-dashed border-black pt-2 text-center text-[9px]">
                     <p>Obrigado pela preferência!</p>
                     <p>Caldas Gestão • www.caldasgestao.com.br</p>
+                </div>
+
+                <div className="mt-4 border-t border-dashed border-black pt-2 text-center text-[9px] uppercase tracking-widest">
+                    - - - - - corte aqui - - - - -
                 </div>
             </div>
         </>
