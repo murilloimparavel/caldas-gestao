@@ -243,7 +243,7 @@ export default function FinancialTransactionsIndex({
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full gap-2 sm:w-auto">
-                                        <Plus className="h-4 w-4" />
+                                        <Plus className="h-4 w-4" aria-hidden="true" />
                                         Novo Lançamento
                                     </Button>
                                 </DialogTrigger>
@@ -270,7 +270,7 @@ export default function FinancialTransactionsIndex({
                                                     : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                         >
-                                            <ArrowDownRight className="h-4 w-4 text-rose-500" />
+                                            <ArrowDownRight className="h-4 w-4 text-rose-500" aria-hidden="true" />
                                             Conta a Pagar (Despesa)
                                         </button>
                                         <button
@@ -284,7 +284,7 @@ export default function FinancialTransactionsIndex({
                                                     : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                         >
-                                            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                                            <ArrowUpRight className="h-4 w-4 text-emerald-500" aria-hidden="true" />
                                             Conta a Receber (Receita)
                                         </button>
                                     </div>
@@ -668,7 +668,7 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                                <ArrowUpRight className="h-5 w-5" />
+                                <ArrowUpRight className="h-5 w-5" aria-hidden="true" />
                             </div>
                         </CardContent>
                     </Card>
@@ -686,7 +686,7 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-600">
-                                <ArrowDownRight className="h-5 w-5" />
+                                <ArrowDownRight className="h-5 w-5" aria-hidden="true" />
                             </div>
                         </CardContent>
                     </Card>
@@ -702,7 +702,7 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-                                <AlertCircle className="h-5 w-5" />
+                                <AlertCircle className="h-5 w-5" aria-hidden="true" />
                             </div>
                         </CardContent>
                     </Card>
@@ -720,7 +720,7 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-600">
-                                <CheckCircle2 className="h-5 w-5" />
+                                <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
                             </div>
                         </CardContent>
                     </Card>
@@ -838,8 +838,9 @@ export default function FinancialTransactionsIndex({
                             className="flex max-w-md min-w-[240px] flex-1 items-center gap-2"
                         >
                             <div className="relative flex-1">
-                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                                 <Input
+                                    aria-label="Buscar descrição, cliente ou fornecedor"
                                     placeholder="Buscar descrição, cliente ou fornecedor..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -958,7 +959,7 @@ export default function FinancialTransactionsIndex({
                                                         variant="outline"
                                                         className="gap-1 border-destructive/30 bg-destructive/10 font-medium text-destructive"
                                                     >
-                                                        <ArrowDownRight className="h-3 w-3" />
+                                                        <ArrowDownRight className="h-3 w-3" aria-hidden="true" />
                                                         A Pagar
                                                     </Badge>
                                                 ) : (
@@ -966,7 +967,7 @@ export default function FinancialTransactionsIndex({
                                                         variant="outline"
                                                         className="gap-1 border-success/30 bg-success/10 font-medium text-success"
                                                     >
-                                                        <ArrowUpRight className="h-3 w-3" />
+                                                        <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                                                         A Receber
                                                     </Badge>
                                                 )}
@@ -977,14 +978,14 @@ export default function FinancialTransactionsIndex({
                                                 </p>
                                                 {item.supplier && (
                                                     <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                                        <Users className="h-3 w-3" />
+                                                        <Users className="h-3 w-3" aria-hidden="true" />
                                                         Fornecedor:{' '}
                                                         {item.supplier.name}
                                                     </p>
                                                 )}
                                                 {item.customer && (
                                                     <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                                        <User className="h-3 w-3" />
+                                                        <User className="h-3 w-3" aria-hidden="true" />
                                                         Cliente:{' '}
                                                         {item.customer.name}
                                                     </p>
@@ -995,7 +996,7 @@ export default function FinancialTransactionsIndex({
                                             </TableCell>
                                             <TableCell className="px-4 py-3 whitespace-nowrap">
                                                 <div className="flex items-center gap-1.5">
-                                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                                                     <span
                                                         className={
                                                             overdue
@@ -1043,7 +1044,7 @@ export default function FinancialTransactionsIndex({
                                                             variant="secondary"
                                                             className="w-fit gap-1 bg-success/15 text-success"
                                                         >
-                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
                                                             Liquidado
                                                         </Badge>
                                                         {item.paid_date && (
@@ -1068,7 +1069,7 @@ export default function FinancialTransactionsIndex({
                                                         variant="outline"
                                                         className="gap-1 border-warning/30 bg-warning/15 text-warning"
                                                     >
-                                                        <Clock className="h-3 w-3" />
+                                                        <Clock className="h-3 w-3" aria-hidden="true" />
                                                         Pendente
                                                     </Badge>
                                                 )}
@@ -1078,7 +1079,7 @@ export default function FinancialTransactionsIndex({
                                                         variant="secondary"
                                                         className="gap-1 bg-muted text-muted-foreground"
                                                     >
-                                                        <Ban className="h-3 w-3" />
+                                                        <Ban className="h-3 w-3" aria-hidden="true" />
                                                         Cancelado
                                                     </Badge>
                                                 )}
@@ -1097,9 +1098,11 @@ export default function FinancialTransactionsIndex({
                                                                         item,
                                                                     )
                                                                 }
+                                                                aria-label={`Liquidar ${item.description || 'lançamento'}`}
                                                             >
-                                                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                                                                 Liquidar
+                                                                <span className="sr-only">Liquidar {item.description || 'lançamento'}</span>
                                                             </Button>
                                                         )}
                                                         {canManage && (
@@ -1113,10 +1116,11 @@ export default function FinancialTransactionsIndex({
                                                                             item,
                                                                         )
                                                                     }
-                                                                    aria-label="Editar Lançamento"
+                                                                    aria-label={`Editar ${item.description || 'lançamento'}`}
                                                                     title="Editar Lançamento"
                                                                 >
-                                                                    <Edit3 className="h-3.5 w-3.5" />
+                                                                    <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                                                                    <span className="sr-only">Editar {item.description || 'lançamento'}</span>
                                                                 </Button>
                                                                 <Button
                                                                     size="icon"
@@ -1127,10 +1131,11 @@ export default function FinancialTransactionsIndex({
                                                                             item,
                                                                         )
                                                                     }
-                                                                    aria-label="Cancelar Lançamento"
+                                                                    aria-label={`Cancelar ${item.description || 'lançamento'}`}
                                                                     title="Cancelar Lançamento"
                                                                 >
-                                                                    <Ban className="h-3.5 w-3.5" />
+                                                                    <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                                                                    <span className="sr-only">Cancelar {item.description || 'lançamento'}</span>
                                                                 </Button>
                                                             </>
                                                         )}

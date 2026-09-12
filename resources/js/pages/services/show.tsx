@@ -108,6 +108,7 @@ export default function ServiceShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [hasImageError, setHasImageError] = useState(false);
     const [professionalsDialogOpen, setProfessionalsDialogOpen] =
         useState(false);
     const [professionalSearch, setProfessionalSearch] = useState('');
@@ -349,15 +350,13 @@ export default function ServiceShow({
                             <h2 className="text-base font-semibold">
                                 Resumo operacional
                             </h2>
-                            {service.image_url ? (
+                            {!hasImageError && service.image_url ? (
                                 <div className="mt-4 overflow-hidden rounded-xl border border-border">
                                     <img
                                         src={service.image_url}
                                         alt={service.name}
                                         className="aspect-video max-h-72 w-full bg-muted/30 object-contain sm:max-h-80"
-                                        onError={(event) => {
-                                            event.currentTarget.parentElement?.remove();
-                                        }}
+                                        onError={() => setHasImageError(true)}
                                     />
                                 </div>
                             ) : null}

@@ -1,3 +1,4 @@
+import { useHttp } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -34,6 +35,12 @@ interface QuickCreateModalProps {
     onSuccess: (created: CreatedEntity) => void;
 }
 
+type CustomerFormData = {
+    name: string;
+    email: string;
+    phone: string;
+};
+
 export function QuickCreateCustomerModal({
     open,
     onOpenChange,
@@ -42,75 +49,46 @@ export function QuickCreateCustomerModal({
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('customer-quick-create'),
     );
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [processing, setProcessing] = useState(false);
+    const form = useHttp<CustomerFormData>({
+        name: '',
+        email: '',
+        phone: '',
+    });
 
     const handleClose = () => {
-        setName('');
-        setEmail('');
-        setPhone('');
-        setErrors({});
+        form.reset();
+        form.clearErrors();
         onOpenChange(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
+        form.clearErrors();
+        form.transform((data) => ({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone || null,
+        }));
 
         try {
-            const response = await fetch(customers.store.url(), {
-                method: 'POST',
+            await form.post(customers.store.url(), {
                 headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
                     'X-Idempotency-Key': mutationKey,
-                    'X-CSRF-TOKEN':
-                        (
-                            document.querySelector(
-                                'meta[name="csrf-token"]',
-                            ) as HTMLMetaElement
-                        )?.content || '',
                 },
-                body: JSON.stringify({
-                    name,
-                    email: email || null,
-                    phone: phone || null,
-                }),
+                onSuccess: (responseData: any) => {
+                    const createdCustomer: CreatedEntity = {
+                        id: responseData?.id || responseData?.customer?.id,
+                        name: responseData?.name || responseData?.customer?.name,
+                        phone: responseData?.phone || responseData?.customer?.phone,
+                    };
+
+                    handleClose();
+                    setMutationKey(createIdempotencyKey('customer-quick-create'));
+                    onSuccess(createdCustomer);
+                },
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    setErrors(data.errors);
-                } else {
-                    setErrors({
-                        name: data.message || 'Erro ao cadastrar cliente.',
-                    });
-                }
-
-                setProcessing(false);
-
-                return;
-            }
-
-            const createdCustomer: CreatedEntity = {
-                id: data.id || data.customer?.id,
-                name: data.name || data.customer?.name,
-                phone: data.phone || data.customer?.phone,
-            };
-
-            setProcessing(false);
-            handleClose();
-            setMutationKey(createIdempotencyKey('customer-quick-create'));
-            onSuccess(createdCustomer);
         } catch {
-            setErrors({ name: 'Erro de conexão ao cadastrar cliente.' });
-            setProcessing(false);
+            form.setError('name', 'Erro de conexão ao cadastrar cliente.');
         }
     };
 
@@ -125,28 +103,28 @@ export function QuickCreateCustomerModal({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormErrorSummary errors={errors} />
+                    <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome"
                         name="name"
-                        error={errors.name}
+                        error={form.errors.name}
                         required
                     >
                         <Input
                             id="quick_customer_name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
                             placeholder="Nome completo do cliente"
                             required
                         />
                     </FormField>
 
-                    <FormField label="E-mail" name="email" error={errors.email}>
+                    <FormField label="E-mail" name="email" error={form.errors.email}>
                         <Input
                             id="quick_customer_email"
                             type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={form.data.email}
+                            onChange={(e) => form.setData('email', e.target.value)}
                             placeholder="cliente@exemplo.com"
                         />
                     </FormField>
@@ -154,18 +132,18 @@ export function QuickCreateCustomerModal({
                     <FormField
                         label="Telefone / WhatsApp"
                         name="phone"
-                        error={errors.phone}
+                        error={form.errors.phone}
                     >
                         <Input
                             id="quick_customer_phone"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            value={form.data.phone}
+                            onChange={(e) => form.setData('phone', e.target.value)}
                             placeholder="(11) 99999-9999"
                         />
                     </FormField>
 
                     <FormActions
-                        processing={processing}
+                        processing={form.processing}
                         onCancel={handleClose}
                         submitLabel="Cadastrar e Selecionar"
                     />
@@ -175,6 +153,14 @@ export function QuickCreateCustomerModal({
     );
 }
 
+type ServiceFormData = {
+    name: string;
+    priceFormatted: string;
+    durationMinutes: string;
+    price_cents?: number;
+    duration_minutes?: number;
+};
+
 export function QuickCreateServiceModal({
     open,
     onOpenChange,
@@ -183,79 +169,51 @@ export function QuickCreateServiceModal({
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('service-quick-create'),
     );
-    const [name, setName] = useState('');
-    const [priceFormatted, setPriceFormatted] = useState('');
-    const [durationMinutes, setDurationMinutes] = useState('30');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [processing, setProcessing] = useState(false);
+    const form = useHttp<ServiceFormData>({
+        name: '',
+        priceFormatted: '',
+        durationMinutes: '30',
+    });
 
     const handleClose = () => {
-        setName('');
-        setPriceFormatted('');
-        setDurationMinutes('30');
-        setErrors({});
+        form.reset();
+        form.clearErrors();
         onOpenChange(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
+        form.clearErrors();
 
-        const priceCents = parseBrazilianCurrency(priceFormatted);
-        const duration = Number.parseInt(durationMinutes, 10) || 30;
+        const priceCents = parseBrazilianCurrency(form.data.priceFormatted);
+        const duration = Number.parseInt(form.data.durationMinutes, 10) || 30;
+
+        form.transform((data) => ({
+            name: data.name,
+            price_cents: priceCents,
+            duration_minutes: duration,
+        }));
 
         try {
-            const response = await fetch(services.store.url(), {
-                method: 'POST',
+            await form.post(services.store.url(), {
                 headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
                     'X-Idempotency-Key': mutationKey,
-                    'X-CSRF-TOKEN':
-                        (
-                            document.querySelector(
-                                'meta[name="csrf-token"]',
-                            ) as HTMLMetaElement
-                        )?.content || '',
                 },
-                body: JSON.stringify({
-                    name,
-                    price_cents: priceCents,
-                    duration_minutes: duration,
-                }),
+                onSuccess: (responseData: any) => {
+                    const createdService: CreatedEntity = {
+                        id: responseData?.id || responseData?.service?.id,
+                        name: responseData?.name || responseData?.service?.name,
+                        duration_minutes: duration,
+                        price_cents: priceCents,
+                    };
+
+                    handleClose();
+                    setMutationKey(createIdempotencyKey('service-quick-create'));
+                    onSuccess(createdService);
+                },
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    setErrors(data.errors);
-                } else {
-                    setErrors({
-                        name: data.message || 'Erro ao cadastrar serviço.',
-                    });
-                }
-
-                setProcessing(false);
-
-                return;
-            }
-
-            const createdService: CreatedEntity = {
-                id: data.id || data.service?.id,
-                name: data.name || data.service?.name,
-                duration_minutes: duration,
-                price_cents: priceCents,
-            };
-
-            setProcessing(false);
-            handleClose();
-            setMutationKey(createIdempotencyKey('service-quick-create'));
-            onSuccess(createdService);
         } catch {
-            setErrors({ name: 'Erro de conexão ao cadastrar serviço.' });
-            setProcessing(false);
+            form.setError('name', 'Erro de conexão ao cadastrar serviço.');
         }
     };
 
@@ -270,17 +228,17 @@ export function QuickCreateServiceModal({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormErrorSummary errors={errors} />
+                    <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome do Serviço"
                         name="name"
-                        error={errors.name}
+                        error={form.errors.name}
                         required
                     >
                         <Input
                             id="quick_service_name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
                             placeholder="Ex.: Corte de Cabelo"
                             required
                         />
@@ -290,14 +248,14 @@ export function QuickCreateServiceModal({
                         <FormField
                             label="Preço (R$)"
                             name="price_cents"
-                            error={errors.price_cents}
+                            error={form.errors.price_cents}
                             required
                         >
                             <Input
                                 id="quick_service_price"
-                                value={priceFormatted}
+                                value={form.data.priceFormatted}
                                 onChange={(e) =>
-                                    setPriceFormatted(e.target.value)
+                                    form.setData('priceFormatted', e.target.value)
                                 }
                                 placeholder="50,00"
                                 required
@@ -307,7 +265,7 @@ export function QuickCreateServiceModal({
                         <FormField
                             label="Duração (minutos)"
                             name="duration_minutes"
-                            error={errors.duration_minutes}
+                            error={form.errors.duration_minutes}
                             required
                         >
                             <Input
@@ -315,9 +273,9 @@ export function QuickCreateServiceModal({
                                 type="number"
                                 min={1}
                                 max={1440}
-                                value={durationMinutes}
+                                value={form.data.durationMinutes}
                                 onChange={(e) =>
-                                    setDurationMinutes(e.target.value)
+                                    form.setData('durationMinutes', e.target.value)
                                 }
                                 placeholder="30"
                                 required
@@ -326,7 +284,7 @@ export function QuickCreateServiceModal({
                     </div>
 
                     <FormActions
-                        processing={processing}
+                        processing={form.processing}
                         onCancel={handleClose}
                         submitLabel="Cadastrar e Selecionar"
                     />
@@ -336,6 +294,11 @@ export function QuickCreateServiceModal({
     );
 }
 
+type ProfessionalFormData = {
+    name: string;
+    phone: string;
+};
+
 export function QuickCreateProfessionalModal({
     open,
     onOpenChange,
@@ -344,72 +307,44 @@ export function QuickCreateProfessionalModal({
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('professional-quick-create'),
     );
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [processing, setProcessing] = useState(false);
+    const form = useHttp<ProfessionalFormData>({
+        name: '',
+        phone: '',
+    });
 
     const handleClose = () => {
-        setName('');
-        setPhone('');
-        setErrors({});
+        form.reset();
+        form.clearErrors();
         onOpenChange(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
+        form.clearErrors();
+        form.transform((data) => ({
+            name: data.name,
+            phone: data.phone || null,
+        }));
 
         try {
-            const response = await fetch(professionals.store.url(), {
-                method: 'POST',
+            await form.post(professionals.store.url(), {
                 headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
                     'X-Idempotency-Key': mutationKey,
-                    'X-CSRF-TOKEN':
-                        (
-                            document.querySelector(
-                                'meta[name="csrf-token"]',
-                            ) as HTMLMetaElement
-                        )?.content || '',
                 },
-                body: JSON.stringify({
-                    name,
-                    phone: phone || null,
-                }),
+                onSuccess: (responseData: any) => {
+                    const createdProfessional: CreatedEntity = {
+                        id: responseData?.id || responseData?.professional?.id,
+                        name: responseData?.name || responseData?.professional?.name,
+                        phone: responseData?.phone || responseData?.professional?.phone,
+                    };
+
+                    handleClose();
+                    setMutationKey(createIdempotencyKey('professional-quick-create'));
+                    onSuccess(createdProfessional);
+                },
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    setErrors(data.errors);
-                } else {
-                    setErrors({
-                        name: data.message || 'Erro ao cadastrar profissional.',
-                    });
-                }
-
-                setProcessing(false);
-
-                return;
-            }
-
-            const createdProfessional: CreatedEntity = {
-                id: data.id || data.professional?.id,
-                name: data.name || data.professional?.name,
-                phone: data.phone || data.professional?.phone,
-            };
-
-            setProcessing(false);
-            handleClose();
-            setMutationKey(createIdempotencyKey('professional-quick-create'));
-            onSuccess(createdProfessional);
         } catch {
-            setErrors({ name: 'Erro de conexão ao cadastrar profissional.' });
-            setProcessing(false);
+            form.setError('name', 'Erro de conexão ao cadastrar profissional.');
         }
     };
 
@@ -423,17 +358,17 @@ export function QuickCreateProfessionalModal({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormErrorSummary errors={errors} />
+                    <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome do Profissional"
                         name="name"
-                        error={errors.name}
+                        error={form.errors.name}
                         required
                     >
                         <Input
                             id="quick_professional_name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
                             placeholder="Nome completo do profissional"
                             required
                         />
@@ -442,18 +377,18 @@ export function QuickCreateProfessionalModal({
                     <FormField
                         label="Telefone / Contato"
                         name="phone"
-                        error={errors.phone}
+                        error={form.errors.phone}
                     >
                         <Input
                             id="quick_professional_phone"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            value={form.data.phone}
+                            onChange={(e) => form.setData('phone', e.target.value)}
                             placeholder="(11) 99999-9999"
                         />
                     </FormField>
 
                     <FormActions
-                        processing={processing}
+                        processing={form.processing}
                         onCancel={handleClose}
                         submitLabel="Cadastrar e Selecionar"
                     />
@@ -463,6 +398,14 @@ export function QuickCreateProfessionalModal({
     );
 }
 
+type SupplierFormData = {
+    name: string;
+    documentNumber: string;
+    phone: string;
+    email: string;
+    document_number?: string | null;
+};
+
 export function QuickCreateSupplierModal({
     open,
     onOpenChange,
@@ -471,78 +414,48 @@ export function QuickCreateSupplierModal({
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('supplier-quick-create'),
     );
-    const [name, setName] = useState('');
-    const [documentNumber, setDocumentNumber] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [processing, setProcessing] = useState(false);
+    const form = useHttp<SupplierFormData>({
+        name: '',
+        documentNumber: '',
+        phone: '',
+        email: '',
+    });
 
     const handleClose = () => {
-        setName('');
-        setDocumentNumber('');
-        setPhone('');
-        setEmail('');
-        setErrors({});
+        form.reset();
+        form.clearErrors();
         onOpenChange(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
+        form.clearErrors();
+        form.transform((data) => ({
+            name: data.name,
+            document_number: data.documentNumber || null,
+            phone: data.phone || null,
+            email: data.email || null,
+        }));
 
         try {
-            const response = await fetch('/suppliers', {
-                method: 'POST',
+            await form.post('/suppliers', {
                 headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
                     'X-Idempotency-Key': mutationKey,
-                    'X-CSRF-TOKEN':
-                        (
-                            document.querySelector(
-                                'meta[name="csrf-token"]',
-                            ) as HTMLMetaElement
-                        )?.content || '',
                 },
-                body: JSON.stringify({
-                    name,
-                    document_number: documentNumber || null,
-                    phone: phone || null,
-                    email: email || null,
-                }),
+                onSuccess: (responseData: any) => {
+                    const createdSupplier: CreatedEntity = {
+                        id: responseData?.id || responseData?.supplier?.id,
+                        name: responseData?.name || responseData?.supplier?.name,
+                        phone: responseData?.phone || responseData?.supplier?.phone,
+                    };
+
+                    handleClose();
+                    setMutationKey(createIdempotencyKey('supplier-quick-create'));
+                    onSuccess(createdSupplier);
+                },
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    setErrors(data.errors);
-                } else {
-                    setErrors({
-                        name: data.message || 'Erro ao cadastrar fornecedor.',
-                    });
-                }
-
-                setProcessing(false);
-
-                return;
-            }
-
-            const createdSupplier: CreatedEntity = {
-                id: data.id || data.supplier?.id,
-                name: data.name || data.supplier?.name,
-                phone: data.phone || data.supplier?.phone,
-            };
-
-            setProcessing(false);
-            handleClose();
-            setMutationKey(createIdempotencyKey('supplier-quick-create'));
-            onSuccess(createdSupplier);
         } catch {
-            setErrors({ name: 'Erro de conexão ao cadastrar fornecedor.' });
-            setProcessing(false);
+            form.setError('name', 'Erro de conexão ao cadastrar fornecedor.');
         }
     };
 
@@ -557,17 +470,17 @@ export function QuickCreateSupplierModal({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormErrorSummary errors={errors} />
+                    <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Razão Social / Empresa"
                         name="name"
-                        error={errors.name}
+                        error={form.errors.name}
                         required
                     >
                         <Input
                             id="quick_supplier_name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
                             placeholder="Nome da empresa ou fornecedor"
                             required
                         />
@@ -576,12 +489,14 @@ export function QuickCreateSupplierModal({
                     <FormField
                         label="CNPJ / CPF"
                         name="document_number"
-                        error={errors.document_number}
+                        error={form.errors.document_number}
                     >
                         <Input
                             id="quick_supplier_document"
-                            value={documentNumber}
-                            onChange={(e) => setDocumentNumber(e.target.value)}
+                            value={form.data.documentNumber}
+                            onChange={(e) =>
+                                form.setData('documentNumber', e.target.value)
+                            }
                             placeholder="00.000.000/0000-00"
                         />
                     </FormField>
@@ -590,12 +505,14 @@ export function QuickCreateSupplierModal({
                         <FormField
                             label="Telefone / Contato"
                             name="phone"
-                            error={errors.phone}
+                            error={form.errors.phone}
                         >
                             <Input
                                 id="quick_supplier_phone"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
+                                value={form.data.phone}
+                                onChange={(e) =>
+                                    form.setData('phone', e.target.value)
+                                }
                                 placeholder="(11) 99999-9999"
                             />
                         </FormField>
@@ -603,20 +520,22 @@ export function QuickCreateSupplierModal({
                         <FormField
                             label="E-mail"
                             name="email"
-                            error={errors.email}
+                            error={form.errors.email}
                         >
                             <Input
                                 id="quick_supplier_email"
                                 type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={form.data.email}
+                                onChange={(e) =>
+                                    form.setData('email', e.target.value)
+                                }
                                 placeholder="fornecedor@exemplo.com"
                             />
                         </FormField>
                     </div>
 
                     <FormActions
-                        processing={processing}
+                        processing={form.processing}
                         onCancel={handleClose}
                         submitLabel="Cadastrar e Selecionar"
                     />
@@ -626,6 +545,10 @@ export function QuickCreateSupplierModal({
     );
 }
 
+type CategoryFormData = {
+    name: string;
+};
+
 export function QuickCreateCategoryModal({
     open,
     onOpenChange,
@@ -634,68 +557,41 @@ export function QuickCreateCategoryModal({
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('category-quick-create'),
     );
-    const [name, setName] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [processing, setProcessing] = useState(false);
+    const form = useHttp<CategoryFormData>({
+        name: '',
+    });
 
     const handleClose = () => {
-        setName('');
-        setErrors({});
+        form.reset();
+        form.clearErrors();
         onOpenChange(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
+        form.clearErrors();
+        form.transform((data) => ({
+            name: data.name,
+        }));
 
         try {
-            const response = await fetch('/categories', {
-                method: 'POST',
+            await form.post('/categories', {
                 headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
                     'X-Idempotency-Key': mutationKey,
-                    'X-CSRF-TOKEN':
-                        (
-                            document.querySelector(
-                                'meta[name="csrf-token"]',
-                            ) as HTMLMetaElement
-                        )?.content || '',
                 },
-                body: JSON.stringify({
-                    name,
-                }),
+                onSuccess: (responseData: any) => {
+                    const createdCategory: CreatedEntity = {
+                        id: responseData?.id || responseData?.category?.id,
+                        name: responseData?.name || responseData?.category?.name,
+                    };
+
+                    handleClose();
+                    setMutationKey(createIdempotencyKey('category-quick-create'));
+                    onSuccess(createdCategory);
+                },
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    setErrors(data.errors);
-                } else {
-                    setErrors({
-                        name: data.message || 'Erro ao cadastrar categoria.',
-                    });
-                }
-
-                setProcessing(false);
-
-                return;
-            }
-
-            const createdCategory: CreatedEntity = {
-                id: data.id || data.category?.id,
-                name: data.name || data.category?.name,
-            };
-
-            setProcessing(false);
-            handleClose();
-            setMutationKey(createIdempotencyKey('category-quick-create'));
-            onSuccess(createdCategory);
         } catch {
-            setErrors({ name: 'Erro de conexão ao cadastrar categoria.' });
-            setProcessing(false);
+            form.setError('name', 'Erro de conexão ao cadastrar categoria.');
         }
     };
 
@@ -710,24 +606,24 @@ export function QuickCreateCategoryModal({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormErrorSummary errors={errors} />
+                    <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome da Categoria"
                         name="name"
-                        error={errors.name}
+                        error={form.errors.name}
                         required
                     >
                         <Input
                             id="quick_category_name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
                             placeholder="Ex.: Produtos de Cabelo, Bebidas, etc."
                             required
                         />
                     </FormField>
 
                     <FormActions
-                        processing={processing}
+                        processing={form.processing}
                         onCancel={handleClose}
                         submitLabel="Cadastrar e Selecionar"
                     />
@@ -737,6 +633,13 @@ export function QuickCreateCategoryModal({
     );
 }
 
+type ProductFormData = {
+    name: string;
+    priceFormatted: string;
+    sale_price_cents?: number;
+    unit_of_measure?: string;
+};
+
 export function QuickCreateProductModal({
     open,
     onOpenChange,
@@ -745,77 +648,51 @@ export function QuickCreateProductModal({
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('product-quick-create'),
     );
-    const [name, setName] = useState('');
-    const [priceFormatted, setPriceFormatted] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [processing, setProcessing] = useState(false);
+    const form = useHttp<ProductFormData>({
+        name: '',
+        priceFormatted: '',
+    });
 
     const handleClose = () => {
-        setName('');
-        setPriceFormatted('');
-        setErrors({});
+        form.reset();
+        form.clearErrors();
         onOpenChange(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setProcessing(true);
-        setErrors({});
+        form.clearErrors();
+        const priceCents = parseBrazilianCurrency(form.data.priceFormatted);
 
-        const priceCents = parseBrazilianCurrency(priceFormatted);
+        form.transform((data) => ({
+            name: data.name,
+            sale_price_cents: priceCents,
+            unit_of_measure: 'un',
+        }));
 
         try {
-            const response = await fetch(products.store.url(), {
-                method: 'POST',
+            await form.post(products.store.url(), {
                 headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
                     'X-Idempotency-Key': mutationKey,
-                    'X-CSRF-TOKEN':
-                        (
-                            document.querySelector(
-                                'meta[name="csrf-token"]',
-                            ) as HTMLMetaElement
-                        )?.content || '',
                 },
-                body: JSON.stringify({
-                    name,
-                    sale_price_cents: priceCents,
-                    unit_of_measure: 'un',
-                }),
+                onSuccess: (responseData: any) => {
+                    const createdProduct: CreatedEntity = {
+                        id: responseData?.id || responseData?.product?.id,
+                        name: responseData?.name || responseData?.product?.name,
+                        price_cents: priceCents,
+                        current_stock:
+                            responseData?.current_stock ??
+                            responseData?.product?.current_stock ??
+                            0,
+                    };
+
+                    handleClose();
+                    setMutationKey(createIdempotencyKey('product-quick-create'));
+                    onSuccess(createdProduct);
+                },
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.errors) {
-                    setErrors(data.errors);
-                } else {
-                    setErrors({
-                        name: data.message || 'Erro ao cadastrar produto.',
-                    });
-                }
-
-                setProcessing(false);
-
-                return;
-            }
-
-            const createdProduct: CreatedEntity = {
-                id: data.id || data.product?.id,
-                name: data.name || data.product?.name,
-                price_cents: priceCents,
-                current_stock:
-                    data.current_stock ?? data.product?.current_stock ?? 0,
-            };
-
-            setProcessing(false);
-            handleClose();
-            setMutationKey(createIdempotencyKey('product-quick-create'));
-            onSuccess(createdProduct);
         } catch {
-            setErrors({ name: 'Erro de conexão ao cadastrar produto.' });
-            setProcessing(false);
+            form.setError('name', 'Erro de conexão ao cadastrar produto.');
         }
     };
 
@@ -829,17 +706,17 @@ export function QuickCreateProductModal({
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormErrorSummary errors={errors} />
+                    <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome do Produto"
                         name="name"
-                        error={errors.name}
+                        error={form.errors.name}
                         required
                     >
                         <Input
                             id="quick_product_name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
                             placeholder="Ex.: Pomada Modeladora"
                             required
                         />
@@ -848,20 +725,22 @@ export function QuickCreateProductModal({
                     <FormField
                         label="Preço de Venda (R$)"
                         name="sale_price_cents"
-                        error={errors.sale_price_cents}
+                        error={form.errors.sale_price_cents}
                         required
                     >
                         <Input
                             id="quick_product_price"
-                            value={priceFormatted}
-                            onChange={(e) => setPriceFormatted(e.target.value)}
+                            value={form.data.priceFormatted}
+                            onChange={(e) =>
+                                form.setData('priceFormatted', e.target.value)
+                            }
                             placeholder="35,00"
                             required
                         />
                     </FormField>
 
                     <FormActions
-                        processing={processing}
+                        processing={form.processing}
                         onCancel={handleClose}
                         submitLabel="Cadastrar e Selecionar"
                     />
@@ -870,3 +749,11 @@ export function QuickCreateProductModal({
         </Dialog>
     );
 }
+
+// Aliases matching dialog naming conventions
+export const QuickCustomerDialog = QuickCreateCustomerModal;
+export const QuickServiceDialog = QuickCreateServiceModal;
+export const QuickProfessionalDialog = QuickCreateProfessionalModal;
+export const QuickProductDialog = QuickCreateProductModal;
+export const QuickCategoryDialog = QuickCreateCategoryModal;
+export const QuickSupplierDialog = QuickCreateSupplierModal;

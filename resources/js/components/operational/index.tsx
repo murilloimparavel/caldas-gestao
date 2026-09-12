@@ -695,6 +695,7 @@ export function Pagination({
                     >
                         <Link href={resolvedLinks[0].url} preserveScroll>
                             <ChevronLeft aria-hidden="true" />
+                            <span className="sr-only">Página anterior</span>
                         </Link>
                     </Button>
                 ) : null}
@@ -705,6 +706,7 @@ export function Pagination({
                         variant={link.active ? 'default' : 'outline'}
                         size="icon"
                         aria-current={link.active ? 'page' : undefined}
+                        aria-label={`Página ${link.label}`}
                         disabled={!link.url}
                     >
                         {link.url ? (
@@ -728,6 +730,7 @@ export function Pagination({
                             preserveScroll
                         >
                             <ChevronRight aria-hidden="true" />
+                            <span className="sr-only">Próxima página</span>
                         </Link>
                     </Button>
                 ) : null}

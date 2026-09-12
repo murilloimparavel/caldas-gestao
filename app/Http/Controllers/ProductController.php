@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -95,7 +96,7 @@ final class ProductController extends Controller
         ]);
     }
 
-    public function store(ProductRequest $request, TenantContext $context, CreateProduct $createProduct): RedirectResponse
+    public function store(ProductRequest $request, TenantContext $context, CreateProduct $createProduct): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createProduct, $request, $context, $data): array {
@@ -104,6 +105,14 @@ final class ProductController extends Controller
             return ['resource_id' => $product->getKey(), 'resource_type' => 'product'];
         });
         $product = Product::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $product->id,
+                'name' => $product->name,
+                'product' => $product,
+            ], 201);
+        }
 
         return to_route('products.show', $product)->with('success', 'Produto cadastrado com sucesso.');
     }

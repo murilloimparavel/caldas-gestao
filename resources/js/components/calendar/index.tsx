@@ -25,7 +25,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { index as calendarIndex } from '@/routes/calendar';
 import type {
     AppointmentStatus,
@@ -69,20 +69,6 @@ type ZonedParts = {
     month: number;
     year: number;
 };
-
-function getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-
-    if (parts.length === 0 || !parts[0]) {
-        return '?';
-    }
-
-    if (parts.length === 1) {
-        return parts[0].substring(0, 2).toUpperCase();
-    }
-
-    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
 
 export function asInstant(value: string): Date {
     if (!value || typeof value !== 'string') {

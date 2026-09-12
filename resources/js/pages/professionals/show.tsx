@@ -219,6 +219,7 @@ function AvailabilityEditor({
                                         disabled={!canConfigure || processing}
                                     >
                                         <Check aria-hidden="true" />
+                                        <span className="sr-only">Salvar intervalo de {day.name}</span>
                                     </Button>
                                     <Form
                                         {...destroyAvailabilityRule.form(
@@ -247,6 +248,7 @@ function AvailabilityEditor({
                                                     }
                                                 >
                                                     <Trash2 aria-hidden="true" />
+                                                    <span className="sr-only">Remover intervalo de {day.name}</span>
                                                 </Button>
                                             </>
                                         )}
@@ -329,6 +331,7 @@ function AvailabilityEditor({
                                         disabled={!canConfigure || processing}
                                     >
                                         <Check aria-hidden="true" />
+                                        <span className="sr-only">Criar intervalo de {day.name}</span>
                                     </Button>
                                 </div>
                             </div>
