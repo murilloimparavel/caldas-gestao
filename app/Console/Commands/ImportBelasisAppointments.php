@@ -118,7 +118,8 @@ final class ImportBelasisAppointments extends Command
 
     private function uuidOption(string $key, string $label): string
     {
-        $value = trim((string) $this->option($key));
+        $raw = $this->option($key);
+        $value = is_scalar($raw) ? trim((string) $raw) : '';
         if (! Str::isUuid($value)) {
             throw new RuntimeException("A valid {$label} UUID is required.");
         }
