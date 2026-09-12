@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** @property int $lock_version */
-#[Fillable(['tenant_id', 'unit_id', 'customer_id', 'professional_id', 'starts_at', 'ends_at', 'timezone', 'status', 'source', 'online_booking_campaign_link_id', 'color', 'reminder_enabled', 'fit_in', 'notes', 'cancelled_at', 'cancel_reason'])]
+#[Fillable(['tenant_id', 'unit_id', 'source_id', 'customer_id', 'professional_id', 'starts_at', 'ends_at', 'timezone', 'status', 'source', 'online_booking_campaign_link_id', 'color', 'reminder_enabled', 'fit_in', 'notes', 'cancelled_at', 'cancel_reason'])]
 #[UsePolicy(AppointmentPolicy::class)]
 class Appointment extends Model
 {
