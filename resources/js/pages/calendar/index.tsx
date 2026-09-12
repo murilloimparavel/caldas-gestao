@@ -1666,10 +1666,79 @@ export default function CalendarIndex(props: CalendarProps) {
         props.calendar?.appointments ?? props.appointments ?? [];
 
     const scheduleBlocks =
+        props.scheduleBlocks ??
         props.calendar?.schedule_blocks ??
         props.schedule_blocks ??
         props.calendarSettings?.schedule_blocks ??
         [];
+
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleManualSync = () => {
+        if (isSyncing) {
+            return;
+        }
+
+        setIsSyncing(true);
+        router.reload({
+            only: ['appointments', 'scheduleBlocks'],
+            onFinish: () => {
+                setIsSyncing(false);
+            },
+        });
+    };
+
+    useEffect(() => {
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+
+        const reloadData = () => {
+            if (document.visibilityState === 'hidden') {
+                return;
+            }
+
+            setIsSyncing(true);
+            router.reload({
+                only: ['appointments', 'scheduleBlocks'],
+                onFinish: () => {
+                    setIsSyncing(false);
+                },
+            });
+        };
+
+        const startPolling = () => {
+            if (intervalId !== null) {
+                clearInterval(intervalId);
+            }
+            intervalId = setInterval(reloadData, 30000);
+        };
+
+        const stopPolling = () => {
+            if (intervalId !== null) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                reloadData();
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        startPolling();
+
+        return () => {
+            stopPolling();
+            document.removeEventListener(
+                'visibilitychange',
+                handleVisibilityChange,
+            );
+        };
+    }, []);
     const filters = props.calendar?.filters ?? props.filters ?? {};
     const view = filters.view ?? 'week';
     const unitTimezone =
@@ -1868,6 +1937,8 @@ export default function CalendarIndex(props: CalendarProps) {
                     }}
                     onCreateBlock={() => setBlockCreateOpen(true)}
                     onFilter={() => setFilterOpen(true)}
+                    onSync={handleManualSync}
+                    isSyncing={isSyncing}
                     range={range}
                     timeZone={unitTimezone}
                     view={view}

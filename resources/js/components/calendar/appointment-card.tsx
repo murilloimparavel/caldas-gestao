@@ -1,4 +1,4 @@
-import { MoreHorizontal } from 'lucide-react';
+import { AlertCircle, FileText, Globe, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CalendarAppointment } from '@/types/calendar';
 import { formatTime } from './date-utils';
@@ -21,6 +21,36 @@ export function AppointmentCard({
         appointment.service?.name ??
         'Serviço não informado';
 
+    const notesContent =
+        appointment.notes?.trim() ||
+        appointment.customer?.notes?.trim() ||
+        appointment.description?.trim() ||
+        null;
+    const hasNotes = Boolean(notesContent);
+    const isAlertNote = /alerg|cuidado|medic|atenç|restriç|alerta/i.test(
+        notesContent ?? '',
+    );
+    const NoteIcon = isAlertNote ? AlertCircle : FileText;
+
+    const isOnline =
+        appointment.source === 'online' ||
+        Boolean(appointment.online_booking) ||
+        Boolean(appointment.online_booking_campaign_link_id);
+
+    const fullAriaLabel = [
+        formatTime(appointment.starts_at, timeZone),
+        appointment.ends_at
+            ? `até ${formatTime(appointment.ends_at, timeZone)}`
+            : null,
+        customerName,
+        serviceName,
+        statusLabel(appointment.status),
+        isOnline ? 'Agendamento online' : null,
+        hasNotes ? `Observação: ${notesContent}` : null,
+    ]
+        .filter(Boolean)
+        .join(', ');
+
     return (
         <button
             type="button"
@@ -37,7 +67,7 @@ export function AppointmentCard({
                     'border-border bg-card text-card-foreground',
                 compact ? 'h-full min-h-16' : 'min-h-24',
             )}
-            aria-label={`${formatTime(appointment.starts_at, timeZone)}, ${customerName}, ${serviceName}, ${statusLabel(appointment.status)}`}
+            aria-label={fullAriaLabel}
         >
             <div className="flex items-start justify-between gap-1">
                 <span className="text-3xs leading-none font-semibold">
@@ -46,10 +76,47 @@ export function AppointmentCard({
                         ? `–${formatTime(appointment.ends_at, timeZone)}`
                         : null}
                 </span>
-                <MoreHorizontal
-                    className="size-3.5 shrink-0 opacity-60 transition group-hover:opacity-100"
-                    aria-hidden="true"
-                />
+                <div className="flex items-center gap-1">
+                    {isOnline ? (
+                        <span
+                            className={cn(
+                                'inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-semibold text-sky-700 bg-sky-500/15 dark:bg-sky-500/25 dark:text-sky-300',
+                                compact ? 'text-[9px]' : 'text-3xs',
+                            )}
+                            title="Agendamento online"
+                        >
+                            <Globe
+                                className="size-2.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            {!compact ? <span>Online</span> : null}
+                            <span className="sr-only">Agendamento online</span>
+                        </span>
+                    ) : null}
+                    {hasNotes ? (
+                        <span
+                            className={cn(
+                                'inline-flex items-center',
+                                isAlertNote
+                                    ? 'text-destructive dark:text-red-400'
+                                    : 'text-amber-600 dark:text-amber-400',
+                            )}
+                            title={`Observação: ${notesContent}`}
+                        >
+                            <NoteIcon
+                                className="size-3 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <span className="sr-only">
+                                Observação: {notesContent}
+                            </span>
+                        </span>
+                    ) : null}
+                    <MoreHorizontal
+                        className="size-3.5 shrink-0 opacity-60 transition group-hover:opacity-100"
+                        aria-hidden="true"
+                    />
+                </div>
             </div>
             <p className="mt-1 truncate text-xs leading-snug font-bold">
                 {customerName}
