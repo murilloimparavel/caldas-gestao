@@ -127,6 +127,10 @@ export default [
         ignores: [
             '.worktrees/**',
             '**/.worktrees/**',
+            '.runtime/**',
+            '.playwright/**',
+            '.playwright-cli/**',
+            '.playwright-mcp/**',
             'vendor',
             'vendor/**',
             '**/vendor/**',
