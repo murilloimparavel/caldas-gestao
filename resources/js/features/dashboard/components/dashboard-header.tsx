@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,11 +34,19 @@ export function DashboardHeader({
     startDate: initialStartDate = '',
     endDate: initialEndDate = '',
 }: DashboardHeaderProps) {
+    const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>(period);
     const [startDate, setStartDate] = useState(initialStartDate);
     const [endDate, setEndDate] = useState(initialEndDate);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    useEffect(() => {
+        setSelectedPeriod(period);
+        setStartDate(initialStartDate);
+        setEndDate(initialEndDate);
+    }, [period, initialStartDate, initialEndDate]);
+
     const handlePeriodChange = (newPeriod: PeriodFilter) => {
+        setSelectedPeriod(newPeriod);
         if (newPeriod !== 'custom') {
             router.get(
                 dashboard().url,
@@ -78,7 +86,7 @@ export function DashboardHeader({
 
             <div className="flex flex-wrap items-center gap-2.5">
                 <Select
-                    value={period}
+                    value={selectedPeriod}
                     onValueChange={(v) => handlePeriodChange(v as PeriodFilter)}
                 >
                     <SelectTrigger className="w-[150px] bg-background">
@@ -94,7 +102,7 @@ export function DashboardHeader({
                     </SelectContent>
                 </Select>
 
-                {period === 'custom' && (
+                {selectedPeriod === 'custom' && (
                     <div className="flex items-center gap-2">
                         <Input
                             type="date"
