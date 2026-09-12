@@ -255,7 +255,7 @@ class GetDashboardSnapshot
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate))
             ->get()
-            ->groupBy(fn (Appointment $appointment): string => $appointment->starts_at->setTimezone($timezone)->toDateString())
+            ->groupBy(fn (Appointment $appointment): string => CarbonImmutable::parse($appointment->starts_at)->setTimezone($timezone)->toDateString())
             ->map->count();
 
         $data = [];
@@ -307,7 +307,7 @@ class GetDashboardSnapshot
             ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate))
             ->whereIn('status', ['checked_in', 'in_service', 'completed'])
             ->get()
-            ->groupBy(fn (Appointment $appointment): string => $appointment->starts_at->setTimezone($timezone)->toDateString())
+            ->groupBy(fn (Appointment $appointment): string => CarbonImmutable::parse($appointment->starts_at)->setTimezone($timezone)->toDateString())
             ->map->count();
 
         $sales = Sale::query()
