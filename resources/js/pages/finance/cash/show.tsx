@@ -416,6 +416,7 @@ export default function CashShow({ shift }: Props) {
                             const config =
                                 movementTypeConfig[m.type] ??
                                 movementTypeConfig.supply;
+
                             return (
                                 <div
                                     key={m.id}
