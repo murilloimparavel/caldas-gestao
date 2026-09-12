@@ -211,8 +211,9 @@ function Home({ branding }: HomeProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [activeAudience, setActiveAudience] =
         useState<AudienceKey>('barbearia');
-    const [activePreview, setActivePreview] =
-        useState<'agenda' | 'comanda' | 'retencao'>('agenda');
+    const [activePreview, setActivePreview] = useState<
+        'agenda' | 'comanda' | 'retencao'
+    >('agenda');
     const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [registerHref, setRegisterHref] = useState(() => register().url);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -769,7 +770,8 @@ function Home({ branding }: HomeProps) {
                                             A experiência em tela
                                         </span>
                                         <h3 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-[#F2EFE7] sm:text-3xl">
-                                            O produto desenhado para a velocidade do balcão.
+                                            O produto desenhado para a
+                                            velocidade do balcão.
                                         </h3>
                                     </div>
 
@@ -782,8 +784,12 @@ function Home({ branding }: HomeProps) {
                                         <button
                                             type="button"
                                             role="tab"
-                                            aria-selected={activePreview === 'agenda'}
-                                            onClick={() => setActivePreview('agenda')}
+                                            aria-selected={
+                                                activePreview === 'agenda'
+                                            }
+                                            onClick={() =>
+                                                setActivePreview('agenda')
+                                            }
                                             className={cn(
                                                 'rounded-lg px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-[#C8FF3D] focus-visible:outline-hidden',
                                                 activePreview === 'agenda'
@@ -796,8 +802,12 @@ function Home({ branding }: HomeProps) {
                                         <button
                                             type="button"
                                             role="tab"
-                                            aria-selected={activePreview === 'comanda'}
-                                            onClick={() => setActivePreview('comanda')}
+                                            aria-selected={
+                                                activePreview === 'comanda'
+                                            }
+                                            onClick={() =>
+                                                setActivePreview('comanda')
+                                            }
                                             className={cn(
                                                 'rounded-lg px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-[#C8FF3D] focus-visible:outline-hidden',
                                                 activePreview === 'comanda'
@@ -810,8 +820,12 @@ function Home({ branding }: HomeProps) {
                                         <button
                                             type="button"
                                             role="tab"
-                                            aria-selected={activePreview === 'retencao'}
-                                            onClick={() => setActivePreview('retencao')}
+                                            aria-selected={
+                                                activePreview === 'retencao'
+                                            }
+                                            onClick={() =>
+                                                setActivePreview('retencao')
+                                            }
                                             className={cn(
                                                 'rounded-lg px-4 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-[#C8FF3D] focus-visible:outline-hidden',
                                                 activePreview === 'retencao'
@@ -944,6 +958,7 @@ function Home({ branding }: HomeProps) {
                                 <div
                                     className="flex flex-col border-b border-[#0A0C0B]/25 sm:flex-row"
                                     role="tablist"
+                                    tabIndex={0}
                                     aria-label="Tipos de negócio"
                                     onKeyDown={handleAudienceKeyDown}
                                 >

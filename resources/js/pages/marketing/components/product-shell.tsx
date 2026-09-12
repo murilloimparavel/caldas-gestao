@@ -41,7 +41,10 @@ export function ProductShell({
                 </div>
 
                 <div className="flex items-center gap-2 rounded-md border border-white/10 bg-[#0A0C0B]/70 px-3 py-1 text-3xs font-medium text-[#A9A79D]">
-                    <span className="size-1.5 rounded-full bg-[#C8FF3D]" aria-hidden="true" />
+                    <span
+                        className="size-1.5 rounded-full bg-[#C8FF3D]"
+                        aria-hidden="true"
+                    />
                     <span className="font-mono">{url}</span>
                 </div>
 
@@ -58,7 +61,9 @@ export function ProductShell({
             </div>
 
             {/* Window Content Area */}
-            <div className="relative flex-1 overflow-hidden p-4 sm:p-6">{children}</div>
+            <div className="relative flex-1 overflow-hidden p-4 sm:p-6">
+                {children}
+            </div>
         </div>
     );
 }

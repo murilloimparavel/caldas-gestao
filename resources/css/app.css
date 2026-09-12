@@ -97,7 +97,7 @@
     --success-foreground: #ffffff;
     --warning: oklch(0.72 0.16 75);
     --warning-foreground: #2a1b02;
-    --info: oklch(0.60 0.16 235);
+    --info: oklch(0.6 0.16 235);
     --info-foreground: #ffffff;
     --border: #dcd7cf;
     --input: #dcd7cf;
@@ -139,7 +139,7 @@
     --success-foreground: #0b1e13;
     --warning: oklch(0.76 0.15 75);
     --warning-foreground: #221401;
-    --info: oklch(0.70 0.15 235);
+    --info: oklch(0.7 0.15 235);
     --info-foreground: #0b172a;
     --border: #294146;
     --input: #294146;

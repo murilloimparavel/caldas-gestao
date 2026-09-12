@@ -30,7 +30,7 @@ export function TabNavigation({
 }) {
     return (
         <div className="overflow-x-auto border-b border-border/70">
-            <nav
+            <div
                 aria-label="Configuração do agendamento online"
                 className="flex min-w-max gap-1"
                 role="tablist"
@@ -48,7 +48,7 @@ export function TabNavigation({
                         {label}
                     </button>
                 ))}
-            </nav>
+            </div>
         </div>
     );
 }

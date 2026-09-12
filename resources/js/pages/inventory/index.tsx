@@ -247,18 +247,30 @@ export default function InventoryIndex({
                                     <TableHead className="px-4 py-3">
                                         Data / Hora
                                     </TableHead>
-                                    <TableHead className="px-4 py-3">Produto</TableHead>
-                                    <TableHead className="px-4 py-3">Tipo</TableHead>
-                                    <TableHead className="px-4 py-3">Qtd</TableHead>
-                                    <TableHead className="px-4 py-3">Custo Un.</TableHead>
-                                    <TableHead className="px-4 py-3">Anterior</TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Produto
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Tipo
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Qtd
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Custo Un.
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Anterior
+                                    </TableHead>
                                     <TableHead className="px-4 py-3">
                                         Resultante
                                     </TableHead>
                                     <TableHead className="px-4 py-3">
                                         Motivo / Ref
                                     </TableHead>
-                                    <TableHead className="px-4 py-3">Operador</TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Operador
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y divide-border/60">
@@ -271,14 +283,16 @@ export default function InventoryIndex({
                                         m.type === 'adjustment_loss';
 
                                     const date = new Date(m.created_at);
-                                    const formattedDate =
-                                        date.toLocaleString('pt-BR', {
+                                    const formattedDate = date.toLocaleString(
+                                        'pt-BR',
+                                        {
                                             day: '2-digit',
                                             month: '2-digit',
                                             year: 'numeric',
                                             hour: '2-digit',
                                             minute: '2-digit',
-                                        });
+                                        },
+                                    );
 
                                     return (
                                         <TableRow
@@ -324,10 +338,7 @@ export default function InventoryIndex({
                                                           ? '-'
                                                           : ''}
                                                     {m.quantity}{' '}
-                                                    {
-                                                        m.product
-                                                            .unit_of_measure
-                                                    }
+                                                    {m.product.unit_of_measure}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
@@ -349,8 +360,7 @@ export default function InventoryIndex({
                                                 {m.reason}
                                                 {m.reference_type ? (
                                                     <span className="block text-3xs text-muted-foreground">
-                                                        Ref:{' '}
-                                                        {m.reference_type}
+                                                        Ref: {m.reference_type}
                                                         {m.reference_id
                                                             ? ` #${m.reference_id.slice(0, 8)}`
                                                             : ''}

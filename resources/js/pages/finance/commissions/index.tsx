@@ -572,9 +572,9 @@ export default function CommissionsIndex({
                                 </FormField>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">
+                                    <span className="text-sm font-medium">
                                         Aplicar a:
-                                    </label>
+                                    </span>
                                     <div className="grid grid-cols-3 gap-2">
                                         <Button
                                             type="button"

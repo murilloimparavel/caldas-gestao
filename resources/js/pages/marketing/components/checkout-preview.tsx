@@ -20,18 +20,26 @@ export function CheckoutPreview() {
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-white">Comanda #1048</span>
+                            <span className="text-sm font-bold text-white">
+                                Comanda #1048
+                            </span>
                             <span className="rounded-full border border-[#C8FF3D]/30 bg-[#C8FF3D]/10 px-2 py-0.5 text-3xs font-bold text-[#C8FF3D]">
                                 Aberta
                             </span>
                         </div>
-                        <p className="text-3xs text-[#A9A79D]">Cliente: Camila Moreira • Atendimento das 09:30</p>
+                        <p className="text-3xs text-[#A9A79D]">
+                            Cliente: Camila Moreira • Atendimento das 09:30
+                        </p>
                     </div>
                 </div>
 
                 <div className="text-right">
-                    <span className="text-3xs font-medium text-[#A9A79D] uppercase">Total Comanda</span>
-                    <p className="text-lg font-bold text-[#C8FF3D]">R$ 300,00</p>
+                    <span className="text-3xs font-medium text-[#A9A79D] uppercase">
+                        Total Comanda
+                    </span>
+                    <p className="text-lg font-bold text-[#C8FF3D]">
+                        R$ 300,00
+                    </p>
                 </div>
             </div>
 
@@ -49,11 +57,17 @@ export function CheckoutPreview() {
                                 <Scissors className="size-3.5" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-white">Corte & Escova Modelada</p>
-                                <p className="text-3xs text-[#A9A79D]">Profissional: Juliana Costa</p>
+                                <p className="text-xs font-semibold text-white">
+                                    Corte & Escova Modelada
+                                </p>
+                                <p className="text-3xs text-[#A9A79D]">
+                                    Profissional: Juliana Costa
+                                </p>
                             </div>
                         </div>
-                        <span className="text-xs font-bold text-white">R$ 140,00</span>
+                        <span className="text-xs font-bold text-white">
+                            R$ 140,00
+                        </span>
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] p-3">
@@ -62,11 +76,17 @@ export function CheckoutPreview() {
                                 <Sparkles className="size-3.5" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-white">Tratamento Reconstrutor</p>
-                                <p className="text-3xs text-[#A9A79D]">Profissional: Juliana Costa</p>
+                                <p className="text-xs font-semibold text-white">
+                                    Tratamento Reconstrutor
+                                </p>
+                                <p className="text-3xs text-[#A9A79D]">
+                                    Profissional: Juliana Costa
+                                </p>
                             </div>
                         </div>
-                        <span className="text-xs font-bold text-white">R$ 95,00</span>
+                        <span className="text-xs font-bold text-white">
+                            R$ 95,00
+                        </span>
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] p-3">
@@ -75,11 +95,17 @@ export function CheckoutPreview() {
                                 <Package className="size-3.5" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-white">Óleo Nutritivo 60ml</p>
-                                <p className="text-3xs text-emerald-400">Baixa automática em estoque</p>
+                                <p className="text-xs font-semibold text-white">
+                                    Óleo Nutritivo 60ml
+                                </p>
+                                <p className="text-3xs text-emerald-400">
+                                    Baixa automática em estoque
+                                </p>
                             </div>
                         </div>
-                        <span className="text-xs font-bold text-white">R$ 85,00</span>
+                        <span className="text-xs font-bold text-white">
+                            R$ 85,00
+                        </span>
                     </div>
                 </div>
 
@@ -106,7 +132,9 @@ export function CheckoutPreview() {
                             <span>Comissão Juliana (40%)</span>
                             <span className="text-white">R$ 86,00</span>
                         </div>
-                        <p className="mt-1 text-[#777A70]">Calculada e vinculada ao fechamento do caixa.</p>
+                        <p className="mt-1 text-[#777A70]">
+                            Calculada e vinculada ao fechamento do caixa.
+                        </p>
                     </div>
 
                     {/* Payment CTA */}

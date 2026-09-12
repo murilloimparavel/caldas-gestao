@@ -1492,7 +1492,7 @@ function ScheduleBlockForm({
                                             onClick={() =>
                                                 setQuickProfessionalOpen(true)
                                             }
-                                            className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
+                                            className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                         >
                                             + Novo Profissional
                                         </button>

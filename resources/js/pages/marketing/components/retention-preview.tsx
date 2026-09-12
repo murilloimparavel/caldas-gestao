@@ -31,7 +31,9 @@ export function RetentionPreview() {
                         <Clock className="size-3.5 text-cyan-400" />
                     </div>
                     <p className="mt-2 text-xl font-bold text-white">21 dias</p>
-                    <span className="mt-1 text-3xs text-[#A9A79D]">era 38 dias sem lembretes</span>
+                    <span className="mt-1 text-3xs text-[#A9A79D]">
+                        era 38 dias sem lembretes
+                    </span>
                 </div>
 
                 <div className="flex flex-col rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
@@ -39,8 +41,12 @@ export function RetentionPreview() {
                         <span>Receita Previsível</span>
                         <RefreshCw className="size-3.5 text-[#C8FF3D]" />
                     </div>
-                    <p className="mt-2 text-xl font-bold text-[#C8FF3D]">R$ 8.450/mês</p>
-                    <span className="mt-1 text-3xs text-[#A9A79D]">em assinaturas e pacotes</span>
+                    <p className="mt-2 text-xl font-bold text-[#C8FF3D]">
+                        R$ 8.450/mês
+                    </p>
+                    <span className="mt-1 text-3xs text-[#A9A79D]">
+                        em assinaturas e pacotes
+                    </span>
                 </div>
             </div>
 
@@ -67,13 +73,16 @@ export function RetentionPreview() {
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-xs font-bold text-white">Mariana Duarte</p>
+                                    <p className="text-xs font-bold text-white">
+                                        Mariana Duarte
+                                    </p>
                                     <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-3xs font-semibold text-amber-300">
                                         38 dias sem agendar
                                     </span>
                                 </div>
                                 <p className="mt-0.5 text-3xs text-[#D4D0C5]">
-                                    Costuma retocar mechas a cada 30 dias com Juliana Costa
+                                    Costuma retocar mechas a cada 30 dias com
+                                    Juliana Costa
                                 </p>
                             </div>
                         </div>
@@ -94,13 +103,16 @@ export function RetentionPreview() {
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-xs font-bold text-white">Carlos Eduardo</p>
+                                    <p className="text-xs font-bold text-white">
+                                        Carlos Eduardo
+                                    </p>
                                     <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-3xs font-semibold text-sky-300">
                                         Pacote 4x Barba (3/4 usadas)
                                     </span>
                                 </div>
                                 <p className="mt-0.5 text-3xs text-[#A9A79D]">
-                                    Restam 1 sessão contratada • Validade até 30/Nov
+                                    Restam 1 sessão contratada • Validade até
+                                    30/Nov
                                 </p>
                             </div>
                         </div>
@@ -121,13 +133,16 @@ export function RetentionPreview() {
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-xs font-bold text-white">Patrícia Nogueira</p>
+                                    <p className="text-xs font-bold text-white">
+                                        Patrícia Nogueira
+                                    </p>
                                     <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-3xs font-semibold text-emerald-300">
                                         Clube VIP Mensal (Ativo)
                                     </span>
                                 </div>
                                 <p className="mt-0.5 text-3xs text-[#D4D0C5]">
-                                    Próxima mensalidade: R$ 240,00 no dia 05 • Débito automático PIX
+                                    Próxima mensalidade: R$ 240,00 no dia 05 •
+                                    Débito automático PIX
                                 </p>
                             </div>
                         </div>

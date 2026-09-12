@@ -7,12 +7,7 @@ import type {
     ScheduleBlock,
 } from '@/types/calendar';
 import { AppointmentCard } from './appointment-card';
-import {
-    addDays,
-    dateKey,
-    dateOnlyParts,
-    formatDay,
-} from './date-utils';
+import { addDays, dateKey, dateOnlyParts, formatDay } from './date-utils';
 
 export function MonthAgenda({
     appointments,
@@ -109,7 +104,7 @@ export function MonthAgenda({
     };
 
     return (
-        <section
+        <div
             className="surface-panel overflow-hidden"
             aria-label="Calendário mensal"
             role="grid"
@@ -228,6 +223,6 @@ export function MonthAgenda({
                     </div>
                 ))}
             </div>
-        </section>
+        </div>
     );
 }

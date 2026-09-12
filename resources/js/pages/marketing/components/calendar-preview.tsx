@@ -1,10 +1,4 @@
-import {
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    Lock,
-    Plus,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Lock, Plus } from 'lucide-react';
 
 export function CalendarPreview() {
     return (
@@ -29,14 +23,20 @@ export function CalendarPreview() {
                         </button>
                     </div>
                     <div>
-                        <span className="text-sm font-bold text-[#F2EFE7]">Hoje, 14 Out</span>
-                        <span className="ml-2 text-3xs font-medium text-[#C8FF3D]">32 agendamentos</span>
+                        <span className="text-sm font-bold text-[#F2EFE7]">
+                            Hoje, 14 Out
+                        </span>
+                        <span className="ml-2 text-3xs font-medium text-[#C8FF3D]">
+                            32 agendamentos
+                        </span>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <div className="hidden rounded-lg border border-white/10 bg-white/5 p-1 text-3xs font-medium text-[#A9A79D] sm:flex">
-                        <span className="rounded bg-white/10 px-2.5 py-1 text-white">Dia</span>
+                        <span className="rounded bg-white/10 px-2.5 py-1 text-white">
+                            Dia
+                        </span>
                         <span className="px-2.5 py-1">Semana</span>
                         <span className="px-2.5 py-1">Mês</span>
                     </div>
@@ -57,11 +57,17 @@ export function CalendarPreview() {
                                 MS
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-[#F2EFE7]">Matheus Silva</p>
-                                <p className="text-3xs text-[#A9A79D]">Master Barber</p>
+                                <p className="text-xs font-semibold text-[#F2EFE7]">
+                                    Matheus Silva
+                                </p>
+                                <p className="text-3xs text-[#A9A79D]">
+                                    Master Barber
+                                </p>
                             </div>
                         </div>
-                        <span className="text-3xs font-medium text-[#A9A79D]">6 horários</span>
+                        <span className="text-3xs font-medium text-[#A9A79D]">
+                            6 horários
+                        </span>
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2.5">
@@ -73,8 +79,12 @@ export function CalendarPreview() {
                                     Concluído
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs font-bold text-white">Lucas Andrade</p>
-                            <p className="text-3xs text-[#D4D0C5]">Corte Degradê + Barba Alinhada</p>
+                            <p className="mt-1 text-xs font-bold text-white">
+                                Lucas Andrade
+                            </p>
+                            <p className="text-3xs text-[#D4D0C5]">
+                                Corte Degradê + Barba Alinhada
+                            </p>
                             <div className="mt-2 flex items-center justify-between text-3xs text-emerald-300/80">
                                 <span>R$ 85,00</span>
                                 <span className="flex items-center gap-1">
@@ -91,11 +101,17 @@ export function CalendarPreview() {
                                     Em atendimento
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs font-bold text-white">Rodrigo Mello</p>
-                            <p className="text-3xs text-[#D4D0C5]">Barboterapia Completa</p>
+                            <p className="mt-1 text-xs font-bold text-white">
+                                Rodrigo Mello
+                            </p>
+                            <p className="text-3xs text-[#D4D0C5]">
+                                Barboterapia Completa
+                            </p>
                             <div className="mt-2 flex items-center justify-between text-3xs text-violet-300/80">
                                 <span>R$ 95,00</span>
-                                <span className="text-[#C8FF3D]">Comanda aberta</span>
+                                <span className="text-[#C8FF3D]">
+                                    Comanda aberta
+                                </span>
                             </div>
                         </div>
 
@@ -115,11 +131,17 @@ export function CalendarPreview() {
                                 JC
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-[#F2EFE7]">Juliana Costa</p>
-                                <p className="text-3xs text-[#A9A79D]">Colorista & Estilo</p>
+                                <p className="text-xs font-semibold text-[#F2EFE7]">
+                                    Juliana Costa
+                                </p>
+                                <p className="text-3xs text-[#A9A79D]">
+                                    Colorista & Estilo
+                                </p>
                             </div>
                         </div>
-                        <span className="text-3xs font-medium text-[#A9A79D]">4 horários</span>
+                        <span className="text-3xs font-medium text-[#A9A79D]">
+                            4 horários
+                        </span>
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2.5">
@@ -131,8 +153,12 @@ export function CalendarPreview() {
                                     Confirmado
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs font-bold text-white">Camila Moreira</p>
-                            <p className="text-3xs text-[#D4D0C5]">Mechas Balayage + Nutrição</p>
+                            <p className="mt-1 text-xs font-bold text-white">
+                                Camila Moreira
+                            </p>
+                            <p className="text-3xs text-[#D4D0C5]">
+                                Mechas Balayage + Nutrição
+                            </p>
                             <div className="mt-2 flex items-center justify-between text-3xs text-sky-300/80">
                                 <span>R$ 380,00</span>
                                 <span>Google Cal Conectado</span>
@@ -147,11 +173,17 @@ export function CalendarPreview() {
                                     Agendado
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs font-bold text-white">Fernanda Dias</p>
-                            <p className="text-3xs text-[#D4D0C5]">Escova Modelada + Hidratação</p>
+                            <p className="mt-1 text-xs font-bold text-white">
+                                Fernanda Dias
+                            </p>
+                            <p className="text-3xs text-[#D4D0C5]">
+                                Escova Modelada + Hidratação
+                            </p>
                             <div className="mt-2 flex items-center justify-between text-3xs text-amber-300/80">
                                 <span>R$ 130,00</span>
-                                <span className="text-amber-300">Site online</span>
+                                <span className="text-amber-300">
+                                    Site online
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -165,11 +197,17 @@ export function CalendarPreview() {
                                 RL
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-[#F2EFE7]">Rafael Lima</p>
-                                <p className="text-3xs text-[#A9A79D]">Estética Facial</p>
+                                <p className="text-xs font-semibold text-[#F2EFE7]">
+                                    Rafael Lima
+                                </p>
+                                <p className="text-3xs text-[#A9A79D]">
+                                    Estética Facial
+                                </p>
                             </div>
                         </div>
-                        <span className="text-3xs font-medium text-[#A9A79D]">5 horários</span>
+                        <span className="text-3xs font-medium text-[#A9A79D]">
+                            5 horários
+                        </span>
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2.5">
@@ -181,11 +219,17 @@ export function CalendarPreview() {
                                     Confirmado
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs font-bold text-white">Carla Nogueira</p>
-                            <p className="text-3xs text-[#D4D0C5]">Limpeza Profunda + Peeling</p>
+                            <p className="mt-1 text-xs font-bold text-white">
+                                Carla Nogueira
+                            </p>
+                            <p className="text-3xs text-[#D4D0C5]">
+                                Limpeza Profunda + Peeling
+                            </p>
                             <div className="mt-2 flex items-center justify-between text-3xs text-emerald-300/80">
                                 <span>R$ 190,00</span>
-                                <span className="text-[#C8FF3D]">Pacote 2/4</span>
+                                <span className="text-[#C8FF3D]">
+                                    Pacote 2/4
+                                </span>
                             </div>
                         </div>
 

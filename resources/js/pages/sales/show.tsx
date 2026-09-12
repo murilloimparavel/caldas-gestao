@@ -829,9 +829,9 @@ export default function SalesShow({
 
                                                         {/* Type Selector */}
                                                         <div className="space-y-1.5">
-                                                            <label className="text-sm font-medium text-foreground">
+                                                            <span className="text-sm font-medium text-foreground">
                                                                 Tipo de Item
-                                                            </label>
+                                                            </span>
                                                             <div className="grid grid-cols-3 gap-2">
                                                                 {(
                                                                     [
@@ -905,7 +905,7 @@ export default function SalesShow({
                                                                                     true,
                                                                                 )
                                                                             }
-                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
+                                                                            className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                         >
                                                                             +
                                                                             Novo
@@ -1024,7 +1024,7 @@ export default function SalesShow({
                                                                                     true,
                                                                                 )
                                                                             }
-                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-xs"
+                                                                            className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                         >
                                                                             +
                                                                             Novo

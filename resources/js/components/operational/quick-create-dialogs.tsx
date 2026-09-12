@@ -78,12 +78,17 @@ export function QuickCreateCustomerModal({
                 onSuccess: (responseData: any) => {
                     const createdCustomer: CreatedEntity = {
                         id: responseData?.id || responseData?.customer?.id,
-                        name: responseData?.name || responseData?.customer?.name,
-                        phone: responseData?.phone || responseData?.customer?.phone,
+                        name:
+                            responseData?.name || responseData?.customer?.name,
+                        phone:
+                            responseData?.phone ||
+                            responseData?.customer?.phone,
                     };
 
                     handleClose();
-                    setMutationKey(createIdempotencyKey('customer-quick-create'));
+                    setMutationKey(
+                        createIdempotencyKey('customer-quick-create'),
+                    );
                     onSuccess(createdCustomer);
                 },
             });
@@ -113,18 +118,26 @@ export function QuickCreateCustomerModal({
                         <Input
                             id="quick_customer_name"
                             value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
                             placeholder="Nome completo do cliente"
                             required
                         />
                     </FormField>
 
-                    <FormField label="E-mail" name="email" error={form.errors.email}>
+                    <FormField
+                        label="E-mail"
+                        name="email"
+                        error={form.errors.email}
+                    >
                         <Input
                             id="quick_customer_email"
                             type="email"
                             value={form.data.email}
-                            onChange={(e) => form.setData('email', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('email', e.target.value)
+                            }
                             placeholder="cliente@exemplo.com"
                         />
                     </FormField>
@@ -137,7 +150,9 @@ export function QuickCreateCustomerModal({
                         <Input
                             id="quick_customer_phone"
                             value={form.data.phone}
-                            onChange={(e) => form.setData('phone', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('phone', e.target.value)
+                            }
                             placeholder="(11) 99999-9999"
                         />
                     </FormField>
@@ -208,7 +223,9 @@ export function QuickCreateServiceModal({
                     };
 
                     handleClose();
-                    setMutationKey(createIdempotencyKey('service-quick-create'));
+                    setMutationKey(
+                        createIdempotencyKey('service-quick-create'),
+                    );
                     onSuccess(createdService);
                 },
             });
@@ -238,7 +255,9 @@ export function QuickCreateServiceModal({
                         <Input
                             id="quick_service_name"
                             value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
                             placeholder="Ex.: Corte de Cabelo"
                             required
                         />
@@ -255,7 +274,10 @@ export function QuickCreateServiceModal({
                                 id="quick_service_price"
                                 value={form.data.priceFormatted}
                                 onChange={(e) =>
-                                    form.setData('priceFormatted', e.target.value)
+                                    form.setData(
+                                        'priceFormatted',
+                                        e.target.value,
+                                    )
                                 }
                                 placeholder="50,00"
                                 required
@@ -275,7 +297,10 @@ export function QuickCreateServiceModal({
                                 max={1440}
                                 value={form.data.durationMinutes}
                                 onChange={(e) =>
-                                    form.setData('durationMinutes', e.target.value)
+                                    form.setData(
+                                        'durationMinutes',
+                                        e.target.value,
+                                    )
                                 }
                                 placeholder="30"
                                 required
@@ -334,12 +359,18 @@ export function QuickCreateProfessionalModal({
                 onSuccess: (responseData: any) => {
                     const createdProfessional: CreatedEntity = {
                         id: responseData?.id || responseData?.professional?.id,
-                        name: responseData?.name || responseData?.professional?.name,
-                        phone: responseData?.phone || responseData?.professional?.phone,
+                        name:
+                            responseData?.name ||
+                            responseData?.professional?.name,
+                        phone:
+                            responseData?.phone ||
+                            responseData?.professional?.phone,
                     };
 
                     handleClose();
-                    setMutationKey(createIdempotencyKey('professional-quick-create'));
+                    setMutationKey(
+                        createIdempotencyKey('professional-quick-create'),
+                    );
                     onSuccess(createdProfessional);
                 },
             });
@@ -368,7 +399,9 @@ export function QuickCreateProfessionalModal({
                         <Input
                             id="quick_professional_name"
                             value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
                             placeholder="Nome completo do profissional"
                             required
                         />
@@ -382,7 +415,9 @@ export function QuickCreateProfessionalModal({
                         <Input
                             id="quick_professional_phone"
                             value={form.data.phone}
-                            onChange={(e) => form.setData('phone', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('phone', e.target.value)
+                            }
                             placeholder="(11) 99999-9999"
                         />
                     </FormField>
@@ -445,12 +480,17 @@ export function QuickCreateSupplierModal({
                 onSuccess: (responseData: any) => {
                     const createdSupplier: CreatedEntity = {
                         id: responseData?.id || responseData?.supplier?.id,
-                        name: responseData?.name || responseData?.supplier?.name,
-                        phone: responseData?.phone || responseData?.supplier?.phone,
+                        name:
+                            responseData?.name || responseData?.supplier?.name,
+                        phone:
+                            responseData?.phone ||
+                            responseData?.supplier?.phone,
                     };
 
                     handleClose();
-                    setMutationKey(createIdempotencyKey('supplier-quick-create'));
+                    setMutationKey(
+                        createIdempotencyKey('supplier-quick-create'),
+                    );
                     onSuccess(createdSupplier);
                 },
             });
@@ -480,7 +520,9 @@ export function QuickCreateSupplierModal({
                         <Input
                             id="quick_supplier_name"
                             value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
                             placeholder="Nome da empresa ou fornecedor"
                             required
                         />
@@ -582,11 +624,14 @@ export function QuickCreateCategoryModal({
                 onSuccess: (responseData: any) => {
                     const createdCategory: CreatedEntity = {
                         id: responseData?.id || responseData?.category?.id,
-                        name: responseData?.name || responseData?.category?.name,
+                        name:
+                            responseData?.name || responseData?.category?.name,
                     };
 
                     handleClose();
-                    setMutationKey(createIdempotencyKey('category-quick-create'));
+                    setMutationKey(
+                        createIdempotencyKey('category-quick-create'),
+                    );
                     onSuccess(createdCategory);
                 },
             });
@@ -616,7 +661,9 @@ export function QuickCreateCategoryModal({
                         <Input
                             id="quick_category_name"
                             value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
                             placeholder="Ex.: Produtos de Cabelo, Bebidas, etc."
                             required
                         />
@@ -687,7 +734,9 @@ export function QuickCreateProductModal({
                     };
 
                     handleClose();
-                    setMutationKey(createIdempotencyKey('product-quick-create'));
+                    setMutationKey(
+                        createIdempotencyKey('product-quick-create'),
+                    );
                     onSuccess(createdProduct);
                 },
             });
@@ -716,7 +765,9 @@ export function QuickCreateProductModal({
                         <Input
                             id="quick_product_name"
                             value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('name', e.target.value)
+                            }
                             placeholder="Ex.: Pomada Modeladora"
                             required
                         />

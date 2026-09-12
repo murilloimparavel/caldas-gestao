@@ -188,6 +188,7 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                         return (
                                             <div
                                                 key={hour}
+                                                role="gridcell"
                                                 tabIndex={0}
                                                 aria-label={`${day.label}, ${hour} horas: ${count > 0 ? `${count} agendamentos, ${Math.round(pct)}% do maior movimento` : 'nenhum agendamento'}`}
                                                 className={`group relative flex h-7 items-center justify-center rounded text-2xs transition-all hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:scale-105 ${getIntensityClass(

@@ -121,7 +121,6 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                                 <li
                                     key={item.status}
                                     className="flex items-center justify-between text-xs"
-                                    role="listitem"
                                 >
                                     <div className="flex items-center gap-2">
                                         <span
