@@ -2,10 +2,10 @@ export type PeriodFilter = 'today' | '7d' | '30d' | 'this_month' | 'custom';
 
 export type PeriodDetails = {
     preset: string;
-    start_date: string;
-    end_date: string;
-    previous_start_date: string;
-    previous_end_date: string;
+    startDate: string;
+    endDate: string;
+    previousStartDate: string;
+    previousEndDate: string;
 };
 
 export type DashboardMetric = {
@@ -16,12 +16,14 @@ export type DashboardMetric = {
 };
 
 export type KpiCardData = {
-    id: string;
+    id?: string;
     title: string;
     value: string;
     changePercentage: number;
     trend: 'up' | 'down' | 'neutral';
     sparklineData: number[];
+    todayValue?: string;
+    conversionRate?: number;
     unit?: string;
 };
 
@@ -29,7 +31,7 @@ export type DailyVisitTrend = {
     date: string;
     label: string;
     visits: number;
-    sales_cents?: number;
+    salesCents: number;
 };
 
 export type AppointmentStatusCount = {
@@ -43,41 +45,24 @@ export type AppointmentStatusCount = {
 export type ProfessionalPerformance = {
     id: string;
     name: string;
+    avatarUrl: string;
+    totalServices: number;
+    changePercentage: number;
+    averageTicket: string;
+    /** Legacy aliases used by the chart while its renderer is migrated. */
     avatar_url?: string | null;
-    avatarUrl?: string | null;
-    services_count: number;
-    totalServices?: number;
-    variation_percentage: number;
-    changePercentage?: number;
-    average_ticket_cents: number;
-    averageTicket?: string;
+    services_count?: number;
+    variation_percentage?: number;
+    average_ticket_cents?: number;
 };
 
 export type CategorySales = {
     category: string;
     label: string;
+    totalAmount: string;
     total_cents?: number;
-    totalAmount?: string;
     percentage: number;
     color: string;
-};
-
-export type SalesByCategoryBackend = {
-    services: { total_cents: number; percentage: number };
-    products: { total_cents: number; percentage: number };
-    packages: { total_cents: number; percentage: number };
-};
-
-export type ScheduleHeatmapHour = {
-    hour: number;
-    label: string;
-    count: number;
-};
-
-export type ScheduleHeatmapDay = {
-    day_of_week: number;
-    day_label: string;
-    hours: ScheduleHeatmapHour[];
 };
 
 export type ScheduleHeatmapCell = {
@@ -85,7 +70,23 @@ export type ScheduleHeatmapCell = {
     dayLabel: string;
     hour: number;
     count: number;
-    occupancyPercentage?: number;
+};
+
+/** Compatibility shapes kept for isolated chart components during migration. */
+export type ScheduleHeatmapHour = {
+    hour: number;
+    label: string;
+    count: number;
+};
+export type ScheduleHeatmapDay = {
+    day_of_week: number;
+    day_label: string;
+    hours: ScheduleHeatmapHour[];
+};
+export type SalesByCategoryBackend = {
+    services: { total_cents: number; percentage: number };
+    products: { total_cents: number; percentage: number };
+    packages: { total_cents: number; percentage: number };
 };
 
 export type DashboardMode = 'empty' | 'active';
@@ -96,7 +97,7 @@ export type AppointmentSummary = {
     client: string;
     service: string;
     professional: string;
-    status: 'confirmed' | 'waiting' | 'in-service';
+    status: 'scheduled' | 'confirmed' | 'checked_in' | 'in_service';
 };
 
 export type AttentionItem = {
@@ -119,37 +120,18 @@ export type AppointmentFunnel = {
 };
 
 export type DashboardSnapshot = {
-    mode?: DashboardMode;
-    userName?: string;
-    period?: PeriodFilter | PeriodDetails;
-    startDate?: string;
-    endDate?: string;
-    metrics?: DashboardMetric[];
-    topKpis?: {
+    period: PeriodDetails;
+    userName: string;
+    topKpis: {
         totalSales: KpiCardData;
         appointments: KpiCardData;
         tickets: KpiCardData;
     };
-    total_sales_cents?: number;
-    today_sales_cents?: number;
-    sales_variation_percentage?: number;
-    total_appointments?: number;
-    growth_rate_percentage?: number;
-    total_sales_count?: number;
-    conversion_rate_percentage?: number;
-    visitsTrend?: DailyVisitTrend[];
-    visits_trend?: DailyVisitTrend[];
-    statusBreakdown?: AppointmentStatusCount[];
-    status_breakdown?: AppointmentStatusCount[];
-    ticket_medio?: TicketMedioDetails;
-    professionalPerformance?: ProfessionalPerformance[];
-    professionals_performance?: ProfessionalPerformance[];
-    salesCategoryBreakdown?: CategorySales[];
-    sales_by_category?: SalesByCategoryBackend;
-    scheduleHeatmap?: ScheduleHeatmapCell[] | ScheduleHeatmapDay[];
-    schedule_heatmap?: ScheduleHeatmapDay[];
-    appointment_funnel?: AppointmentFunnel;
-    appointments?: AppointmentSummary[];
-    attentionItems?: AttentionItem[];
-    attention_items?: AttentionItem[];
+    visitsTrend: DailyVisitTrend[];
+    statusBreakdown: AppointmentStatusCount[];
+    professionalPerformance: ProfessionalPerformance[];
+    salesCategoryBreakdown: CategorySales[];
+    scheduleHeatmap: ScheduleHeatmapCell[];
+    appointments: AppointmentSummary[];
+    attentionItems: AttentionItem[];
 };

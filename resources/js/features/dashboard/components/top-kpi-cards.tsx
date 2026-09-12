@@ -1,13 +1,7 @@
-import {
-    TrendingUp,
-    TrendingDown,
-    Minus,
-    DollarSign,
-    CalendarCheck,
-    Receipt,
-} from 'lucide-react';
+import { DollarSign, CalendarCheck, Receipt } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { KpiCardData } from '../types';
+import { MetricDelta } from './metric-delta';
 
 type TopKpiCardsProps = {
     totalSales?: KpiCardData;
@@ -42,21 +36,23 @@ function Sparkline({
         })
         .join(' ');
 
-    const strokeColor =
+    const strokeClass =
         trend === 'up'
-            ? '#10b981' // emerald-500
+            ? 'text-emerald-500'
             : trend === 'down'
-              ? '#ef4444' // red-500
-              : '#9ca3af'; // gray-400
+              ? 'text-destructive'
+              : 'text-muted-foreground';
 
     return (
         <svg
             viewBox={`0 0 ${width} ${height}`}
-            className="h-8 w-24 overflow-visible"
+            className={`h-8 w-24 overflow-visible ${strokeClass}`}
+            role="img"
+            aria-label={`Tendência ${trend === 'up' ? 'de alta' : trend === 'down' ? 'de queda' : 'estável'}`}
         >
             <polyline
                 fill="none"
-                stroke={strokeColor}
+                stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -111,11 +107,9 @@ export function TopKpiCards({
     ];
 
     return (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {kpis.map((kpi) => {
                 const Icon = kpi.icon;
-                const isUp = kpi.trend === 'up';
-                const isDown = kpi.trend === 'down';
 
                 return (
                     <Card
@@ -134,27 +128,10 @@ export function TopKpiCards({
                                         {kpi.title}
                                     </span>
                                 </div>
-                                <div
-                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                        isUp
-                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                            : isDown
-                                              ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-                                              : 'bg-muted text-muted-foreground'
-                                    }`}
-                                >
-                                    {isUp && <TrendingUp className="size-3" />}
-                                    {isDown && (
-                                        <TrendingDown className="size-3" />
-                                    )}
-                                    {!isUp && !isDown && (
-                                        <Minus className="size-3" />
-                                    )}
-                                    <span>
-                                        {kpi.changePercentage > 0 ? '+' : ''}
-                                        {kpi.changePercentage}%
-                                    </span>
-                                </div>
+                                <MetricDelta
+                                    value={kpi.changePercentage}
+                                    label=""
+                                />
                             </div>
 
                             <div className="mt-4 flex items-end justify-between">

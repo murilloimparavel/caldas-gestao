@@ -24,7 +24,8 @@ class GetDashboardSnapshot
     {
         $preset = $filters['preset'] ?? '30d';
 
-        [$startDate, $endDate] = $this->resolveDateRange($preset, $filters['start_date'] ?? null, $filters['end_date'] ?? null);
+        $timezone = $unit?->timezone ?: $tenant->timezone ?: config('app.timezone');
+        [$startDate, $endDate] = $this->resolveDateRange($preset, $filters['start_date'] ?? null, $filters['end_date'] ?? null, $timezone);
 
         // Previous date range of equal duration
         $daysCount = $startDate->diffInDays($endDate) + 1;
@@ -35,22 +36,22 @@ class GetDashboardSnapshot
         $currentSalesQuery = Sale::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('created_at', [$startDate, $endDate]);
+            ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate));
 
         $prevSalesQuery = Sale::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('created_at', [$prevStartDate, $prevEndDate]);
+            ->whereBetween('created_at', $this->utcDateRange($prevStartDate, $prevEndDate));
 
         $currentAppointmentsQuery = Appointment::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$startDate, $endDate]);
+            ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate));
 
         $prevAppointmentsQuery = Appointment::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$prevStartDate, $prevEndDate]);
+            ->whereBetween('starts_at', $this->utcDateRange($prevStartDate, $prevEndDate));
 
         // 1. User Name
         $userName = auth()->user()?->name;
@@ -67,13 +68,13 @@ class GetDashboardSnapshot
         $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'finalized')->sum('final_amount_cents');
         $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'finalized')->sum('final_amount_cents');
 
-        $todayStart = CarbonImmutable::now()->startOfDay();
-        $todayEnd = CarbonImmutable::now()->endOfDay();
+        $todayStart = CarbonImmutable::now($timezone)->startOfDay();
+        $todayEnd = CarbonImmutable::now($timezone)->endOfDay();
         $todaySalesCents = (int) Sale::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
-            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->whereBetween('created_at', $this->utcDateRange($todayStart, $todayEnd))
             ->sum('final_amount_cents');
 
         $salesVariationPercentage = $this->calculateVariation($totalSalesCents, $prevTotalSalesCents);
@@ -93,9 +94,9 @@ class GetDashboardSnapshot
             : 0.0;
 
         // 5. Sparkline data (daily counts/totals)
-        $salesSparkline = $this->calculateSalesSparkline($tenant, $unit, $startDate, $endDate);
-        $appointmentsSparkline = $this->calculateAppointmentsSparkline($tenant, $unit, $startDate, $endDate);
-        $ticketsSparkline = $this->calculateTicketsSparkline($tenant, $unit, $startDate, $endDate);
+        $salesSparkline = $this->calculateSalesSparkline($tenant, $unit, $startDate, $endDate, $timezone);
+        $appointmentsSparkline = $this->calculateAppointmentsSparkline($tenant, $unit, $startDate, $endDate, $timezone);
+        $ticketsSparkline = $this->calculateTicketsSparkline($tenant, $unit, $startDate, $endDate, $timezone);
 
         // Top KPIs
         $topKpis = [
@@ -125,7 +126,7 @@ class GetDashboardSnapshot
         ];
 
         // 6. Visits trend (daily breakdown)
-        $visitsTrend = $this->calculateVisitsTrend($tenant, $unit, $startDate, $endDate);
+        $visitsTrend = $this->calculateVisitsTrend($tenant, $unit, $startDate, $endDate, $timezone);
 
         // 7. Status breakdown
         $statusBreakdown = $this->calculateStatusBreakdown((clone $currentAppointmentsQuery)->get(), $totalAppointments);
@@ -138,10 +139,10 @@ class GetDashboardSnapshot
 
         // 10. Schedule heatmap
         $allPeriodAppointments = (clone $currentAppointmentsQuery)->get();
-        $scheduleHeatmap = $this->calculateScheduleHeatmap($allPeriodAppointments);
+        $scheduleHeatmap = $this->calculateScheduleHeatmap($allPeriodAppointments, $timezone);
 
         // 11. Today's Next 5 Appointments
-        $nextAppointments = $this->calculateNextAppointments($tenant, $unit);
+        $nextAppointments = $this->calculateNextAppointments($tenant, $unit, $timezone);
 
         // 12. Attention Items (alerts)
         $attentionItems = $this->calculateAttentionItems($tenant, $unit);
@@ -169,17 +170,17 @@ class GetDashboardSnapshot
     /**
      * @return array{0: CarbonImmutable, 1: CarbonImmutable}
      */
-    private function resolveDateRange(string $preset, ?string $startDateStr, ?string $endDateStr): array
+    private function resolveDateRange(string $preset, ?string $startDateStr, ?string $endDateStr, string $timezone): array
     {
-        $now = CarbonImmutable::now();
+        $now = CarbonImmutable::now($timezone);
 
         return match ($preset) {
             'today' => [$now->startOfDay(), $now->endOfDay()],
             '7d' => [$now->subDays(6)->startOfDay(), $now->endOfDay()],
-            'this_month' => [$now->startOfMonth()->startOfDay(), $now->endOfMonth()->endOfDay()],
+            'this_month' => [$now->startOfMonth()->startOfDay(), $now->endOfDay()],
             'custom' => [
-                CarbonImmutable::parse($startDateStr ?? $now->toDateString())->startOfDay(),
-                CarbonImmutable::parse($endDateStr ?? $now->toDateString())->endOfDay(),
+                CarbonImmutable::parse($startDateStr ?? $now->toDateString(), $timezone)->startOfDay(),
+                CarbonImmutable::parse($endDateStr ?? $now->toDateString(), $timezone)->endOfDay(),
             ],
             default => [$now->subDays(29)->startOfDay(), $now->endOfDay()], // 30d
         };
@@ -192,6 +193,12 @@ class GetDashboardSnapshot
         }
 
         return round((($current - $previous) / $previous) * 100, 1);
+    }
+
+    /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */
+    private function utcDateRange(CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    {
+        return [$startDate->utc(), $endDate->utc()];
     }
 
     private function formatCurrency(int $cents): string
@@ -214,16 +221,17 @@ class GetDashboardSnapshot
     /**
      * @return list<int>
      */
-    private function calculateSalesSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    private function calculateSalesSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
         $sales = Sale::query()
-            ->selectRaw('DATE(created_at) as date_key, SUM(final_amount_cents) as aggregate')
+            ->select(['created_at', 'final_amount_cents'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('date_key')
-            ->pluck('aggregate', 'date_key');
+            ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate))
+            ->get()
+            ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
+            ->map(fn (Collection $daySales): int => (int) $daySales->sum('final_amount_cents'));
 
         $data = [];
         $cursor = $startDate->startOfDay();
@@ -239,15 +247,16 @@ class GetDashboardSnapshot
     /**
      * @return list<int>
      */
-    private function calculateAppointmentsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    private function calculateAppointmentsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
         $appointments = Appointment::query()
-            ->selectRaw('DATE(starts_at) as date_key, COUNT(*) as aggregate')
+            ->select(['starts_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$startDate, $endDate])
-            ->groupBy('date_key')
-            ->pluck('aggregate', 'date_key');
+            ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate))
+            ->get()
+            ->groupBy(fn (Appointment $appointment): string => $appointment->starts_at->setTimezone($timezone)->toDateString())
+            ->map->count();
 
         $data = [];
         $cursor = $startDate->startOfDay();
@@ -263,16 +272,17 @@ class GetDashboardSnapshot
     /**
      * @return list<int>
      */
-    private function calculateTicketsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    private function calculateTicketsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
         $tickets = Sale::query()
-            ->selectRaw('DATE(created_at) as date_key, COUNT(*) as aggregate')
+            ->select(['created_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('date_key')
-            ->pluck('aggregate', 'date_key');
+            ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate))
+            ->get()
+            ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
+            ->map->count();
 
         $data = [];
         $cursor = $startDate->startOfDay();
@@ -288,24 +298,27 @@ class GetDashboardSnapshot
     /**
      * @return list<array{date: string, label: string, visits: int, salesCents: int}>
      */
-    private function calculateVisitsTrend(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    private function calculateVisitsTrend(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
         $appointments = Appointment::query()
-            ->selectRaw('DATE(starts_at) as date_key, COUNT(*) as aggregate')
+            ->select(['starts_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$startDate, $endDate])
-            ->groupBy('date_key')
-            ->pluck('aggregate', 'date_key');
+            ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate))
+            ->whereIn('status', ['checked_in', 'in_service', 'completed'])
+            ->get()
+            ->groupBy(fn (Appointment $appointment): string => $appointment->starts_at->setTimezone($timezone)->toDateString())
+            ->map->count();
 
         $sales = Sale::query()
-            ->selectRaw('DATE(created_at) as date_key, SUM(final_amount_cents) as aggregate')
+            ->select(['created_at', 'final_amount_cents'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('date_key')
-            ->pluck('aggregate', 'date_key');
+            ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate))
+            ->get()
+            ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
+            ->map(fn (Collection $daySales): int => (int) $daySales->sum('final_amount_cents'));
 
         $trend = [];
         $cursor = $startDate->startOfDay();
@@ -331,7 +344,11 @@ class GetDashboardSnapshot
     private function calculateStatusBreakdown($appointments, int $total): array
     {
         $statusConfig = [
+            'draft' => ['label' => 'Rascunho', 'color' => '#94a3b8'],
+            'scheduled' => ['label' => 'Agendado', 'color' => '#6366f1'],
             'confirmed' => ['label' => 'Confirmado', 'color' => '#3b82f6'],
+            'checked_in' => ['label' => 'Em espera', 'color' => '#06b6d4'],
+            'in_service' => ['label' => 'Em atendimento', 'color' => '#8b5cf6'],
             'completed' => ['label' => 'Concluído', 'color' => '#22c55e'],
             'cancelled' => ['label' => 'Cancelado', 'color' => '#ef4444'],
             'no_show' => ['label' => 'No-Show', 'color' => '#f59e0b'],
@@ -376,7 +393,7 @@ class GetDashboardSnapshot
             ->selectRaw('professional_id, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$startDate, $endDate])
+            ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate))
             ->groupBy('professional_id')
             ->pluck('aggregate', 'professional_id');
 
@@ -384,7 +401,7 @@ class GetDashboardSnapshot
             ->selectRaw('professional_id, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$prevStartDate, $prevEndDate])
+            ->whereBetween('starts_at', $this->utcDateRange($prevStartDate, $prevEndDate))
             ->groupBy('professional_id')
             ->pluck('aggregate', 'professional_id');
 
@@ -396,7 +413,7 @@ class GetDashboardSnapshot
             ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
-            ->whereBetween('sales.created_at', [$startDate, $endDate])
+            ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
             ->whereNotNull('sale_items.professional_id')
             ->groupBy('sale_items.professional_id')
             ->pluck('total_cents', 'sale_items.professional_id');
@@ -442,7 +459,7 @@ class GetDashboardSnapshot
             ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
-            ->whereBetween('sales.created_at', [$startDate, $endDate])
+            ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
             ->get();
 
         $categoryTotals = ['service' => 0, 'product' => 0, 'package' => 0];
@@ -500,7 +517,7 @@ class GetDashboardSnapshot
      * @param  Collection<int, Appointment>  $appointments
      * @return list<array{dayOfWeek: int, dayLabel: string, hour: int, label: string, count: int}>
      */
-    private function calculateScheduleHeatmap($appointments): array
+    private function calculateScheduleHeatmap($appointments, string $timezone): array
     {
         $days = [
             1 => 'Seg',
@@ -526,12 +543,17 @@ class GetDashboardSnapshot
         }
 
         foreach ($appointments as $appointment) {
+            if (in_array($appointment->status, ['cancelled', 'no_show'], true)) {
+                continue;
+            }
+
             /** @var CarbonInterface|null $startsAt */
             $startsAt = $appointment->starts_at;
             if (! $startsAt) {
                 continue;
             }
 
+            $startsAt = $startsAt->setTimezone($timezone);
             $dayOfWeek = (int) $startsAt->dayOfWeekIso;
             /** @var CarbonInterface|null $endsAt */
             $endsAt = $appointment->ends_at;
@@ -557,28 +579,28 @@ class GetDashboardSnapshot
     /**
      * @return list<array{id: string, startsAt: string, client: string, service: string, professional: string, status: string}>
      */
-    private function calculateNextAppointments(Tenant $tenant, ?Unit $unit): array
+    private function calculateNextAppointments(Tenant $tenant, ?Unit $unit, string $timezone): array
     {
-        $todayStart = CarbonImmutable::now()->startOfDay();
-        $todayEnd = CarbonImmutable::now()->endOfDay();
+        $now = CarbonImmutable::now($timezone);
 
         $appointments = Appointment::query()
             ->with(['customer', 'professional', 'items.service'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
-            ->whereBetween('starts_at', [$todayStart, $todayEnd])
+            ->where('starts_at', '>=', $now->utc())
+            ->whereIn('status', ['scheduled', 'confirmed', 'checked_in', 'in_service'])
             ->orderBy('starts_at', 'asc')
             ->limit(5)
             ->get();
 
-        return array_values($appointments->map(function (Appointment $app) {
+        return array_values($appointments->map(function (Appointment $app) use ($timezone) {
             /** @var CarbonInterface|null $startsAt */
             $startsAt = $app->starts_at;
             $firstItem = $app->items->first();
 
             return [
                 'id' => $app->id,
-                'startsAt' => $startsAt ? $startsAt->format('H:i') : '--:--',
+                'startsAt' => $startsAt ? $startsAt->setTimezone($timezone)->format('H:i') : '--:--',
                 'client' => $app->customer->name ?? 'Cliente sem nome',
                 'service' => $firstItem?->service->name ?? 'Serviço',
                 'professional' => $app->professional->name ?? 'Profissional',

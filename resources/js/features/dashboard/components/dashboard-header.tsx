@@ -14,10 +14,10 @@ import { dashboard } from '@/routes';
 import type { PeriodFilter } from '../types';
 
 type DashboardHeaderProps = {
-    userName?: string;
-    period?: PeriodFilter;
-    startDate?: string;
-    endDate?: string;
+    userName: string;
+    period: PeriodFilter;
+    startDate: string;
+    endDate: string;
 };
 
 const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
@@ -29,45 +29,91 @@ const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
 ];
 
 export function DashboardHeader({
-    userName = 'Usuário',
-    period = '30d',
-    startDate: initialStartDate = '',
-    endDate: initialEndDate = '',
+    userName,
+    period,
+    startDate: initialStartDate,
+    endDate: initialEndDate,
 }: DashboardHeaderProps) {
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>(period);
     const [startDate, setStartDate] = useState(initialStartDate);
     const [endDate, setEndDate] = useState(initialEndDate);
-    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [feedback, setFeedback] = useState('');
     const hasValidCustomRange = Boolean(
         startDate && endDate && startDate <= endDate,
     );
+    const customRangeError =
+        !startDate || !endDate
+            ? 'Informe a data inicial e a data final.'
+            : 'A data final deve ser igual ou posterior à data inicial.';
 
     const handlePeriodChange = (newPeriod: PeriodFilter) => {
         setSelectedPeriod(newPeriod);
 
         if (newPeriod !== 'custom') {
+            const periodLabel = PERIOD_OPTIONS.find(
+                (option) => option.value === newPeriod,
+            )?.label;
+            setFeedback(
+                `Carregando dados de ${periodLabel ?? 'período selecionado'}…`,
+            );
+            setIsLoading(true);
             router.get(
                 dashboard().url,
                 { preset: newPeriod },
-                { preserveState: true, preserveScroll: true },
+                {
+                    preserveState: true,
+                    preserveScroll: true,
+                    onSuccess: () => setFeedback('Período atualizado.'),
+                    onError: () =>
+                        setFeedback('Não foi possível atualizar o período.'),
+                    onCancel: () => setFeedback('Atualização cancelada.'),
+                    onFinish: () => setIsLoading(false),
+                },
+            );
+        } else {
+            setFeedback(
+                'Escolha a data inicial e a data final para aplicar o período.',
             );
         }
     };
 
     const handleApplyCustomDates = () => {
-        if (startDate && endDate) {
+        if (hasValidCustomRange) {
+            setFeedback('Carregando dados do período personalizado…');
+            setIsLoading(true);
             router.get(
                 dashboard().url,
                 { preset: 'custom', start_date: startDate, end_date: endDate },
-                { preserveState: true, preserveScroll: true },
+                {
+                    preserveState: true,
+                    preserveScroll: true,
+                    onSuccess: () =>
+                        setFeedback('Período personalizado atualizado.'),
+                    onError: () =>
+                        setFeedback(
+                            'Não foi possível atualizar o período personalizado.',
+                        ),
+                    onCancel: () => setFeedback('Atualização cancelada.'),
+                    onFinish: () => setIsLoading(false),
+                },
             );
+        } else {
+            setFeedback(customRangeError);
         }
     };
 
     const handleRefresh = () => {
-        setIsRefreshing(true);
+        setFeedback('Atualizando dados do dashboard…');
+        setIsLoading(true);
         router.reload({
-            onFinish: () => setIsRefreshing(false),
+            onSuccess: () => setFeedback('Dashboard atualizado.'),
+            onError: () =>
+                setFeedback('Não foi possível atualizar o dashboard.'),
+            onCancel: () => setFeedback('Atualização cancelada.'),
+            onFinish: () => {
+                setIsLoading(false);
+            },
         });
     };
 
@@ -82,7 +128,7 @@ export function DashboardHeader({
                 </p>
             </div>
 
-            <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[min(100%,32rem)]">
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[min(100%,34rem)]">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="flex-1 space-y-1.5">
                         <label
@@ -93,6 +139,7 @@ export function DashboardHeader({
                         </label>
                         <Select
                             value={selectedPeriod}
+                            disabled={isLoading}
                             onValueChange={(v) =>
                                 handlePeriodChange(v as PeriodFilter)
                             }
@@ -125,9 +172,10 @@ export function DashboardHeader({
                         title="Atualizar dados"
                         aria-label="Atualizar dados do dashboard"
                         className="size-11 shrink-0 bg-background/70 shadow-sm"
+                        disabled={isLoading}
                     >
                         <RefreshCw
-                            className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                            className={`size-4 ${isLoading ? 'animate-spin' : ''}`}
                         />
                     </Button>
                 </div>
@@ -154,8 +202,10 @@ export function DashboardHeader({
                                     onChange={(e) =>
                                         setStartDate(e.target.value)
                                     }
-                                    className="h-10 w-full bg-background text-sm shadow-none"
+                                    className="h-11 w-full bg-background text-sm shadow-none"
                                     aria-label="Data inicial"
+                                    aria-invalid={!hasValidCustomRange}
+                                    aria-describedby="dashboard-date-help"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -171,27 +221,41 @@ export function DashboardHeader({
                                     value={endDate}
                                     min={startDate || undefined}
                                     onChange={(e) => setEndDate(e.target.value)}
-                                    className="h-10 w-full bg-background text-sm shadow-none"
+                                    className="h-11 w-full bg-background text-sm shadow-none"
                                     aria-label="Data final"
+                                    aria-invalid={!hasValidCustomRange}
+                                    aria-describedby="dashboard-date-help"
                                 />
                             </div>
                             <Button
                                 size="sm"
                                 variant="secondary"
                                 onClick={handleApplyCustomDates}
-                                disabled={!hasValidCustomRange}
-                                className="h-10 gap-2 px-4 sm:mb-0"
+                                className="h-11 gap-2 px-4 sm:mb-0"
                                 aria-label="Aplicar período personalizado"
+                                disabled={!hasValidCustomRange || isLoading}
                             >
                                 <Check className="size-4" />
                                 Aplicar
                             </Button>
                         </div>
-                        <p className="mt-2 text-[0.7rem] text-muted-foreground">
-                            Escolha o intervalo para atualizar os indicadores.
+                        <p
+                            id="dashboard-date-help"
+                            className={`mt-2 text-[0.7rem] ${hasValidCustomRange ? 'text-muted-foreground' : 'text-destructive'}`}
+                            role="status"
+                        >
+                            {hasValidCustomRange
+                                ? 'Escolha o intervalo para atualizar os indicadores.'
+                                : customRangeError}
                         </p>
                     </div>
                 )}
+                <p
+                    className="min-h-4 text-xs text-muted-foreground"
+                    aria-live="polite"
+                >
+                    {feedback}
+                </p>
             </div>
         </div>
     );

@@ -136,15 +136,18 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                         </CardDescription>
                     </div>
                     {/* Legend scale */}
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <span>Livre</span>
+                    <div
+                        className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                        aria-label="Escala de ocupação: menor para maior movimento"
+                    >
+                        <span>Menor movimento</span>
                         <div className="flex h-2.5 w-16 overflow-hidden rounded">
                             <div className="flex-1 bg-muted/40" />
                             <div className="flex-1 bg-primary/20" />
                             <div className="flex-1 bg-primary/50" />
                             <div className="flex-1 bg-primary" />
                         </div>
-                        <span>Lotado</span>
+                        <span>Maior movimento</span>
                     </div>
                 </div>
             </CardHeader>
@@ -160,7 +163,10 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                         </div>
 
                         {/* Rows per Day */}
-                        <div className="grid gap-1">
+                        <div
+                            className="grid gap-1"
+                            aria-label="Ocupação por dia e horário"
+                        >
                             {DAYS.map((day) => (
                                 <div
                                     key={day.id}
@@ -182,7 +188,9 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                         return (
                                             <div
                                                 key={hour}
-                                                className={`group relative flex h-7 items-center justify-center rounded text-[10px] transition-all hover:z-10 hover:scale-105 ${getIntensityClass(
+                                                tabIndex={0}
+                                                aria-label={`${day.label}, ${hour} horas: ${count > 0 ? `${count} agendamentos, ${Math.round(pct)}% do maior movimento` : 'nenhum agendamento'}`}
+                                                className={`group relative flex h-7 items-center justify-center rounded text-[10px] transition-all hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:scale-105 ${getIntensityClass(
                                                     pct,
                                                 )}`}
                                             >

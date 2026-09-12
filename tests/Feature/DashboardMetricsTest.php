@@ -54,7 +54,7 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
         'professional_id' => $professional->id,
         'starts_at' => Carbon::parse('2026-08-26 14:00:00'),
         'ends_at' => Carbon::parse('2026-08-26 15:00:00'),
-        'status' => 'completed',
+        'status' => 'checked_in',
     ]);
 
     Appointment::factory()->create([
@@ -193,4 +193,68 @@ it('responds to preset date filters correctly', function () {
             ->where('filters.preset', 'custom')
             ->where('dashboard.topKpis.totalSales.value', 'R$ 50,00')
         );
+});
+
+it('resolves custom date boundaries in the units timezone', function () {
+    Carbon::setTestNow('2026-08-26 12:00:00');
+
+    [$owner, $tenant, $unit] = dashboardTestWorkspace();
+    $unit->update(['timezone' => 'America/New_York']);
+
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->id, 'unit_id' => $unit->id]);
+
+    Sale::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'sale_category_id' => $category->id,
+        'status' => 'finalized',
+        'final_amount_cents' => 5000,
+        // 03:59 UTC is 23:59 on 25/08 in New York (the unit's local day).
+        'created_at' => Carbon::parse('2026-08-26 03:59:00', 'UTC'),
+    ]);
+
+    Sale::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'sale_category_id' => $category->id,
+        'status' => 'finalized',
+        'final_amount_cents' => 8000,
+        // 04:01 UTC is 00:01 on 26/08 in New York and must be excluded.
+        'created_at' => Carbon::parse('2026-08-26 04:01:00', 'UTC'),
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', [
+            'preset' => 'custom',
+            'start_date' => '2026-08-25',
+            'end_date' => '2026-08-25',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('dashboard.period.startDate', '2026-08-25')
+            ->where('dashboard.period.endDate', '2026-08-25')
+            ->where('dashboard.topKpis.totalSales.value', 'R$ 50,00')
+        );
+});
+
+it('accepts 366 custom dates and rejects 367 custom dates', function () {
+    Carbon::setTestNow('2026-08-26 12:00:00');
+
+    [$owner] = dashboardTestWorkspace();
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', [
+            'preset' => 'custom',
+            'start_date' => '2025-01-01',
+            'end_date' => '2026-01-01',
+        ]))
+        ->assertSuccessful();
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', [
+            'preset' => 'custom',
+            'start_date' => '2025-01-01',
+            'end_date' => '2026-01-02',
+        ]))
+        ->assertSessionHasErrors('end_date');
 });

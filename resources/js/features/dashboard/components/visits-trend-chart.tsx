@@ -17,6 +17,12 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
     // Keep the timeline visible when the period has no visits. This makes an
     // empty period distinguishable from a missing/failed dashboard response.
     const hasPeriod = data.length > 0;
+    const chartData =
+        data.length > 60
+            ? data.filter(
+                  (_, index) => index % Math.ceil(data.length / 60) === 0,
+              )
+            : data;
     const formatDayLabel = (item: DailyVisitTrend): string => {
         if (item.date) {
             const parsedDate = new Date(`${item.date}T12:00:00`);
@@ -34,8 +40,8 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
 
     return (
         <Card className="min-w-0 overflow-hidden border-border/60">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
+            <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                     <CardTitle className="text-base font-semibold">
                         Tendência de Visitas
                     </CardTitle>
@@ -60,11 +66,17 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                 ) : (
                     <div className="relative min-w-0 overflow-x-auto pb-1">
                         <div
-                            className="flex h-44 min-w-[960px] items-end gap-1.5 border-b border-border/50 px-1 sm:gap-2"
+                            className="flex h-44 min-w-full items-end gap-1.5 border-b border-border/50 px-1 sm:gap-2"
+                            style={{
+                                minWidth:
+                                    data.length > 14
+                                        ? `${data.length * 44}px`
+                                        : undefined,
+                            }}
                             role="img"
                             aria-label={`Visitas diárias no período: ${totalVisits} no total`}
                         >
-                            {data.map((item, idx) => {
+                            {chartData.map((item, idx) => {
                                 const heightPct =
                                     maxVisits > 0
                                         ? Math.max(
@@ -126,6 +138,16 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                                 );
                             })}
                         </div>
+                        <p className="sr-only" id="visits-series-summary">
+                            Série completa de visitas:{' '}
+                            {data
+                                .map(
+                                    (item) =>
+                                        `${item.date || item.label}: ${item.visits}`,
+                                )
+                                .join('; ')}
+                            .
+                        </p>
                         {totalVisits === 0 && (
                             <p className="mt-3 text-center text-xs text-muted-foreground">
                                 Nenhuma visita registrada no período

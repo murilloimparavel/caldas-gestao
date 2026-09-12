@@ -60,12 +60,23 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+                        <p className="sr-only" id="status-donut-summary">
+                            Distribuição de status:{' '}
+                            {data
+                                .map(
+                                    (item) =>
+                                        `${item.label}, ${item.count} (${item.percentage}%)`,
+                                )
+                                .join('; ')}
+                            . Total de {totalCount} agendamentos.
+                        </p>
                         {/* SVG Donut */}
                         <div className="relative flex shrink-0 items-center justify-center">
                             <svg
                                 width={size}
                                 height={size}
                                 className="rotate-[-90deg]"
+                                aria-hidden="true"
                             >
                                 <circle
                                     cx={center}
@@ -102,11 +113,15 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                         </div>
 
                         {/* Legend */}
-                        <div className="grid w-full flex-1 gap-2.5">
+                        <ul
+                            className="grid w-full flex-1 gap-2.5"
+                            aria-label="Detalhamento dos status"
+                        >
                             {data.map((item) => (
-                                <div
+                                <li
                                     key={item.status}
                                     className="flex items-center justify-between text-xs"
+                                    role="listitem"
                                 >
                                     <div className="flex items-center gap-2">
                                         <span
@@ -127,9 +142,9 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                                             ({item.percentage}%)
                                         </span>
                                     </div>
-                                </div>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     </div>
                 )}
             </CardContent>

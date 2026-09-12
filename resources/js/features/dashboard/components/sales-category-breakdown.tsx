@@ -7,6 +7,7 @@ import {
     CardDescription,
 } from '@/components/ui/card';
 import type { CategorySales, SalesByCategoryBackend } from '../types';
+import { ChartLegend } from './chart-legend';
 
 type SalesCategoryBreakdownProps = {
     data?: CategorySales[] | SalesByCategoryBackend;
@@ -29,21 +30,21 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
                     label: 'Serviços',
                     totalAmount: formatCurrency(data.services.total_cents),
                     percentage: data.services.percentage,
-                    color: '#3b82f6',
+                    color: 'var(--chart-1)',
                 },
                 {
                     category: 'products',
                     label: 'Produtos',
                     totalAmount: formatCurrency(data.products.total_cents),
                     percentage: data.products.percentage,
-                    color: '#10b981',
+                    color: 'var(--chart-2)',
                 },
                 {
                     category: 'packages',
                     label: 'Pacotes',
                     totalAmount: formatCurrency(data.packages.total_cents),
                     percentage: data.packages.percentage,
-                    color: '#8b5cf6',
+                    color: 'var(--chart-4)',
                 },
             ]
           : [];
@@ -93,19 +94,30 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
                                         backgroundColor: item.color,
                                     }}
                                     className="h-full transition-all duration-500 first:rounded-l-full last:rounded-r-full hover:opacity-85"
+                                    role="img"
+                                    aria-label={`${item.label}: ${item.percentage}%`}
                                     title={`${item.label}: ${item.percentage}%`}
                                 />
                             ))}
                         </div>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        <div className="mt-3">
+                            <ChartLegend
+                                items={categoriesList.map((item) => ({
+                                    label: item.label,
+                                    color: item.color,
+                                }))}
+                            />
+                        </div>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                             {categoriesList.map((item) => {
                                 const Icon = getCategoryIcon(item.category);
 
                                 return (
                                     <div
                                         key={item.category}
-                                        className="flex flex-col rounded-lg border border-border/40 bg-muted/20 p-3"
+                                        className="flex flex-col rounded-lg border border-border/40 bg-muted/20 p-3 transition-colors hover:bg-muted/40"
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
