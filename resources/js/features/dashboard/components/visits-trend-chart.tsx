@@ -29,9 +29,7 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
             }
         }
 
-        return /^\d{1,2}\/\d{1,2}$/.test(item.label)
-            ? item.label
-            : '—';
+        return /^\d{1,2}\/\d{1,2}$/.test(item.label) ? item.label : '—';
     };
 
     return (
@@ -66,63 +64,67 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                             role="img"
                             aria-label={`Visitas diárias no período: ${totalVisits} no total`}
                         >
-                        {data.map((item, idx) => {
-                            const heightPct =
-                                maxVisits > 0
-                                    ? Math.max(
-                                          10,
-                                          Math.round(
-                                              (item.visits / maxVisits) * 100,
-                                          ),
-                                      )
-                                    : 0;
-                            const isHighest =
-                                item.visits > 0 && item.visits === maxVisits;
+                            {data.map((item, idx) => {
+                                const heightPct =
+                                    maxVisits > 0
+                                        ? Math.max(
+                                              10,
+                                              Math.round(
+                                                  (item.visits / maxVisits) *
+                                                      100,
+                                              ),
+                                          )
+                                        : 0;
+                                const isHighest =
+                                    item.visits > 0 &&
+                                    item.visits === maxVisits;
 
-                            const accessibleDate = item.date || item.label;
-                            const dayLabel = formatDayLabel(item);
+                                const accessibleDate = item.date || item.label;
+                                const dayLabel = formatDayLabel(item);
 
-                            return (
-                                <div
-                                    key={`${item.date}-${idx}`}
-                                    className="group relative flex h-full w-7 shrink-0 flex-col items-center justify-end gap-2 sm:w-8"
-                                >
-                                    <span className="sr-only">
-                                        {accessibleDate}: {item.visits} visitas
-                                    </span>
+                                return (
+                                    <div
+                                        key={`${item.date}-${idx}`}
+                                        className="group relative flex h-full w-7 shrink-0 flex-col items-center justify-end gap-2 sm:w-8"
+                                    >
+                                        <span className="sr-only">
+                                            {accessibleDate}: {item.visits}{' '}
+                                            visitas
+                                        </span>
 
-                                    <div className="pointer-events-none absolute bottom-10 z-10 hidden whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs font-semibold text-popover-foreground shadow-md group-hover:block group-focus-within:block">
-                                        {accessibleDate}: {item.visits} visitas
+                                        <div className="pointer-events-none absolute bottom-10 z-10 hidden rounded-md bg-popover px-2 py-1 text-xs font-semibold whitespace-nowrap text-popover-foreground shadow-md group-focus-within:block group-hover:block">
+                                            {accessibleDate}: {item.visits}{' '}
+                                            visitas
+                                        </div>
+
+                                        <div className="relative flex min-h-0 w-full flex-1 items-end justify-center rounded-t bg-muted/40 p-1">
+                                            <div
+                                                style={{
+                                                    height:
+                                                        item.visits > 0
+                                                            ? `${heightPct}%`
+                                                            : '4px',
+                                                    minHeight:
+                                                        item.visits > 0
+                                                            ? '8px'
+                                                            : '4px',
+                                                }}
+                                                className={`w-full rounded-t transition-all duration-300 group-hover:brightness-110 ${
+                                                    isHighest
+                                                        ? 'bg-primary shadow-xs'
+                                                        : item.visits > 0
+                                                          ? 'bg-primary/60 dark:bg-primary/40'
+                                                          : 'bg-muted-foreground/20'
+                                                }`}
+                                                aria-hidden="true"
+                                            />
+                                        </div>
+                                        <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                                            {dayLabel}
+                                        </span>
                                     </div>
-
-                                    <div className="relative flex min-h-0 w-full flex-1 items-end justify-center rounded-t bg-muted/40 p-1">
-                                        <div
-                                            style={{
-                                                height:
-                                                    item.visits > 0
-                                                        ? `${heightPct}%`
-                                                        : '4px',
-                                                minHeight:
-                                                    item.visits > 0
-                                                        ? '8px'
-                                                        : '4px',
-                                            }}
-                                            className={`w-full rounded-t transition-all duration-300 group-hover:brightness-110 ${
-                                                isHighest
-                                                    ? 'bg-primary shadow-xs'
-                                                    : item.visits > 0
-                                                      ? 'bg-primary/60 dark:bg-primary/40'
-                                                      : 'bg-muted-foreground/20'
-                                            }`}
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
-                                        {dayLabel}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
                         </div>
                         {totalVisits === 0 && (
                             <p className="mt-3 text-center text-xs text-muted-foreground">
