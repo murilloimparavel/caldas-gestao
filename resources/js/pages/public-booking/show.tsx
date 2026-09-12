@@ -513,7 +513,7 @@ export default function PublicBooking({
                             aria-selected={tab === key}
                             aria-controls={`public-booking-panel-${key}`}
                             onClick={() => setTab(key)}
-                            className={`rounded-xl px-4 py-2.5 text-sm font-medium whitespace-nowrap transition ${tab === key ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950' : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}
+                            className={`rounded-xl px-4 py-2.5 text-sm font-medium whitespace-nowrap transition ${tab === key ? 'bg-foreground text-background' : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}
                         >
                             {label}
                         </button>

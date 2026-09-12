@@ -45,6 +45,14 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import type {
     FinancialObligation,
     FinancialObligationType,
@@ -909,224 +917,231 @@ export default function FinancialTransactionsIndex({
                             description="Não há contas a pagar ou receber correspondentes aos filtros selecionados."
                         />
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b bg-muted/40 text-xs text-muted-foreground uppercase">
-                                    <tr>
-                                        <th className="px-4 py-3">Tipo</th>
-                                        <th className="px-4 py-3">
-                                            Descrição / Contato
-                                        </th>
-                                        <th className="px-4 py-3">Categoria</th>
-                                        <th className="px-4 py-3">
-                                            Vencimento
-                                        </th>
-                                        <th className="px-4 py-3">Valor</th>
-                                        <th className="px-4 py-3">Status</th>
-                                        <th className="px-4 py-3 text-right">
-                                            Ações
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {obligations.data.map((item) => {
-                                        const overdue = isOverdue(item);
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Tipo
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Descrição / Contato
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Categoria
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Vencimento
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Valor
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Status
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-right text-xs uppercase">
+                                        Ações
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y">
+                                {obligations.data.map((item) => {
+                                    const overdue = isOverdue(item);
 
-                                        return (
-                                            <tr
-                                                key={item.id}
-                                                className="transition-colors hover:bg-muted/30"
-                                            >
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    {item.type === 'payable' ? (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="gap-1 border-rose-500/30 bg-rose-50 font-medium text-rose-600 dark:bg-rose-950/30"
-                                                        >
-                                                            <ArrowDownRight className="h-3 w-3" />
-                                                            A Pagar
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="gap-1 border-emerald-500/30 bg-emerald-50 font-medium text-emerald-600 dark:bg-emerald-950/30"
-                                                        >
-                                                            <ArrowUpRight className="h-3 w-3" />
-                                                            A Receber
-                                                        </Badge>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <p className="font-medium text-foreground">
-                                                        {item.description}
+                                    return (
+                                        <TableRow
+                                            key={item.id}
+                                            className="transition-colors hover:bg-muted/30"
+                                        >
+                                            <TableCell className="px-4 py-3 whitespace-nowrap">
+                                                {item.type === 'payable' ? (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="gap-1 border-destructive/30 bg-destructive/10 font-medium text-destructive"
+                                                    >
+                                                        <ArrowDownRight className="h-3 w-3" />
+                                                        A Pagar
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="gap-1 border-success/30 bg-success/10 font-medium text-success"
+                                                    >
+                                                        <ArrowUpRight className="h-3 w-3" />
+                                                        A Receber
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3">
+                                                <p className="font-medium text-foreground">
+                                                    {item.description}
+                                                </p>
+                                                {item.supplier && (
+                                                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <Users className="h-3 w-3" />
+                                                        Fornecedor:{' '}
+                                                        {item.supplier.name}
                                                     </p>
-                                                    {item.supplier && (
-                                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                                            <Users className="h-3 w-3" />
-                                                            Fornecedor:{' '}
-                                                            {item.supplier.name}
-                                                        </p>
-                                                    )}
-                                                    {item.customer && (
-                                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                                            <User className="h-3 w-3" />
-                                                            Cliente:{' '}
-                                                            {item.customer.name}
-                                                        </p>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                                                    {item.category?.name || '—'}
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                                                        <span
-                                                            className={
-                                                                overdue
-                                                                    ? 'font-semibold text-rose-600'
-                                                                    : 'text-foreground'
-                                                            }
-                                                        >
-                                                            {new Date(
-                                                                item.due_date +
-                                                                    'T00:00:00',
-                                                            ).toLocaleDateString(
-                                                                'pt-BR',
-                                                            )}
-                                                        </span>
-                                                        {overdue && (
-                                                            <Badge
-                                                                variant="destructive"
-                                                                className="px-1.5 py-0 text-2xs"
-                                                            >
-                                                                Vencido
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 font-semibold whitespace-nowrap">
+                                                )}
+                                                {item.customer && (
+                                                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <User className="h-3 w-3" />
+                                                        Cliente:{' '}
+                                                        {item.customer.name}
+                                                    </p>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                                                {item.category?.name || '—'}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                                                     <span
                                                         className={
-                                                            item.type ===
-                                                            'payable'
-                                                                ? 'text-rose-600 dark:text-rose-400'
-                                                                : 'text-emerald-600 dark:text-emerald-400'
+                                                            overdue
+                                                                ? 'font-semibold text-destructive'
+                                                                : 'text-foreground'
                                                         }
                                                     >
-                                                        {item.type === 'payable'
-                                                            ? '- '
-                                                            : '+ '}
-                                                        {formatMoney(
-                                                            item.amount_cents,
+                                                        {new Date(
+                                                            item.due_date +
+                                                                'T00:00:00',
+                                                        ).toLocaleDateString(
+                                                            'pt-BR',
                                                         )}
                                                     </span>
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    {item.status === 'paid' && (
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className="w-fit gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                                            >
-                                                                <CheckCircle2 className="h-3 w-3" />
-                                                                Liquidado
-                                                            </Badge>
-                                                            {item.paid_date && (
-                                                                <span className="text-3xs text-muted-foreground">
-                                                                    {new Date(
-                                                                        item.paid_date +
-                                                                            'T00:00:00',
-                                                                    ).toLocaleDateString(
-                                                                        'pt-BR',
-                                                                    )}{' '}
-                                                                    (
-                                                                    {item.payment_method ||
-                                                                        '—'}
-                                                                    )
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {item.status ===
-                                                        'pending' && (
+                                                    {overdue && (
                                                         <Badge
-                                                            variant="outline"
-                                                            className="gap-1 border-amber-500/40 bg-amber-50 text-amber-600 dark:bg-amber-950/20"
+                                                            variant="destructive"
+                                                            className="px-1.5 py-0 text-2xs"
                                                         >
-                                                            <Clock className="h-3 w-3" />
-                                                            Pendente
+                                                            Vencido
                                                         </Badge>
                                                     )}
-                                                    {item.status ===
-                                                        'cancelled' && (
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-semibold whitespace-nowrap">
+                                                <span
+                                                    className={
+                                                        item.type === 'payable'
+                                                            ? 'text-destructive'
+                                                            : 'text-success'
+                                                    }
+                                                >
+                                                    {item.type === 'payable'
+                                                        ? '- '
+                                                        : '+ '}
+                                                    {formatMoney(
+                                                        item.amount_cents,
+                                                    )}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 whitespace-nowrap">
+                                                {item.status === 'paid' && (
+                                                    <div className="flex flex-col gap-0.5">
                                                         <Badge
                                                             variant="secondary"
-                                                            className="gap-1 bg-muted text-muted-foreground"
+                                                            className="w-fit gap-1 bg-success/15 text-success"
                                                         >
-                                                            <Ban className="h-3 w-3" />
-                                                            Cancelado
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            Liquidado
                                                         </Badge>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-right whitespace-nowrap">
-                                                    {item.status ===
-                                                        'pending' && (
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            {canSettle && (
+                                                        {item.paid_date && (
+                                                            <span className="text-3xs text-muted-foreground">
+                                                                {new Date(
+                                                                    item.paid_date +
+                                                                        'T00:00:00',
+                                                                ).toLocaleDateString(
+                                                                    'pt-BR',
+                                                                )}{' '}
+                                                                (
+                                                                {item.payment_method ||
+                                                                    '—'}
+                                                                )
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {item.status ===
+                                                    'pending' && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="gap-1 border-warning/30 bg-warning/15 text-warning"
+                                                    >
+                                                        <Clock className="h-3 w-3" />
+                                                        Pendente
+                                                    </Badge>
+                                                )}
+                                                {item.status ===
+                                                    'cancelled' && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="gap-1 bg-muted text-muted-foreground"
+                                                    >
+                                                        <Ban className="h-3 w-3" />
+                                                        Cancelado
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right whitespace-nowrap">
+                                                {item.status ===
+                                                    'pending' && (
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        {canSettle && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 border-success/30 text-success hover:bg-success/10 hover:text-success"
+                                                                onClick={() =>
+                                                                    setSettlingObligation(
+                                                                        item,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                                                Liquidar
+                                                            </Button>
+                                                        )}
+                                                        {canManage && (
+                                                            <>
                                                                 <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="h-8 border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50"
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8"
                                                                     onClick={() =>
-                                                                        setSettlingObligation(
+                                                                        openEdit(
                                                                             item,
                                                                         )
                                                                     }
+                                                                    aria-label="Editar Lançamento"
+                                                                    title="Editar Lançamento"
                                                                 >
-                                                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                                                    Liquidar
+                                                                    <Edit3 className="h-3.5 w-3.5" />
                                                                 </Button>
-                                                            )}
-                                                            {canManage && (
-                                                                <>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-8 w-8"
-                                                                        onClick={() =>
-                                                                            openEdit(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        title="Editar Lançamento"
-                                                                    >
-                                                                        <Edit3 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                                                                        onClick={() =>
-                                                                            setCancellingObligation(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        title="Cancelar Lançamento"
-                                                                    >
-                                                                        <Ban className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                    onClick={() =>
+                                                                        setCancellingObligation(
+                                                                            item,
+                                                                        )
+                                                                    }
+                                                                    aria-label="Cancelar Lançamento"
+                                                                    title="Cancelar Lançamento"
+                                                                >
+                                                                    <Ban className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                     )}
 
                     {obligations.links && obligations.links.length > 3 && (

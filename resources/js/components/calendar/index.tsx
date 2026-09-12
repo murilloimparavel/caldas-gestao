@@ -49,21 +49,17 @@ export const statusLabels: Record<string, string> = {
 };
 
 const statusClasses: Record<string, string> = {
-    cancelled:
-        'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200',
+    cancelled: 'border-destructive/30 bg-destructive/10 text-destructive',
     checked_in:
         'border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-200',
-    completed:
-        'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
-    confirmed:
-        'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200',
+    completed: 'border-success/30 bg-success/10 text-success',
+    confirmed: 'border-info/30 bg-info/10 text-info',
     draft: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
     in_service:
         'border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-200',
     no_show:
         'border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-200',
-    scheduled:
-        'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
+    scheduled: 'border-warning/30 bg-warning/10 text-warning',
 };
 
 type ZonedParts = {
