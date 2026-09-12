@@ -15,6 +15,7 @@ export type CalendarOption = {
     duration_minutes?: number | null;
     id: string;
     name: string;
+    notes?: string | null;
     phone?: string | null;
     price_cents?: number | null;
     status?: string;
@@ -52,6 +53,8 @@ export type CalendarAppointment = {
     items?: CalendarAppointmentItem[];
     lock_version: number;
     notes?: string | null;
+    online_booking?: boolean | null;
+    online_booking_campaign_link_id?: string | null;
     professional?: CalendarOption | null;
     professional_id?: string | null;
     reminder_enabled?: boolean;
@@ -59,6 +62,7 @@ export type CalendarAppointment = {
     sale_links?: CalendarAppointmentSaleLink[];
     service?: CalendarOption | null;
     service_id?: string | null;
+    source?: 'internal' | 'online' | 'imported' | string | null;
     starts_at: string;
     status: AppointmentStatus;
 };
@@ -139,5 +143,6 @@ export type CalendarProps = {
     professionals?: CalendarOption[];
     range?: CalendarRange;
     schedule_blocks?: ScheduleBlock[];
+    scheduleBlocks?: ScheduleBlock[];
     services?: CalendarOption[];
 };

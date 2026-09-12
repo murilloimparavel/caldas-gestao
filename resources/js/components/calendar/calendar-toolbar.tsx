@@ -5,8 +5,10 @@ import {
     ChevronRight,
     Filter,
     Lock,
+    RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { index as calendarIndex } from '@/routes/calendar';
 import type {
     CalendarFilters,
@@ -22,6 +24,8 @@ export function CalendarToolbar({
     onCreate,
     onCreateBlock,
     onFilter,
+    onSync,
+    isSyncing = false,
     range,
     timeZone,
     view,
@@ -32,6 +36,8 @@ export function CalendarToolbar({
     onCreate: () => void;
     onCreateBlock?: () => void;
     onFilter: () => void;
+    onSync?: () => void;
+    isSyncing?: boolean;
     range?: CalendarRange;
     timeZone?: string;
     view: CalendarView;
@@ -45,7 +51,7 @@ export function CalendarToolbar({
 
     return (
         <div className="flex flex-col gap-3 sm:gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-start">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 sm:justify-start">
                 <div className="flex items-center gap-1 sm:gap-2">
                     <Button
                         asChild
@@ -102,26 +108,69 @@ export function CalendarToolbar({
                         </Link>
                     </Button>
                 </div>
-                <Button
-                    asChild
-                    variant="ghost"
-                    className="h-11 min-h-[44px] px-3 font-medium sm:inline-flex"
-                >
-                    <Link
-                        href={calendarIndex({
-                            query: {
-                                ...filters,
-                                date: dateKey(
-                                    new Date().toISOString(),
-                                    timeZone,
-                                ),
-                                view,
-                            },
-                        })}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Button
+                        asChild
+                        variant="ghost"
+                        className="h-11 min-h-[44px] px-3 font-medium sm:h-9 sm:min-h-0 sm:inline-flex"
                     >
-                        Hoje
-                    </Link>
-                </Button>
+                        <Link
+                            href={calendarIndex({
+                                query: {
+                                    ...filters,
+                                    date: dateKey(
+                                        new Date().toISOString(),
+                                        timeZone,
+                                    ),
+                                    view,
+                                },
+                            })}
+                        >
+                            Hoje
+                        </Link>
+                    </Button>
+
+                    <div
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground select-none"
+                        title="Agenda conectada com sincronização automática a cada 30 segundos"
+                    >
+                        <span
+                            className="size-2 rounded-full bg-emerald-500 animate-pulse"
+                            aria-hidden="true"
+                        />
+                        <span className="hidden xs:inline">Ao vivo</span>
+                    </div>
+
+                    {onSync ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={onSync}
+                            disabled={isSyncing}
+                            aria-label={
+                                isSyncing
+                                    ? 'Sincronizando agenda…'
+                                    : 'Sincronizar agenda manualmente'
+                            }
+                            title="Sincronizar agenda agora"
+                            className="h-11 w-11 shrink-0 sm:h-9 sm:w-9"
+                        >
+                            <RefreshCw
+                                className={cn(
+                                    'size-4',
+                                    isSyncing && 'animate-spin text-primary',
+                                )}
+                                aria-hidden="true"
+                            />
+                            <span className="sr-only">
+                                {isSyncing
+                                    ? 'Sincronizando agenda…'
+                                    : 'Sincronizar agenda'}
+                            </span>
+                        </Button>
+                    ) : null}
+                </div>
             </div>
 
             <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">

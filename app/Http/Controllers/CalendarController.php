@@ -39,7 +39,7 @@ final class CalendarController extends Controller
         $end = $start->addDays(42);
         $appointments = Appointment::query()
             ->with([
-                'customer:id,name,phone',
+                'customer:id,name,phone,notes',
                 'professional:id,name',
                 'items.service:id,name',
                 'saleLinks.sale:id,status,reference_label',
@@ -62,6 +62,7 @@ final class CalendarController extends Controller
                 'duration_minutes' => $item?->duration_minutes,
                 'service_id' => $item?->service_id,
                 'service' => $item?->service?->only(['id', 'name']),
+                'online_booking' => $appointment->source === 'online' || $appointment->online_booking_campaign_link_id !== null,
                 'sale_link' => $saleLink ? [
                     'id' => $saleLink->getKey(),
                     'sale_id' => $saleLink->sale_id,
@@ -75,7 +76,7 @@ final class CalendarController extends Controller
         })->values();
 
         $options = [
-            'customers' => Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone']),
+            'customers' => Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone', 'notes']),
             'professionals' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'avatar_path'])->map(fn (Professional $p) => [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -120,7 +121,14 @@ final class CalendarController extends Controller
                 ])->values(),
         ];
 
-        return Inertia::render('calendar/index', ['appointments' => $appointments, 'options' => $options, 'filters' => $filters, 'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()], 'calendarSettings' => $calendarSettings]);
+        return Inertia::render('calendar/index', [
+            'appointments' => $appointments,
+            'options' => $options,
+            'filters' => $filters,
+            'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
+            'calendarSettings' => $calendarSettings,
+            'scheduleBlocks' => $calendarSettings['schedule_blocks'] ?? [],
+        ]);
     }
 
     public function store(AppointmentRequest $request, TenantContext $context, CreateAppointment $create): RedirectResponse
