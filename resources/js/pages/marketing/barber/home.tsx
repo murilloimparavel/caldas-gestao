@@ -1,8 +1,25 @@
 import { Head } from '@inertiajs/react';
+import { useCallback, useEffect } from 'react';
 import type { Branding } from '@/types/ui';
 
 interface BarberHomeProps {
     branding: Branding;
+    metaPixelId?: string | null;
+}
+
+type MetaPixelFunction = {
+    (...args: unknown[]): void;
+    callMethod?: (...args: unknown[]) => void;
+    queue?: unknown[][];
+    loaded?: boolean;
+    version?: string;
+};
+
+declare global {
+    interface Window {
+        fbq?: MetaPixelFunction;
+        _fbq?: MetaPixelFunction;
+    }
 }
 
 const SALES_WHATSAPP_PHONE = '5564992697946';
@@ -59,6 +76,77 @@ function buildWhatsAppHref(search: string): string {
     return `https://wa.me/${SALES_WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
 }
 
+function readCookie(name: string): string | undefined {
+    const value = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith(`${name}=`))
+        ?.split('=')
+        .slice(1)
+        .join('=');
+
+    return value ? decodeURIComponent(value) : undefined;
+}
+
+function createEventId(eventName: string): string {
+    const randomId = globalThis.crypto?.randomUUID?.();
+
+    return `${eventName.toLowerCase()}_${randomId || `${Date.now()}_${Math.random().toString(36).slice(2)}`}`;
+}
+
+function sendMetaEvent(event: {
+    event_name: 'PageView' | 'Lead';
+    event_id: string;
+}): void {
+    const params = new URLSearchParams(window.location.search);
+    const fbp = readCookie('_fbp');
+    const fbc = readCookie('_fbc');
+    const fbclid = params.get('fbclid');
+    const fallbackFbc = fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined;
+
+    void fetch('/marketing/barber/meta-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        keepalive: true,
+        body: JSON.stringify({
+            ...event,
+            event_source_url: window.location.href,
+            fbp,
+            fbc: fbc || fallbackFbc,
+        }),
+    }).catch(() => undefined);
+}
+
+function loadMetaPixel(pixelId: string): void {
+    if (window.fbq) {
+        window.fbq('init', pixelId);
+
+        return;
+    }
+
+    const fbq: MetaPixelFunction = (...args: unknown[]): void => {
+        if (fbq.callMethod) {
+            fbq.callMethod(...args);
+        } else {
+            fbq.queue?.push(args);
+        }
+    };
+    fbq.queue = [];
+    fbq.loaded = true;
+    fbq.version = '2.0';
+    window.fbq = fbq;
+    window._fbq = fbq;
+    fbq('init', pixelId);
+
+    if (!document.querySelector('script[data-meta-pixel]')) {
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+        script.dataset.metaPixel = pixelId;
+        document.head.appendChild(script);
+    }
+}
+
 function Logo({ name }: { name: string }) {
     return (
         <div className="flex items-center gap-3" aria-label={name}>
@@ -72,11 +160,29 @@ function Logo({ name }: { name: string }) {
     );
 }
 
-function BarberHome({ branding }: BarberHomeProps) {
+function BarberHome({ branding, metaPixelId }: BarberHomeProps) {
     const whatsappHref = buildWhatsAppHref(
         typeof window === 'undefined' ? '' : window.location.search,
     );
     const brandName = branding?.name || 'Caldas Gestão';
+    const trackLead = useCallback((): void => {
+        const eventId = createEventId('Lead');
+
+        window.fbq?.('track', 'Lead', {}, { eventID: eventId });
+        sendMetaEvent({ event_name: 'Lead', event_id: eventId });
+    }, []);
+
+    useEffect(() => {
+        if (!metaPixelId) {
+            return;
+        }
+
+        loadMetaPixel(metaPixelId);
+        const eventId = createEventId('PageView');
+
+        window.fbq?.('track', 'PageView', {}, { eventID: eventId });
+        sendMetaEvent({ event_name: 'PageView', event_id: eventId });
+    }, [metaPixelId]);
 
     return (
         <>
@@ -104,6 +210,7 @@ function BarberHome({ branding }: BarberHomeProps) {
                     <Logo name={brandName} />
                     <a
                         href={whatsappHref}
+                        onClick={trackLead}
                         aria-label="Falar com um vendedor pelo WhatsApp"
                         className="hidden rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-[#deded5] transition hover:border-white hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none sm:inline-flex"
                     >
@@ -130,6 +237,7 @@ function BarberHome({ branding }: BarberHomeProps) {
                             </p>
                             <a
                                 href={whatsappHref}
+                                onClick={trackLead}
                                 aria-label="Quero enxergar o que sobra pelo WhatsApp"
                                 className="mt-7 inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-full bg-white px-5 py-3.5 text-sm font-semibold text-[#171717] transition hover:bg-[#ededeb] focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111] focus-visible:outline-none sm:w-auto"
                             >
@@ -366,6 +474,7 @@ function BarberHome({ branding }: BarberHomeProps) {
                                 </div>
                                 <a
                                     href={whatsappHref}
+                                    onClick={trackLead}
                                     aria-label="Quero enxergar o que sobra pelo WhatsApp"
                                     className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#171717] px-5 py-3.5 text-sm font-semibold text-[#f5f5f3] transition hover:bg-[#303030] focus-visible:ring-2 focus-visible:ring-[#171717] focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto sm:shrink-0"
                                 >
@@ -379,6 +488,7 @@ function BarberHome({ branding }: BarberHomeProps) {
                 <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-[#111111]/95 p-3 backdrop-blur sm:hidden">
                     <a
                         href={whatsappHref}
+                        onClick={trackLead}
                         aria-label="Falar no WhatsApp"
                         className="flex min-h-12 items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-[#171717] focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
                     >

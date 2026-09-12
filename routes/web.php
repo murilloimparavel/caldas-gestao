@@ -18,6 +18,7 @@ use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
+use App\Http\Controllers\MetaConversionController;
 use App\Http\Controllers\OnlineBookingCampaignLinkController;
 use App\Http\Controllers\OnlineBookingSettingsController;
 use App\Http\Controllers\PackageTemplateController;
@@ -33,12 +34,18 @@ use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
 use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::post('/webhooks/lastlink', LastlinkWebhookController::class)
     ->middleware('throttle:30,1')
     ->name('webhooks.lastlink');
+
+Route::post('/marketing/barber/meta-events', MetaConversionController::class)
+    ->middleware('throttle:30,1')
+    ->withoutMiddleware(ValidateCsrfToken::class)
+    ->name('marketing.barber.meta-events.store');
 
 Route::get('/billing', BillingController::class)
     ->middleware(['auth', 'verified', 'tenant.context'])
@@ -72,6 +79,7 @@ Route::get('/', function () {
                 'primaryColor' => config('branding.primary_color'),
                 'accentColor' => config('branding.accent_color'),
             ],
+            'metaPixelId' => config('services.meta.pixel_id'),
         ]);
     }
 

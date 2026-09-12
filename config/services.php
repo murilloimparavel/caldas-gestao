@@ -34,6 +34,13 @@ return [
         'checkout_url' => env('LASTLINK_CHECKOUT_URL'),
     ],
 
+    'meta' => [
+        'pixel_id' => env('META_PIXEL_ID', '2058995828162676'),
+        'conversions_api_token' => env('META_CONVERSIONS_API_TOKEN'),
+        'conversions_api_version' => env('META_CONVERSIONS_API_VERSION', 'v25.0'),
+        'conversions_api_url' => 'https://graph.facebook.com',
+    ],
+
     'google_calendar' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
