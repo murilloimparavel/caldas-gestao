@@ -16,6 +16,18 @@ it('renders the public sales page with default branding', function (): void {
         );
 });
 
+it('renders the barber landing page only with the barber query parameter', function (): void {
+    $this->get('/?lp=barber')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('marketing/barber/home')
+            ->where('branding.name', config('branding.name')),
+        );
+
+    $this->get('/')
+        ->assertInertia(fn ($page) => $page->component('marketing/home'));
+});
+
 it('canonicalizes sign in and sign up aliases', function (): void {
     $this->get('/signin')->assertRedirect(route('login'));
     $this->get('/signup')->assertRedirect(route('register'));
