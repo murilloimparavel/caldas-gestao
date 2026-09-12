@@ -35,7 +35,7 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
     };
 
     return (
-        <Card className="border-border/60">
+        <Card className="min-w-0 overflow-hidden border-border/60">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                     <CardTitle className="text-base font-semibold">
@@ -54,15 +54,15 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                     </span>
                 </div>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="min-w-0 pt-4">
                 {!hasPeriod ? (
                     <div className="flex h-44 items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
                         Nenhum dado de visitas disponível para o período
                     </div>
                 ) : (
-                    <div className="relative overflow-x-auto pb-1">
+                    <div className="relative min-w-0 overflow-x-auto pb-1">
                         <div
-                            className="flex h-44 min-w-max items-end gap-1.5 border-b border-border/50 px-1 sm:gap-2"
+                            className="flex h-44 min-w-[960px] items-end gap-1.5 border-b border-border/50 px-1 sm:gap-2"
                             role="img"
                             aria-label={`Visitas diárias no período: ${totalVisits} no total`}
                         >
@@ -95,9 +95,18 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                                         {accessibleDate}: {item.visits} visitas
                                     </div>
 
-                                    <div className="relative flex w-full flex-1 items-end justify-center rounded-t bg-muted/40 p-1">
+                                    <div className="relative flex min-h-0 w-full flex-1 items-end justify-center rounded-t bg-muted/40 p-1">
                                         <div
-                                            style={{ height: `${heightPct}%` }}
+                                            style={{
+                                                height:
+                                                    item.visits > 0
+                                                        ? `${heightPct}%`
+                                                        : '4px',
+                                                minHeight:
+                                                    item.visits > 0
+                                                        ? '8px'
+                                                        : '4px',
+                                            }}
                                             className={`w-full rounded-t transition-all duration-300 group-hover:brightness-110 ${
                                                 isHighest
                                                     ? 'bg-primary shadow-xs'
