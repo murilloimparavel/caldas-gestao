@@ -55,6 +55,10 @@ Route::get('/', function () {
     $domain = request()->attributes->get('tenant_domain');
 
     if ($domain?->kind?->value === 'public') {
+        if (request()->getHost() === 'romawear.com.br') {
+            return response()->file(public_path('romawear-demo/index.html'), ['Cache-Control' => 'no-store']);
+        }
+
         $tenant = $domain->tenant;
 
         return Inertia::render('public/coming-soon', [

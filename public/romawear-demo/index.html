@@ -1,0 +1,1195 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ROMAWEAR — Exemplo de agendamento</title>
+<meta name="robots" content="noindex, nofollow" />
+<style>
+	:root {
+		--ivory: #f4efe6;
+		--ivory-dim: #ece5d6;
+		--charcoal: #1c1a17;
+		--charcoal-soft: #33302b;
+		--line: #d8cfbd;
+		--accent: #8a6b3f;
+		--accent-strong: #5f4726;
+		--danger: #7a2e2e;
+		--radius: 2px;
+		--maxw: 720px;
+		font-size: 16px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*, *::before, *::after {
+			animation-duration: 0.001ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.001ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
+
+	* { box-sizing: border-box; }
+
+	html, body {
+		margin: 0;
+		padding: 0;
+		background: var(--ivory);
+		color: var(--charcoal);
+	}
+
+	body {
+		font-family: Arial, Helvetica, sans-serif;
+		padding-bottom: 96px;
+	}
+
+	h1, h2, h3 {
+		font-family: Georgia, 'Times New Roman', Times, serif;
+	}
+
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	a, button, input {
+		font-family: inherit;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--accent-strong);
+		outline-offset: 2px;
+	}
+
+	.skip-link {
+		position: absolute;
+		left: -9999px;
+		top: 0;
+		background: var(--charcoal);
+		color: var(--ivory);
+		padding: 0.75rem 1rem;
+		z-index: 100;
+	}
+
+	.skip-link:focus {
+		left: 0.5rem;
+		top: 0.5rem;
+	}
+
+	header.top {
+		border-bottom: 1px solid var(--line);
+		padding: 1.5rem 1.25rem 1.1rem;
+	}
+
+	.wordmark {
+		max-width: var(--maxw);
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.4rem;
+	}
+
+	.wordmark h1 {
+		margin: 0;
+		font-weight: 400;
+		letter-spacing: 0.38em;
+		font-size: clamp(1.4rem, 5vw, 2rem);
+		text-transform: uppercase;
+		color: var(--charcoal);
+	}
+
+	.demo-flag {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.7rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		background: var(--charcoal);
+		color: var(--ivory);
+		padding: 0.3rem 0.6rem;
+		border-radius: var(--radius);
+	}
+
+	.demo-flag::before {
+		content: '●';
+		color: #d8b46a;
+	}
+
+	.demo-banner {
+		max-width: var(--maxw);
+		margin: 1rem auto 0;
+		padding: 0 1.25rem;
+	}
+
+	.demo-banner p {
+		margin: 0;
+		background: var(--ivory-dim);
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		padding: 0.75rem 0.9rem;
+		font-size: 0.85rem;
+		line-height: 1.55;
+		color: var(--charcoal-soft);
+	}
+
+	.demo-banner strong {
+		color: var(--charcoal);
+	}
+
+	main {
+		max-width: var(--maxw);
+		margin: 0 auto;
+		padding: 1.25rem 1.25rem 2.5rem;
+	}
+
+	/* Progress */
+	.progress {
+		list-style: none;
+		display: flex;
+		gap: 0.4rem;
+		margin: 0 0 1.5rem;
+		padding: 0;
+	}
+
+	.progress li {
+		flex: 1;
+		text-align: center;
+	}
+
+	.progress button {
+		width: 100%;
+		background: none;
+		border: none;
+		padding: 0.5rem 0.25rem;
+		cursor: default;
+		border-bottom: 3px solid var(--line);
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--charcoal-soft);
+	}
+
+	.progress li[data-done='true'] button {
+		border-bottom-color: var(--accent);
+		color: var(--charcoal);
+	}
+
+	.progress li button[aria-current='step'] {
+		border-bottom-color: var(--accent-strong);
+		color: var(--charcoal);
+		font-weight: bold;
+	}
+
+	.step {
+		display: none;
+	}
+
+	.step[data-active='true'] {
+		display: block;
+	}
+
+	.step h2 {
+		margin: 0 0 0.25rem;
+		font-weight: 400;
+		font-size: 1.4rem;
+	}
+
+	.step-subtitle {
+		margin: 0 0 1.25rem;
+		font-size: 0.9rem;
+		color: var(--charcoal-soft);
+		line-height: 1.5;
+	}
+
+	.professional-card {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		border: 1px solid var(--line);
+		background: #fff;
+		border-radius: var(--radius);
+		padding: 1rem 1.1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.professional-avatar {
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: var(--charcoal);
+		color: var(--ivory);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: Georgia, serif;
+		font-size: 1.1rem;
+		flex-shrink: 0;
+	}
+
+	.professional-card p {
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--charcoal-soft);
+	}
+
+	.professional-card strong {
+		display: block;
+		font-size: 1.05rem;
+		color: var(--charcoal);
+	}
+
+	fieldset {
+		border: none;
+		margin: 0 0 1.5rem;
+		padding: 0;
+	}
+
+	legend {
+		font-size: 0.78rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--charcoal-soft);
+		margin-bottom: 0.75rem;
+		padding: 0;
+	}
+
+	.service-grid {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.service-toggle {
+		width: 100%;
+		min-height: 48px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		border: 1px solid var(--line);
+		background: #fff;
+		padding: 0.9rem 1.1rem;
+		border-radius: var(--radius);
+		cursor: pointer;
+		text-align: left;
+		transition: border-color 0.15s ease, background-color 0.15s ease;
+	}
+
+	.service-toggle:hover {
+		border-color: var(--accent);
+	}
+
+	.service-toggle[aria-pressed='true'] {
+		background: var(--charcoal);
+		border-color: var(--charcoal);
+		color: var(--ivory);
+	}
+
+	.service-toggle .thumb {
+		flex-shrink: 0;
+		width: 72px;
+		height: 72px;
+		border-radius: var(--radius);
+		object-fit: cover;
+		background: var(--ivory-dim);
+	}
+
+	.service-toggle .thumb[data-size='small'] {
+		width: 32px;
+		height: 32px;
+	}
+
+	.service-toggle .text-thumb-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.service-toggle .name {
+		font-size: 1.02rem;
+	}
+
+	.service-toggle .meta {
+		font-size: 0.82rem;
+		opacity: 0.75;
+		display: block;
+		margin-top: 0.15rem;
+	}
+
+	.service-toggle .check {
+		flex-shrink: 0;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		border: 1px solid currentColor;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.85rem;
+	}
+
+	.toggle-others {
+		background: transparent;
+		border: 1px dashed var(--line);
+		color: var(--charcoal-soft);
+		padding: 0.75rem 1rem;
+		width: 100%;
+		min-height: 48px;
+		border-radius: var(--radius);
+		cursor: pointer;
+		font-size: 0.9rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.others-list {
+		margin-top: 0.75rem;
+	}
+
+	.others-list[hidden] {
+		display: none;
+	}
+
+	.day-grid, .time-grid {
+		list-style: none;
+		margin: 0 0 1.5rem;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+		gap: 0.6rem;
+	}
+
+	.day-btn, .time-btn {
+		min-height: 48px;
+		border: 1px solid var(--line);
+		background: #fff;
+		border-radius: var(--radius);
+		cursor: pointer;
+		font-size: 0.9rem;
+		padding: 0.5rem;
+	}
+
+	.day-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		line-height: 1.3;
+	}
+
+	.day-btn .weekday {
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--charcoal-soft);
+	}
+
+	.day-btn[aria-pressed='true'] .weekday,
+	.time-btn[aria-pressed='true'] {
+		color: var(--ivory);
+	}
+
+	.day-btn[aria-pressed='true'],
+	.time-btn[aria-pressed='true'] {
+		background: var(--charcoal);
+		border-color: var(--charcoal);
+		color: var(--ivory);
+	}
+
+	.illustrative-note {
+		display: block;
+		background: var(--ivory-dim);
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		padding: 0.75rem 0.9rem;
+		font-size: 0.82rem;
+		line-height: 1.5;
+		color: var(--charcoal-soft);
+		margin-bottom: 1.25rem;
+	}
+
+	.review-section {
+		border: 1px solid var(--line);
+		background: #fff;
+		border-radius: var(--radius);
+		padding: 1.1rem 1.25rem;
+		margin-bottom: 1rem;
+	}
+
+	.review-section h3 {
+		margin: 0 0 0.65rem;
+		font-size: 0.95rem;
+		font-weight: 400;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.edit-btn {
+		background: none;
+		border: none;
+		color: var(--accent-strong);
+		text-decoration: underline;
+		cursor: pointer;
+		font-size: 0.8rem;
+		padding: 0.25rem;
+	}
+
+	.review-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.4rem;
+		font-size: 0.9rem;
+	}
+
+	.review-list li {
+		display: flex;
+		justify-content: space-between;
+		border-bottom: 1px dotted var(--line);
+		padding-bottom: 0.35rem;
+	}
+
+	.review-totals {
+		display: grid;
+		gap: 0.3rem;
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--line);
+		font-size: 0.92rem;
+	}
+
+	.review-totals .grand-total {
+		font-size: 1.1rem;
+	}
+
+	.form-field {
+		margin-bottom: 1.1rem;
+	}
+
+	.form-field label {
+		display: block;
+		font-size: 0.85rem;
+		margin-bottom: 0.35rem;
+		color: var(--charcoal-soft);
+	}
+
+	.form-field input {
+		width: 100%;
+		padding: 0.75rem 0.9rem;
+		border: 1px solid var(--line);
+		background: #fff;
+		font-size: 0.95rem;
+		border-radius: var(--radius);
+		color: var(--charcoal);
+		min-height: 48px;
+	}
+
+	.form-field .field-error {
+		color: var(--danger);
+		font-size: 0.8rem;
+		margin-top: 0.35rem;
+		display: none;
+	}
+
+	.form-field[data-invalid='true'] input {
+		border-color: var(--danger);
+	}
+
+	.form-field[data-invalid='true'] .field-error {
+		display: block;
+	}
+
+	.result-panel {
+		border: 1px solid var(--line);
+		background: #fff;
+		border-radius: var(--radius);
+		padding: 1.25rem;
+	}
+
+	.result-panel h2 {
+		margin-top: 0;
+	}
+
+	.result-message {
+		white-space: pre-wrap;
+		background: var(--ivory-dim);
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		padding: 0.9rem 1rem;
+		font-size: 0.88rem;
+		line-height: 1.6;
+		margin: 1rem 0;
+	}
+
+	.whatsapp-note {
+		font-size: 0.85rem;
+		color: var(--charcoal-soft);
+		line-height: 1.5;
+		margin-bottom: 1.1rem;
+	}
+
+	.copy-btn {
+		background: var(--charcoal);
+		color: var(--ivory);
+		border: none;
+		padding: 0.75rem 1.1rem;
+		border-radius: var(--radius);
+		font-size: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		cursor: pointer;
+		min-height: 48px;
+	}
+
+	.copy-status {
+		display: inline-block;
+		margin-left: 0.75rem;
+		font-size: 0.85rem;
+		color: var(--accent-strong);
+	}
+
+	.wizard-actions {
+		display: flex;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.wizard-actions .back-btn {
+		background: transparent;
+		border: 1px solid var(--line);
+		color: var(--charcoal-soft);
+		padding: 0.75rem 1.1rem;
+		border-radius: var(--radius);
+		cursor: pointer;
+		min-height: 48px;
+	}
+
+	.sticky-bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: var(--charcoal);
+		color: var(--ivory);
+		padding: 0.85rem 1.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		z-index: 20;
+	}
+
+	.sticky-bar .info {
+		font-size: 0.85rem;
+		line-height: 1.35;
+	}
+
+	.sticky-bar .info strong {
+		font-size: 1.05rem;
+		display: block;
+	}
+
+	.sticky-bar button {
+		background: var(--ivory);
+		color: var(--charcoal);
+		border: none;
+		padding: 0.75rem 1.2rem;
+		border-radius: var(--radius);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		font-size: 0.85rem;
+		cursor: pointer;
+		min-height: 48px;
+	}
+
+	.sticky-bar button:disabled {
+		background: #7c7669;
+		color: #d9d4c8;
+		cursor: not-allowed;
+	}
+
+	footer.disclaimer {
+		max-width: var(--maxw);
+		margin: 2rem auto 0;
+		padding: 0 1.25rem 2rem;
+		font-size: 0.78rem;
+		color: var(--charcoal-soft);
+	}
+</style>
+<link rel="stylesheet" href="/romawear-demo/theme.css" />
+</head>
+<body>
+<a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+
+<header class="top">
+	<div class="wordmark">
+		<h1>Romawear</h1>
+		<span class="demo-flag">Exemplo de agendamento</span>
+	</div>
+</header>
+
+<div class="demo-banner">
+	<p>
+		<strong>Demonstração:</strong> os horários são ilustrativos e nenhum agendamento é criado.
+	</p>
+</div>
+
+<main id="main-content">
+	<ol class="progress" id="progress" aria-label="Etapas do agendamento"></ol>
+
+	<!-- Step 1: Serviços -->
+	<section class="step" id="step-services" data-active="true" aria-labelledby="services-heading">
+		<h2 id="services-heading">Serviços</h2>
+		<p class="step-subtitle">Escolha um ou mais serviços para o seu atendimento.</p>
+
+		<div class="professional-card">
+			<div class="professional-avatar" aria-hidden="true">BR</div>
+			<p>
+				<strong>Atendimento com Bruno Roma</strong>
+				Único profissional disponível neste exemplo.
+			</p>
+		</div>
+
+		<fieldset>
+			<legend>Serviços em destaque</legend>
+			<ul class="service-grid" id="featured-service-list"></ul>
+		</fieldset>
+
+		<button type="button" class="toggle-others" id="toggle-others" aria-expanded="false" aria-controls="others-list">
+			Ver outros serviços
+		</button>
+
+		<fieldset class="others-list" id="others-list" hidden>
+			<legend>Outros serviços</legend>
+			<ul class="service-grid" id="other-service-list"></ul>
+		</fieldset>
+	</section>
+
+	<!-- Step 2: Dia e horário -->
+	<section class="step" id="step-datetime" data-active="false" aria-labelledby="datetime-heading">
+		<h2 id="datetime-heading">Dia e horário</h2>
+		<p class="step-subtitle">Escolha um dia e um horário para simular o seu pedido de agendamento.</p>
+
+		<span class="illustrative-note">
+			<strong>Horários ilustrativos.</strong> Este exemplo não consulta a agenda e não reserva
+			horários — os horários abaixo servem apenas para demonstrar o fluxo.
+		</span>
+
+		<fieldset>
+			<legend>Dia</legend>
+			<ul class="day-grid" id="day-list"></ul>
+		</fieldset>
+
+		<fieldset>
+			<legend>Horário (ilustrativo)</legend>
+			<ul class="time-grid" id="time-list"></ul>
+		</fieldset>
+
+		<div class="wizard-actions">
+			<button type="button" class="back-btn" data-back>Voltar</button>
+		</div>
+	</section>
+
+	<!-- Step 3: Revisão -->
+	<section class="step" id="step-review" data-active="false" aria-labelledby="review-heading">
+		<h2 id="review-heading">Revisão</h2>
+		<p class="step-subtitle">Confira os detalhes do seu pedido de agendamento antes de continuar.</p>
+
+		<span class="illustrative-note">
+			Dia e horário ilustrativos — nenhum horário é reservado nesta etapa.
+		</span>
+
+		<div class="review-section">
+			<h3>Profissional</h3>
+			<p id="review-professional" style="margin:0;font-size:0.9rem;"></p>
+		</div>
+
+		<div class="review-section">
+			<h3>Serviços <button type="button" class="edit-btn" data-goto="step-services">Editar</button></h3>
+			<ul class="review-list" id="review-services"></ul>
+			<div class="review-totals">
+				<span id="review-duration"></span>
+				<span class="grand-total" id="review-total"></span>
+			</div>
+		</div>
+
+		<div class="review-section">
+			<h3>Dia e horário <button type="button" class="edit-btn" data-goto="step-datetime">Editar</button></h3>
+			<p id="review-datetime" style="margin:0;font-size:0.9rem;"></p>
+		</div>
+
+		<div class="wizard-actions">
+			<button type="button" class="back-btn" data-back>Voltar</button>
+		</div>
+	</section>
+
+	<!-- Step 4: Seus dados -->
+	<section class="step" id="step-contact" data-active="false" aria-labelledby="contact-heading">
+		<h2 id="contact-heading">Seus dados</h2>
+		<p class="step-subtitle">Seu WhatsApp e como podemos chamar você. Demonstração: os dados não são enviados.</p>
+
+		<form id="contact-form" novalidate>
+			<div class="form-field" id="phone-field">
+				<label for="phone-input">Telefone (WhatsApp)</label>
+				<input type="tel" id="phone-input" name="phone" autocomplete="tel" inputmode="tel" placeholder="(11) 91234-5678" required />
+				<span class="field-error">Informe um telefone válido, com DDD.</span>
+			</div>
+
+			<div class="form-field" id="name-field">
+				<label for="name-input">Nome</label>
+				<input type="text" id="name-input" name="name" autocomplete="name" required />
+				<span class="field-error">Informe seu nome para continuar.</span>
+			</div>
+
+			<div class="wizard-actions">
+				<button type="button" class="back-btn" data-back>Voltar</button>
+				<button type="submit" class="copy-btn" id="submit-btn">Ver mensagem</button>
+			</div>
+		</form>
+	</section>
+
+	<!-- Step 5: Resultado -->
+	<section class="step" id="step-result" data-active="false" aria-labelledby="result-heading">
+		<div class="result-panel">
+			<h2 id="result-heading">Pedido preparado</h2>
+			<p class="whatsapp-note">
+				Esta demonstração prepara a mensagem. <strong>O envio ao WhatsApp e a reserva serão habilitados
+				na versão final.</strong>
+			</p>
+
+			<pre class="result-message" id="result-message"></pre>
+
+			<button type="button" class="copy-btn" id="copy-message-btn">Copiar mensagem</button>
+			<span class="copy-status" id="copy-status" role="status" aria-live="polite"></span>
+
+			<div class="wizard-actions">
+				<button type="button" class="back-btn" data-back>Voltar</button>
+			</div>
+		</div>
+	</section>
+</main>
+
+<div class="sticky-bar" id="sticky-bar" role="status">
+	<div class="info">
+		<strong id="sticky-total">R$ 0,00</strong>
+		<span id="sticky-duration">0 min · 0 serviços</span>
+	</div>
+	<button type="button" id="sticky-continue-btn" disabled>Continuar</button>
+</div>
+
+<footer class="disclaimer">
+	Romawear — exemplo de agendamento demonstrativo. Nenhuma informação é armazenada ou transmitida.
+</footer>
+
+<script src="/romawear-demo/booking.js"></script>
+<script>
+(function () {
+	'use strict';
+
+	var api = window.RomawearBooking;
+	var services = api.SERVICES;
+	var featured = api.featuredServices(services);
+	var others = api.otherServices(services);
+	var days = api.upcomingDays(new Date(), 7);
+
+	var STEPS = ['step-services', 'step-datetime', 'step-review', 'step-contact', 'step-result'];
+	var STEP_LABELS = {
+		'step-services': 'Serviços',
+		'step-datetime': 'Dia e horário',
+		'step-review': 'Revisão',
+		'step-contact': 'Seus dados',
+		'step-result': 'Pronto',
+	};
+
+	var state = {
+		stepIndex: 0,
+		selectedIds: [],
+		othersExpanded: false,
+		dateIso: null,
+		time: null,
+		name: '',
+		phone: '',
+	};
+
+	var progressEl = document.getElementById('progress');
+	var featuredListEl = document.getElementById('featured-service-list');
+	var otherListEl = document.getElementById('other-service-list');
+	var othersListWrap = document.getElementById('others-list');
+	var toggleOthersBtn = document.getElementById('toggle-others');
+	var dayListEl = document.getElementById('day-list');
+	var timeListEl = document.getElementById('time-list');
+	var reviewProfessionalEl = document.getElementById('review-professional');
+	var reviewServicesEl = document.getElementById('review-services');
+	var reviewDurationEl = document.getElementById('review-duration');
+	var reviewTotalEl = document.getElementById('review-total');
+	var reviewDatetimeEl = document.getElementById('review-datetime');
+	var nameInput = document.getElementById('name-input');
+	var phoneInput = document.getElementById('phone-input');
+	var nameField = document.getElementById('name-field');
+	var phoneField = document.getElementById('phone-field');
+	var contactForm = document.getElementById('contact-form');
+	var resultMessageEl = document.getElementById('result-message');
+	var copyMessageBtn = document.getElementById('copy-message-btn');
+	var copyStatusEl = document.getElementById('copy-status');
+	var stickyBar = document.getElementById('sticky-bar');
+	var stickyTotalEl = document.getElementById('sticky-total');
+	var stickyDurationEl = document.getElementById('sticky-duration');
+	var stickyContinueBtn = document.getElementById('sticky-continue-btn');
+
+	function currentStepId() {
+		return STEPS[state.stepIndex];
+	}
+
+	function renderProgress() {
+		progressEl.innerHTML = '';
+
+		STEPS.forEach(function (stepId, index) {
+			if (stepId === 'step-result') {
+				return;
+			}
+
+			var li = document.createElement('li');
+			li.setAttribute('data-done', index < state.stepIndex ? 'true' : 'false');
+
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.textContent = STEP_LABELS[stepId];
+			btn.disabled = true;
+
+			if (index === state.stepIndex) {
+				btn.setAttribute('aria-current', 'step');
+			}
+
+			li.appendChild(btn);
+			progressEl.appendChild(li);
+		});
+	}
+
+	function renderServiceButton(service) {
+		var li = document.createElement('li');
+		var btn = document.createElement('button');
+		btn.type = 'button';
+		btn.className = 'service-toggle';
+		var isSelected = state.selectedIds.indexOf(service.id) !== -1;
+		btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+
+		var thumbWrap = document.createElement('span');
+		thumbWrap.className = 'text-thumb-wrap';
+
+		if (service.imageUrl) {
+			var thumb = document.createElement('img');
+			thumb.className = 'thumb';
+			thumb.src = service.imageUrl;
+			thumb.alt = '';
+			thumb.width = service.id === 'sobrancelha' ? 32 : 72;
+			thumb.height = service.id === 'sobrancelha' ? 32 : 72;
+			thumb.loading = 'lazy';
+			if (service.id === 'sobrancelha') {
+				thumb.setAttribute('data-size', 'small');
+			}
+			thumb.addEventListener('error', function () {
+				thumb.style.display = 'none';
+			});
+			thumbWrap.appendChild(thumb);
+		}
+
+		var textWrap = document.createElement('span');
+		var name = document.createElement('span');
+		name.className = 'name';
+		name.textContent = service.name;
+		var meta = document.createElement('span');
+		meta.className = 'meta';
+		meta.textContent = api.formatBRL(service.priceCents) + ' · ' + api.formatDuration(service.durationMin);
+		if (service.description) {
+			var description = document.createElement('span');
+			description.className = 'meta';
+			description.textContent = service.description;
+			textWrap.appendChild(name);
+			textWrap.appendChild(meta);
+			textWrap.appendChild(description);
+		} else {
+			textWrap.appendChild(name);
+			textWrap.appendChild(meta);
+		}
+
+		thumbWrap.appendChild(textWrap);
+
+		var check = document.createElement('span');
+		check.className = 'check';
+		check.setAttribute('aria-hidden', 'true');
+		check.textContent = isSelected ? '✓' : '';
+
+		btn.appendChild(thumbWrap);
+		btn.appendChild(check);
+
+		btn.addEventListener('click', function () {
+			state.selectedIds = api.toggleSelection(state.selectedIds, service.id);
+			renderAll();
+		});
+
+		li.appendChild(btn);
+		return li;
+	}
+
+	function renderServices() {
+		featuredListEl.innerHTML = '';
+		featured.forEach(function (service) {
+			featuredListEl.appendChild(renderServiceButton(service));
+		});
+
+		otherListEl.innerHTML = '';
+		others.forEach(function (service) {
+			otherListEl.appendChild(renderServiceButton(service));
+		});
+
+		othersListWrap.hidden = !state.othersExpanded;
+		toggleOthersBtn.setAttribute('aria-expanded', state.othersExpanded ? 'true' : 'false');
+		toggleOthersBtn.textContent = state.othersExpanded ? 'Ocultar outros serviços' : 'Ver outros serviços';
+	}
+
+	function renderDays() {
+		dayListEl.innerHTML = '';
+		days.forEach(function (day) {
+			var li = document.createElement('li');
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'day-btn';
+			btn.setAttribute('aria-pressed', state.dateIso === day.iso ? 'true' : 'false');
+
+			var weekday = document.createElement('span');
+			weekday.className = 'weekday';
+			weekday.textContent = day.weekday;
+
+			var dayNumber = document.createElement('span');
+			dayNumber.textContent = day.day + '/' + day.month;
+
+			btn.appendChild(weekday);
+			btn.appendChild(dayNumber);
+
+			btn.addEventListener('click', function () {
+				state.dateIso = day.iso;
+				renderAll();
+			});
+
+			li.appendChild(btn);
+			dayListEl.appendChild(li);
+		});
+	}
+
+	function renderTimes() {
+		timeListEl.innerHTML = '';
+		api.ILLUSTRATIVE_TIME_SLOTS.forEach(function (time) {
+			var li = document.createElement('li');
+			var btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'time-btn';
+			btn.textContent = time;
+			btn.setAttribute('aria-pressed', state.time === time ? 'true' : 'false');
+
+			btn.addEventListener('click', function () {
+				state.time = time;
+				renderAll();
+			});
+
+			li.appendChild(btn);
+			timeListEl.appendChild(li);
+		});
+	}
+
+	function renderReview() {
+		reviewProfessionalEl.textContent = api.PROFESSIONAL;
+
+		var summary = api.summarize(services, state.selectedIds);
+		reviewServicesEl.innerHTML = '';
+
+		state.selectedIds.forEach(function (id) {
+			var service = services.find(function (s) {
+				return s.id === id;
+			});
+
+			if (!service) {
+				return;
+			}
+
+			var li = document.createElement('li');
+			var name = document.createElement('span');
+			name.textContent = service.name;
+			var price = document.createElement('span');
+			price.textContent = api.formatBRL(service.priceCents);
+			li.appendChild(name);
+			li.appendChild(price);
+			reviewServicesEl.appendChild(li);
+		});
+
+		reviewDurationEl.textContent = 'Duração total: ' + api.formatDuration(summary.totalDurationMin);
+		reviewTotalEl.textContent = 'Total: ' + api.formatBRL(summary.totalCents);
+
+		if (state.dateIso && state.time) {
+			var day = days.find(function (d) {
+				return d.iso === state.dateIso;
+			});
+			reviewDatetimeEl.textContent = (day ? day.day + '/' + day.month : state.dateIso) + ' às ' + state.time + ' (ilustrativo)';
+		} else {
+			reviewDatetimeEl.textContent = 'Nenhum dia/horário selecionado.';
+		}
+	}
+
+	function renderStickyBar() {
+		var summary = api.summarize(services, state.selectedIds);
+		var stepId = currentStepId();
+		var showBar = stepId === 'step-services' || stepId === 'step-datetime';
+
+		stickyBar.style.display = showBar ? 'flex' : 'none';
+		stickyTotalEl.textContent = api.formatBRL(summary.totalCents);
+		stickyDurationEl.textContent = api.formatDuration(summary.totalDurationMin) + ' · ' + summary.count + ' serviço' + (summary.count === 1 ? '' : 's');
+
+		if (stepId === 'step-services') {
+			stickyContinueBtn.disabled = summary.count === 0;
+			stickyContinueBtn.textContent = 'Continuar';
+		} else if (stepId === 'step-datetime') {
+			stickyContinueBtn.disabled = !(state.dateIso && state.time);
+			stickyContinueBtn.textContent = 'Continuar';
+		}
+	}
+
+	function renderSteps() {
+		STEPS.forEach(function (stepId, index) {
+			var section = document.getElementById(stepId);
+			section.setAttribute('data-active', index === state.stepIndex ? 'true' : 'false');
+		});
+	}
+
+	function renderAll() {
+		renderProgress();
+		renderServices();
+		renderDays();
+		renderTimes();
+		renderReview();
+		renderSteps();
+		renderStickyBar();
+	}
+
+	function focusStepHeading() {
+		var stepId = currentStepId();
+		var heading = document.querySelector('#' + stepId + ' h2');
+		if (heading) {
+			heading.setAttribute('tabindex', '-1');
+			heading.focus();
+		}
+	}
+
+	function goToStep(stepId) {
+		var index = STEPS.indexOf(stepId);
+		if (index === -1) {
+			return;
+		}
+		state.stepIndex = index;
+		renderAll();
+		focusStepHeading();
+	}
+
+	function goNext() {
+		if (state.stepIndex < STEPS.length - 1) {
+			state.stepIndex += 1;
+			renderAll();
+			focusStepHeading();
+		}
+	}
+
+	function goBack() {
+		if (state.stepIndex > 0) {
+			state.stepIndex -= 1;
+			renderAll();
+			focusStepHeading();
+		}
+	}
+
+	function validateContact() {
+		var name = nameInput.value.trim();
+		var phoneDigits = phoneInput.value.replace(/\D/g, '');
+		var nameValid = name.length >= 2;
+		var phoneValid = phoneDigits.length >= 10;
+
+		nameField.setAttribute('data-invalid', nameValid ? 'false' : 'true');
+		phoneField.setAttribute('data-invalid', phoneValid ? 'false' : 'true');
+
+		return nameValid && phoneValid;
+	}
+
+	toggleOthersBtn.addEventListener('click', function () {
+		state.othersExpanded = !state.othersExpanded;
+		renderServices();
+	});
+
+	stickyContinueBtn.addEventListener('click', function () {
+		goNext();
+	});
+
+	document.querySelectorAll('[data-back]').forEach(function (btn) {
+		btn.addEventListener('click', goBack);
+	});
+
+	document.querySelectorAll('[data-goto]').forEach(function (btn) {
+		btn.addEventListener('click', function () {
+			goToStep(btn.getAttribute('data-goto'));
+		});
+	});
+
+	(function addReviewContinue() {
+		var actions = document.querySelector('#step-review .wizard-actions');
+		var continueBtn = document.createElement('button');
+		continueBtn.type = 'button';
+		continueBtn.className = 'copy-btn';
+		continueBtn.textContent = 'Continuar';
+		continueBtn.addEventListener('click', goNext);
+		actions.appendChild(continueBtn);
+	})();
+
+	contactForm.addEventListener('submit', function (event) {
+		event.preventDefault();
+
+		if (!validateContact()) {
+			return;
+		}
+
+		state.name = nameInput.value.trim();
+		state.phone = phoneInput.value.trim();
+
+		var message = api.buildWhatsappMessage(state.dateIso, state.time, services, state.selectedIds, state.name);
+		resultMessageEl.textContent = message;
+		copyStatusEl.textContent = '';
+
+		goNext();
+	});
+
+	copyMessageBtn.addEventListener('click', function () {
+		var text = resultMessageEl.textContent;
+
+		function showCopied() {
+			copyStatusEl.textContent = 'Mensagem copiada.';
+		}
+
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(showCopied, function () {
+				copyStatusEl.textContent = 'Não foi possível copiar automaticamente. Selecione o texto manualmente.';
+			});
+		} else {
+			copyStatusEl.textContent = 'Não foi possível copiar automaticamente. Selecione o texto manualmente.';
+		}
+	});
+
+	renderAll();
+})();
+</script>
+</body>
+</html>
