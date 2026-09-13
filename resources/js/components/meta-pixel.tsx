@@ -33,7 +33,15 @@ function readCookie(name: string): string | undefined {
 function sendViewContent(): void {
     const params = new URLSearchParams(window.location.search);
     const customData = Object.fromEntries(
-        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid']
+        [
+            'utm_source',
+            'utm_medium',
+            'utm_campaign',
+            'utm_content',
+            'utm_term',
+            'fbclid',
+            'gclid',
+        ]
             .map((key) => [key, params.get(key)])
             .filter(([, value]) => value),
     );

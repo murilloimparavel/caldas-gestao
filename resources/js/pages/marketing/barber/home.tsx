@@ -196,8 +196,14 @@ function BarberHome({ branding, metaPixelId }: BarberHomeProps) {
             };
             const viewContentEventId = createEventId('ViewContent');
 
-            window.fbq?.('track', 'ViewContent', contentData, { eventID: viewContentEventId });
-            sendMetaEvent({ event_name: 'ViewContent', event_id: viewContentEventId, custom_data: contentData });
+            window.fbq?.('track', 'ViewContent', contentData, {
+                eventID: viewContentEventId,
+            });
+            sendMetaEvent({
+                event_name: 'ViewContent',
+                event_id: viewContentEventId,
+                custom_data: contentData,
+            });
         }, 60_000);
 
         return () => window.clearTimeout(viewContentTimer);
