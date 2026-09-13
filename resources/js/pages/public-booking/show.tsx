@@ -129,6 +129,15 @@ const time = (iso: string, timezone: string): string =>
         minute: '2-digit',
         timeZone: timezone,
     }).format(new Date(iso));
+const formatDateTimeSlot = (iso: string, timezone: string): string => {
+    const formattedDate = new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        timeZone: timezone,
+    }).format(new Date(iso));
+
+    return `${formattedDate} às ${time(iso, timezone)}`;
+};
 const today = (): string => new Date().toISOString().slice(0, 10);
 const limit = (): string => {
     const date = new Date();
@@ -332,17 +341,83 @@ export default function PublicBooking({
             },
         });
     };
-    const focusBooking = (): void => {
-        setTab('services');
+    const rawContactPhone = unit.contacts?.whatsapp || unit.contacts?.phone;
+    const cleanPhone = rawContactPhone
+        ? rawContactPhone.replace(/\D/g, '')
+        : '';
+    const waPhone = cleanPhone
+        ? cleanPhone.length <= 11 && !cleanPhone.startsWith('55')
+            ? `55${cleanPhone}`
+            : cleanPhone
+        : '';
+
+    const formattedSlotDate = slot
+        ? new Intl.DateTimeFormat('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              timeZone: unit.timezone,
+          }).format(new Date(slot))
+        : '';
+    const formattedSlotTime = slot ? time(slot, unit.timezone) : '';
+
+    const preformattedWaMessage = [
+        `Olá! Acabei de agendar um horário em *${unit.name}*:`,
+        '',
+        `👤 *Cliente:* ${appointmentRequest.data.name || 'Cliente'}`,
+        `✂️ *Serviço:* ${selectedService?.name || 'Serviço'}`,
+        selectedProfessional
+            ? `💈 *Profissional:* ${selectedProfessional.name}`
+            : null,
+        formattedSlotDate ? `📅 *Data:* ${formattedSlotDate}` : null,
+        formattedSlotTime ? `⏰ *Horário:* ${formattedSlotTime}` : null,
+        '',
+        'Gostaria de confirmar o agendamento!',
+    ]
+        .filter((line): line is string => line !== null)
+        .join('\n');
+
+    const generatedWhatsappUrl = waPhone
+        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(preformattedWaMessage)}`
+        : null;
+
+    const finalWhatsappUrl = whatsappUrl || generatedWhatsappUrl;
+
+    const scrollToStep = (elementId: string): void => {
+        if (tab !== 'services') {
+            setTab('services');
+        }
+
         window.setTimeout(() => {
-            document
-                .getElementById('public-booking-panel-services')
-                ?.scrollIntoView({
+            const el = document.getElementById(elementId);
+
+            if (el) {
+                el.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start',
                 });
-        }, 0);
+            }
+        }, 50);
     };
+
+    const handleBottomBarAction = (): void => {
+        if (!selectedService) {
+            scrollToStep('booking-step-service');
+        } else if (!slot) {
+            scrollToStep('booking-step-datetime');
+        } else {
+            scrollToStep('booking-step-customer');
+            window.setTimeout(() => {
+                document.getElementById('name')?.focus();
+            }, 300);
+        }
+    };
+
+    const ctaLabel = !selectedService
+        ? 'Escolha o serviço'
+        : !slot
+          ? 'Escolher horário →'
+          : 'Finalizar agendamento →';
 
     if (submitted) {
         return (
@@ -361,14 +436,18 @@ export default function PublicBooking({
                         , às {time(slot, unit.timezone)}. Aguarde a confirmação
                         do profissional.
                     </p>
-                    {whatsappUrl ? (
-                        <Button asChild className="mt-6 w-full">
+                    {finalWhatsappUrl ? (
+                        <Button
+                            asChild
+                            className="mt-6 w-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold text-base py-6 shadow-md"
+                        >
                             <a
-                                href={whatsappUrl}
+                                href={finalWhatsappUrl}
                                 target="_blank"
                                 rel="noreferrer"
+                                className="flex items-center justify-center gap-2"
                             >
-                                <MessageCircle />
+                                <MessageCircle className="size-5 fill-black/20" />
                                 Falar pelo WhatsApp
                             </a>
                         </Button>
@@ -766,6 +845,7 @@ export default function PublicBooking({
                     >
                         <div className="flex flex-col gap-5">
                             <InfoCard
+                                id="booking-step-service"
                                 className={
                                     bookingFlow === 'service_first'
                                         ? 'order-1'
@@ -904,7 +984,10 @@ export default function PublicBooking({
                             </InfoCard>
                         </div>
                         <div className="space-y-5">
-                            <InfoCard title="Data e horário">
+                            <InfoCard
+                                id="booking-step-datetime"
+                                title="Data e horário"
+                            >
                                 <Label htmlFor="date">Data</Label>
                                 <Input
                                     id="date"
@@ -952,7 +1035,10 @@ export default function PublicBooking({
                                     </div>
                                 ) : null}
                             </InfoCard>
-                            <InfoCard title="Seus dados">
+                            <InfoCard
+                                id="booking-step-customer"
+                                title="Seus dados"
+                            >
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Nome</Label>
@@ -1007,14 +1093,51 @@ export default function PublicBooking({
                         </div>
                     </form>
                 )}
-                <button
-                    type="button"
-                    onClick={focusBooking}
-                    className="fixed right-4 bottom-4 left-4 z-20 rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-xl transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-offset-2 sm:hidden"
-                    style={{ backgroundColor: unit.brand_color ?? '#111827' }}
-                >
-                    Agendar agora
-                </button>
+                {/* Bottom Bar Mobile Persistente e Inteligente */}
+                <div className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between border-t border-border bg-background/95 p-3.5 shadow-2xl backdrop-blur-md sm:hidden">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center pr-3">
+                        <span className="truncate text-xs font-bold text-foreground">
+                            {selectedService?.name || 'Selecione um serviço'}
+                        </span>
+                        <span className="truncate text-2xs text-muted-foreground">
+                            {selectedService ? (
+                                <>
+                                    <span>
+                                        {selectedService.duration_minutes} min
+                                    </span>
+                                    <span className="mx-1">·</span>
+                                    <span className="font-semibold text-foreground">
+                                        {money(selectedService.price_cents)}
+                                    </span>
+                                    {slot ? (
+                                        <>
+                                            <span className="mx-1">·</span>
+                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                                {formatDateTimeSlot(
+                                                    slot,
+                                                    unit.timezone,
+                                                )}
+                                            </span>
+                                        </>
+                                    ) : null}
+                                </>
+                            ) : (
+                                'Escolha o atendimento'
+                            )}
+                        </span>
+                    </div>
+                    <Button
+                        type="button"
+                        onClick={handleBottomBarAction}
+                        className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                        style={{
+                            backgroundColor:
+                                unit.brand_color ?? '#111827',
+                        }}
+                    >
+                        {ctaLabel}
+                    </Button>
+                </div>
             </div>
         </PublicShell>
     );
@@ -1051,7 +1174,7 @@ function PublicShell({
     children: React.ReactNode;
 }) {
     return (
-        <main className="min-h-dvh bg-[#f7f5f0] px-4 py-5 text-slate-950 sm:px-6 sm:py-8 dark:bg-slate-950 dark:text-white">
+        <main className="min-h-dvh bg-[#f7f5f0] px-4 pt-5 pb-24 text-slate-950 sm:px-6 sm:py-8 dark:bg-slate-950 dark:text-white">
             <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between">
                 <span className="font-display text-lg font-semibold tracking-tight">
                     {unit.name}
