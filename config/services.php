@@ -39,6 +39,7 @@ return [
         'conversions_api_token' => env('META_CONVERSIONS_API_TOKEN'),
         'conversions_api_version' => env('META_CONVERSIONS_API_VERSION', 'v25.0'),
         'conversions_api_url' => 'https://graph.facebook.com',
+        'conversions_api_test_event_code' => env('META_CONVERSIONS_API_TEST_EVENT_CODE'),
     ],
 
     'google_calendar' => [

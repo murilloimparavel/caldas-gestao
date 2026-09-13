@@ -15,6 +15,7 @@ final class MetaConversionsApi
     {
         $pixelId = trim((string) config('services.meta.pixel_id'));
         $token = trim((string) config('services.meta.conversions_api_token'));
+        $testEventCode = trim((string) config('services.meta.conversions_api_test_event_code'));
 
         if ($pixelId === '' || $token === '') {
             return;
@@ -28,6 +29,21 @@ final class MetaConversionsApi
         ], static fn (?string $value): bool => filled($value));
 
         try {
+            $payload = [
+                'data' => json_encode([[
+                    'event_name' => $event['event_name'],
+                    'event_time' => now()->timestamp,
+                    'event_id' => $event['event_id'],
+                    'action_source' => 'website',
+                    'event_source_url' => $event['event_source_url'],
+                    'user_data' => $userData,
+                ]], JSON_THROW_ON_ERROR),
+            ];
+
+            if ($testEventCode !== '') {
+                $payload['test_event_code'] = $testEventCode;
+            }
+
             Http::withToken($token)
                 ->acceptJson()
                 ->asForm()
@@ -36,16 +52,7 @@ final class MetaConversionsApi
                 ->timeout(3)
                 ->connectTimeout(2)
                 ->throw()
-                ->post($this->eventsUrl($pixelId), [
-                    'data' => json_encode([[
-                        'event_name' => $event['event_name'],
-                        'event_time' => now()->timestamp,
-                        'event_id' => $event['event_id'],
-                        'action_source' => 'website',
-                        'event_source_url' => $event['event_source_url'],
-                        'user_data' => $userData,
-                    ]], JSON_THROW_ON_ERROR),
-                ]);
+                ->post($this->eventsUrl($pixelId), $payload);
         } catch (Throwable) {
             return;
         }

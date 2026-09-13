@@ -9,6 +9,7 @@ beforeEach(function (): void {
         'services.meta.conversions_api_token' => 'meta-test-token',
         'services.meta.conversions_api_version' => 'v25.0',
         'services.meta.conversions_api_url' => 'https://graph.facebook.com',
+        'services.meta.conversions_api_test_event_code' => 'TEST33450',
     ]);
 
     Http::preventStrayRequests();
@@ -41,7 +42,8 @@ it('sends a PageView to the Graph CAPI as a form payload', function (): void {
             && ($event['event_name'] ?? null) === 'PageView'
             && ($event['event_id'] ?? null) === 'pageview-test-123'
             && ($event['action_source'] ?? null) === 'website'
-            && ($event['event_source_url'] ?? null) === 'http://localhost/?lp=barber&utm_source=meta';
+            && ($event['event_source_url'] ?? null) === 'http://localhost/?lp=barber&utm_source=meta'
+            && ($payload['test_event_code'] ?? null) === 'TEST33450';
     });
 });
 
