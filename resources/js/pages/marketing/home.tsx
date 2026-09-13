@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { MetaPixel } from '@/components/meta-pixel';
 import { cn } from '@/lib/utils';
 import { login, register } from '@/routes';
 import type { Branding } from '@/types/ui';
@@ -30,6 +31,7 @@ import { RetentionPreview } from './components/retention-preview';
 
 interface HomeProps {
     branding: Branding;
+    metaPixelId?: string | null;
 }
 
 type AudienceKey = 'barbearia' | 'salao' | 'estetica';
@@ -207,7 +209,7 @@ function LineMark({ className = '' }: { className?: string }) {
     );
 }
 
-function Home({ branding }: HomeProps) {
+function Home({ branding, metaPixelId }: HomeProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [activeAudience, setActiveAudience] =
         useState<AudienceKey>('barbearia');
@@ -310,6 +312,7 @@ function Home({ branding }: HomeProps) {
 
     return (
         <>
+            <MetaPixel pixelId={metaPixelId} />
             <Head title={`${brandName} · O sistema operacional da beleza`}>
                 <meta
                     name="description"

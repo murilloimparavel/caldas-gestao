@@ -94,6 +94,7 @@ Route::get('/', function () {
             'primaryColor' => config('branding.primary_color'),
             'accentColor' => config('branding.accent_color'),
         ],
+        'metaPixelId' => config('services.meta.pixel_id'),
     ]);
 })->name('home');
 

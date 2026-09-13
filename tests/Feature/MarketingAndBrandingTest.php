@@ -12,7 +12,8 @@ it('renders the public sales page with default branding', function (): void {
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page
             ->component('marketing/home')
-            ->where('branding.name', config('branding.name')),
+            ->where('branding.name', config('branding.name'))
+            ->where('metaPixelId', config('services.meta.pixel_id')),
         );
 });
 
@@ -25,7 +26,10 @@ it('renders the barber landing page only with the barber query parameter', funct
         );
 
     $this->get('/')
-        ->assertInertia(fn ($page) => $page->component('marketing/home'));
+        ->assertInertia(fn ($page) => $page
+            ->component('marketing/home')
+            ->where('metaPixelId', config('services.meta.pixel_id')),
+        );
 });
 
 it('canonicalizes sign in and sign up aliases', function (): void {
