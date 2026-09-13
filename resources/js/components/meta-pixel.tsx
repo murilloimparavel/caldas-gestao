@@ -15,10 +15,10 @@ declare global {
     }
 }
 
-function createEventId(): string {
+function createEventId(eventName = 'PageView'): string {
     const randomId = globalThis.crypto?.randomUUID?.();
 
-    return `pageview_${randomId || `${Date.now()}_${Math.random().toString(36).slice(2)}`}`;
+    return `${eventName.toLowerCase()}_${randomId || `${Date.now()}_${Math.random().toString(36).slice(2)}`}`;
 }
 
 function readCookie(name: string): string | undefined {
@@ -30,7 +30,10 @@ function readCookie(name: string): string | undefined {
         .join('=');
 }
 
-function sendViewContent(): void {
+function sendMetaEvent(
+    eventName: 'ViewContent' | 'Lead',
+    extraData: Record<string, unknown> = {},
+): void {
     const params = new URLSearchParams(window.location.search);
     const customData = Object.fromEntries(
         [
@@ -51,18 +54,18 @@ function sendViewContent(): void {
         content_type: 'product',
         content_ids: ['caldas-gestao'],
         num_items: 1,
-        ...customData,
+        ...extraData,
     };
-    const eventId = createEventId();
+    const eventId = createEventId(eventName);
 
-    window.fbq?.('track', 'ViewContent', contentData, { eventID: eventId });
+    window.fbq?.('track', eventName, contentData, { eventID: eventId });
     void fetch('/marketing/barber/meta-events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         keepalive: true,
         body: JSON.stringify({
-            event_name: 'ViewContent',
+            event_name: eventName,
             event_id: eventId,
             event_source_url: window.location.href,
             fbp: readCookie('_fbp'),
@@ -70,6 +73,10 @@ function sendViewContent(): void {
             custom_data: contentData,
         }),
     }).catch(() => undefined);
+}
+
+export function trackMetaLead(): void {
+    sendMetaEvent('Lead');
 }
 
 function loadMetaPixel(pixelId: string): void {
@@ -102,7 +109,13 @@ function loadMetaPixel(pixelId: string): void {
     }
 }
 
-export function MetaPixel({ pixelId }: { pixelId?: string | null }) {
+export function MetaPixel({
+    pixelId,
+    viewContentDelayMs = 60_000,
+}: {
+    pixelId?: string | null;
+    viewContentDelayMs?: number;
+}) {
     useEffect(() => {
         if (!pixelId) {
             return;
@@ -110,10 +123,13 @@ export function MetaPixel({ pixelId }: { pixelId?: string | null }) {
 
         loadMetaPixel(pixelId);
         window.fbq?.('track', 'PageView', {}, { eventID: createEventId() });
-        const viewContentTimer = window.setTimeout(sendViewContent, 60_000);
+        const viewContentTimer = window.setTimeout(
+            () => sendMetaEvent('ViewContent'),
+            viewContentDelayMs,
+        );
 
         return () => window.clearTimeout(viewContentTimer);
-    }, [pixelId]);
+    }, [pixelId, viewContentDelayMs]);
 
     return null;
 }

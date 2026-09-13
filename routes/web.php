@@ -76,13 +76,7 @@ Route::get('/', function () {
     }
 
     if (request()->query('lp') === 'barber') {
-        return Inertia::render('marketing/barber/home', [
-            'branding' => [
-                'name' => config('branding.name', config('app.name')),
-                'logoUrl' => config('branding.logo_url'),
-                'primaryColor' => config('branding.primary_color'),
-                'accentColor' => config('branding.accent_color'),
-            ],
+        return Inertia::render('marketing/barber/conversation', [
             'metaPixelId' => config('services.meta.pixel_id'),
         ]);
     }

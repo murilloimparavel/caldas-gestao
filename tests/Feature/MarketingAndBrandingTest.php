@@ -21,8 +21,8 @@ it('renders the barber landing page only with the barber query parameter', funct
     $this->get('/?lp=barber')
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page
-            ->component('marketing/barber/home')
-            ->where('branding.name', config('branding.name')),
+            ->component('marketing/barber/conversation')
+            ->where('metaPixelId', config('services.meta.pixel_id')),
         );
 
     $this->get('/')

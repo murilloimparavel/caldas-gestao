@@ -26,6 +26,7 @@ final class MetaConversionsApi
             'client_user_agent' => $request->userAgent(),
             'fbp' => $event['fbp'] ?? null,
             'fbc' => $event['fbc'] ?? null,
+            'country' => hash('sha256', 'br'),
         ], static fn (?string $value): bool => filled($value));
 
         try {

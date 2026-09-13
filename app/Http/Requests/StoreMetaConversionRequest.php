@@ -27,7 +27,7 @@ final class StoreMetaConversionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'event_name' => ['required', 'string', Rule::in(['PageView', 'Lead'])],
+            'event_name' => ['required', 'string', Rule::in(['PageView', 'ViewContent', 'Lead'])],
             'event_id' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:-]+$/'],
             'event_source_url' => ['required', 'url:http,https', 'max:2048'],
             'fbp' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._:-]+$/'],
