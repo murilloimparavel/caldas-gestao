@@ -15,6 +15,7 @@ final class StoreMetaConversionRequest extends FormRequest
         'event_source_url',
         'fbp',
         'fbc',
+        'custom_data',
     ];
 
     public function authorize(): bool
@@ -31,6 +32,20 @@ final class StoreMetaConversionRequest extends FormRequest
             'event_source_url' => ['required', 'url:http,https', 'max:2048'],
             'fbp' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._:-]+$/'],
             'fbc' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._:-]+$/'],
+            'custom_data' => ['nullable', 'array', 'max:12'],
+            'custom_data.content_name' => ['nullable', 'string', 'max:100'],
+            'custom_data.content_category' => ['nullable', 'string', 'max:100'],
+            'custom_data.content_type' => ['nullable', 'string', 'max:50'],
+            'custom_data.content_ids' => ['nullable', 'array', 'max:5'],
+            'custom_data.content_ids.*' => ['string', 'max:100'],
+            'custom_data.num_items' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'custom_data.utm_source' => ['nullable', 'string', 'max:100'],
+            'custom_data.utm_medium' => ['nullable', 'string', 'max:100'],
+            'custom_data.utm_campaign' => ['nullable', 'string', 'max:200'],
+            'custom_data.utm_content' => ['nullable', 'string', 'max:200'],
+            'custom_data.utm_term' => ['nullable', 'string', 'max:200'],
+            'custom_data.fbclid' => ['nullable', 'string', 'max:255'],
+            'custom_data.gclid' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -52,8 +67,8 @@ final class StoreMetaConversionRequest extends FormRequest
                 parse_str($source['query'], $query);
             }
 
-            if (($source['host'] ?? null) !== $this->getHost() || ($source['path'] ?? '/') !== '/' || ($query['lp'] ?? null) !== 'barber') {
-                $validator->errors()->add('event_source_url', 'O evento deve vir da landing de barbearias.');
+            if (($source['host'] ?? null) !== $this->getHost() || ($source['path'] ?? '/') !== '/' || ! in_array($query['lp'] ?? null, [null, 'barber'], true)) {
+                $validator->errors()->add('event_source_url', 'O evento deve vir de uma landing pública válida.');
             }
         }];
     }

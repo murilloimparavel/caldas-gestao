@@ -10,7 +10,7 @@ use Throwable;
 
 final class MetaConversionsApi
 {
-    /** @param array{event_name: string, event_id: string, event_source_url: string, fbp?: string|null, fbc?: string|null} $event */
+    /** @param array{event_name: string, event_id: string, event_source_url: string, fbp?: string|null, fbc?: string|null, custom_data?: array<string, mixed>|null} $event */
     public function send(array $event, Request $request): void
     {
         $pixelId = trim((string) config('services.meta.pixel_id'));
@@ -37,6 +37,7 @@ final class MetaConversionsApi
                     'action_source' => 'website',
                     'event_source_url' => $event['event_source_url'],
                     'user_data' => $userData,
+                    'custom_data' => $event['custom_data'] ?? [],
                 ]], JSON_THROW_ON_ERROR),
             ];
 

@@ -15,6 +15,8 @@ type MetaPixelFunction = {
     version?: string;
 };
 
+type MetaEventName = 'PageView' | 'ViewContent' | 'Lead';
+
 declare global {
     interface Window {
         fbq?: MetaPixelFunction;
@@ -94,8 +96,9 @@ function createEventId(eventName: string): string {
 }
 
 function sendMetaEvent(event: {
-    event_name: 'PageView' | 'Lead';
+    event_name: MetaEventName;
     event_id: string;
+    custom_data?: Record<string, unknown>;
 }): void {
     const params = new URLSearchParams(window.location.search);
     const fbp = readCookie('_fbp');
@@ -182,6 +185,22 @@ function BarberHome({ branding, metaPixelId }: BarberHomeProps) {
 
         window.fbq?.('track', 'PageView', {}, { eventID: eventId });
         sendMetaEvent({ event_name: 'PageView', event_id: eventId });
+
+        const viewContentTimer = window.setTimeout(() => {
+            const contentData = {
+                content_name: 'Caldas Gestão para barbearias',
+                content_category: 'Gestão para barbearias',
+                content_type: 'product',
+                content_ids: ['caldas-gestao-barbearias'],
+                num_items: 1,
+            };
+            const viewContentEventId = createEventId('ViewContent');
+
+            window.fbq?.('track', 'ViewContent', contentData, { eventID: viewContentEventId });
+            sendMetaEvent({ event_name: 'ViewContent', event_id: viewContentEventId, custom_data: contentData });
+        }, 60_000);
+
+        return () => window.clearTimeout(viewContentTimer);
     }, [metaPixelId]);
 
     return (
