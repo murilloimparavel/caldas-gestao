@@ -10,7 +10,10 @@ final class MetaConversionController extends Controller
 {
     public function __invoke(StoreMetaConversionRequest $request, MetaConversionsApi $metaConversionsApi): JsonResponse
     {
-        $metaConversionsApi->send($request->validated(), $request);
+        /** @var array{event_name: string, event_id: string, event_source_url: string, fbp?: string|null, fbc?: string|null} $event */
+        $event = $request->validated();
+
+        $metaConversionsApi->send($event, $request);
 
         return response()->json(['accepted' => true], 202);
     }

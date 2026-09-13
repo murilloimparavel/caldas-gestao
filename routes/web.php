@@ -34,7 +34,7 @@ use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
 use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -44,7 +44,7 @@ Route::post('/webhooks/lastlink', LastlinkWebhookController::class)
 
 Route::post('/marketing/barber/meta-events', MetaConversionController::class)
     ->middleware('throttle:30,1')
-    ->withoutMiddleware(ValidateCsrfToken::class)
+    ->withoutMiddleware(PreventRequestForgery::class)
     ->name('marketing.barber.meta-events.store');
 
 Route::get('/billing', BillingController::class)
