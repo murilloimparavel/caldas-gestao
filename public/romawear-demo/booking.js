@@ -182,6 +182,25 @@
 	}
 
 	/**
+	 * Validates an optional birth date: empty is accepted, a future date is not.
+	 * @param {string} birthDateIso
+	 * @param {Date} referenceDate
+	 * @returns {boolean}
+	 */
+	function isValidBirthDate(birthDateIso, referenceDate) {
+		if (!birthDateIso) {
+			return true;
+		}
+
+		var parsed = new Date(birthDateIso + 'T00:00:00');
+		if (isNaN(parsed.getTime())) {
+			return false;
+		}
+
+		return parsed.getTime() <= referenceDate.getTime();
+	}
+
+	/**
 	 * @param {string} dateIso
 	 * @param {string} time
 	 * @param {Array<object>} services
@@ -229,6 +248,7 @@
 		formatDuration: formatDuration,
 		categoriesFrom: categoriesFrom,
 		upcomingDays: upcomingDays,
+		isValidBirthDate: isValidBirthDate,
 		buildWhatsappMessage: buildWhatsappMessage,
 	};
 

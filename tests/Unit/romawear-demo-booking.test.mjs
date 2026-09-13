@@ -153,6 +153,27 @@ test('featured services without a fabricated description expose description as n
 	});
 });
 
+test('isValidBirthDate accepts an empty value', () => {
+	assert.equal(booking.isValidBirthDate('', new Date(2026, 8, 12)), true);
+});
+
+test('isValidBirthDate accepts a past date', () => {
+	assert.equal(booking.isValidBirthDate('1990-05-20', new Date(2026, 8, 12)), true);
+});
+
+test('isValidBirthDate rejects a future date', () => {
+	assert.equal(booking.isValidBirthDate('2030-01-01', new Date(2026, 8, 12)), false);
+});
+
+test('isValidBirthDate accepts the reference date itself', () => {
+	assert.equal(booking.isValidBirthDate('2026-09-12', new Date(2026, 8, 12)), true);
+});
+
+test('buildWhatsappMessage never includes a birth date even if passed as an extra argument', () => {
+	const message = booking.buildWhatsappMessage('2026-01-02', '09:00', booking.SERVICES, ['corte'], 'Maria', '1990-05-20');
+	assert.doesNotMatch(message, /1990-05-20/);
+});
+
 const indexHtmlPath = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
 	'../../public/romawear-demo/index.html'

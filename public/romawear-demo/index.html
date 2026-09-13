@@ -751,6 +751,15 @@
 				<span class="field-error">Informe seu nome para continuar.</span>
 			</div>
 
+			<div class="form-field" id="birth-date-field">
+				<label for="birth-date-input">Data de nascimento (opcional)</label>
+				<input type="date" id="birth-date-input" name="birth-date" autocomplete="bday" />
+				<span class="field-error">Informe uma data de nascimento válida (não pode ser no futuro).</span>
+				<p style="margin:0.35rem 0 0;font-size:0.8rem;color:var(--charcoal-soft);">
+					Se quiser, informe para que possamos lembrar do seu aniversário.
+				</p>
+			</div>
+
 			<div class="wizard-actions">
 				<button type="button" class="back-btn" data-back>Voltar</button>
 				<button type="submit" class="copy-btn" id="submit-btn">Ver mensagem</button>
@@ -835,8 +844,10 @@
 	var reviewDatetimeEl = document.getElementById('review-datetime');
 	var nameInput = document.getElementById('name-input');
 	var phoneInput = document.getElementById('phone-input');
+	var birthDateInput = document.getElementById('birth-date-input');
 	var nameField = document.getElementById('name-field');
 	var phoneField = document.getElementById('phone-field');
+	var birthDateField = document.getElementById('birth-date-field');
 	var contactForm = document.getElementById('contact-form');
 	var resultMessageEl = document.getElementById('result-message');
 	var copyMessageBtn = document.getElementById('copy-message-btn');
@@ -1119,11 +1130,13 @@
 		var phoneDigits = phoneInput.value.replace(/\D/g, '');
 		var nameValid = name.length >= 2;
 		var phoneValid = phoneDigits.length >= 10;
+		var birthDateValid = api.isValidBirthDate(birthDateInput.value, new Date());
 
 		nameField.setAttribute('data-invalid', nameValid ? 'false' : 'true');
 		phoneField.setAttribute('data-invalid', phoneValid ? 'false' : 'true');
+		birthDateField.setAttribute('data-invalid', birthDateValid ? 'false' : 'true');
 
-		return nameValid && phoneValid;
+		return nameValid && phoneValid && birthDateValid;
 	}
 
 	toggleOthersBtn.addEventListener('click', function () {
