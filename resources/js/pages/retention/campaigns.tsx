@@ -529,7 +529,10 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                                                 }
                                                                 className="inline-flex items-center rounded-md border border-dashed border-purple-500/50 bg-purple-500/10 px-2 py-0.5 font-mono text-xs font-semibold text-purple-700 transition hover:bg-purple-500/20 active:scale-95 dark:text-purple-300"
                                                             >
-                                                                + {'{link_agendamento}'}
+                                                                +{' '}
+                                                                {
+                                                                    '{link_agendamento}'
+                                                                }
                                                             </button>
                                                         </div>
                                                     </div>
@@ -554,7 +557,8 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                     <span className="font-semibold text-foreground">
-                                                        Preview do WhatsApp em Tempo Real
+                                                        Preview do WhatsApp em
+                                                        Tempo Real
                                                     </span>
                                                     <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
                                                         <MessageCircle className="size-3.5" />
@@ -572,8 +576,10 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                                                 )}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="truncate text-xs font-bold leading-tight">
-                                                                    {demoUnitName}
+                                                                <p className="truncate text-xs leading-tight font-bold">
+                                                                    {
+                                                                        demoUnitName
+                                                                    }
                                                                 </p>
                                                                 <p className="flex items-center gap-1 text-3xs font-medium text-emerald-200">
                                                                     <span className="size-1.5 rounded-full bg-emerald-300" />
@@ -583,19 +589,23 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                                         </div>
                                                         <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-3xs font-semibold text-white">
                                                             <MessageCircle className="size-3 text-[#25D366]" />
-                                                            <span>WhatsApp</span>
+                                                            <span>
+                                                                WhatsApp
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     {/* WhatsApp Chat Body */}
                                                     <div className="bg-[#efeae2] p-3.5 sm:p-4 dark:bg-[#0b141a]">
                                                         {/* Outgoing Message Bubble */}
                                                         <div className="ml-auto max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] p-3 text-xs text-slate-900 shadow-xs dark:bg-[#005c4b] dark:text-white">
-                                                            <p className="whitespace-pre-wrap break-words leading-relaxed">
+                                                            <p className="leading-relaxed break-words whitespace-pre-wrap">
                                                                 {previewMessage}
                                                             </p>
                                                             <div className="mt-1.5 flex items-center justify-end gap-1 text-3xs text-slate-500 dark:text-emerald-200">
                                                                 <span>
-                                                                    {previewTime}
+                                                                    {
+                                                                        previewTime
+                                                                    }
                                                                 </span>
                                                                 <CheckCheck className="size-3.5 text-[#53bdeb]" />
                                                             </div>
@@ -603,7 +613,8 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                                     </div>
                                                     {/* Footer info */}
                                                     <div className="border-t border-border/50 bg-muted/40 px-3.5 py-1.5 text-3xs text-muted-foreground">
-                                                        Variáveis demonstrativas:{' '}
+                                                        Variáveis
+                                                        demonstrativas:{' '}
                                                         <strong className="text-foreground">
                                                             &#123;cliente&#125;
                                                         </strong>{' '}

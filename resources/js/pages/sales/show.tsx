@@ -283,7 +283,7 @@ export default function SalesShow({
             <PageCanvas>
                 {/* Back Link & Header */}
                 <div className="flex flex-col gap-4">
-                    <div className="print:hidden no-print">
+                    <div className="no-print print:hidden">
                         <Button
                             asChild
                             variant="ghost"
@@ -327,7 +327,7 @@ export default function SalesShow({
 
                         {/* Status Transition Action Buttons */}
                         {canManage && isSaleActive ? (
-                            <div className="flex flex-wrap items-center gap-2 print:hidden no-print">
+                            <div className="no-print flex flex-wrap items-center gap-2 print:hidden">
                                 {isSaleOpen ? (
                                     <Form
                                         {...sales.transition.form(sale.id)}
@@ -594,7 +594,7 @@ export default function SalesShow({
                                 </Dialog>
                             </div>
                         ) : isSaleClosed ? (
-                            <div className="flex flex-wrap items-center gap-2 print:hidden no-print">
+                            <div className="no-print flex flex-wrap items-center gap-2 print:hidden">
                                 <Button
                                     type="button"
                                     onClick={() => window.print()}
@@ -933,9 +933,17 @@ export default function SalesShow({
                                                                     <Input
                                                                         type="text"
                                                                         placeholder="Filtrar serviços por nome..."
-                                                                        value={catalogSearch}
-                                                                        onChange={(e) =>
-                                                                            setCatalogSearch(e.target.value)
+                                                                        value={
+                                                                            catalogSearch
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            setCatalogSearch(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
                                                                         }
                                                                         className="pl-9 text-sm"
                                                                     />
@@ -1013,9 +1021,15 @@ export default function SalesShow({
                                                                                 </option>
                                                                             ),
                                                                         )}
-                                                                        {filteredServices.length === 0 && (
-                                                                            <option value="" disabled>
-                                                                                Nenhum serviço encontrado
+                                                                        {filteredServices.length ===
+                                                                            0 && (
+                                                                            <option
+                                                                                value=""
+                                                                                disabled
+                                                                            >
+                                                                                Nenhum
+                                                                                serviço
+                                                                                encontrado
                                                                             </option>
                                                                         )}
                                                                     </select>
@@ -1070,9 +1084,17 @@ export default function SalesShow({
                                                                     <Input
                                                                         type="text"
                                                                         placeholder="Filtrar produtos por nome..."
-                                                                        value={catalogSearch}
-                                                                        onChange={(e) =>
-                                                                            setCatalogSearch(e.target.value)
+                                                                        value={
+                                                                            catalogSearch
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            setCatalogSearch(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
                                                                         }
                                                                         className="pl-9 text-sm"
                                                                     />
@@ -1146,13 +1168,20 @@ export default function SalesShow({
                                                                                     {
                                                                                         prd.current_stock
                                                                                     }
+
                                                                                     )
                                                                                 </option>
                                                                             ),
                                                                         )}
-                                                                        {filteredProducts.length === 0 && (
-                                                                            <option value="" disabled>
-                                                                                Nenhum produto encontrado
+                                                                        {filteredProducts.length ===
+                                                                            0 && (
+                                                                            <option
+                                                                                value=""
+                                                                                disabled
+                                                                            >
+                                                                                Nenhum
+                                                                                produto
+                                                                                encontrado
                                                                             </option>
                                                                         )}
                                                                     </select>

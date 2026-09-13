@@ -416,8 +416,8 @@ export function formatMoney(cents: number, prefix?: string): string {
         });
 
         if (!prefix) {
-return formatted;
-}
+            return formatted;
+        }
 
         const separator = prefix.endsWith(' ') ? '' : ' ';
 

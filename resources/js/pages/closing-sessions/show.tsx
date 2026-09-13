@@ -71,7 +71,7 @@ export default function ClosingSessionShow({ session }: Props) {
             <Head title={`Recibo Interno #${receiptNumber}`} />
 
             {/* Screen View */}
-            <PageCanvas className="print:hidden no-print">
+            <PageCanvas className="no-print print:hidden">
                 <div className="space-y-6">
                     {/* Top Navigation & Actions */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -374,7 +374,7 @@ export default function ClosingSessionShow({ session }: Props) {
             </PageCanvas>
 
             {/* Print-Only Layout (Optimized for thermal printer 80mm / 58mm) */}
-            <div className="mx-auto hidden w-full max-w-[80mm] p-2 font-mono text-xs leading-relaxed text-black break-words tabular-nums print:block">
+            <div className="mx-auto hidden w-full max-w-[80mm] p-2 font-mono text-xs leading-relaxed break-words text-black tabular-nums print:block">
                 <div className="mb-2 border-b border-dashed border-black pb-2 text-center">
                     <h1 className="text-sm font-bold uppercase">
                         {tenantName}
@@ -422,7 +422,9 @@ export default function ClosingSessionShow({ session }: Props) {
                                     <span className="truncate pr-1">
                                         [{categoryName}] #{s.id.slice(0, 6)}
                                     </span>
-                                    <span className="shrink-0">{formatMoney(saleTotal)}</span>
+                                    <span className="shrink-0">
+                                        {formatMoney(saleTotal)}
+                                    </span>
                                 </div>
                                 {saleItems.map((item, itemIdx) => {
                                     const itemName =
@@ -452,12 +454,16 @@ export default function ClosingSessionShow({ session }: Props) {
                 <div className="mb-3 space-y-1 pt-1 text-right text-2xs">
                     <div className="flex justify-between">
                         <span>Subtotal Bruto:</span>
-                        <span className="font-semibold">{formatMoney(totalGrossCents)}</span>
+                        <span className="font-semibold">
+                            {formatMoney(totalGrossCents)}
+                        </span>
                     </div>
                     {totalDiscountCents > 0 ? (
                         <div className="flex justify-between">
                             <span>Descontos:</span>
-                            <span className="font-semibold">-{formatMoney(totalDiscountCents)}</span>
+                            <span className="font-semibold">
+                                -{formatMoney(totalDiscountCents)}
+                            </span>
                         </div>
                     ) : null}
                     <div className="flex justify-between border-t border-black pt-1 text-xs font-bold">
@@ -471,7 +477,7 @@ export default function ClosingSessionShow({ session }: Props) {
                     <p>Caldas Gestão • www.caldasgestao.com.br</p>
                 </div>
 
-                <div className="mt-4 border-t border-dashed border-black pt-2 text-center text-[9px] uppercase tracking-widest">
+                <div className="mt-4 border-t border-dashed border-black pt-2 text-center text-[9px] tracking-widest uppercase">
                     - - - - - corte aqui - - - - -
                 </div>
             </div>

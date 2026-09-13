@@ -439,7 +439,7 @@ export default function PublicBooking({
                     {finalWhatsappUrl ? (
                         <Button
                             asChild
-                            className="mt-6 w-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold text-base py-6 shadow-md"
+                            className="mt-6 w-full bg-[#25D366] py-6 text-base font-bold text-black shadow-md hover:bg-[#20bd5a]"
                         >
                             <a
                                 href={finalWhatsappUrl}
@@ -1131,8 +1131,7 @@ export default function PublicBooking({
                         onClick={handleBottomBarAction}
                         className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                         style={{
-                            backgroundColor:
-                                unit.brand_color ?? '#111827',
+                            backgroundColor: unit.brand_color ?? '#111827',
                         }}
                     >
                         {ctaLabel}

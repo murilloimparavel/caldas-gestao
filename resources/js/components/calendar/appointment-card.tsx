@@ -80,7 +80,7 @@ export function AppointmentCard({
                     {isOnline ? (
                         <span
                             className={cn(
-                                'inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-semibold text-sky-700 bg-sky-500/15 dark:bg-sky-500/25 dark:text-sky-300',
+                                'inline-flex items-center gap-0.5 rounded bg-sky-500/15 px-1 py-0.5 font-semibold text-sky-700 dark:bg-sky-500/25 dark:text-sky-300',
                                 compact ? 'text-[9px]' : 'text-3xs',
                             )}
                             title="Agendamento online"

@@ -112,7 +112,7 @@ export function CalendarToolbar({
                     <Button
                         asChild
                         variant="ghost"
-                        className="h-11 min-h-[44px] px-3 font-medium sm:h-9 sm:min-h-0 sm:inline-flex"
+                        className="h-11 min-h-[44px] px-3 font-medium sm:inline-flex sm:h-9 sm:min-h-0"
                     >
                         <Link
                             href={calendarIndex({
@@ -135,10 +135,10 @@ export function CalendarToolbar({
                         title="Agenda conectada com sincronização automática a cada 30 segundos"
                     >
                         <span
-                            className="size-2 rounded-full bg-emerald-500 animate-pulse"
+                            className="size-2 animate-pulse rounded-full bg-emerald-500"
                             aria-hidden="true"
                         />
-                        <span className="hidden xs:inline">Ao vivo</span>
+                        <span className="xs:inline hidden">Ao vivo</span>
                     </div>
 
                     {onSync ? (

@@ -234,9 +234,9 @@
     header,
     nav,
     aside,
-    [aria-label="Breadcrumb"],
-    [data-sidebar="sidebar"],
-    [data-slot="sidebar"] {
+    [aria-label='Breadcrumb'],
+    [data-sidebar='sidebar'],
+    [data-slot='sidebar'] {
         display: none !important;
     }
 }

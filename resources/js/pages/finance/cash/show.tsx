@@ -103,7 +103,7 @@ export default function CashShow({ shift }: Props) {
 
     return (
         <>
-            <PageCanvas className="print:hidden no-print">
+            <PageCanvas className="no-print print:hidden">
                 <Head title={`Turno de Caixa #${shift.id.slice(0, 8)}`} />
 
                 <ResourceHeader
@@ -129,173 +129,177 @@ export default function CashShow({ shift }: Props) {
                     }
                 />
 
-            {/* Resumo do Turno */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                        Fundo Inicial
-                    </span>
-                    <p className="mt-2 text-2xl font-bold tracking-tight">
-                        {formatMoney(shift.initial_amount_cents)}
-                    </p>
-                    <span className="text-xs text-muted-foreground">
-                        Aberto: {formatDateTime(shift.opened_at)}
-                    </span>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                        Saldo Esperado em Caixa
-                    </span>
-                    <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-                        {formatMoney(shift.expected_amount_cents)}
-                    </p>
-                    <span className="text-xs text-muted-foreground">
-                        Calculado pelo sistema
-                    </span>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                        Saldo Final Apurado
-                    </span>
-                    <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-                        {shift.final_amount_cents !== null &&
-                        shift.final_amount_cents !== undefined
-                            ? formatMoney(shift.final_amount_cents)
-                            : 'Em aberto'}
-                    </p>
-                    <span className="text-xs text-muted-foreground">
-                        Fechamento: {formatDateTime(shift.closed_at)}
-                    </span>
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                        Diferença / Status
-                    </span>
-                    <div className="mt-2 flex items-center gap-2">
-                        {!isClosed ? (
-                            <Badge className="bg-emerald-600 text-white">
-                                Aberto
-                            </Badge>
-                        ) : diff === 0 ? (
-                            <Badge className="bg-emerald-600 text-white">
-                                Exato
-                            </Badge>
-                        ) : diff > 0 ? (
-                            <Badge className="bg-blue-600 text-white">
-                                +{formatMoney(diff)} (Sobra)
-                            </Badge>
-                        ) : (
-                            <Badge className="bg-rose-600 text-white">
-                                {formatMoney(diff)} (Quebra)
-                            </Badge>
-                        )}
+                {/* Resumo do Turno */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <span className="text-xs font-semibold text-muted-foreground">
+                            Fundo Inicial
+                        </span>
+                        <p className="mt-2 text-2xl font-bold tracking-tight">
+                            {formatMoney(shift.initial_amount_cents)}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                            Aberto: {formatDateTime(shift.opened_at)}
+                        </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                        {shift.closed_by?.name
-                            ? `Fechado por ${shift.closed_by.name}`
-                            : 'Em operação'}
-                    </span>
+
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <span className="text-xs font-semibold text-muted-foreground">
+                            Saldo Esperado em Caixa
+                        </span>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+                            {formatMoney(shift.expected_amount_cents)}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                            Calculado pelo sistema
+                        </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <span className="text-xs font-semibold text-muted-foreground">
+                            Saldo Final Apurado
+                        </span>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+                            {shift.final_amount_cents !== null &&
+                            shift.final_amount_cents !== undefined
+                                ? formatMoney(shift.final_amount_cents)
+                                : 'Em aberto'}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                            Fechamento: {formatDateTime(shift.closed_at)}
+                        </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <span className="text-xs font-semibold text-muted-foreground">
+                            Diferença / Status
+                        </span>
+                        <div className="mt-2 flex items-center gap-2">
+                            {!isClosed ? (
+                                <Badge className="bg-emerald-600 text-white">
+                                    Aberto
+                                </Badge>
+                            ) : diff === 0 ? (
+                                <Badge className="bg-emerald-600 text-white">
+                                    Exato
+                                </Badge>
+                            ) : diff > 0 ? (
+                                <Badge className="bg-blue-600 text-white">
+                                    +{formatMoney(diff)} (Sobra)
+                                </Badge>
+                            ) : (
+                                <Badge className="bg-rose-600 text-white">
+                                    {formatMoney(diff)} (Quebra)
+                                </Badge>
+                            )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                            {shift.closed_by?.name
+                                ? `Fechado por ${shift.closed_by.name}`
+                                : 'Em operação'}
+                        </span>
+                    </div>
                 </div>
-            </div>
 
-            {shift.notes && (
-                <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
-                    <span className="font-semibold text-foreground">
-                        Observações do Turno:{' '}
-                    </span>
-                    <span className="text-muted-foreground">{shift.notes}</span>
-                </div>
-            )}
-
-            {/* Listagem de Movimentações */}
-            <div className="rounded-xl border border-border bg-card shadow-sm">
-                <div className="border-b border-border px-6 py-4">
-                    <h3 className="text-base font-semibold">
-                        Movimentações Registradas
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                        Todas as operações que afetaram o saldo deste turno
-                    </p>
-                </div>
-
-                {!shift.movements || shift.movements.length === 0 ? (
-                    <EmptyState
-                        title="Nenhuma movimentação avulsa registrada"
-                        description="Este turno não teve suprimentos ou sangrias manuais."
-                    />
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                <tr>
-                                    <th className="px-6 py-3">Tipo</th>
-                                    <th className="px-6 py-3">
-                                        Motivo / Descrição
-                                    </th>
-                                    <th className="px-6 py-3">Responsável</th>
-                                    <th className="px-6 py-3">Horário</th>
-                                    <th className="px-6 py-3 text-right">
-                                        Valor
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {shift.movements.map((movement) => {
-                                    const config =
-                                        movementTypeConfig[movement.type] ??
-                                        movementTypeConfig.supply;
-
-                                    return (
-                                        <tr
-                                            key={movement.id}
-                                            className="transition-colors hover:bg-muted/30"
-                                        >
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`font-semibold ${config.bgClass}`}
-                                                >
-                                                    {config.label}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4 font-medium text-foreground">
-                                                {movement.reason}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                                                {movement.user?.name ?? '—'}
-                                            </td>
-                                            <td className="px-6 py-4 text-xs whitespace-nowrap text-muted-foreground">
-                                                {formatDateTime(
-                                                    movement.created_at,
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-bold whitespace-nowrap">
-                                                <span
-                                                    className={
-                                                        config.isCredit
-                                                            ? 'text-emerald-600 dark:text-emerald-400'
-                                                            : 'text-rose-600 dark:text-rose-400'
-                                                    }
-                                                >
-                                                    {config.isCredit
-                                                        ? '+'
-                                                        : '-'}
-                                                    {formatMoney(
-                                                        movement.amount_cents,
-                                                    )}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                {shift.notes && (
+                    <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+                        <span className="font-semibold text-foreground">
+                            Observações do Turno:{' '}
+                        </span>
+                        <span className="text-muted-foreground">
+                            {shift.notes}
+                        </span>
                     </div>
                 )}
-            </div>
+
+                {/* Listagem de Movimentações */}
+                <div className="rounded-xl border border-border bg-card shadow-sm">
+                    <div className="border-b border-border px-6 py-4">
+                        <h3 className="text-base font-semibold">
+                            Movimentações Registradas
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                            Todas as operações que afetaram o saldo deste turno
+                        </p>
+                    </div>
+
+                    {!shift.movements || shift.movements.length === 0 ? (
+                        <EmptyState
+                            title="Nenhuma movimentação avulsa registrada"
+                            description="Este turno não teve suprimentos ou sangrias manuais."
+                        />
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-muted/50 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    <tr>
+                                        <th className="px-6 py-3">Tipo</th>
+                                        <th className="px-6 py-3">
+                                            Motivo / Descrição
+                                        </th>
+                                        <th className="px-6 py-3">
+                                            Responsável
+                                        </th>
+                                        <th className="px-6 py-3">Horário</th>
+                                        <th className="px-6 py-3 text-right">
+                                            Valor
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {shift.movements.map((movement) => {
+                                        const config =
+                                            movementTypeConfig[movement.type] ??
+                                            movementTypeConfig.supply;
+
+                                        return (
+                                            <tr
+                                                key={movement.id}
+                                                className="transition-colors hover:bg-muted/30"
+                                            >
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`font-semibold ${config.bgClass}`}
+                                                    >
+                                                        {config.label}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-6 py-4 font-medium text-foreground">
+                                                    {movement.reason}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                                                    {movement.user?.name ?? '—'}
+                                                </td>
+                                                <td className="px-6 py-4 text-xs whitespace-nowrap text-muted-foreground">
+                                                    {formatDateTime(
+                                                        movement.created_at,
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-bold whitespace-nowrap">
+                                                    <span
+                                                        className={
+                                                            config.isCredit
+                                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                                : 'text-rose-600 dark:text-rose-400'
+                                                        }
+                                                    >
+                                                        {config.isCredit
+                                                            ? '+'
+                                                            : '-'}
+                                                        {formatMoney(
+                                                            movement.amount_cents,
+                                                        )}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </PageCanvas>
 
             {/* Layout de Impressão Térmica (80mm / 58mm) */}
@@ -304,10 +308,8 @@ export default function CashShow({ shift }: Props) {
                     <h1 className="text-sm font-bold uppercase">
                         Caldas Gestão
                     </h1>
-                    <p className="text-2xs">
-                        Unidade Operacional
-                    </p>
-                    <p className="mt-1 font-bold text-2xs">
+                    <p className="text-2xs">Unidade Operacional</p>
+                    <p className="mt-1 text-2xs font-bold">
                         {isClosed
                             ? '*** FECHAMENTO DE TURNO ***'
                             : '*** RESUMO DE TURNO (ABERTO) ***'}
@@ -394,7 +396,7 @@ export default function CashShow({ shift }: Props) {
                         </span>
                     </div>
                     {isClosed && (
-                        <div className="flex justify-between border-t border-dashed border-black pt-1 font-bold text-xs">
+                        <div className="flex justify-between border-t border-dashed border-black pt-1 text-xs font-bold">
                             <span>Diferença:</span>
                             <span>
                                 {diff === 0
@@ -409,7 +411,7 @@ export default function CashShow({ shift }: Props) {
 
                 {shift.movements && shift.movements.length > 0 && (
                     <div className="mb-2 space-y-1 border-b border-dashed border-black pb-2">
-                        <p className="text-center font-bold text-2xs uppercase">
+                        <p className="text-center text-2xs font-bold uppercase">
                             Movimentações ({shift.movements.length})
                         </p>
                         {shift.movements.map((m) => {
@@ -453,7 +455,7 @@ export default function CashShow({ shift }: Props) {
                     </div>
                 </div>
 
-                <div className="mt-4 border-t border-dashed border-black pt-2 text-center text-[9px] uppercase tracking-widest">
+                <div className="mt-4 border-t border-dashed border-black pt-2 text-center text-[9px] tracking-widest uppercase">
                     - - - - - corte aqui - - - - -
                 </div>
             </div>

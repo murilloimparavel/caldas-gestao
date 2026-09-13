@@ -226,9 +226,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                             className="text-lg font-bold"
                                             placeholder="0,00"
                                             value={initialAmountFloat}
-                                            onValueChange={(cents, formatted) => {
+                                            onValueChange={(
+                                                cents,
+                                                formatted,
+                                            ) => {
                                                 setInitialAmountCents(cents);
-                                                setInitialAmountFloat(formatted);
+                                                setInitialAmountFloat(
+                                                    formatted,
+                                                );
                                             }}
                                             required
                                         />
@@ -243,9 +248,14 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                 const nextCents =
                                                     initialAmountCents +
                                                     amountInReais * 100;
-                                                setInitialAmountCents(nextCents);
+                                                setInitialAmountCents(
+                                                    nextCents,
+                                                );
                                                 setInitialAmountFloat(
-                                                    formatMoney(nextCents, 'R$'),
+                                                    formatMoney(
+                                                        nextCents,
+                                                        'R$',
+                                                    ),
                                                 );
                                             }}
                                             onReset={() => {
@@ -572,9 +582,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <Input
                                                             type="text"
                                                             placeholder="Ex: Troco adicional em moedas"
-                                                            value={
-                                                                supplyReason
-                                                            }
+                                                            value={supplyReason}
                                                             onChange={(e) =>
                                                                 setSupplyReason(
                                                                     e.target
@@ -756,9 +764,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <Input
                                                             type="text"
                                                             placeholder="Ex: Transferência para cofre principal"
-                                                            value={
-                                                                bleedReason
-                                                            }
+                                                            value={bleedReason}
                                                             onChange={(e) =>
                                                                 setBleedReason(
                                                                     e.target
