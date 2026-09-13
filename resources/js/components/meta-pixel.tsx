@@ -54,6 +54,7 @@ function sendMetaEvent(
         content_type: 'product',
         content_ids: ['caldas-gestao'],
         num_items: 1,
+        ...customData,
         ...extraData,
     };
     const eventId = createEventId(eventName);
