@@ -99,6 +99,21 @@ nunca o disco local efêmero do container. Validar antes de habilitar uploads:
 - leitura e gravação de um objeto de teste;
 - política de acesso sem exposição pública indevida.
 
+## Persistência de Sessões e Cookies de Produção
+
+As três aplicações no Coolify (`caldas-gestao`, `caldas-gestao-worker` e `caldas-gestao-scheduler`) utilizam obrigatoriamente `SESSION_DRIVER=database`.
+
+Em arquiteturas baseadas em containers Docker orquestrados pelo Coolify, o driver padrão baseado em arquivos (`SESSION_DRIVER=file`) armazenaria os dados em `/var/www/html/storage/framework/sessions`. Como cada release reconstrói a imagem e destrói o container anterior, todos os operadores logados seriam deslogados a cada deploy. Com a persistência centralizada no banco PostgreSQL dedicado (`zj6ryjlxbvb237rncuxpxhuo`), as sessões ativas são preservadas de forma transparente, impedindo que as sessões dos operadores sejam destruídas durante deploys zero-downtime ou reinicializações de containers.
+
+Variáveis de ambiente obrigatórias nos três serviços:
+
+| Variável | Valor de Produção | Finalidade |
+|---|---|---|
+| `SESSION_DRIVER` | `database` | Salva sessões na tabela `sessions` do PostgreSQL |
+| `SESSION_LIFETIME` | `120` | Timeout de inatividade de 2 horas (120 minutos) |
+| `SESSION_SECURE_COOKIE` | `true` | Exige HTTPS para tráfego seguro de cookies |
+| `SESSION_COOKIE` | `caldas-gestao-session` | Nome exclusivo do cookie de sessão |
+
 ## Worker e scheduler
 
 O ambiente de produção precisa executar, separadamente da aplicação web:
