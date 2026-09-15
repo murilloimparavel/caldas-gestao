@@ -10,7 +10,7 @@ import {
     UserCheck,
     Users,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
     createIdempotencyKey,
     EmptyState,
@@ -31,7 +31,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import type {
     CommissionRule,
     ProfessionalCommissionSummary,
@@ -50,100 +49,7 @@ type ProductOption = {
     sale_price_cents: number;
 };
 
-function ServiceSelection({
-    services,
-    selectedServiceIds,
-    onSelectionChange,
-    error,
-    single = false,
-}: {
-    services: ServiceOption[];
-    selectedServiceIds: string[];
-    onSelectionChange: (serviceIds: string[]) => void;
-    error?: string;
-    single?: boolean;
-}) {
-    const selectAllRef = useRef<HTMLInputElement>(null);
-    const selectedCount = selectedServiceIds.length;
-    const allSelected = !single && services.length > 0 && selectedCount === services.length;
-    const partiallySelected = !single && selectedCount > 0 && !allSelected;
-
-    useEffect(() => {
-        if (selectAllRef.current) {
-            selectAllRef.current.indeterminate = partiallySelected;
-        }
-    }, [partiallySelected]);
-
-    const toggleAllServices = (checked: boolean) => {
-        onSelectionChange(checked ? services.map((service) => service.id) : []);
-    };
-
-    const toggleService = (serviceId: string, checked: boolean) => {
-        const nextIds = checked
-            ? single
-                ? [serviceId]
-                : [...new Set([...selectedServiceIds, serviceId])]
-            : selectedServiceIds.filter((id) => id !== serviceId);
-
-        onSelectionChange(nextIds);
-    };
-
-    if (services.length === 0) {
-        return (
-            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                Nenhum serviço ativo disponível nesta unidade ainda.
-            </p>
-        );
-    }
-
-    return (
-        <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium">Serviços Específicos</span>
-                <span className="text-xs text-muted-foreground">
-                    {single
-                        ? 'Selecione um serviço'
-                        : `${selectedCount} de ${services.length} selecionado(s)`}
-                </span>
-            </div>
-            {!single && (
-                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/10">
-                    <input
-                        ref={selectAllRef}
-                        type="checkbox"
-                        checked={allSelected}
-                        aria-checked={partiallySelected ? 'mixed' : allSelected}
-                        onChange={(event) => toggleAllServices(event.currentTarget.checked)}
-                        className="size-4 rounded border-input accent-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    />
-                    <span>Selecionar todos os serviços</span>
-                </label>
-            )}
-            <div className="grid max-h-48 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-                {services.map((service) => (
-                    <label
-                        key={service.id}
-                        className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm transition-colors has-checked:border-primary/60 has-checked:bg-secondary/70"
-                    >
-                        <Checkbox
-                            name={single ? 'service_id' : 'service_ids[]'}
-                            value={service.id}
-                            checked={selectedServiceIds.includes(service.id)}
-                            onCheckedChange={(checked) =>
-                                toggleService(service.id, checked === true)
-                            }
-                            aria-label={`Selecionar serviço ${service.name}`}
-                        />
-                        <span className="min-w-0 truncate">
-                            {service.name} ({formatMoney(service.price_cents)})
-                        </span>
-                    </label>
-                ))}
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
-    );
-}
+const ALL_SERVICES_VALUE = '__all_services__';
 
 type Props = {
     professionals: ProfessionalCommissionSummary[];
@@ -721,35 +627,79 @@ export default function CommissionsIndex({
                                 </div>
 
                                 {itemTargetType === 'service' && (
-                                    editingRule ? (
-                                        <FormField
-                                            label="Serviço Específico"
-                                            error={errors.service_id}
-                                        >
-                                            <select
-                                                name="service_id"
-                                                defaultValue={editingRule.service_id ?? ''}
-                                                required
-                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                            >
-                                                <option value="">
-                                                    Selecione um serviço...
-                                                </option>
-                                                {services.map((service) => (
-                                                    <option key={service.id} value={service.id}>
-                                                        {service.name} ({formatMoney(service.price_cents)})
+                                    <FormField
+                                        label="Serviço Específico"
+                                        error={errors.service_ids ?? errors.service_id}
+                                    >
+                                        {services.length === 0 ? (
+                                            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                                Nenhum serviço ativo disponível nesta unidade ainda.
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <select
+                                                    name={
+                                                        editingRule
+                                                            ? 'service_id'
+                                                            : selectedServiceIds.length === services.length
+                                                              ? undefined
+                                                              : 'service_ids[]'
+                                                    }
+                                                    value={
+                                                        editingRule
+                                                            ? undefined
+                                                            : selectedServiceIds.length === services.length
+                                                              ? ALL_SERVICES_VALUE
+                                                              : (selectedServiceIds[0] ?? '')
+                                                    }
+                                                    defaultValue={
+                                                        editingRule
+                                                            ? (editingRule.service_id ?? '')
+                                                            : undefined
+                                                    }
+                                                    onChange={(event) => {
+                                                        if (editingRule) {
+                                                            return;
+                                                        }
+
+                                                        setSelectedServiceIds(
+                                                            event.target.value === ALL_SERVICES_VALUE
+                                                                ? services.map((service) => service.id)
+                                                                : event.target.value
+                                                                  ? [event.target.value]
+                                                                  : [],
+                                                        );
+                                                    }}
+                                                    required
+                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                                >
+                                                    <option value="">
+                                                        Selecione um serviço...
                                                     </option>
-                                                ))}
-                                            </select>
-                                        </FormField>
-                                    ) : (
-                                        <ServiceSelection
-                                            services={services}
-                                            selectedServiceIds={selectedServiceIds}
-                                            onSelectionChange={setSelectedServiceIds}
-                                            error={errors.service_ids ?? errors.service_id}
-                                        />
-                                    )
+                                                    {!editingRule && (
+                                                        <option value={ALL_SERVICES_VALUE}>
+                                                            Todos os serviços
+                                                        </option>
+                                                    )}
+                                                    {services.map((service) => (
+                                                        <option key={service.id} value={service.id}>
+                                                            {service.name} ({formatMoney(service.price_cents)})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {!editingRule && selectedServiceIds.length === services.length && (
+                                                    services.map((service) => (
+                                                        <input
+                                                            key={service.id}
+                                                            type="hidden"
+                                                            name="service_ids[]"
+                                                            value={service.id}
+                                                        />
+                                                    ))
+                                                )}
+                                            </>
+                                        )}
+                                    </FormField>
                                 )}
 
                                 {itemTargetType === 'product' && (
