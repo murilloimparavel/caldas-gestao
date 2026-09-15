@@ -16,6 +16,7 @@ final class SaveCommissionRule extends OperationalAction
      * @param  array{
      *     professional_id?: string|null,
      *     service_id?: string|null,
+     *     service_ids?: list<string>,
      *     product_id?: string|null,
      *     type?: string,
      *     value_rate: int,
@@ -95,6 +96,52 @@ final class SaveCommissionRule extends OperationalAction
             ]);
 
             return $createdRule;
+        }, 5);
+    }
+
+    /**
+     * @param  list<string>  $serviceIds
+     * @param  array{professional_id?: string|null, type?: string, value_rate: int, is_active?: bool}  $data
+     * @return list<CommissionRule>
+     */
+    public function handleMany(User $actor, TenantContext $context, array $serviceIds, array $data): array
+    {
+        $unit = $this->unit($actor, $context, 'commission.manage');
+        $tenantId = $context->tenant->getKey();
+        $unitId = $unit->getKey();
+
+        return DB::transaction(function () use ($actor, $context, $serviceIds, $data, $tenantId, $unitId): array {
+            $rules = [];
+
+            foreach ($serviceIds as $serviceId) {
+                /** @var CommissionRule $rule */
+                $rule = CommissionRule::query()->create([
+                    'id' => (string) Str::uuid7(),
+                    'tenant_id' => $tenantId,
+                    'unit_id' => $unitId,
+                    'professional_id' => $data['professional_id'] ?? null,
+                    'service_id' => $serviceId,
+                    'type' => $data['type'] ?? 'percentage',
+                    'value_rate' => $data['value_rate'],
+                    'is_active' => $data['is_active'] ?? true,
+                    'lock_version' => 1,
+                ]);
+
+                $this->events->record($actor, $context, 'commission_rule.created', $rule, [
+                    'commission_rule_id' => $rule->getKey(),
+                    'professional_id' => $rule->professional_id,
+                    'service_id' => $rule->service_id,
+                    'product_id' => $rule->product_id,
+                    'rate_type' => $rule->type,
+                    'rate_value' => $rule->value_rate,
+                    'value_rate' => $rule->value_rate,
+                    'is_active' => $rule->is_active,
+                    'lock_version' => $rule->lock_version,
+                ]);
+                $rules[] = $rule;
+            }
+
+            return $rules;
         }, 5);
     }
 }

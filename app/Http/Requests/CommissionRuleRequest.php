@@ -3,9 +3,15 @@
 namespace App\Http\Requests;
 
 use App\Models\CommissionRule;
+use App\Models\Product;
+use App\Models\Professional;
+use App\Models\Service;
+use App\Support\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 final class CommissionRuleRequest extends FormRequest
 {
@@ -21,10 +27,29 @@ final class CommissionRuleRequest extends FormRequest
     /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
+        $context = $this->attributes->get(TenantContext::class);
+        $tenantId = $context instanceof TenantContext ? $context->tenant->getKey() : null;
+        $unitId = $context instanceof TenantContext ? $context->unit?->getKey() : null;
+        $scopedExists = static function (string $model) use ($tenantId, $unitId): Exists {
+            $rule = Rule::exists($model, 'id');
+            if ($tenantId !== null) {
+                $rule->where('tenant_id', $tenantId);
+            }
+            if ($unitId !== null) {
+                $rule->where('unit_id', $unitId);
+            }
+
+            return $rule;
+        };
+        $hasServiceBatch = $this->filled('service_ids');
+        $isUpdate = $this->route('rule') instanceof CommissionRule;
+
         return [
-            'professional_id' => ['nullable', 'uuid', 'exists:professionals,id'],
-            'service_id' => ['nullable', 'uuid', 'exists:services,id'],
-            'product_id' => ['nullable', 'uuid', 'exists:products,id'],
+            'professional_id' => ['nullable', 'uuid', $scopedExists(Professional::class)],
+            'service_id' => ['nullable', 'uuid', Rule::prohibitedIf($hasServiceBatch), $scopedExists(Service::class)],
+            'service_ids' => [$isUpdate ? 'prohibited' : 'sometimes', 'array', 'min:1', 'max:100'],
+            'service_ids.*' => ['required', 'uuid', 'distinct', $scopedExists(Service::class)],
+            'product_id' => ['nullable', 'uuid', Rule::prohibitedIf($hasServiceBatch), $scopedExists(Product::class)],
             'type' => ['required', 'string', 'in:percentage,fixed'],
             'value_rate' => ['required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],

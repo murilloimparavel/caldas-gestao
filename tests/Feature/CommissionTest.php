@@ -375,6 +375,49 @@ it('manages commission rules lifecycle via controller (create, update, delete)',
     expect(CommissionRule::query()->whereKey($rule->getKey())->exists())->toBeFalse();
 });
 
+it('creates one commission rule for every selected service in one request', function () {
+    [$owner, $tenant, $unit] = commissionTestWorkspace();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $services = Service::factory()->count(2)->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'professional_id' => $professional->getKey(),
+        'service_ids' => $services->pluck('id')->all(),
+        'type' => 'percentage',
+        'value_rate' => 25,
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    expect(CommissionRule::query()
+        ->where('tenant_id', $tenant->getKey())
+        ->where('unit_id', $unit->getKey())
+        ->where('professional_id', $professional->getKey())
+        ->pluck('service_id')
+        ->sort()
+        ->values()
+        ->all())->toBe($services->pluck('id')->sort()->values()->all());
+
+    $rule = CommissionRule::query()->firstOrFail();
+    $updateResponse = $this->actingAs($owner)->put(route('commissions.rules.update', $rule), [
+        'professional_id' => $professional->getKey(),
+        'service_ids' => [$services->first()->getKey()],
+        'type' => 'percentage',
+        'value_rate' => 30,
+        'lock_version' => $rule->lock_version,
+    ]);
+
+    $updateResponse->assertSessionHasErrors('service_ids');
+});
+
 it('renders commissions index and professional show pages with Inertia', function () {
     [$owner, $tenant, $unit] = commissionTestWorkspace();
 
