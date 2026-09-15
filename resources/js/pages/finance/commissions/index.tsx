@@ -629,11 +629,15 @@ export default function CommissionsIndex({
                                 {itemTargetType === 'service' && (
                                     <FormField
                                         label="Serviço Específico"
-                                        error={errors.service_ids ?? errors.service_id}
+                                        error={
+                                            errors.service_ids ??
+                                            errors.service_id
+                                        }
                                     >
                                         {services.length === 0 ? (
                                             <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                                                Nenhum serviço ativo disponível nesta unidade ainda.
+                                                Nenhum serviço ativo disponível
+                                                nesta unidade ainda.
                                             </p>
                                         ) : (
                                             <>
@@ -641,20 +645,24 @@ export default function CommissionsIndex({
                                                     name={
                                                         editingRule
                                                             ? 'service_id'
-                                                            : selectedServiceIds.length === services.length
+                                                            : selectedServiceIds.length ===
+                                                                services.length
                                                               ? undefined
                                                               : 'service_ids[]'
                                                     }
                                                     value={
                                                         editingRule
                                                             ? undefined
-                                                            : selectedServiceIds.length === services.length
+                                                            : selectedServiceIds.length ===
+                                                                services.length
                                                               ? ALL_SERVICES_VALUE
-                                                              : (selectedServiceIds[0] ?? '')
+                                                              : (selectedServiceIds[0] ??
+                                                                '')
                                                     }
                                                     defaultValue={
                                                         editingRule
-                                                            ? (editingRule.service_id ?? '')
+                                                            ? (editingRule.service_id ??
+                                                              '')
                                                             : undefined
                                                     }
                                                     onChange={(event) => {
@@ -663,10 +671,22 @@ export default function CommissionsIndex({
                                                         }
 
                                                         setSelectedServiceIds(
-                                                            event.target.value === ALL_SERVICES_VALUE
-                                                                ? services.map((service) => service.id)
-                                                                : event.target.value
-                                                                  ? [event.target.value]
+                                                            event.target
+                                                                .value ===
+                                                                ALL_SERVICES_VALUE
+                                                                ? services.map(
+                                                                      (
+                                                                          service,
+                                                                      ) =>
+                                                                          service.id,
+                                                                  )
+                                                                : event.target
+                                                                        .value
+                                                                  ? [
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    ]
                                                                   : [],
                                                         );
                                                     }}
@@ -677,17 +697,30 @@ export default function CommissionsIndex({
                                                         Selecione um serviço...
                                                     </option>
                                                     {!editingRule && (
-                                                        <option value={ALL_SERVICES_VALUE}>
+                                                        <option
+                                                            value={
+                                                                ALL_SERVICES_VALUE
+                                                            }
+                                                        >
                                                             Todos os serviços
                                                         </option>
                                                     )}
                                                     {services.map((service) => (
-                                                        <option key={service.id} value={service.id}>
-                                                            {service.name} ({formatMoney(service.price_cents)})
+                                                        <option
+                                                            key={service.id}
+                                                            value={service.id}
+                                                        >
+                                                            {service.name} (
+                                                            {formatMoney(
+                                                                service.price_cents,
+                                                            )}
+                                                            )
                                                         </option>
                                                     ))}
                                                 </select>
-                                                {!editingRule && selectedServiceIds.length === services.length && (
+                                                {!editingRule &&
+                                                    selectedServiceIds.length ===
+                                                        services.length &&
                                                     services.map((service) => (
                                                         <input
                                                             key={service.id}
@@ -695,8 +728,7 @@ export default function CommissionsIndex({
                                                             name="service_ids[]"
                                                             value={service.id}
                                                         />
-                                                    ))
-                                                )}
+                                                    ))}
                                             </>
                                         )}
                                     </FormField>
