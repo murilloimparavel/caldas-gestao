@@ -74,8 +74,8 @@ export default function CommissionsIndex({
     const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<CommissionRule | null>(null);
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
-    const [selectedProductId, setSelectedProductId] = useState('');
     const [itemTargetType, setItemTargetType] = useState<
         'all' | 'service' | 'product'
     >('all');
@@ -86,8 +86,8 @@ export default function CommissionsIndex({
     const openCreateModal = () => {
         setEditingRule(null);
         setSelectedServiceIds([]);
+        setSelectedProductIds([]);
         setSelectedProfessionalId('');
-        setSelectedProductId('');
         setItemTargetType('all');
         setRuleRateType('percentage');
         setIsRuleModalOpen(true);
@@ -96,8 +96,8 @@ export default function CommissionsIndex({
     const openEditModal = (rule: CommissionRule) => {
         setEditingRule(rule);
         setSelectedServiceIds(rule.service_id ? [rule.service_id] : []);
+        setSelectedProductIds(rule.product_id ? [rule.product_id] : []);
         setSelectedProfessionalId(rule.professional_id ?? '');
-        setSelectedProductId(rule.product_id ?? '');
 
         if (rule.service_id) {
             setItemTargetType('service');
@@ -818,51 +818,132 @@ export default function CommissionsIndex({
                                 {itemTargetType === 'product' && (
                                     <FormField
                                         label="Produto Específico"
-                                        error={errors.product_id}
+                                        error={
+                                            errors.product_ids ??
+                                            errors.product_id
+                                        }
                                     >
-                                        <select
-                                            name="product_id"
-                                            value={selectedProductId}
-                                            onChange={(event) =>
-                                                setSelectedProductId(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            required
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                        >
-                                            <option value="">
-                                                Selecione um produto...
-                                            </option>
-                                            {products.map((p) => (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.name} (
-                                                    {formatMoney(
-                                                        p.sale_price_cents,
-                                                    )}
-                                                    )
-                                                </option>
+                                        <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border border-input bg-background p-2">
+                                            {!editingRule && (
+                                                <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm font-medium hover:bg-muted">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={
+                                                            selectedProductIds.length ===
+                                                            products.length
+                                                        }
+                                                        onChange={(event) =>
+                                                            setSelectedProductIds(
+                                                                event.target
+                                                                    .checked
+                                                                    ? products.map(
+                                                                          (
+                                                                              product,
+                                                                          ) =>
+                                                                              product.id,
+                                                                      )
+                                                                    : [],
+                                                            )
+                                                        }
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    />
+                                                    Todos os produtos
+                                                </label>
+                                            )}
+                                            {products.map((product) => (
+                                                <label
+                                                    key={product.id}
+                                                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        name={
+                                                            editingRule
+                                                                ? undefined
+                                                                : 'product_ids[]'
+                                                        }
+                                                        value={product.id}
+                                                        checked={selectedProductIds.includes(
+                                                            product.id,
+                                                        )}
+                                                        onChange={() => {
+                                                            if (editingRule) {
+                                                                return;
+                                                            }
+
+                                                            setSelectedProductIds(
+                                                                selectedProductIds.includes(
+                                                                    product.id,
+                                                                )
+                                                                    ? selectedProductIds.filter(
+                                                                          (
+                                                                              id,
+                                                                          ) =>
+                                                                              id !==
+                                                                              product.id,
+                                                                      )
+                                                                    : [
+                                                                          ...selectedProductIds,
+                                                                          product.id,
+                                                                      ],
+                                                            );
+                                                        }}
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span>
+                                                        {product.name} (
+                                                        {formatMoney(
+                                                            product.sale_price_cents,
+                                                        )}
+                                                        )
+                                                    </span>
+                                                </label>
                                             ))}
-                                        </select>
+                                        </div>
+                                        {editingRule && (
+                                            <input
+                                                type="hidden"
+                                                name="product_id"
+                                                value={
+                                                    selectedProductIds[0] ?? ''
+                                                }
+                                            />
+                                        )}
+                                        {!editingRule &&
+                                            selectedProductIds.length === 0 && (
+                                                <p className="text-xs text-destructive">
+                                                    Selecione pelo menos um
+                                                    produto.
+                                                </p>
+                                            )}
                                         {(() => {
-                                            const conflict = rules.find(
+                                            const conflicts = rules.filter(
                                                 (rule) =>
                                                     rule.id !==
                                                         editingRule?.id &&
                                                     rule.professional_id ===
                                                         (selectedProfessionalId ||
                                                             null) &&
-                                                    rule.product_id ===
-                                                        selectedProductId,
+                                                    rule.product_id !== null &&
+                                                    selectedProductIds.includes(
+                                                        rule.product_id,
+                                                    ),
                                             );
 
-                                            return conflict ? (
+                                            return conflicts.length > 0 ? (
                                                 <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                                                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                                                    Já existe uma regra para{' '}
-                                                    {conflict.product?.name}.
-                                                    Remova o produto repetido
-                                                    antes de salvar.
+                                                    Já existe regra para:{' '}
+                                                    {conflicts
+                                                        .map(
+                                                            (rule) =>
+                                                                rule.product
+                                                                    ?.name,
+                                                        )
+                                                        .filter(Boolean)
+                                                        .join(', ')}
+                                                    . Remova os produtos
+                                                    repetidos antes de salvar.
                                                 </p>
                                             ) : null;
                                         })()}

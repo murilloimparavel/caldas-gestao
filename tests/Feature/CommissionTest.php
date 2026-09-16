@@ -478,6 +478,44 @@ it('rejects an exact duplicate product commission rule', function () {
     $response->assertSessionHasErrors('product_id');
 });
 
+it('creates product commission rules in a batch and rejects duplicate batches atomically', function () {
+    [$owner, $tenant, $unit] = commissionTestWorkspace();
+
+    $products = Product::factory()->count(2)->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'product_ids' => $products->pluck('id')->all(),
+        'type' => 'percentage',
+        'value_rate' => 25,
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    expect(CommissionRule::query()
+        ->where('tenant_id', $tenant->getKey())
+        ->where('unit_id', $unit->getKey())
+        ->whereIn('product_id', $products->pluck('id'))
+        ->count())->toBe(2);
+
+    $duplicateResponse = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'product_ids' => $products->pluck('id')->all(),
+        'type' => 'percentage',
+        'value_rate' => 30,
+        'is_active' => true,
+    ]);
+
+    $duplicateResponse->assertSessionHasErrors('product_ids');
+    expect(CommissionRule::query()
+        ->where('tenant_id', $tenant->getKey())
+        ->where('unit_id', $unit->getKey())
+        ->whereIn('product_id', $products->pluck('id'))
+        ->count())->toBe(2);
+});
+
 it('renders commissions index and professional show pages with Inertia', function () {
     [$owner, $tenant, $unit] = commissionTestWorkspace();
 

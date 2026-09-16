@@ -193,7 +193,9 @@ final class CommissionController extends Controller
         $this->mutation->execute($request, $context, $request->user(), $data, function () use ($saveRule, $request, $context, $data): array {
             $rules = isset($data['service_ids'])
                 ? $saveRule->handleMany($request->user(), $context, $data['service_ids'], $data)
-                : [$saveRule->handle($request->user(), $context, $data)];
+                : (isset($data['product_ids'])
+                    ? $saveRule->handleManyProducts($request->user(), $context, $data['product_ids'], $data)
+                    : [$saveRule->handle($request->user(), $context, $data)]);
             $rule = $rules[0];
 
             return ['resource_id' => $rule->getKey(), 'resource_type' => 'commission_rule'];

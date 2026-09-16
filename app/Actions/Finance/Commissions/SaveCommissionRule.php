@@ -160,6 +160,70 @@ final class SaveCommissionRule extends OperationalAction
     }
 
     /**
+     * @param  list<string>  $productIds
+     * @param  array{professional_id?: string|null, type?: string, value_rate: int, is_active?: bool}  $data
+     * @return list<CommissionRule>
+     */
+    public function handleManyProducts(User $actor, TenantContext $context, array $productIds, array $data): array
+    {
+        $unit = $this->unit($actor, $context, 'commission.manage');
+        $tenantId = $context->tenant->getKey();
+        $unitId = $unit->getKey();
+
+        return DB::transaction(function () use ($actor, $context, $productIds, $data, $tenantId, $unitId): array {
+            $conflictingRules = CommissionRule::query()
+                ->with('product:id,name')
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('professional_id', $data['professional_id'] ?? null)
+                ->whereNull('service_id')
+                ->whereIn('product_id', $productIds)
+                ->lockForUpdate()
+                ->get();
+
+            if ($conflictingRules->isNotEmpty()) {
+                $names = $conflictingRules->pluck('product.name')->filter()->unique()->implode(', ');
+
+                throw ValidationException::withMessages([
+                    'product_ids' => "Já existe uma regra de comissão para: {$names}.",
+                ]);
+            }
+
+            $rules = [];
+
+            foreach ($productIds as $productId) {
+                /** @var CommissionRule $rule */
+                $rule = CommissionRule::query()->create([
+                    'id' => (string) Str::uuid7(),
+                    'tenant_id' => $tenantId,
+                    'unit_id' => $unitId,
+                    'professional_id' => $data['professional_id'] ?? null,
+                    'product_id' => $productId,
+                    'type' => $data['type'] ?? 'percentage',
+                    'value_rate' => $data['value_rate'],
+                    'is_active' => $data['is_active'] ?? true,
+                    'lock_version' => 1,
+                ]);
+
+                $this->events->record($actor, $context, 'commission_rule.created', $rule, [
+                    'commission_rule_id' => $rule->getKey(),
+                    'professional_id' => $rule->professional_id,
+                    'service_id' => $rule->service_id,
+                    'product_id' => $rule->product_id,
+                    'rate_type' => $rule->type,
+                    'rate_value' => $rule->value_rate,
+                    'value_rate' => $rule->value_rate,
+                    'is_active' => $rule->is_active,
+                    'lock_version' => $rule->lock_version,
+                ]);
+                $rules[] = $rule;
+            }
+
+            return $rules;
+        }, 5);
+    }
+
+    /**
      * @param  array{service_id?: string|null, product_id?: string|null}  $item
      */
     private function ensureNoConflicts(string $tenantId, string $unitId, ?string $professionalId, array $item, ?string $exceptRuleId = null): void
