@@ -36,6 +36,7 @@ export type CalendarAppointmentSale = {
     reference_label?: string | null;
     source?: string | null;
     status: string;
+    synchronization_status?: 'active' | 'paused' | 'review' | string | null;
 };
 
 export type CalendarAppointmentSaleLink = {
@@ -77,6 +78,7 @@ export type AppointmentSaleAutomation = {
     category?: SaleCategoryOptionSummary | null;
     category_id?: string | null;
     enabled?: boolean | null;
+    last_error?: string | null;
     is_enabled?: boolean | null;
     supported?: boolean | null;
 };

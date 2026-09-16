@@ -18,6 +18,10 @@ import {
     ResourceHeader,
     StatusBadge,
 } from '@/components/operational';
+import {
+    AutomationFeedback,
+    automationIssueFromErrors,
+} from '@/components/appointment-sale-automation-feedback';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -109,6 +113,10 @@ export default function SaleCategoryShow({
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale_category.manage');
+    const flashAutomationError = props.flash?.error ?? undefined;
+    const flashAutomationIssue = flashAutomationError
+        ? automationIssueFromErrors({ flash: flashAutomationError })
+        : null;
     const defaultCategoryId =
         automation?.default_sale_category_id ??
         automation?.default_appointment_category_id;
@@ -185,14 +193,46 @@ export default function SaleCategoryShow({
                                 ) : null}
                             </div>
                         ) : null}
+                        {flashAutomationIssue ? (
+                            <AutomationFeedback
+                                kind={flashAutomationIssue}
+                                onReload={() => window.location.reload()}
+                            >
+                                {flashAutomationError}
+                            </AutomationFeedback>
+                        ) : null}
                         <Form
                             {...saleCategories.update.form(category.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
                             className="space-y-5"
                         >
-                            {({ errors, processing }) => (
+                            {({ errors, processing, submit }) => (
                                 <>
                                     <FormErrorSummary errors={errors} />
+                                    {automationIssueFromErrors(errors) ? (
+                                        <AutomationFeedback
+                                            kind={
+                                                automationIssueFromErrors(
+                                                    errors,
+                                                ) ?? 'category'
+                                            }
+                                            onAction={
+                                                automationIssueFromErrors(
+                                                    errors,
+                                                ) === 'stale'
+                                                    ? undefined
+                                                    : submit
+                                            }
+                                            onReload={
+                                                automationIssueFromErrors(
+                                                    errors,
+                                                ) === 'stale'
+                                                    ? () =>
+                                                          window.location.reload()
+                                                    : undefined
+                                            }
+                                        />
+                                    ) : null}
                                     <input
                                         type="hidden"
                                         name="lock_version"
@@ -311,6 +351,18 @@ export default function SaleCategoryShow({
                                                 </p>
                                             </div>
                                         </div>
+                                        {!canBeAutomationCategory ? (
+                                            <AutomationFeedback
+                                                kind="category"
+                                                title="Esta categoria não pode ser usada pela Agenda"
+                                            >
+                                                A automação exige uma categoria
+                                                ativa que aceite serviços.
+                                                Reative a categoria ou altere o
+                                                tipo antes de defini-la como
+                                                padrão.
+                                            </AutomationFeedback>
+                                        ) : null}
                                         {canToggleAutomation ? (
                                             <>
                                                 <input

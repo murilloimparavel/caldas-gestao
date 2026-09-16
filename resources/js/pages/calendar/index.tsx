@@ -49,6 +49,10 @@ import {
     QuickCreateProfessionalModal,
     QuickCreateServiceModal,
 } from '@/components/operational/quick-create-dialogs';
+import {
+    AutomationFeedback,
+    automationIssueFromErrors,
+} from '@/components/appointment-sale-automation-feedback';
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -631,395 +635,439 @@ function AppointmentForm({
                 className="space-y-6"
                 onSuccess={onClose}
             >
-                {({ errors, processing }) => (
-                    <>
-                        <FormErrorSummary errors={errors} />
+                {({ errors, processing, submit }) => {
+                    const automationIssue = automationIssueFromErrors(errors);
 
-                        {/* Bloqueio amigável para cancelado */}
-                        {isCancelled && (
-                            <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive dark:border-destructive/40 dark:bg-destructive/15">
-                                <XCircle className="mt-0.5 size-5 shrink-0" />
-                                <div className="space-y-1 text-sm">
-                                    <p className="font-semibold text-destructive">
-                                        Este agendamento está cancelado e não
-                                        pode ser editado.
-                                    </p>
-                                    {appointment?.cancel_reason && (
-                                        <p className="text-xs text-muted-foreground">
-                                            <strong className="font-medium text-foreground">
-                                                Motivo registrado:
-                                            </strong>{' '}
-                                            {appointment.cancel_reason}
+                    return (
+                        <>
+                            <FormErrorSummary errors={errors} />
+
+                            {automationIssue ? (
+                                <AutomationFeedback
+                                    kind={automationIssue}
+                                    onAction={
+                                        automationIssue === 'creation'
+                                            ? submit
+                                            : undefined
+                                    }
+                                    onReload={
+                                        automationIssue === 'stale' ||
+                                        automationIssue === 'conflict' ||
+                                        automationIssue === 'sync'
+                                            ? () =>
+                                                  router.reload({
+                                                      only: [
+                                                          'appointments',
+                                                          'scheduleBlocks',
+                                                          'options',
+                                                      ],
+                                                  })
+                                            : undefined
+                                    }
+                                />
+                            ) : null}
+
+                            {/* Bloqueio amigável para cancelado */}
+                            {isCancelled && (
+                                <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive dark:border-destructive/40 dark:bg-destructive/15">
+                                    <XCircle className="mt-0.5 size-5 shrink-0" />
+                                    <div className="space-y-1 text-sm">
+                                        <p className="font-semibold text-destructive">
+                                            Este agendamento está cancelado e
+                                            não pode ser editado.
                                         </p>
-                                    )}
+                                        {appointment?.cancel_reason && (
+                                            <p className="text-xs text-muted-foreground">
+                                                <strong className="font-medium text-foreground">
+                                                    Motivo registrado:
+                                                </strong>{' '}
+                                                {appointment.cancel_reason}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Bloqueio amigável para concluído */}
-                        {isCompleted && (
-                            <div className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-                                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                                <div className="space-y-1 text-sm">
-                                    <p className="font-semibold">
-                                        Este agendamento já foi concluído e seu
-                                        histórico está registrado.
-                                    </p>
-                                    <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
-                                        Os dados operacionais estão bloqueados;
-                                        apenas o campo de observações pode ser
-                                        atualizado.
+                            {/* Bloqueio amigável para concluído */}
+                            {isCompleted && (
+                                <div className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                    <div className="space-y-1 text-sm">
+                                        <p className="font-semibold">
+                                            Este agendamento já foi concluído e
+                                            seu histórico está registrado.
+                                        </p>
+                                        <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                                            Os dados operacionais estão
+                                            bloqueados; apenas o campo de
+                                            observações pode ser atualizado.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Aviso amigável de conflito de horário */}
+                            {!isCancelled && conflict && (
+                                <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                        <Badge
+                                            variant="outline"
+                                            className="border-amber-400 bg-amber-100 font-semibold text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                                        >
+                                            Atenção: Horário coincide com outro
+                                            agendamento/bloqueio
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                                        {conflict.description}
                                     </p>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Aviso amigável de conflito de horário */}
-                        {!isCancelled && conflict && (
-                            <div className="flex flex-col gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                                    <Badge
-                                        variant="outline"
-                                        className="border-amber-400 bg-amber-100 font-semibold text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                            {/* Hidden inputs para preservar integridade quando campos estiverem desabilitados */}
+                            {(isCompleted || isCancelled) && (
+                                <>
+                                    <input
+                                        type="hidden"
+                                        name="customer_id"
+                                        value={selectedCustomer}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="service_id"
+                                        value={selectedService}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="professional_id"
+                                        value={selectedProfessional}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="starts_at"
+                                        value={selectedStartsAt}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="duration_minutes"
+                                        value={selectedDuration}
+                                    />
+                                </>
+                            )}
+                            {(isCompleted ||
+                                isCancelled ||
+                                isReadOnlyStatus) && (
+                                <input
+                                    type="hidden"
+                                    name="status"
+                                    value={selectedStatus}
+                                />
+                            )}
+
+                            <div className="grid min-w-0 gap-5 md:grid-cols-2">
+                                <div className="min-w-0 md:col-span-2">
+                                    <FormField
+                                        label="Cliente"
+                                        name="customer_id"
+                                        error={errors.customer_id}
+                                        action={
+                                            !isCancelled && !isCompleted ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setQuickCustomerOpen(
+                                                            true,
+                                                        )
+                                                    }
+                                                    className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                                                >
+                                                    + Novo Cliente
+                                                </button>
+                                            ) : undefined
+                                        }
                                     >
-                                        Atenção: Horário coincide com outro
-                                        agendamento/bloqueio
-                                    </Badge>
+                                        <select
+                                            id="customer_id"
+                                            name="customer_id"
+                                            value={selectedCustomer}
+                                            onChange={(e) =>
+                                                setSelectedCustomer(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            disabled={
+                                                isCancelled || isCompleted
+                                            }
+                                            required
+                                            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
+                                        >
+                                            <option value="">
+                                                Selecione um cliente
+                                            </option>
+                                            {customerList.map((customer) => (
+                                                <option
+                                                    key={customer.id}
+                                                    value={customer.id}
+                                                >
+                                                    {customer.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </FormField>
                                 </div>
-                                <p className="text-xs text-amber-800 dark:text-amber-300">
-                                    {conflict.description}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Hidden inputs para preservar integridade quando campos estiverem desabilitados */}
-                        {(isCompleted || isCancelled) && (
-                            <>
-                                <input
-                                    type="hidden"
-                                    name="customer_id"
-                                    value={selectedCustomer}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="service_id"
-                                    value={selectedService}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="professional_id"
-                                    value={selectedProfessional}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="starts_at"
-                                    value={selectedStartsAt}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="duration_minutes"
-                                    value={selectedDuration}
-                                />
-                            </>
-                        )}
-                        {(isCompleted || isCancelled || isReadOnlyStatus) && (
-                            <input
-                                type="hidden"
-                                name="status"
-                                value={selectedStatus}
-                            />
-                        )}
-
-                        <div className="grid min-w-0 gap-5 md:grid-cols-2">
-                            <div className="min-w-0 md:col-span-2">
                                 <FormField
-                                    label="Cliente"
-                                    name="customer_id"
-                                    error={errors.customer_id}
+                                    label="Serviço"
+                                    name="service_id"
+                                    error={errors.service_id}
                                     action={
                                         !isCancelled && !isCompleted ? (
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    setQuickCustomerOpen(true)
+                                                    setQuickServiceOpen(true)
                                                 }
                                                 className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                                             >
-                                                + Novo Cliente
+                                                + Novo Serviço
                                             </button>
                                         ) : undefined
                                     }
                                 >
                                     <select
-                                        id="customer_id"
-                                        name="customer_id"
-                                        value={selectedCustomer}
+                                        id="service_id"
+                                        name="service_id"
+                                        value={selectedService}
                                         onChange={(e) =>
-                                            setSelectedCustomer(e.target.value)
+                                            handleServiceChange(e.target.value)
                                         }
                                         disabled={isCancelled || isCompleted}
                                         required
                                         className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
                                     >
                                         <option value="">
-                                            Selecione um cliente
+                                            Selecione um serviço
                                         </option>
-                                        {customerList.map((customer) => (
+                                        {serviceList.map((service) => (
                                             <option
-                                                key={customer.id}
-                                                value={customer.id}
+                                                key={service.id}
+                                                value={service.id}
                                             >
-                                                {customer.name}
+                                                {service.name}
                                             </option>
                                         ))}
                                     </select>
                                 </FormField>
-                            </div>
-                            <FormField
-                                label="Serviço"
-                                name="service_id"
-                                error={errors.service_id}
-                                action={
-                                    !isCancelled && !isCompleted ? (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setQuickServiceOpen(true)
-                                            }
-                                            className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                                        >
-                                            + Novo Serviço
-                                        </button>
-                                    ) : undefined
-                                }
-                            >
-                                <select
-                                    id="service_id"
-                                    name="service_id"
-                                    value={selectedService}
-                                    onChange={(e) =>
-                                        handleServiceChange(e.target.value)
-                                    }
-                                    disabled={isCancelled || isCompleted}
-                                    required
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                    <option value="">
-                                        Selecione um serviço
-                                    </option>
-                                    {serviceList.map((service) => (
-                                        <option
-                                            key={service.id}
-                                            value={service.id}
-                                        >
-                                            {service.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </FormField>
-                            <FormField
-                                label="Profissional"
-                                name="professional_id"
-                                error={errors.professional_id}
-                                action={
-                                    !isCancelled && !isCompleted ? (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setQuickProfessionalOpen(true)
-                                            }
-                                            className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
-                                        >
-                                            + Novo Profissional
-                                        </button>
-                                    ) : undefined
-                                }
-                            >
-                                <select
-                                    id="professional_id"
-                                    name="professional_id"
-                                    value={selectedProfessional}
-                                    onChange={(e) =>
-                                        setSelectedProfessional(e.target.value)
-                                    }
-                                    disabled={isCancelled || isCompleted}
-                                    required
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                    <option value="">
-                                        Selecione um profissional
-                                    </option>
-                                    {professionalList.map((professional) => (
-                                        <option
-                                            key={professional.id}
-                                            value={professional.id}
-                                        >
-                                            {professional.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </FormField>
-                            <FormField
-                                label="Data e horário"
-                                name="starts_at"
-                                error={errors.starts_at}
-                            >
-                                <Input
-                                    id="starts_at"
-                                    name="starts_at"
-                                    type="datetime-local"
-                                    value={selectedStartsAt}
-                                    onChange={(e) =>
-                                        setSelectedStartsAt(e.target.value)
-                                    }
-                                    disabled={isCancelled || isCompleted}
-                                    required
-                                />
-                            </FormField>
-                            <FormField
-                                label="Duração"
-                                name="duration_minutes"
-                                error={errors.duration_minutes}
-                            >
-                                <Input
-                                    id="duration_minutes"
-                                    name="duration_minutes"
-                                    type="number"
-                                    min={5}
-                                    max={1440}
-                                    step={5}
-                                    value={selectedDuration}
-                                    onChange={(e) =>
-                                        setSelectedDuration(
-                                            Number(e.target.value),
-                                        )
-                                    }
-                                    disabled={isCancelled || isCompleted}
-                                    required
-                                />
-                                {estimatedEndTime && (
-                                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        <Clock className="size-3.5 shrink-0 text-primary" />
-                                        <span>
-                                            Término previsto:{' '}
-                                            <strong className="font-semibold text-foreground">
-                                                {estimatedEndTime}
-                                            </strong>
-                                        </span>
-                                    </p>
-                                )}
-                            </FormField>
-                            <FormField
-                                label="Status"
-                                name="status"
-                                error={errors.status}
-                            >
-                                <select
-                                    id="status"
-                                    name="status"
-                                    value={selectedStatus}
-                                    onChange={(e) =>
-                                        handleStatusChange(
-                                            e.target.value as AppointmentStatus,
-                                        )
-                                    }
-                                    disabled={
-                                        isCancelled ||
-                                        isCompleted ||
-                                        isReadOnlyStatus
-                                    }
-                                    className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                    {availableStatuses.map((status) => (
-                                        <option key={status} value={status}>
-                                            {statusLabel(status)}
-                                        </option>
-                                    ))}
-                                </select>
-                            </FormField>
-                            <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-3.5 py-3 md:col-span-2">
-                                <input
-                                    type="hidden"
-                                    name="reminder_enabled"
-                                    value={reminderEnabled ? '1' : '0'}
-                                />
-                                <input
-                                    id="reminder_enabled"
-                                    type="checkbox"
-                                    checked={reminderEnabled}
-                                    onChange={(e) =>
-                                        setReminderEnabled(e.target.checked)
-                                    }
-                                    disabled={isCancelled || isCompleted}
-                                    className="size-4 accent-primary disabled:opacity-70"
-                                />
-                                <label
-                                    htmlFor="reminder_enabled"
-                                    className="text-sm"
-                                >
-                                    Enviar lembrete ao cliente
-                                    <span className="block text-xs text-muted-foreground">
-                                        O canal e o consentimento são validados
-                                        pelo servidor.
-                                    </span>
-                                </label>
-                            </div>
-                            <div className="min-w-0 md:col-span-2">
                                 <FormField
-                                    label="Observações"
-                                    name="notes"
-                                    error={errors.notes}
+                                    label="Profissional"
+                                    name="professional_id"
+                                    error={errors.professional_id}
+                                    action={
+                                        !isCancelled && !isCompleted ? (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setQuickProfessionalOpen(
+                                                        true,
+                                                    )
+                                                }
+                                                className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                                            >
+                                                + Novo Profissional
+                                            </button>
+                                        ) : undefined
+                                    }
                                 >
-                                    <textarea
-                                        id="notes"
-                                        name="notes"
-                                        rows={3}
-                                        value={notes}
+                                    <select
+                                        id="professional_id"
+                                        name="professional_id"
+                                        value={selectedProfessional}
                                         onChange={(e) =>
-                                            setNotes(e.target.value)
+                                            setSelectedProfessional(
+                                                e.target.value,
+                                            )
                                         }
-                                        disabled={isCancelled}
-                                        className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                        placeholder="Informações úteis para o atendimento"
+                                        disabled={isCancelled || isCompleted}
+                                        required
+                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                        <option value="">
+                                            Selecione um profissional
+                                        </option>
+                                        {professionalList.map(
+                                            (professional) => (
+                                                <option
+                                                    key={professional.id}
+                                                    value={professional.id}
+                                                >
+                                                    {professional.name}
+                                                </option>
+                                            ),
+                                        )}
+                                    </select>
+                                </FormField>
+                                <FormField
+                                    label="Data e horário"
+                                    name="starts_at"
+                                    error={errors.starts_at}
+                                >
+                                    <Input
+                                        id="starts_at"
+                                        name="starts_at"
+                                        type="datetime-local"
+                                        value={selectedStartsAt}
+                                        onChange={(e) =>
+                                            setSelectedStartsAt(e.target.value)
+                                        }
+                                        disabled={isCancelled || isCompleted}
+                                        required
                                     />
                                 </FormField>
-                            </div>
-                        </div>
-                        {isEditing ? (
-                            <input
-                                type="hidden"
-                                name="lock_version"
-                                value={appointment.lock_version}
-                            />
-                        ) : null}
-
-                        {isCancelled ? (
-                            <div className="flex justify-end border-t border-border pt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={onClose}
+                                <FormField
+                                    label="Duração"
+                                    name="duration_minutes"
+                                    error={errors.duration_minutes}
                                 >
-                                    Fechar
-                                </Button>
+                                    <Input
+                                        id="duration_minutes"
+                                        name="duration_minutes"
+                                        type="number"
+                                        min={5}
+                                        max={1440}
+                                        step={5}
+                                        value={selectedDuration}
+                                        onChange={(e) =>
+                                            setSelectedDuration(
+                                                Number(e.target.value),
+                                            )
+                                        }
+                                        disabled={isCancelled || isCompleted}
+                                        required
+                                    />
+                                    {estimatedEndTime && (
+                                        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <Clock className="size-3.5 shrink-0 text-primary" />
+                                            <span>
+                                                Término previsto:{' '}
+                                                <strong className="font-semibold text-foreground">
+                                                    {estimatedEndTime}
+                                                </strong>
+                                            </span>
+                                        </p>
+                                    )}
+                                </FormField>
+                                <FormField
+                                    label="Status"
+                                    name="status"
+                                    error={errors.status}
+                                >
+                                    <select
+                                        id="status"
+                                        name="status"
+                                        value={selectedStatus}
+                                        onChange={(e) =>
+                                            handleStatusChange(
+                                                e.target
+                                                    .value as AppointmentStatus,
+                                            )
+                                        }
+                                        disabled={
+                                            isCancelled ||
+                                            isCompleted ||
+                                            isReadOnlyStatus
+                                        }
+                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                        {availableStatuses.map((status) => (
+                                            <option key={status} value={status}>
+                                                {statusLabel(status)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormField>
+                                <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-3.5 py-3 md:col-span-2">
+                                    <input
+                                        type="hidden"
+                                        name="reminder_enabled"
+                                        value={reminderEnabled ? '1' : '0'}
+                                    />
+                                    <input
+                                        id="reminder_enabled"
+                                        type="checkbox"
+                                        checked={reminderEnabled}
+                                        onChange={(e) =>
+                                            setReminderEnabled(e.target.checked)
+                                        }
+                                        disabled={isCancelled || isCompleted}
+                                        className="size-4 accent-primary disabled:opacity-70"
+                                    />
+                                    <label
+                                        htmlFor="reminder_enabled"
+                                        className="text-sm"
+                                    >
+                                        Enviar lembrete ao cliente
+                                        <span className="block text-xs text-muted-foreground">
+                                            O canal e o consentimento são
+                                            validados pelo servidor.
+                                        </span>
+                                    </label>
+                                </div>
+                                <div className="min-w-0 md:col-span-2">
+                                    <FormField
+                                        label="Observações"
+                                        name="notes"
+                                        error={errors.notes}
+                                    >
+                                        <textarea
+                                            id="notes"
+                                            name="notes"
+                                            rows={3}
+                                            value={notes}
+                                            onChange={(e) =>
+                                                setNotes(e.target.value)
+                                            }
+                                            disabled={isCancelled}
+                                            className="min-h-24 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
+                                            placeholder="Informações úteis para o atendimento"
+                                        />
+                                    </FormField>
+                                </div>
                             </div>
-                        ) : (
-                            <FormActions
-                                processing={processing}
-                                onCancel={onClose}
-                                cancelLabel="Cancelar"
-                                label={
-                                    isEditing
-                                        ? isCompleted
-                                            ? 'Salvar observações'
-                                            : 'Salvar alterações'
-                                        : 'Criar agendamento'
-                                }
-                            />
-                        )}
-                    </>
-                )}
+                            {isEditing ? (
+                                <input
+                                    type="hidden"
+                                    name="lock_version"
+                                    value={appointment.lock_version}
+                                />
+                            ) : null}
+
+                            {isCancelled ? (
+                                <div className="flex justify-end border-t border-border pt-4">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={onClose}
+                                    >
+                                        Fechar
+                                    </Button>
+                                </div>
+                            ) : (
+                                <FormActions
+                                    processing={processing}
+                                    onCancel={onClose}
+                                    cancelLabel="Cancelar"
+                                    label={
+                                        isEditing
+                                            ? isCompleted
+                                                ? 'Salvar observações'
+                                                : 'Salvar alterações'
+                                            : 'Criar agendamento'
+                                    }
+                                />
+                            )}
+                        </>
+                    );
+                }}
             </Form>
 
             <QuickCreateCustomerModal
@@ -1072,6 +1120,18 @@ function CancelAppointmentForm({
         >
             {({ errors, processing }) => (
                 <>
+                    {automationIssueFromErrors(errors) ? (
+                        <AutomationFeedback
+                            kind={
+                                automationIssueFromErrors(errors) ?? 'creation'
+                            }
+                            onReload={
+                                automationIssueFromErrors(errors) === 'stale'
+                                    ? () => router.reload()
+                                    : undefined
+                            }
+                        />
+                    ) : null}
                     <input
                         type="hidden"
                         name="lock_version"
@@ -1258,20 +1318,41 @@ function AppointmentSummaryHeader({
             </div>
 
             {isAutomaticSale ? (
-                <div className="flex items-start gap-2.5 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 text-xs text-muted-foreground">
-                    <Sparkles
-                        aria-hidden="true"
-                        className="mt-0.5 size-4 shrink-0 text-primary"
-                    />
-                    <p>
-                        <strong className="font-semibold text-foreground">
-                            Comanda criada automaticamente pela Agenda.
-                        </strong>{' '}
-                        O serviço deste agendamento já foi adicionado e as
-                        alterações serão sincronizadas enquanto a comanda
-                        permanecer aberta.
-                    </p>
-                </div>
+                <>
+                    <div className="flex items-start gap-2.5 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 text-xs text-muted-foreground">
+                        <Sparkles
+                            aria-hidden="true"
+                            className="mt-0.5 size-4 shrink-0 text-primary"
+                        />
+                        <p>
+                            <strong className="font-semibold text-foreground">
+                                Comanda criada automaticamente pela Agenda.
+                            </strong>{' '}
+                            O serviço deste agendamento já foi adicionado e as
+                            alterações serão sincronizadas enquanto a comanda
+                            permanecer aberta.
+                        </p>
+                    </div>
+                    {linkedSale && linkedSale.status !== 'open' ? (
+                        <AutomationFeedback
+                            kind={
+                                ['cancelled', 'closed', 'finalized'].includes(
+                                    linkedSale.status,
+                                )
+                                    ? 'sync'
+                                    : 'blocked'
+                            }
+                            actionLabel="Abrir comanda para revisar"
+                            onAction={() =>
+                                router.visit(sales.show(linkedSale.id))
+                            }
+                        >
+                            {linkedSale.status === 'cancelled'
+                                ? 'A comanda foi cancelada e não receberá alterações deste agendamento.'
+                                : 'A comanda não está aberta; alterações futuras do agendamento não serão aplicadas nela.'}
+                        </AutomationFeedback>
+                    ) : null}
+                </>
             ) : null}
 
             {/* Serviço & Valor + Data & Horário */}
@@ -1430,9 +1511,26 @@ function OpenAppointmentSaleForm({
             className="space-y-4"
             onSuccess={onClose}
         >
-            {({ errors, processing }) => (
+            {({ errors, processing, submit }) => (
                 <>
                     <FormErrorSummary errors={errors} />
+                    {automationIssueFromErrors(errors) ? (
+                        <AutomationFeedback
+                            kind={
+                                automationIssueFromErrors(errors) ?? 'creation'
+                            }
+                            onAction={
+                                automationIssueFromErrors(errors) === 'stale'
+                                    ? undefined
+                                    : submit
+                            }
+                            onReload={
+                                automationIssueFromErrors(errors) === 'stale'
+                                    ? () => router.reload()
+                                    : undefined
+                            }
+                        />
+                    ) : null}
                     <input
                         type="hidden"
                         name="appointment_id"
@@ -1822,6 +1920,10 @@ export default function CalendarIndex(props: CalendarProps) {
     );
     const services = optionList(props.options?.services, props.services);
     const loadError = typeof props.error === 'string' ? props.error : undefined;
+    const flashAutomationError = page.props.flash?.error ?? undefined;
+    const flashAutomationIssue = flashAutomationError
+        ? automationIssueFromErrors({ flash: flashAutomationError })
+        : null;
     const selectedProfessionalIds = filters.professional_ids ?? [];
     const selectedStatuses = filters.status ?? [];
     const visibleAppointments = appointments.filter((appointment) => {
@@ -2007,6 +2109,14 @@ export default function CalendarIndex(props: CalendarProps) {
                 />
 
                 {loadError ? <CalendarError message={loadError} /> : null}
+                {flashAutomationIssue ? (
+                    <AutomationFeedback
+                        kind={flashAutomationIssue}
+                        onReload={() => router.reload()}
+                    >
+                        {flashAutomationError}
+                    </AutomationFeedback>
+                ) : null}
 
                 {/* Filtros rápidos de profissionais (responsivo para mobile e desktop) */}
                 <section className="gap-4" aria-label="Filtros da agenda">
