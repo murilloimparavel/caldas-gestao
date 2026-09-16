@@ -37,6 +37,10 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
 import { cn } from '@/lib/utils';
 import closingSessions from '@/routes/closing-sessions';
 import sales from '@/routes/sales';
@@ -149,6 +153,7 @@ export default function SalesIndex({
     );
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const { view, setView } = useResourceView('caldas-gestao:sales:view');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale.manage');
     const canClosePermission =
@@ -614,6 +619,9 @@ export default function SalesIndex({
                             </span>
                         ) : null}
                     </div>
+                    <div className="flex justify-end border-t border-border pt-3">
+                        <ResourceViewToggle value={view} onChange={setView} />
+                    </div>
                 </div>
 
                 {/* Floating/Sticky Batch Bar for multi-selection */}
@@ -815,7 +823,11 @@ export default function SalesIndex({
                 ) : (
                     <section
                         aria-label="Lista de comandas"
-                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((sale) => {
                             const isSelected = selectedIds.includes(sale.id);
@@ -827,10 +839,16 @@ export default function SalesIndex({
                                         isSelected
                                             ? 'border-primary bg-primary/[0.03]'
                                             : ''
-                                    }`}
+                                    } ${view === 'list' ? 'max-md:min-h-0 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                                 >
                                     {/* Top Row: Select Checkbox, Reference / Identifier, Status */}
-                                    <div className="flex items-start justify-between gap-3">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                                : 'flex items-start justify-between gap-3'
+                                        }
+                                    >
                                         <div className="flex min-w-0 items-center gap-2.5">
                                             <input
                                                 type="checkbox"
@@ -861,7 +879,13 @@ export default function SalesIndex({
                                     </div>
 
                                     {/* Customer & Appointment Info */}
-                                    <div className="flex flex-col gap-1.5 border-y border-border py-2.5 text-xs text-muted-foreground">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex flex-1 flex-col gap-1.5 border-y border-border py-2.5 text-xs text-muted-foreground md:border-y-0 md:py-0'
+                                                : 'flex flex-col gap-1.5 border-y border-border py-2.5 text-xs text-muted-foreground'
+                                        }
+                                    >
                                         <div className="flex items-center gap-2">
                                             <User className="size-3.5 shrink-0 text-muted-foreground" />
                                             <span className="truncate font-medium text-foreground">
@@ -903,7 +927,13 @@ export default function SalesIndex({
                                     </div>
 
                                     {/* Bottom Row: Total & Action */}
-                                    <div className="flex items-center justify-between gap-2 pt-1">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex items-center justify-between gap-2 pt-1 md:border-l md:border-border md:pt-0 md:pl-4'
+                                                : 'flex items-center justify-between gap-2 pt-1'
+                                        }
+                                    >
                                         <div>
                                             <span className="block text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
                                                 Total a Pagar
