@@ -21,6 +21,7 @@ final class SaveCommissionRule extends OperationalAction
      *     service_id?: string|null,
      *     service_ids?: list<string>,
      *     product_id?: string|null,
+     *     category_id?: string|null,
      *     scope?: string,
      *     type?: string,
      *     value_rate: int,
@@ -51,6 +52,7 @@ final class SaveCommissionRule extends OperationalAction
                 $this->ensureNoConflicts($tenantId, $unitId, $data['professional_id'] ?? $lockedRule->professional_id, [
                     'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
                     'product_id' => array_key_exists('product_id', $data) ? $data['product_id'] : $lockedRule->product_id,
+                    'category_id' => array_key_exists('category_id', $data) ? $data['category_id'] : $lockedRule->category_id,
                     'scope' => $data['scope'] ?? $lockedRule->scope,
                 ], $lockedRule->getKey());
 
@@ -58,6 +60,7 @@ final class SaveCommissionRule extends OperationalAction
                     'professional_id' => $data['professional_id'] ?? $lockedRule->professional_id,
                     'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
                     'product_id' => array_key_exists('product_id', $data) ? $data['product_id'] : $lockedRule->product_id,
+                    'category_id' => array_key_exists('category_id', $data) ? $data['category_id'] : $lockedRule->category_id,
                     'scope' => $data['scope'] ?? $lockedRule->scope,
                     'type' => $data['type'] ?? $lockedRule->type,
                     'value_rate' => $data['value_rate'],
@@ -70,6 +73,7 @@ final class SaveCommissionRule extends OperationalAction
                     'professional_id' => $lockedRule->professional_id,
                     'service_id' => $lockedRule->service_id,
                     'product_id' => $lockedRule->product_id,
+                    'category_id' => $lockedRule->category_id,
                     'rate_type' => $lockedRule->type,
                     'rate_value' => $lockedRule->value_rate,
                     'value_rate' => $lockedRule->value_rate,
@@ -82,11 +86,12 @@ final class SaveCommissionRule extends OperationalAction
 
             $scope = $data['scope'] ?? (($data['service_id'] ?? null) !== null
                 ? 'service'
-                : (($data['product_id'] ?? null) !== null ? 'product' : 'all'));
+                : (($data['product_id'] ?? null) !== null ? 'product' : (($data['category_id'] ?? null) !== null ? 'service_category' : 'all')));
 
             $this->ensureNoConflicts($tenantId, $unitId, $data['professional_id'] ?? null, [
                 'service_id' => $data['service_id'] ?? null,
                 'product_id' => $data['product_id'] ?? null,
+                'category_id' => $data['category_id'] ?? null,
                 'scope' => $scope,
             ]);
 
@@ -98,6 +103,7 @@ final class SaveCommissionRule extends OperationalAction
                 'professional_id' => $data['professional_id'] ?? null,
                 'service_id' => $data['service_id'] ?? null,
                 'product_id' => $data['product_id'] ?? null,
+                'category_id' => $data['category_id'] ?? null,
                 'scope' => $scope,
                 'type' => $data['type'] ?? 'percentage',
                 'value_rate' => $data['value_rate'],
@@ -110,6 +116,7 @@ final class SaveCommissionRule extends OperationalAction
                 'professional_id' => $createdRule->professional_id,
                 'service_id' => $createdRule->service_id,
                 'product_id' => $createdRule->product_id,
+                'category_id' => $createdRule->category_id,
                 'rate_type' => $createdRule->type,
                 'rate_value' => $createdRule->value_rate,
                 'value_rate' => $createdRule->value_rate,
@@ -119,6 +126,28 @@ final class SaveCommissionRule extends OperationalAction
 
             return $createdRule;
         }, 5);
+    }
+
+    /**
+     * @param  list<string>  $categoryIds
+     * @return list<CommissionRule>
+     */
+    public function handleManyCategories(User $actor, TenantContext $context, array $categoryIds, array $data): array
+    {
+        return DB::transaction(function () use ($actor, $context, $categoryIds, $data): array {
+            $scope = $data['scope'] ?? (($data['item_type'] ?? 'service') === 'product' ? 'product_category' : 'service_category');
+            $rules = [];
+
+            foreach ($categoryIds as $categoryId) {
+                $rules[] = $this->handle($actor, $context, [
+                    ...$data,
+                    'scope' => $scope,
+                    'category_id' => $categoryId,
+                ]);
+            }
+
+            return $rules;
+        });
     }
 
     /**
@@ -236,7 +265,7 @@ final class SaveCommissionRule extends OperationalAction
     }
 
     /**
-     * @param  array{service_id?: string|null, product_id?: string|null, scope?: string}  $item
+     * @param  array{service_id?: string|null, product_id?: string|null, category_id?: string|null, scope?: string}  $item
      */
     private function ensureNoConflicts(string $tenantId, string $unitId, ?string $professionalId, array $item, ?string $exceptRuleId = null): void
     {
@@ -247,6 +276,7 @@ final class SaveCommissionRule extends OperationalAction
             ->where('scope', $item['scope'] ?? 'all')
             ->where('service_id', $item['service_id'] ?? null)
             ->where('product_id', $item['product_id'] ?? null)
+            ->where('category_id', $item['category_id'] ?? null)
             ->when($exceptRuleId !== null, fn ($query) => $query->where('id', '!=', $exceptRuleId))
             ->lockForUpdate();
 
@@ -256,6 +286,7 @@ final class SaveCommissionRule extends OperationalAction
                 : (($item['product_id'] ?? null) !== null
                     ? Product::query()->whereKey($item['product_id'])->value('name')
                 : match ($item['scope'] ?? 'all') {
+                    'service_category', 'product_category' => 'a categoria selecionada',
                     'service' => 'Todos os serviços',
                     'product' => 'Todos os produtos',
                     default => 'Todos os itens',
@@ -263,7 +294,7 @@ final class SaveCommissionRule extends OperationalAction
 
             $errorKey = ($item['service_id'] ?? null) !== null
                 ? 'service_id'
-                : (($item['product_id'] ?? null) !== null ? 'product_id' : 'scope');
+                : (($item['product_id'] ?? null) !== null ? 'product_id' : (($item['category_id'] ?? null) !== null ? 'category_id' : 'scope'));
 
             throw ValidationException::withMessages([
                 $errorKey => "Já existe uma regra de comissão para {$itemName} neste profissional.",

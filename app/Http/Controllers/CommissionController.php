@@ -7,6 +7,7 @@ use App\Actions\Finance\Commissions\SaveCommissionRule;
 use App\Actions\Finance\Commissions\SettleCommissions;
 use App\Http\Requests\CommissionRuleRequest;
 use App\Http\Requests\CommissionSettlementRequest;
+use App\Models\Category;
 use App\Models\CommissionAccrual;
 use App\Models\CommissionRule;
 use App\Models\CommissionSettlement;
@@ -69,7 +70,7 @@ final class CommissionController extends Controller
         });
 
         $rules = CommissionRule::query()
-            ->with(['professional', 'service', 'product'])
+            ->with(['professional', 'service.category', 'product.category', 'category'])
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->orderByDesc('created_at')
@@ -80,14 +81,34 @@ final class CommissionController extends Controller
             ->where('unit_id', $unitId)
             ->where('status', 'active')
             ->orderBy('name')
-            ->get(['id', 'name', 'price_cents']);
+            ->with('category:id,name,type')
+            ->get(['id', 'name', 'price_cents', 'category_id']);
 
         $products = Product::query()
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'sale_price_cents']);
+            ->with('category:id,name,type')
+            ->get(['id', 'name', 'sale_price_cents', 'category_id', 'unit_of_measure']);
+
+        $serviceCategories = Category::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->where('type', 'service')
+            ->withCount(['services as items_count' => fn ($query) => $query->where('status', 'active')])
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
+
+        $productCategories = Category::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->where('type', 'product')
+            ->withCount(['products as items_count' => fn ($query) => $query->where('is_active', true)])
+            ->orderBy('name')
+            ->get(['id', 'name', 'type']);
 
         $totalPendingCents = (int) CommissionAccrual::query()
             ->where('tenant_id', $tenantId)
@@ -107,6 +128,8 @@ final class CommissionController extends Controller
             'rules' => $rules,
             'services' => $services,
             'products' => $products,
+            'service_categories' => $serviceCategories,
+            'product_categories' => $productCategories,
             'metrics' => [
                 'total_pending_cents' => $totalPendingCents,
                 'total_settled_month_cents' => $totalSettledThisMonthCents,
@@ -191,13 +214,17 @@ final class CommissionController extends Controller
         $data = $request->validated();
 
         $this->mutation->execute($request, $context, $request->user(), $data, function () use ($saveRule, $request, $context, $data): array {
-            $rules = isset($data['scope'])
-                ? [$saveRule->handle($request->user(), $context, $data)]
-                : (isset($data['service_ids'])
-                ? $saveRule->handleMany($request->user(), $context, $data['service_ids'], $data)
-                : (isset($data['product_ids'])
-                    ? $saveRule->handleManyProducts($request->user(), $context, $data['product_ids'], $data)
-                    : [$saveRule->handle($request->user(), $context, $data)]));
+            if (isset($data['category_ids'])) {
+                $rules = $saveRule->handleManyCategories($request->user(), $context, $data['category_ids'], $data);
+            } elseif (isset($data['scope'])) {
+                $rules = [$saveRule->handle($request->user(), $context, $data)];
+            } elseif (isset($data['service_ids'])) {
+                $rules = $saveRule->handleMany($request->user(), $context, $data['service_ids'], $data);
+            } elseif (isset($data['product_ids'])) {
+                $rules = $saveRule->handleManyProducts($request->user(), $context, $data['product_ids'], $data);
+            } else {
+                $rules = [$saveRule->handle($request->user(), $context, $data)];
+            }
             $rule = $rules[0];
 
             return ['resource_id' => $rule->getKey(), 'resource_type' => 'commission_rule'];

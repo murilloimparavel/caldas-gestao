@@ -31,7 +31,7 @@ final class AccrueCommissionsForSale extends OperationalAction
 
         $accruals = new Collection;
 
-        $sale->loadMissing('items');
+        $sale->loadMissing(['items.service:id,category_id', 'items.product:id,category_id']);
 
         foreach ($sale->items as $item) {
             if ($item->professional_id === null) {
@@ -120,22 +120,23 @@ final class AccrueCommissionsForSale extends OperationalAction
         $productMatches = $item->product_id !== null
             && $rule->scope === 'product'
             && ($rule->product_id === null || $rule->product_id === $item->product_id);
+        $itemCategoryId = $item->service?->category_id ?? $item->product?->category_id;
+        $categoryMatches = $itemCategoryId !== null
+            && $rule->category_id === $itemCategoryId
+            && (($item->service_id !== null && $rule->scope === 'service_category')
+                || ($item->product_id !== null && $rule->scope === 'product_category'));
         $isItemSpecific = ($serviceMatches && $rule->service_id !== null)
             || ($productMatches && $rule->product_id !== null);
+        $isCategorySpecific = $categoryMatches;
         $isRuleItemGeneric = $rule->scope === 'all'
             || ($rule->scope === 'service' && $rule->service_id === null && $item->service_id !== null)
             || ($rule->scope === 'product' && $rule->product_id === null && $item->product_id !== null);
 
-        if (! $isItemSpecific && ! $isRuleItemGeneric) {
+        if (! $isItemSpecific && ! $isCategorySpecific && ! $isRuleItemGeneric) {
             return null;
         }
 
-        // Specific professional + Specific item => 6
-        // Specific professional + Type generic  => 5
-        // Specific professional + All items     => 4
-        // Generic professional  + Specific item => 3
-        // Generic professional  + Type generic  => 2
-        // Generic professional  + All items     => 1
+        // Professional + item > professional + category > professional + type.
         $score = 1;
 
         if ($rule->professional_id !== null) {
@@ -143,6 +144,8 @@ final class AccrueCommissionsForSale extends OperationalAction
         }
 
         if ($isItemSpecific) {
+            $score += 3;
+        } elseif ($isCategorySpecific) {
             $score += 2;
         } elseif (($rule->scope ?? 'all') !== 'all') {
             $score += 1;

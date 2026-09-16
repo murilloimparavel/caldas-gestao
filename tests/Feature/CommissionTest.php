@@ -3,6 +3,7 @@
 use App\Actions\Finance\Commissions\AccrueCommissionsForSale;
 use App\Actions\Identity\OnboardTenant;
 use App\Models\AuditEvent;
+use App\Models\Category;
 use App\Models\ClosingSession;
 use App\Models\CommissionAccrual;
 use App\Models\CommissionRule;
@@ -542,6 +543,230 @@ it('applies dynamic service and product rules to items created after the rules',
 
     expect($accruals)->toHaveCount(2);
     expect($accruals->pluck('rate_value')->sort()->values()->all())->toBe([50, 60]);
+});
+
+it('applies a service category rule to current and future services in the category only', function () {
+    [$owner, $tenant, $unit, $context] = commissionTestWorkspace();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $careCategory = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+        'name' => 'Cuidados',
+    ]);
+    $otherCategory = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+        'name' => 'Fora da regra',
+    ]);
+
+    $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'professional_id' => $professional->getKey(),
+        'scope' => 'service_category',
+        'category_id' => $careCategory->getKey(),
+        'type' => 'percentage',
+        'value_rate' => 10,
+        'is_active' => true,
+    ])->assertSessionHasNoErrors();
+
+    $currentService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $careCategory->getKey(),
+        'price_cents' => 10000,
+    ]);
+    $futureService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $careCategory->getKey(),
+        'price_cents' => 20000,
+    ]);
+    $outsideService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $otherCategory->getKey(),
+        'price_cents' => 30000,
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+    ]);
+
+    foreach ([[$currentService, 10000], [$futureService, 20000], [$outsideService, 30000]] as [$service, $totalCents]) {
+        SaleItem::factory()->create([
+            'tenant_id' => $tenant->getKey(),
+            'unit_id' => $unit->getKey(),
+            'sale_id' => $sale->getKey(),
+            'item_type' => 'service',
+            'service_id' => $service->getKey(),
+            'product_id' => null,
+            'professional_id' => $professional->getKey(),
+            'total_cents' => $totalCents,
+        ]);
+    }
+
+    $accruals = (new AccrueCommissionsForSale)->handle($owner, $context, $sale);
+
+    expect($accruals)->toHaveCount(2)
+        ->and($accruals->pluck('gross_amount_cents')->sort()->values()->all())->toBe([10000, 20000])
+        ->and($accruals->pluck('commission_amount_cents')->sort()->values()->all())->toBe([1000, 2000]);
+});
+
+it('applies a product category fixed rule per quantity and excludes products outside the category', function () {
+    [$owner, $tenant, $unit, $context] = commissionTestWorkspace();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $beverages = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'product',
+        'name' => 'Bebidas',
+    ]);
+    $otherCategory = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'product',
+        'name' => 'Fora da regra',
+    ]);
+
+    $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'professional_id' => $professional->getKey(),
+        'scope' => 'product_category',
+        'category_id' => $beverages->getKey(),
+        'type' => 'fixed',
+        'value_rate' => 500,
+        'is_active' => true,
+    ])->assertSessionHasNoErrors();
+
+    $includedProduct = Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $beverages->getKey(),
+    ]);
+    $excludedProduct = Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $otherCategory->getKey(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+    ]);
+
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'product',
+        'service_id' => null,
+        'product_id' => $includedProduct->getKey(),
+        'professional_id' => $professional->getKey(),
+        'quantity' => 3,
+        'total_cents' => 3000,
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'product',
+        'service_id' => null,
+        'product_id' => $excludedProduct->getKey(),
+        'professional_id' => $professional->getKey(),
+        'quantity' => 2,
+        'total_cents' => 2000,
+    ]);
+
+    $accruals = (new AccrueCommissionsForSale)->handle($owner, $context, $sale);
+
+    expect($accruals)->toHaveCount(1)
+        ->and($accruals->first()->commission_amount_cents)->toBe(1500);
+});
+
+it('prioritizes a specific item rule over a category rule and a generic rule', function () {
+    [$owner, $tenant, $unit, $context] = commissionTestWorkspace();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $category = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+    ]);
+    $service = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $category->getKey(),
+        'price_cents' => 10000,
+    ]);
+
+    foreach ([
+        ['scope' => 'service_category', 'value_rate' => 10, 'category_id' => $category->getKey()],
+        ['scope' => 'service', 'value_rate' => 20, 'service_id' => $service->getKey()],
+        ['scope' => 'service', 'value_rate' => 5],
+    ] as $ruleData) {
+        $this->actingAs($owner)->post(route('commissions.rules.store'), array_merge([
+            'professional_id' => $professional->getKey(),
+            'type' => 'percentage',
+            'is_active' => true,
+        ], $ruleData))->assertSessionHasNoErrors();
+    }
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'total_cents' => 10000,
+    ]);
+
+    $accruals = (new AccrueCommissionsForSale)->handle($owner, $context, $sale);
+
+    expect($accruals)->toHaveCount(1)
+        ->and($accruals->first()->rate_value)->toBe(20)
+        ->and($accruals->first()->commission_amount_cents)->toBe(2000);
+});
+
+it('rejects category commission targets from another tenant or unit', function () {
+    [$owner, $tenant, $unit] = commissionTestWorkspace();
+    $otherUnit = Unit::factory()->create(['tenant_id' => $tenant->getKey()]);
+    $foreignCategory = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $otherUnit->getKey(),
+        'type' => 'service',
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'scope' => 'service_category',
+        'category_id' => $foreignCategory->getKey(),
+        'type' => 'percentage',
+        'value_rate' => 10,
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasErrors('category_id');
+    expect(CommissionRule::query()
+        ->where('tenant_id', $tenant->getKey())
+        ->where('unit_id', $unit->getKey())
+        ->exists())->toBeFalse();
 });
 
 it('rejects an exact duplicate product commission rule', function () {
