@@ -120,7 +120,9 @@ final class AccrueCommissionsForSale extends OperationalAction
         $productMatches = $item->product_id !== null
             && $rule->scope === 'product'
             && ($rule->product_id === null || $rule->product_id === $item->product_id);
-        $itemCategoryId = $item->service?->category_id ?? $item->product?->category_id;
+        $itemCategoryId = $item->service_id !== null
+            ? $item->service->category_id
+            : $item->product?->category_id;
         $categoryMatches = $itemCategoryId !== null
             && $rule->category_id === $itemCategoryId
             && (($item->service_id !== null && $rule->scope === 'service_category')

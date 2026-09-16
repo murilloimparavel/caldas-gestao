@@ -47,7 +47,7 @@ export function SelectionPicker({
 
             return matchesQuery && matchesCategory;
         });
-    }, [categoryId, items, query]);
+    }, [categoryId, items, itemsHaveCategoryData, query]);
 
     const visibleIds = filteredItems.map((item) => item.id);
     const allVisibleSelected =

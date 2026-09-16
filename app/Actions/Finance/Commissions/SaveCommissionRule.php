@@ -129,6 +129,19 @@ final class SaveCommissionRule extends OperationalAction
     }
 
     /**
+     * @param  array{
+     *     professional_id?: string|null,
+     *     service_id?: string|null,
+     *     service_ids?: list<string>,
+     *     product_id?: string|null,
+     *     category_id?: string|null,
+     *     scope?: string,
+     *     item_type?: string,
+     *     type?: string,
+     *     value_rate: int,
+     *     is_active?: bool,
+     *     lock_version?: int
+     * }  $data
      * @param  list<string>  $categoryIds
      * @return list<CommissionRule>
      */
