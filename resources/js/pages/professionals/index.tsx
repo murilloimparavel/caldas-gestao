@@ -32,6 +32,10 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
 import { useInitials } from '@/hooks/use-initials';
 import professionals from '@/routes/professionals';
 import type { SharedPageProps } from '@/types';
@@ -67,6 +71,9 @@ export default function ProfessionalsIndex({
     serviceOptions,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const { view, setView } = useResourceView(
+        'caldas-gestao:professionals-view',
+    );
     const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
     const getInitials = useInitials();
     const [createKey] = useState(() =>
@@ -248,7 +255,9 @@ export default function ProfessionalsIndex({
                     onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'profissional encontrado' : 'profissionais encontrados'}`}
-                />
+                >
+                    <ResourceViewToggle value={view} onChange={setView} />
+                </SearchToolbar>
 
                 {paginator.data.length === 0 ? (
                     <EmptyState
@@ -276,14 +285,24 @@ export default function ProfessionalsIndex({
                 ) : (
                     <section
                         aria-label="Lista de profissionais"
-                        className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((professional) => (
                             <article
                                 key={professional.id}
-                                className="surface-panel flex min-h-52 flex-col gap-5 p-5 transition-colors hover:border-primary/40"
+                                className={`surface-panel flex min-h-52 flex-col gap-5 p-5 transition-colors hover:border-primary/40 ${view === 'list' ? 'max-md:min-h-52 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                             >
-                                <div className="flex items-start justify-between gap-3">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                            : 'flex items-start justify-between gap-3'
+                                    }
+                                >
                                     <div className="flex min-w-0 items-center gap-3">
                                         <Avatar className="size-11 shrink-0">
                                             {professional.avatar_url ? (
@@ -318,7 +337,13 @@ export default function ProfessionalsIndex({
                                     </div>
                                     <StatusBadge status={professional.status} />
                                 </div>
-                                <div className="space-y-2">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'flex-1 space-y-2 md:border-l md:border-border md:pl-4'
+                                            : 'space-y-2'
+                                    }
+                                >
                                     <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                                         Serviços habilitados
                                     </p>
@@ -326,7 +351,13 @@ export default function ProfessionalsIndex({
                                         items={professional.services}
                                     />
                                 </div>
-                                <div className="mt-auto flex justify-end border-t border-border pt-4">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'mt-auto flex justify-end border-t border-border pt-4 md:mt-0 md:border-t-0 md:border-l md:pt-0 md:pl-4'
+                                            : 'mt-auto flex justify-end border-t border-border pt-4'
+                                    }
+                                >
                                     <Button asChild variant="outline" size="sm">
                                         <Link
                                             href={professionals.show(
