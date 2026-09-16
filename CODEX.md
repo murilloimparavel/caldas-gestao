@@ -19,3 +19,8 @@
 - Correções P0/P1 retornam ao autor; a validação seguinte deve ser pontual e limitada às correções, sem repetir uma auditoria integral.
 - Tarefas mecânicas ou isoladas dispensam revisor dedicado: use validação automática e inspeção do agente raiz.
 - Quando o frontend depender do backend, finalize primeiro os contratos e o backend, gere o Wayfinder e só então implemente o frontend.
+
+## Deploy
+
+- Este projeto usa autodeploy: após publicar um commit na branch `main`, o webhook do repositório aciona o deploy automaticamente.
+- Não é necessário acionar um deploy manual no Coolify depois de um `git push` para `main`, salvo quando o usuário pedir explicitamente uma reexecução.
