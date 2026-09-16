@@ -586,6 +586,10 @@ export default function SalesIndex({
                             >
                                 Filtrar
                             </Button>
+                            <ResourceViewToggle
+                                value={view}
+                                onChange={setView}
+                            />
                             {filters.search ||
                             filters.status ||
                             filters.sale_category_id ||
@@ -618,9 +622,6 @@ export default function SalesIndex({
                                 {selectedIds.length} selecionada(s)
                             </span>
                         ) : null}
-                    </div>
-                    <div className="flex justify-end border-t border-border pt-3">
-                        <ResourceViewToggle value={view} onChange={setView} />
                     </div>
                 </div>
 
