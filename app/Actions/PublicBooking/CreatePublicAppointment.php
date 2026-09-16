@@ -2,6 +2,7 @@
 
 namespace App\Actions\PublicBooking;
 
+use App\Actions\Appointments\CreateAppointmentSale;
 use App\Models\Appointment;
 use App\Models\AppointmentItem;
 use App\Models\Customer;
@@ -20,7 +21,10 @@ use Illuminate\Validation\ValidationException;
 
 final class CreatePublicAppointment
 {
-    public function __construct(private readonly CalendarAvailability $availability) {}
+    public function __construct(
+        private readonly CalendarAvailability $availability,
+        private readonly CreateAppointmentSale $createAppointmentSale = new CreateAppointmentSale,
+    ) {}
 
     /** @param array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, online_booking_campaign_link_id?: string|null} $data */
     public function handle(Tenant $tenant, Unit $unit, array $data): Appointment
@@ -141,6 +145,8 @@ final class CreatePublicAppointment
                     'currency' => $tenant->default_currency,
                     'position' => 1,
                 ]);
+
+                $this->createAppointmentSale->handlePublic($tenant, $unit, $appointment);
 
                 return $appointment->fresh('items');
             }, 5);

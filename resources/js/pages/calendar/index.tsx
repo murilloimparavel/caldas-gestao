@@ -13,6 +13,7 @@ import {
     Receipt,
     RefreshCw,
     SlidersHorizontal,
+    Sparkles,
     XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -1141,6 +1142,11 @@ function AppointmentSummaryHeader({
     services: CalendarOption[];
     unitTimezone: string;
 }) {
+    const linkedSale = appointment.sale_link?.sale;
+    const isAutomaticSale = Boolean(
+        linkedSale?.created_automatically ?? linkedSale?.automatic,
+    );
+
     const customerObj = useMemo(() => {
         const custId = appointment.customer_id ?? appointment.customer?.id;
 
@@ -1225,6 +1231,23 @@ function AppointmentSummaryHeader({
                 </div>
             </div>
 
+            {isAutomaticSale ? (
+                <div className="flex items-start gap-2.5 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 text-xs text-muted-foreground">
+                    <Sparkles
+                        aria-hidden="true"
+                        className="mt-0.5 size-4 shrink-0 text-primary"
+                    />
+                    <p>
+                        <strong className="font-semibold text-foreground">
+                            Comanda criada automaticamente pela Agenda.
+                        </strong>{' '}
+                        O serviço deste agendamento já foi adicionado e as
+                        alterações serão sincronizadas enquanto a comanda
+                        permanecer aberta.
+                    </p>
+                </div>
+            ) : null}
+
             {/* Serviço & Valor + Data & Horário */}
             <div className="grid grid-cols-1 gap-2 border-t border-border/60 pt-2.5 text-xs sm:grid-cols-2">
                 <div className="flex min-w-0 items-center gap-2">
@@ -1260,18 +1283,32 @@ function AppointmentSummaryHeader({
                     )}
 
                 {/* Comanda & Faturamento */}
-                {appointment.sale_link?.sale ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-2.5 py-1 text-xs shadow-2xs">
-                        <Receipt className="size-3.5 shrink-0 text-primary" />
+                {linkedSale ? (
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background/80 px-2.5 py-1 text-xs shadow-2xs">
+                        {isAutomaticSale ? (
+                            <Sparkles
+                                aria-hidden="true"
+                                className="size-3.5 shrink-0 text-primary"
+                            />
+                        ) : (
+                            <Receipt className="size-3.5 shrink-0 text-primary" />
+                        )}
                         <span className="max-w-[140px] truncate font-medium">
-                            {appointment.sale_link.sale.reference_label ||
-                                'Comanda'}
+                            {linkedSale.reference_label || 'Comanda'}
                         </span>
+                        {isAutomaticSale ? (
+                            <Badge
+                                variant="secondary"
+                                className="border-primary/20 bg-primary/10 px-1.5 py-0 text-2xs font-semibold text-primary"
+                            >
+                                Automática
+                            </Badge>
+                        ) : null}
                         <Badge
                             variant="outline"
                             className="px-1.5 py-0 text-2xs capitalize"
                         >
-                            {appointment.sale_link.sale.status}
+                            {linkedSale.status}
                         </Badge>
                         <Button
                             asChild
@@ -1279,9 +1316,7 @@ function AppointmentSummaryHeader({
                             variant="ghost"
                             className="h-6 px-1.5 text-xs font-medium text-primary hover:text-primary/80"
                         >
-                            <Link
-                                href={sales.show(appointment.sale_link.sale.id)}
-                            >
+                            <Link href={sales.show(linkedSale.id)}>
                                 Ver Comanda →
                             </Link>
                         </Button>

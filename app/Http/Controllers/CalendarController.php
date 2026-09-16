@@ -56,6 +56,10 @@ final class CalendarController extends Controller
         $appointments = $appointments->map(function (Appointment $appointment): array {
             $item = $appointment->items->first();
             $saleLink = $appointment->saleLinks->first();
+            $saleMetadata = $saleLink?->sale?->source_metadata;
+            $createdAutomatically = is_array($saleMetadata)
+                && (($saleMetadata['created_automatically'] ?? false) === true
+                    || in_array(($saleMetadata['origin'] ?? null), ['appointment_automation', 'automatic'], true));
 
             return [
                 ...$appointment->toArray(),
@@ -70,6 +74,9 @@ final class CalendarController extends Controller
                         'id' => $saleLink->sale->getKey(),
                         'status' => $saleLink->sale->status,
                         'reference_label' => $saleLink->sale->reference_label,
+                        'created_automatically' => $createdAutomatically,
+                        'automatic' => $createdAutomatically,
+                        'origin' => is_array($saleMetadata) ? ($saleMetadata['origin'] ?? null) : null,
                     ] : null,
                 ] : null,
             ];

@@ -4,6 +4,7 @@ namespace App\Actions\SaleCategories;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\SaleCategory;
+use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -24,7 +25,8 @@ final class DeactivateSaleCategory extends OperationalAction
             throw new ConflictHttpException('The sale category lock_version is required for this mutation.');
         }
 
-        return DB::transaction(function () use ($actor, $context, $saleCategory, $expectedVersion): SaleCategory {
+        return DB::transaction(function () use ($actor, $context, $saleCategory, $expectedVersion, $unit): SaleCategory {
+            $lockedUnit = Unit::query()->whereKey($unit->getKey())->lockForUpdate()->firstOrFail();
             $locked = SaleCategory::query()->whereKey($saleCategory->getKey())->lockForUpdate()->firstOrFail();
 
             if ($locked->lock_version !== $expectedVersion) {
@@ -39,6 +41,13 @@ final class DeactivateSaleCategory extends OperationalAction
                 'is_active' => false,
                 'lock_version' => $locked->lock_version + 1,
             ])->save();
+
+            if ($lockedUnit->appointment_default_sale_category_id === $locked->getKey()) {
+                $lockedUnit->forceFill([
+                    'appointment_sales_automation_enabled' => false,
+                    'appointment_default_sale_category_id' => null,
+                ])->save();
+            }
 
             $this->events->record($actor, $context, 'sale_category.deactivated', $locked, [
                 'type' => $locked->type,

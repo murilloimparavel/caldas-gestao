@@ -29,7 +29,10 @@ export type CalendarAppointmentItem = {
 };
 
 export type CalendarAppointmentSale = {
+    automatic?: boolean;
+    created_automatically?: boolean;
     id: string;
+    origin?: string | null;
     reference_label?: string | null;
     status: string;
 };
