@@ -134,7 +134,7 @@ final class CalendarController extends Controller
             'filters' => $filters,
             'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
             'calendarSettings' => $calendarSettings,
-            'scheduleBlocks' => $calendarSettings['schedule_blocks'] ?? [],
+            'scheduleBlocks' => $calendarSettings['schedule_blocks'],
         ]);
     }
 

@@ -83,7 +83,7 @@ final class UpdateAppointment extends OperationalAction
                 'service_name_snapshot' => $service->name,
                 'duration_minutes' => $duration,
                 'price_cents' => $service->price_cents,
-                'currency' => $appointmentItem?->currency ?? 'BRL',
+                'currency' => $appointmentItem === null ? 'BRL' : ($appointmentItem->currency ?? 'BRL'),
             ];
 
             if ($appointmentItem === null) {

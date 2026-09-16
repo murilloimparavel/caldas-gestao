@@ -60,8 +60,8 @@ final class SaleCategoryController extends Controller
         $unit = $context->unit;
         $defaultCategoryId = $unit?->appointment_default_sale_category_id;
         $automation = [
-            'enabled' => (bool) ($unit?->appointment_sales_automation_enabled ?? false),
-            'appointment_automation_enabled' => (bool) ($unit?->appointment_sales_automation_enabled ?? false),
+            'enabled' => (bool) ($unit->appointment_sales_automation_enabled ?? false),
+            'appointment_automation_enabled' => (bool) ($unit->appointment_sales_automation_enabled ?? false),
             'default_sale_category_id' => $defaultCategoryId,
             'default_appointment_category_id' => $defaultCategoryId,
         ];
