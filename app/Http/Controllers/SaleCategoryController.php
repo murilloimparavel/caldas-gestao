@@ -53,12 +53,25 @@ final class SaleCategoryController extends Controller
         ]);
     }
 
-    public function show(SaleCategory $saleCategory): Response
+    public function show(SaleCategory $saleCategory, TenantContext $context): Response
     {
         Gate::authorize('view', $saleCategory);
 
+        $unit = $context->unit;
+        $defaultCategoryId = $unit?->appointment_default_sale_category_id;
+        $automation = [
+            'enabled' => (bool) ($unit?->appointment_sales_automation_enabled ?? false),
+            'appointment_automation_enabled' => (bool) ($unit?->appointment_sales_automation_enabled ?? false),
+            'default_sale_category_id' => $defaultCategoryId,
+            'default_appointment_category_id' => $defaultCategoryId,
+        ];
+        $category = $saleCategory->loadCount('sales');
+        $category->setAttribute('is_default_for_appointments', $defaultCategoryId === $saleCategory->getKey());
+        $category->setAttribute('appointment_automation_enabled', $automation['enabled']);
+
         return Inertia::render('sale-categories/show', [
-            'category' => $saleCategory->loadCount('sales'),
+            'category' => $category,
+            'appointment_automation' => $automation,
         ]);
     }
 

@@ -32,6 +32,8 @@ final class SaleCategoryRequest extends FormRequest
             'type' => ['required', Rule::in(['service', 'product', 'mixed'])],
             'uniqueness_scope' => ['required', Rule::in(['customer', 'appointment', 'reference', 'none'])],
             'is_active' => ['sometimes', 'boolean'],
+            'is_default_for_appointments' => ['sometimes', 'boolean'],
+            'appointment_automation_enabled' => ['sometimes', 'boolean'],
             'lock_version' => [$this->isMethod('post') ? 'sometimes' : 'required', 'integer', 'min:0'],
         ];
     }

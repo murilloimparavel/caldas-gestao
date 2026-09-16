@@ -1,5 +1,13 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
+import {
+    AlertTriangle,
+    ArrowLeft,
+    CalendarClock,
+    Receipt,
+    ShieldAlert,
+    Sparkles,
+    Tag,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -28,8 +36,19 @@ type SaleCategoryType = 'service' | 'product' | 'mixed';
 type UniquenessScope = 'customer' | 'appointment' | 'reference' | 'none';
 
 type SaleCategory = {
+    appointment_automation?: {
+        category_id?: string | null;
+        enabled?: boolean | null;
+        is_enabled?: boolean | null;
+        supported?: boolean | null;
+    } | null;
+    appointment_automation_supported?: boolean | null;
+    appointment_default?: boolean | null;
     created_at?: string;
+    default_for_appointments?: boolean | null;
     id: string;
+    is_default_for_appointments?: boolean | null;
+    is_appointment_default?: boolean | null;
     is_active: boolean;
     key: string;
     lock_version: number;
@@ -80,6 +99,20 @@ export default function SaleCategoryShow({ category }: Props) {
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale_category.manage');
+    const automationSupported =
+        category.appointment_automation_supported ??
+        category.appointment_automation?.supported ??
+        category.appointment_automation != null;
+    const isAppointmentDefault =
+        category.is_default_for_appointments ??
+        category.is_appointment_default ??
+        category.default_for_appointments ??
+        category.appointment_default ??
+        category.appointment_automation?.enabled ??
+        category.appointment_automation?.is_enabled ??
+        category.appointment_automation?.category_id === category.id;
+    const canBeAppointmentDefault =
+        category.is_active && category.type !== 'product';
 
     return (
         <>
@@ -244,6 +277,62 @@ export default function SaleCategoryShow({ category }: Props) {
                                                 </select>
                                             </FormField>
                                         </div>
+                                    </div>
+                                    <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                <CalendarClock className="size-4" aria-hidden="true" />
+                                            </div>
+                                            <div className="min-w-0 flex-1 space-y-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h3 className="text-sm font-semibold">Automação com a Agenda</h3>
+                                                    {isAppointmentDefault && (
+                                                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                                            Padrão da Agenda
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs leading-relaxed text-muted-foreground">
+                                                    Novos agendamentos podem abrir uma comanda nesta categoria e adicionar os serviços automaticamente.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {!automationSupported ? (
+                                            <div className="mt-3 flex items-start gap-2 rounded-lg border border-border/70 bg-background/50 p-3 text-xs text-muted-foreground">
+                                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden="true" />
+                                                <span>
+                                                    A automação ainda não está disponível para esta unidade. Quando o backend fornecer essa configuração, ela poderá ser ativada aqui.
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-border/70 bg-background/40 p-3 transition-colors has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                                                <input type="hidden" name="is_default_for_appointments" value="0" />
+                                                <input
+                                                    type="checkbox"
+                                                    name="is_default_for_appointments"
+                                                    value="1"
+                                                    defaultChecked={isAppointmentDefault}
+                                                    disabled={!canManage || !canBeAppointmentDefault}
+                                                    className="mt-0.5 size-4 accent-primary"
+                                                />
+                                                <span className="space-y-1">
+                                                    <span className="block text-sm font-medium">Usar como categoria padrão para novos agendamentos</span>
+                                                    <span className="block text-xs leading-relaxed text-muted-foreground">
+                                                        Apenas uma categoria ativa por unidade pode ser padrão. Ao ativar, a categoria padrão anterior será substituída.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        )}
+                                        {automationSupported && !canBeAppointmentDefault && (
+                                            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                                                {category.is_active
+                                                    ? 'Categorias que aceitam somente produtos não podem ser usadas por agendamentos.'
+                                                    : 'Reative esta categoria para usá-la na automação da Agenda.'}
+                                            </p>
+                                        )}
+                                        {automationSupported && !canManage && (
+                                            <p className="mt-2 text-xs text-muted-foreground">Você não tem permissão para alterar a automação desta categoria.</p>
+                                        )}
                                     </div>
                                     {canManage ? (
                                         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">

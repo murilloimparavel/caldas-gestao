@@ -20,9 +20,9 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 final class AddSaleItem extends OperationalAction
 {
     /** @param array<string, mixed> $data */
-    public function handle(User $actor, TenantContext $context, Sale $sale, array $data): SaleItem
+    public function handle(User $actor, TenantContext $context, Sale $sale, array $data, string $permission = 'sale.manage'): SaleItem
     {
-        $unit = $this->unit($actor, $context, 'sale.manage');
+        $unit = $this->unit($actor, $context, $permission);
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
 
@@ -43,7 +43,11 @@ final class AddSaleItem extends OperationalAction
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $context, $sale, $data, $itemType, $tenantId, $unitId): SaleItem {
+        $sourceId = isset($data['source_id']) && trim((string) $data['source_id']) !== ''
+            ? trim((string) $data['source_id'])
+            : null;
+
+        return DB::transaction(function () use ($actor, $context, $sale, $data, $itemType, $sourceId, $tenantId, $unitId): SaleItem {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
 
@@ -55,6 +59,30 @@ final class AddSaleItem extends OperationalAction
                 throw ValidationException::withMessages([
                     'sale' => 'Apenas comandas em aberto ou em rascunho podem receber novos itens.',
                 ]);
+            }
+
+            if ($sourceId !== null) {
+                /** @var SaleItem|null $existingSourceItem */
+                $existingSourceItem = SaleItem::withTrashed()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('source_id', $sourceId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingSourceItem !== null) {
+                    if ((string) $existingSourceItem->sale_id !== (string) $lockedSale->getKey()) {
+                        throw ValidationException::withMessages([
+                            'source_id' => 'A identidade do item já está vinculada a outra comanda nesta unidade.',
+                        ]);
+                    }
+
+                    if ($existingSourceItem->trashed()) {
+                        $existingSourceItem->restore();
+                    }
+
+                    return $existingSourceItem;
+                }
             }
 
             /** @var SaleCategory $category */
@@ -176,6 +204,7 @@ final class AddSaleItem extends OperationalAction
             /** @var SaleItem $item */
             $item = SaleItem::query()->create([
                 'id' => (string) Str::uuid7(),
+                'source_id' => $sourceId,
                 'tenant_id' => $tenantId,
                 'unit_id' => $unitId,
                 'sale_id' => $lockedSale->getKey(),
@@ -188,6 +217,7 @@ final class AddSaleItem extends OperationalAction
                 'quantity' => $quantity,
                 'discount_cents' => $discountCents,
                 'total_cents' => $totalCents,
+                'source_metadata' => $data['source_metadata'] ?? null,
             ]);
 
             $totalAmountCents = (int) $lockedSale->items()->sum('total_cents');

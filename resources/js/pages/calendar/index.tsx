@@ -84,6 +84,7 @@ import type { SharedPageProps } from '@/types';
 import type {
     AppointmentStatus,
     CalendarAppointment,
+    CalendarAppointmentSaleLink,
     CalendarOption,
     CalendarProps,
     SaleCategoryOptionSummary,
@@ -193,6 +194,33 @@ function formatPriceCents(cents: number | null | undefined): string | null {
         style: 'currency',
         currency: 'BRL',
     }).format(cents / 100);
+}
+
+function getAppointmentSaleLink(
+    appointment: CalendarAppointment,
+): CalendarAppointmentSaleLink | null {
+    return (
+        appointment.sale_link ??
+        appointment.sale_links?.find((link) => link.sale) ??
+        null
+    );
+}
+
+function wasSaleCreatedAutomatically(
+    link: CalendarAppointmentSaleLink | null,
+): boolean {
+    const sale = link?.sale;
+
+    return [
+        link?.automatic,
+        link?.created_automatically,
+        sale?.automatic,
+        sale?.created_automatically,
+        sale?.source === 'appointment',
+        sale?.source === 'agenda',
+        sale?.origin === 'appointment',
+        sale?.origin === 'agenda',
+    ].some((value) => value === true);
 }
 
 function optionList(
@@ -1181,6 +1209,9 @@ function AppointmentSummaryHeader({
             ),
         [appointment, unitTimezone],
     );
+    const appointmentSaleLink = getAppointmentSaleLink(appointment);
+    const appointmentSale = appointmentSaleLink?.sale;
+    const automaticSale = wasSaleCreatedAutomatically(appointmentSaleLink);
 
     return (
         <div className="space-y-3 rounded-xl border border-border/80 bg-muted/30 p-4 shadow-2xs">
@@ -1260,18 +1291,26 @@ function AppointmentSummaryHeader({
                     )}
 
                 {/* Comanda & Faturamento */}
-                {appointment.sale_link?.sale ? (
+                {appointmentSale ? (
                     <div className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-2.5 py-1 text-xs shadow-2xs">
                         <Receipt className="size-3.5 shrink-0 text-primary" />
                         <span className="max-w-[140px] truncate font-medium">
-                            {appointment.sale_link.sale.reference_label ||
+                            {appointmentSale.reference_label ||
                                 'Comanda'}
                         </span>
+                        {automaticSale ? (
+                            <Badge
+                                variant="secondary"
+                                className="border border-primary/20 bg-primary/10 px-1.5 py-0 text-2xs font-medium text-primary"
+                            >
+                                Criada pela Agenda
+                            </Badge>
+                        ) : null}
                         <Badge
                             variant="outline"
                             className="px-1.5 py-0 text-2xs capitalize"
                         >
-                            {appointment.sale_link.sale.status}
+                            {appointmentSale.status}
                         </Badge>
                         <Button
                             asChild
@@ -1280,9 +1319,9 @@ function AppointmentSummaryHeader({
                             className="h-6 px-1.5 text-xs font-medium text-primary hover:text-primary/80"
                         >
                             <Link
-                                href={sales.show(appointment.sale_link.sale.id)}
+                                href={sales.show(appointmentSale.id)}
                             >
-                                Ver Comanda →
+                                Ver comanda →
                             </Link>
                         </Button>
                     </div>

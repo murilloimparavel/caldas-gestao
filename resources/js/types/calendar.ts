@@ -29,12 +29,18 @@ export type CalendarAppointmentItem = {
 };
 
 export type CalendarAppointmentSale = {
+    automatic?: boolean | null;
+    created_automatically?: boolean | null;
     id: string;
+    origin?: string | null;
     reference_label?: string | null;
+    source?: string | null;
     status: string;
 };
 
 export type CalendarAppointmentSaleLink = {
+    automatic?: boolean | null;
+    created_automatically?: boolean | null;
     id: string;
     sale?: CalendarAppointmentSale | null;
     sale_id: string;
@@ -65,6 +71,14 @@ export type CalendarAppointment = {
     source?: 'internal' | 'online' | 'imported' | string | null;
     starts_at: string;
     status: AppointmentStatus;
+};
+
+export type AppointmentSaleAutomation = {
+    category?: SaleCategoryOptionSummary | null;
+    category_id?: string | null;
+    enabled?: boolean | null;
+    is_enabled?: boolean | null;
+    supported?: boolean | null;
 };
 
 export type CalendarFilters = {
@@ -134,6 +148,7 @@ export type CalendarProps = {
     timezone?: string;
     unitTimezone?: string;
     options?: {
+        appointment_sale_automation?: AppointmentSaleAutomation | null;
         customers?: CalendarOption[];
         professionals?: CalendarOption[];
         services?: CalendarOption[];

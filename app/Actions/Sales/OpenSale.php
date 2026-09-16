@@ -18,9 +18,9 @@ use Illuminate\Validation\ValidationException;
 final class OpenSale extends OperationalAction
 {
     /** @param array<string, mixed> $data */
-    public function handle(User $actor, TenantContext $context, array $data): Sale
+    public function handle(User $actor, TenantContext $context, array $data, string $permission = 'sale.manage'): Sale
     {
-        $unit = $this->unit($actor, $context, 'sale.manage');
+        $unit = $this->unit($actor, $context, $permission);
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
 
@@ -73,6 +73,10 @@ final class OpenSale extends OperationalAction
             }
         }
 
+        $sourceId = isset($data['source_id']) && trim((string) $data['source_id']) !== ''
+            ? trim((string) $data['source_id'])
+            : null;
+
         $referenceLabel = isset($data['reference_label']) ? trim((string) $data['reference_label']) : null;
         if ($referenceLabel === '') {
             $referenceLabel = null;
@@ -91,7 +95,25 @@ final class OpenSale extends OperationalAction
             default => null,
         };
 
-        return DB::transaction(function () use ($actor, $context, $category, $customerId, $appointmentId, $referenceLabel, $openContextKey, $data, $tenantId, $unitId): Sale {
+        return DB::transaction(function () use ($actor, $context, $category, $customerId, $appointmentId, $referenceLabel, $openContextKey, $sourceId, $data, $tenantId, $unitId): Sale {
+            if ($sourceId !== null) {
+                /** @var Sale|null $existingSourceSale */
+                $existingSourceSale = Sale::withTrashed()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('source_id', $sourceId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingSourceSale !== null) {
+                    if ($existingSourceSale->trashed()) {
+                        $existingSourceSale->restore();
+                    }
+
+                    return $existingSourceSale;
+                }
+            }
+
             if ($openContextKey !== null) {
                 /** @var Sale|null $existingSale */
                 $existingSale = Sale::query()
@@ -111,6 +133,7 @@ final class OpenSale extends OperationalAction
             /** @var Sale $sale */
             $sale = Sale::query()->create([
                 'id' => (string) Str::uuid7(),
+                'source_id' => $sourceId,
                 'tenant_id' => $tenantId,
                 'unit_id' => $unitId,
                 'customer_id' => $customerId,
@@ -125,6 +148,7 @@ final class OpenSale extends OperationalAction
                 'discount_amount_cents' => 0,
                 'final_amount_cents' => 0,
                 'notes' => isset($data['notes']) ? (string) $data['notes'] : null,
+                'source_metadata' => $data['source_metadata'] ?? null,
                 'lock_version' => 1,
             ]);
 
