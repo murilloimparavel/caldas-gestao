@@ -21,6 +21,7 @@ final class SaveCommissionRule extends OperationalAction
      *     service_id?: string|null,
      *     service_ids?: list<string>,
      *     product_id?: string|null,
+     *     scope?: string,
      *     type?: string,
      *     value_rate: int,
      *     is_active?: bool,
@@ -50,12 +51,14 @@ final class SaveCommissionRule extends OperationalAction
                 $this->ensureNoConflicts($tenantId, $unitId, $data['professional_id'] ?? $lockedRule->professional_id, [
                     'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
                     'product_id' => array_key_exists('product_id', $data) ? $data['product_id'] : $lockedRule->product_id,
+                    'scope' => $data['scope'] ?? $lockedRule->scope,
                 ], $lockedRule->getKey());
 
                 $lockedRule->forceFill([
                     'professional_id' => $data['professional_id'] ?? $lockedRule->professional_id,
                     'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
                     'product_id' => array_key_exists('product_id', $data) ? $data['product_id'] : $lockedRule->product_id,
+                    'scope' => $data['scope'] ?? $lockedRule->scope,
                     'type' => $data['type'] ?? $lockedRule->type,
                     'value_rate' => $data['value_rate'],
                     'is_active' => $data['is_active'] ?? $lockedRule->is_active,
@@ -77,9 +80,14 @@ final class SaveCommissionRule extends OperationalAction
                 return $lockedRule;
             }
 
+            $scope = $data['scope'] ?? (($data['service_id'] ?? null) !== null
+                ? 'service'
+                : (($data['product_id'] ?? null) !== null ? 'product' : 'all'));
+
             $this->ensureNoConflicts($tenantId, $unitId, $data['professional_id'] ?? null, [
                 'service_id' => $data['service_id'] ?? null,
                 'product_id' => $data['product_id'] ?? null,
+                'scope' => $scope,
             ]);
 
             /** @var CommissionRule $createdRule */
@@ -90,6 +98,7 @@ final class SaveCommissionRule extends OperationalAction
                 'professional_id' => $data['professional_id'] ?? null,
                 'service_id' => $data['service_id'] ?? null,
                 'product_id' => $data['product_id'] ?? null,
+                'scope' => $scope,
                 'type' => $data['type'] ?? 'percentage',
                 'value_rate' => $data['value_rate'],
                 'is_active' => $data['is_active'] ?? true,
@@ -135,6 +144,7 @@ final class SaveCommissionRule extends OperationalAction
                     'unit_id' => $unitId,
                     'professional_id' => $data['professional_id'] ?? null,
                     'service_id' => $serviceId,
+                    'scope' => 'service',
                     'type' => $data['type'] ?? 'percentage',
                     'value_rate' => $data['value_rate'],
                     'is_active' => $data['is_active'] ?? true,
@@ -176,6 +186,7 @@ final class SaveCommissionRule extends OperationalAction
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)
                 ->where('professional_id', $data['professional_id'] ?? null)
+                ->where('scope', 'product')
                 ->whereNull('service_id')
                 ->whereIn('product_id', $productIds)
                 ->lockForUpdate()
@@ -199,6 +210,7 @@ final class SaveCommissionRule extends OperationalAction
                     'unit_id' => $unitId,
                     'professional_id' => $data['professional_id'] ?? null,
                     'product_id' => $productId,
+                    'scope' => 'product',
                     'type' => $data['type'] ?? 'percentage',
                     'value_rate' => $data['value_rate'],
                     'is_active' => $data['is_active'] ?? true,
@@ -224,7 +236,7 @@ final class SaveCommissionRule extends OperationalAction
     }
 
     /**
-     * @param  array{service_id?: string|null, product_id?: string|null}  $item
+     * @param  array{service_id?: string|null, product_id?: string|null, scope?: string}  $item
      */
     private function ensureNoConflicts(string $tenantId, string $unitId, ?string $professionalId, array $item, ?string $exceptRuleId = null): void
     {
@@ -232,6 +244,7 @@ final class SaveCommissionRule extends OperationalAction
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('professional_id', $professionalId)
+            ->where('scope', $item['scope'] ?? 'all')
             ->where('service_id', $item['service_id'] ?? null)
             ->where('product_id', $item['product_id'] ?? null)
             ->when($exceptRuleId !== null, fn ($query) => $query->where('id', '!=', $exceptRuleId))
@@ -242,10 +255,18 @@ final class SaveCommissionRule extends OperationalAction
                 ? Service::query()->whereKey($item['service_id'])->value('name')
                 : (($item['product_id'] ?? null) !== null
                     ? Product::query()->whereKey($item['product_id'])->value('name')
-                    : 'Todos os itens');
+                : match ($item['scope'] ?? 'all') {
+                    'service' => 'Todos os serviços',
+                    'product' => 'Todos os produtos',
+                    default => 'Todos os itens',
+                });
+
+            $errorKey = ($item['service_id'] ?? null) !== null
+                ? 'service_id'
+                : (($item['product_id'] ?? null) !== null ? 'product_id' : 'scope');
 
             throw ValidationException::withMessages([
-                (($item['service_id'] ?? null) !== null ? 'service_id' : 'product_id') => "Já existe uma regra de comissão para {$itemName} neste profissional.",
+                $errorKey => "Já existe uma regra de comissão para {$itemName} neste profissional.",
             ]);
         }
     }
@@ -260,6 +281,7 @@ final class SaveCommissionRule extends OperationalAction
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('professional_id', $professionalId)
+            ->where('scope', 'service')
             ->whereNull('product_id')
             ->whereIn('service_id', $serviceIds)
             ->lockForUpdate()

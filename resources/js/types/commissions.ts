@@ -1,4 +1,5 @@
 export type CommissionRuleType = 'percentage' | 'fixed';
+export type CommissionRuleScope = 'all' | 'service' | 'product';
 export type CommissionAccrualStatus = 'accrued' | 'settled' | 'cancelled';
 
 export type CommissionRule = {
@@ -8,6 +9,7 @@ export type CommissionRule = {
     professional_id: string | null;
     service_id: string | null;
     product_id: string | null;
+    scope: CommissionRuleScope;
     type: CommissionRuleType;
     value_rate: number;
     is_active: boolean;

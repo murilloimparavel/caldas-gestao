@@ -99,9 +99,9 @@ export default function CommissionsIndex({
         setSelectedProductIds(rule.product_id ? [rule.product_id] : []);
         setSelectedProfessionalId(rule.professional_id ?? '');
 
-        if (rule.service_id) {
+        if (rule.scope === 'service' || rule.service_id) {
             setItemTargetType('service');
-        } else if (rule.product_id) {
+        } else if (rule.scope === 'product' || rule.product_id) {
             setItemTargetType('product');
         } else {
             setItemTargetType('all');
@@ -632,6 +632,13 @@ export default function CommissionsIndex({
                                             Produto
                                         </Button>
                                     </div>
+                                    {itemTargetType === 'all' && (
+                                        <input
+                                            type="hidden"
+                                            name="scope"
+                                            value="all"
+                                        />
+                                    )}
                                     {(() => {
                                         const conflict = rules.find(
                                             (rule) =>
@@ -658,7 +665,14 @@ export default function CommissionsIndex({
 
                                 {itemTargetType === 'service' && (
                                     <FormField
-                                        label="Serviço Específico"
+                                        label={
+                                            !editingRule &&
+                                            services.length > 0 &&
+                                            selectedServiceIds.length ===
+                                                services.length
+                                                ? 'Todos os Serviços (inclui novos)'
+                                                : 'Serviços Específicos'
+                                        }
                                         error={
                                             errors.service_ids ??
                                             errors.service_id
@@ -699,6 +713,7 @@ export default function CommissionsIndex({
                                                                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                                             />
                                                             Todos os serviços
+                                                            (inclui novos)
                                                         </label>
                                                     )}
                                                     {services.map((service) => (
@@ -709,7 +724,9 @@ export default function CommissionsIndex({
                                                             <input
                                                                 type="checkbox"
                                                                 name={
-                                                                    editingRule
+                                                                    editingRule ||
+                                                                    selectedServiceIds.length ===
+                                                                        services.length
                                                                         ? undefined
                                                                         : 'service_ids[]'
                                                                 }
@@ -755,6 +772,16 @@ export default function CommissionsIndex({
                                                         </label>
                                                     ))}
                                                 </div>
+                                                {!editingRule &&
+                                                    services.length > 0 &&
+                                                    selectedServiceIds.length ===
+                                                        services.length && (
+                                                        <input
+                                                            type="hidden"
+                                                            name="scope"
+                                                            value="service"
+                                                        />
+                                                    )}
                                                 {editingRule && (
                                                     <input
                                                         type="hidden"
@@ -817,7 +844,14 @@ export default function CommissionsIndex({
 
                                 {itemTargetType === 'product' && (
                                     <FormField
-                                        label="Produto Específico"
+                                        label={
+                                            !editingRule &&
+                                            products.length > 0 &&
+                                            selectedProductIds.length ===
+                                                products.length
+                                                ? 'Todos os Produtos (inclui novos)'
+                                                : 'Produtos Específicos'
+                                        }
                                         error={
                                             errors.product_ids ??
                                             errors.product_id
@@ -847,7 +881,8 @@ export default function CommissionsIndex({
                                                         }
                                                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                                     />
-                                                    Todos os produtos
+                                                    Todos os produtos (inclui
+                                                    novos)
                                                 </label>
                                             )}
                                             {products.map((product) => (
@@ -858,7 +893,9 @@ export default function CommissionsIndex({
                                                     <input
                                                         type="checkbox"
                                                         name={
-                                                            editingRule
+                                                            editingRule ||
+                                                            selectedProductIds.length ===
+                                                                products.length
                                                                 ? undefined
                                                                 : 'product_ids[]'
                                                         }
@@ -900,6 +937,16 @@ export default function CommissionsIndex({
                                                 </label>
                                             ))}
                                         </div>
+                                        {!editingRule &&
+                                            products.length > 0 &&
+                                            selectedProductIds.length ===
+                                                products.length && (
+                                                <input
+                                                    type="hidden"
+                                                    name="scope"
+                                                    value="product"
+                                                />
+                                            )}
                                         {editingRule && (
                                             <input
                                                 type="hidden"

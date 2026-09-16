@@ -18,12 +18,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $professional_id
  * @property string|null $service_id
  * @property string|null $product_id
+ * @property string $scope
  * @property string $type
  * @property int $value_rate
  * @property bool $is_active
  * @property int $lock_version
  */
-#[Fillable(['tenant_id', 'unit_id', 'professional_id', 'service_id', 'product_id', 'type', 'value_rate', 'is_active', 'lock_version'])]
+#[Fillable(['tenant_id', 'unit_id', 'professional_id', 'service_id', 'product_id', 'scope', 'type', 'value_rate', 'is_active', 'lock_version'])]
 #[UsePolicy(CommissionPolicy::class)]
 class CommissionRule extends Model
 {
@@ -35,6 +36,7 @@ class CommissionRule extends Model
         'value_rate' => 0,
         'is_active' => true,
         'lock_version' => 0,
+        'scope' => 'all',
     ];
 
     protected function casts(): array

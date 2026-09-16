@@ -43,14 +43,16 @@ final class CommissionRuleRequest extends FormRequest
         };
         $hasServiceBatch = $this->filled('service_ids');
         $hasProductBatch = $this->filled('product_ids');
+        $scope = $this->input('scope');
         $isUpdate = $this->route('rule') instanceof CommissionRule;
 
         return [
             'professional_id' => ['nullable', 'uuid', $scopedExists(Professional::class)],
-            'service_id' => ['nullable', 'uuid', Rule::prohibitedIf($hasServiceBatch || $hasProductBatch), $scopedExists(Service::class)],
+            'scope' => ['nullable', 'string', Rule::in(['all', 'service', 'product'])],
+            'service_id' => ['nullable', 'uuid', Rule::prohibitedIf($hasServiceBatch || $hasProductBatch || in_array($scope, ['all', 'product'], true)), $scopedExists(Service::class)],
             'service_ids' => [$isUpdate || $hasProductBatch ? 'prohibited' : 'sometimes', 'array', 'min:1', 'max:100'],
             'service_ids.*' => ['required', 'uuid', 'distinct', $scopedExists(Service::class)],
-            'product_id' => ['nullable', 'uuid', Rule::prohibitedIf($hasServiceBatch || $hasProductBatch), $scopedExists(Product::class)],
+            'product_id' => ['nullable', 'uuid', Rule::prohibitedIf($hasServiceBatch || $hasProductBatch || in_array($scope, ['all', 'service'], true)), $scopedExists(Product::class)],
             'product_ids' => [$isUpdate || $hasServiceBatch ? 'prohibited' : 'sometimes', 'array', 'min:1', 'max:100'],
             'product_ids.*' => ['required', 'uuid', 'distinct', $scopedExists(Product::class)],
             'type' => ['required', 'string', 'in:percentage,fixed'],

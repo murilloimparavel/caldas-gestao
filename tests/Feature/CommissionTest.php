@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Finance\Commissions\AccrueCommissionsForSale;
 use App\Actions\Identity\OnboardTenant;
 use App\Models\AuditEvent;
 use App\Models\ClosingSession;
@@ -452,6 +453,95 @@ it('rejects a service batch atomically when one exact commission rule already ex
         ->where('unit_id', $unit->getKey())
         ->where('professional_id', $professional->getKey())
         ->count())->toBe(1);
+});
+
+it('creates one dynamic rule for all services and products including future items', function () {
+    [$owner, $tenant, $unit] = commissionTestWorkspace();
+
+    $serviceResponse = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'scope' => 'service',
+        'type' => 'percentage',
+        'value_rate' => 50,
+        'is_active' => true,
+    ]);
+    $serviceResponse->assertSessionHasNoErrors();
+
+    $productResponse = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'scope' => 'product',
+        'type' => 'percentage',
+        'value_rate' => 60,
+        'is_active' => true,
+    ]);
+    $productResponse->assertSessionHasNoErrors();
+
+    expect(CommissionRule::query()->where('tenant_id', $tenant->getKey())->where('unit_id', $unit->getKey())->get())
+        ->toHaveCount(2)
+        ->and(CommissionRule::query()->where('scope', 'service')->whereNull('service_id')->exists())->toBeTrue()
+        ->and(CommissionRule::query()->where('scope', 'product')->whereNull('product_id')->exists())->toBeTrue();
+});
+
+it('applies dynamic service and product rules to items created after the rules', function () {
+    [$owner, $tenant, $unit, $context] = commissionTestWorkspace();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+
+    $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'professional_id' => $professional->getKey(),
+        'scope' => 'service',
+        'type' => 'percentage',
+        'value_rate' => 50,
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'professional_id' => $professional->getKey(),
+        'scope' => 'product',
+        'type' => 'percentage',
+        'value_rate' => 60,
+    ])->assertSessionHasNoErrors();
+
+    $service = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'is_active' => true,
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'product_id' => null,
+        'professional_id' => $professional->getKey(),
+        'total_cents' => 10000,
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'product',
+        'service_id' => null,
+        'product_id' => $product->getKey(),
+        'professional_id' => $professional->getKey(),
+        'total_cents' => 10000,
+    ]);
+
+    $accruals = (new AccrueCommissionsForSale)->handle($owner, $context, $sale);
+
+    expect($accruals)->toHaveCount(2);
+    expect($accruals->pluck('rate_value')->sort()->values()->all())->toBe([50, 60]);
 });
 
 it('rejects an exact duplicate product commission rule', function () {

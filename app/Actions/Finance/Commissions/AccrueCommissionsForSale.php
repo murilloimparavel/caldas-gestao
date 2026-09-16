@@ -114,27 +114,37 @@ final class AccrueCommissionsForSale extends OperationalAction
             return null;
         }
 
-        $serviceMatches = ($item->service_id !== null && $rule->service_id === $item->service_id);
-        $productMatches = ($item->product_id !== null && $rule->product_id === $item->product_id);
-        $isItemSpecific = ($serviceMatches || $productMatches);
-        $isRuleItemGeneric = ($rule->service_id === null && $rule->product_id === null);
+        $serviceMatches = $item->service_id !== null
+            && $rule->scope === 'service'
+            && ($rule->service_id === null || $rule->service_id === $item->service_id);
+        $productMatches = $item->product_id !== null
+            && $rule->scope === 'product'
+            && ($rule->product_id === null || $rule->product_id === $item->product_id);
+        $isItemSpecific = ($serviceMatches && $rule->service_id !== null)
+            || ($productMatches && $rule->product_id !== null);
+        $isRuleItemGeneric = $rule->scope === 'all'
+            || ($rule->scope === 'service' && $rule->service_id === null && $item->service_id !== null)
+            || ($rule->scope === 'product' && $rule->product_id === null && $item->product_id !== null);
 
         if (! $isItemSpecific && ! $isRuleItemGeneric) {
             return null;
         }
 
-        // Scoring:
-        // Specific professional + Specific item => 4
-        // Specific professional + Generic item  => 3
-        // Generic professional  + Specific item => 2
-        // Generic professional  + Generic item  => 1
+        // Specific professional + Specific item => 6
+        // Specific professional + Type generic  => 5
+        // Specific professional + All items     => 4
+        // Generic professional  + Specific item => 3
+        // Generic professional  + Type generic  => 2
+        // Generic professional  + All items     => 1
         $score = 1;
 
         if ($rule->professional_id !== null) {
-            $score += 2;
+            $score += 3;
         }
 
         if ($isItemSpecific) {
+            $score += 2;
+        } elseif (($rule->scope ?? 'all') !== 'all') {
             $score += 1;
         }
 

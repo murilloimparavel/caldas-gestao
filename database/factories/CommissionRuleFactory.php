@@ -26,6 +26,9 @@ class CommissionRuleFactory extends Factory
             'professional_id' => null,
             'service_id' => null,
             'product_id' => null,
+            'scope' => fn (array $attributes): string => ($attributes['service_id'] ?? null) !== null
+                ? 'service'
+                : (($attributes['product_id'] ?? null) !== null ? 'product' : 'all'),
             'type' => 'percentage',
             'value_rate' => 10,
             'is_active' => true,
