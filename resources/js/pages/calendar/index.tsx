@@ -85,6 +85,7 @@ import type { SharedPageProps } from '@/types';
 import type {
     AppointmentStatus,
     CalendarAppointment,
+    CalendarAppointmentSaleLink,
     CalendarOption,
     CalendarProps,
     SaleCategoryOptionSummary,
@@ -194,6 +195,33 @@ function formatPriceCents(cents: number | null | undefined): string | null {
         style: 'currency',
         currency: 'BRL',
     }).format(cents / 100);
+}
+
+function getAppointmentSaleLink(
+    appointment: CalendarAppointment,
+): CalendarAppointmentSaleLink | null {
+    return (
+        appointment.sale_link ??
+        appointment.sale_links?.find((link) => link.sale) ??
+        null
+    );
+}
+
+function wasSaleCreatedAutomatically(
+    link: CalendarAppointmentSaleLink | null,
+): boolean {
+    const sale = link?.sale;
+
+    return [
+        link?.automatic,
+        link?.created_automatically,
+        sale?.automatic,
+        sale?.created_automatically,
+        sale?.source === 'appointment',
+        sale?.source === 'agenda',
+        sale?.origin === 'appointment',
+        sale?.origin === 'agenda',
+    ].some((value) => value === true);
 }
 
 function optionList(
@@ -1142,11 +1170,6 @@ function AppointmentSummaryHeader({
     services: CalendarOption[];
     unitTimezone: string;
 }) {
-    const linkedSale = appointment.sale_link?.sale;
-    const isAutomaticSale = Boolean(
-        linkedSale?.created_automatically ?? linkedSale?.automatic,
-    );
-
     const customerObj = useMemo(() => {
         const custId = appointment.customer_id ?? appointment.customer?.id;
 
@@ -1187,6 +1210,9 @@ function AppointmentSummaryHeader({
             ),
         [appointment, unitTimezone],
     );
+    const appointmentSaleLink = getAppointmentSaleLink(appointment);
+    const linkedSale = appointmentSaleLink?.sale;
+    const isAutomaticSale = wasSaleCreatedAutomatically(appointmentSaleLink);
 
     return (
         <div className="space-y-3 rounded-xl border border-border/80 bg-muted/30 p-4 shadow-2xs">

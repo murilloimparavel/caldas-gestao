@@ -37,10 +37,20 @@ type UniquenessScope = 'customer' | 'appointment' | 'reference' | 'none';
 
 type SaleCategory = {
     appointment_automation_enabled?: boolean;
+    appointment_automation?: {
+        category_id?: string | null;
+        enabled?: boolean | null;
+        is_enabled?: boolean | null;
+        supported?: boolean | null;
+    } | null;
+    appointment_automation_supported?: boolean | null;
+    appointment_default?: boolean | null;
     created_at?: string;
+    default_for_appointments?: boolean | null;
     id: string;
+    is_default_for_appointments?: boolean | null;
+    is_appointment_default?: boolean | null;
     is_active: boolean;
-    is_default_for_appointments?: boolean;
     key: string;
     lock_version: number;
     name: string;
