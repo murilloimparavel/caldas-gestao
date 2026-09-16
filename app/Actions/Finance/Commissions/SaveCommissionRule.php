@@ -4,10 +4,13 @@ namespace App\Actions\Finance\Commissions;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\CommissionRule;
+use App\Models\Product;
+use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class SaveCommissionRule extends OperationalAction
@@ -44,6 +47,11 @@ final class SaveCommissionRule extends OperationalAction
                     throw new ConflictHttpException('A regra de comissão foi modificada concorrentemente.');
                 }
 
+                $this->ensureNoConflicts($tenantId, $unitId, $data['professional_id'] ?? $lockedRule->professional_id, [
+                    'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
+                    'product_id' => array_key_exists('product_id', $data) ? $data['product_id'] : $lockedRule->product_id,
+                ], $lockedRule->getKey());
+
                 $lockedRule->forceFill([
                     'professional_id' => $data['professional_id'] ?? $lockedRule->professional_id,
                     'service_id' => array_key_exists('service_id', $data) ? $data['service_id'] : $lockedRule->service_id,
@@ -68,6 +76,11 @@ final class SaveCommissionRule extends OperationalAction
 
                 return $lockedRule;
             }
+
+            $this->ensureNoConflicts($tenantId, $unitId, $data['professional_id'] ?? null, [
+                'service_id' => $data['service_id'] ?? null,
+                'product_id' => $data['product_id'] ?? null,
+            ]);
 
             /** @var CommissionRule $createdRule */
             $createdRule = CommissionRule::query()->create([
@@ -111,6 +124,7 @@ final class SaveCommissionRule extends OperationalAction
         $unitId = $unit->getKey();
 
         return DB::transaction(function () use ($actor, $context, $serviceIds, $data, $tenantId, $unitId): array {
+            $this->ensureNoConflictsForServices($tenantId, $unitId, $data['professional_id'] ?? null, $serviceIds);
             $rules = [];
 
             foreach ($serviceIds as $serviceId) {
@@ -143,5 +157,56 @@ final class SaveCommissionRule extends OperationalAction
 
             return $rules;
         }, 5);
+    }
+
+    /**
+     * @param  array{service_id?: string|null, product_id?: string|null}  $item
+     */
+    private function ensureNoConflicts(string $tenantId, string $unitId, ?string $professionalId, array $item, ?string $exceptRuleId = null): void
+    {
+        $query = CommissionRule::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('professional_id', $professionalId)
+            ->where('service_id', $item['service_id'] ?? null)
+            ->where('product_id', $item['product_id'] ?? null)
+            ->when($exceptRuleId !== null, fn ($query) => $query->where('id', '!=', $exceptRuleId))
+            ->lockForUpdate();
+
+        if ($query->exists()) {
+            $itemName = ($item['service_id'] ?? null) !== null
+                ? Service::query()->whereKey($item['service_id'])->value('name')
+                : (($item['product_id'] ?? null) !== null
+                    ? Product::query()->whereKey($item['product_id'])->value('name')
+                    : 'Todos os itens');
+
+            throw ValidationException::withMessages([
+                (($item['service_id'] ?? null) !== null ? 'service_id' : 'product_id') => "Já existe uma regra de comissão para {$itemName} neste profissional.",
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<string>  $serviceIds
+     */
+    private function ensureNoConflictsForServices(string $tenantId, string $unitId, ?string $professionalId, array $serviceIds): void
+    {
+        $conflictingRules = CommissionRule::query()
+            ->with('service:id,name')
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('professional_id', $professionalId)
+            ->whereNull('product_id')
+            ->whereIn('service_id', $serviceIds)
+            ->lockForUpdate()
+            ->get();
+
+        if ($conflictingRules->isNotEmpty()) {
+            $names = $conflictingRules->pluck('service.name')->filter()->unique()->implode(', ');
+
+            throw ValidationException::withMessages([
+                'service_ids' => "Já existe uma regra de comissão para: {$names}.",
+            ]);
+        }
     }
 }

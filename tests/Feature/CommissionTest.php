@@ -418,6 +418,66 @@ it('creates one commission rule for every selected service in one request', func
     $updateResponse->assertSessionHasErrors('service_ids');
 });
 
+it('rejects a service batch atomically when one exact commission rule already exists', function () {
+    [$owner, $tenant, $unit] = commissionTestWorkspace();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $services = Service::factory()->count(2)->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
+
+    CommissionRule::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $professional->getKey(),
+        'service_id' => $services->first()->getKey(),
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'professional_id' => $professional->getKey(),
+        'service_ids' => $services->pluck('id')->all(),
+        'type' => 'percentage',
+        'value_rate' => 25,
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasErrors('service_ids');
+    expect(CommissionRule::query()
+        ->where('tenant_id', $tenant->getKey())
+        ->where('unit_id', $unit->getKey())
+        ->where('professional_id', $professional->getKey())
+        ->count())->toBe(1);
+});
+
+it('rejects an exact duplicate product commission rule', function () {
+    [$owner, $tenant, $unit] = commissionTestWorkspace();
+
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'is_active' => true,
+    ]);
+    CommissionRule::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'product_id' => $product->getKey(),
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('commissions.rules.store'), [
+        'product_id' => $product->getKey(),
+        'type' => 'percentage',
+        'value_rate' => 25,
+        'is_active' => true,
+    ]);
+
+    $response->assertSessionHasErrors('product_id');
+});
+
 it('renders commissions index and professional show pages with Inertia', function () {
     [$owner, $tenant, $unit] = commissionTestWorkspace();
 

@@ -2,6 +2,7 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Coins,
+    AlertTriangle,
     Percent,
     Plus,
     Receipt,
@@ -49,8 +50,6 @@ type ProductOption = {
     sale_price_cents: number;
 };
 
-const ALL_SERVICES_VALUE = '__all_services__';
-
 type Props = {
     professionals: ProfessionalCommissionSummary[];
     rules: CommissionRule[];
@@ -75,6 +74,8 @@ export default function CommissionsIndex({
     const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<CommissionRule | null>(null);
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+    const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
+    const [selectedProductId, setSelectedProductId] = useState('');
     const [itemTargetType, setItemTargetType] = useState<
         'all' | 'service' | 'product'
     >('all');
@@ -85,6 +86,8 @@ export default function CommissionsIndex({
     const openCreateModal = () => {
         setEditingRule(null);
         setSelectedServiceIds([]);
+        setSelectedProfessionalId('');
+        setSelectedProductId('');
         setItemTargetType('all');
         setRuleRateType('percentage');
         setIsRuleModalOpen(true);
@@ -93,6 +96,8 @@ export default function CommissionsIndex({
     const openEditModal = (rule: CommissionRule) => {
         setEditingRule(rule);
         setSelectedServiceIds(rule.service_id ? [rule.service_id] : []);
+        setSelectedProfessionalId(rule.professional_id ?? '');
+        setSelectedProductId(rule.product_id ?? '');
 
         if (rule.service_id) {
             setItemTargetType('service');
@@ -557,8 +562,11 @@ export default function CommissionsIndex({
                                 >
                                     <select
                                         name="professional_id"
-                                        defaultValue={
-                                            editingRule?.professional_id ?? ''
+                                        value={selectedProfessionalId}
+                                        onChange={(event) =>
+                                            setSelectedProfessionalId(
+                                                event.target.value,
+                                            )
                                         }
                                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     >
@@ -624,6 +632,28 @@ export default function CommissionsIndex({
                                             Produto
                                         </Button>
                                     </div>
+                                    {(() => {
+                                        const conflict = rules.find(
+                                            (rule) =>
+                                                rule.id !== editingRule?.id &&
+                                                rule.professional_id ===
+                                                    (selectedProfessionalId ||
+                                                        null) &&
+                                                rule.service_id === null &&
+                                                rule.product_id === null,
+                                        );
+
+                                        return itemTargetType === 'all' &&
+                                            conflict ? (
+                                            <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                                Já existe uma regra geral de
+                                                comissão para este profissional.
+                                                Remova a regra existente antes
+                                                de salvar.
+                                            </p>
+                                        ) : null;
+                                    })()}
                                 </div>
 
                                 {itemTargetType === 'service' && (
@@ -641,94 +671,145 @@ export default function CommissionsIndex({
                                             </p>
                                         ) : (
                                             <>
-                                                <select
-                                                    name={
-                                                        editingRule
-                                                            ? 'service_id'
-                                                            : selectedServiceIds.length ===
-                                                                services.length
-                                                              ? undefined
-                                                              : 'service_ids[]'
-                                                    }
-                                                    value={
-                                                        editingRule
-                                                            ? undefined
-                                                            : selectedServiceIds.length ===
-                                                                services.length
-                                                              ? ALL_SERVICES_VALUE
-                                                              : (selectedServiceIds[0] ??
-                                                                '')
-                                                    }
-                                                    defaultValue={
-                                                        editingRule
-                                                            ? (editingRule.service_id ??
-                                                              '')
-                                                            : undefined
-                                                    }
-                                                    onChange={(event) => {
-                                                        if (editingRule) {
-                                                            return;
-                                                        }
-
-                                                        setSelectedServiceIds(
-                                                            event.target
-                                                                .value ===
-                                                                ALL_SERVICES_VALUE
-                                                                ? services.map(
-                                                                      (
-                                                                          service,
-                                                                      ) =>
-                                                                          service.id,
-                                                                  )
-                                                                : event.target
-                                                                        .value
-                                                                  ? [
+                                                <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border border-input bg-background p-2">
+                                                    {!editingRule && (
+                                                        <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm font-medium hover:bg-muted">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={
+                                                                    selectedServiceIds.length ===
+                                                                    services.length
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    setSelectedServiceIds(
                                                                         event
                                                                             .target
-                                                                            .value,
-                                                                    ]
-                                                                  : [],
-                                                        );
-                                                    }}
-                                                    required
-                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                                >
-                                                    <option value="">
-                                                        Selecione um serviço...
-                                                    </option>
-                                                    {!editingRule && (
-                                                        <option
-                                                            value={
-                                                                ALL_SERVICES_VALUE
-                                                            }
-                                                        >
+                                                                            .checked
+                                                                            ? services.map(
+                                                                                  (
+                                                                                      service,
+                                                                                  ) =>
+                                                                                      service.id,
+                                                                              )
+                                                                            : [],
+                                                                    )
+                                                                }
+                                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                            />
                                                             Todos os serviços
-                                                        </option>
+                                                        </label>
                                                     )}
                                                     {services.map((service) => (
-                                                        <option
+                                                        <label
                                                             key={service.id}
-                                                            value={service.id}
+                                                            className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
                                                         >
-                                                            {service.name} (
-                                                            {formatMoney(
-                                                                service.price_cents,
-                                                            )}
-                                                            )
-                                                        </option>
+                                                            <input
+                                                                type="checkbox"
+                                                                name={
+                                                                    editingRule
+                                                                        ? undefined
+                                                                        : 'service_ids[]'
+                                                                }
+                                                                value={
+                                                                    service.id
+                                                                }
+                                                                checked={selectedServiceIds.includes(
+                                                                    service.id,
+                                                                )}
+                                                                onChange={() => {
+                                                                    if (
+                                                                        editingRule
+                                                                    ) {
+                                                                        return;
+                                                                    }
+
+                                                                    setSelectedServiceIds(
+                                                                        selectedServiceIds.includes(
+                                                                            service.id,
+                                                                        )
+                                                                            ? selectedServiceIds.filter(
+                                                                                  (
+                                                                                      id,
+                                                                                  ) =>
+                                                                                      id !==
+                                                                                      service.id,
+                                                                              )
+                                                                            : [
+                                                                                  ...selectedServiceIds,
+                                                                                  service.id,
+                                                                              ],
+                                                                    );
+                                                                }}
+                                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                            />
+                                                            <span>
+                                                                {service.name} (
+                                                                {formatMoney(
+                                                                    service.price_cents,
+                                                                )}
+                                                                )
+                                                            </span>
+                                                        </label>
                                                     ))}
-                                                </select>
+                                                </div>
+                                                {editingRule && (
+                                                    <input
+                                                        type="hidden"
+                                                        name="service_id"
+                                                        value={
+                                                            selectedServiceIds[0] ??
+                                                            ''
+                                                        }
+                                                    />
+                                                )}
                                                 {!editingRule &&
                                                     selectedServiceIds.length ===
-                                                        services.length &&
-                                                    services.map((service) => (
-                                                        <input
-                                                            key={service.id}
-                                                            type="hidden"
-                                                            name="service_ids[]"
-                                                            value={service.id}
-                                                        />
-                                                    ))}
+                                                        0 && (
+                                                        <p className="text-xs text-destructive">
+                                                            Selecione pelo menos
+                                                            um serviço.
+                                                        </p>
+                                                    )}
+                                                {(() => {
+                                                    const conflicts =
+                                                        rules.filter(
+                                                            (rule) =>
+                                                                rule.id !==
+                                                                    editingRule?.id &&
+                                                                rule.professional_id ===
+                                                                    (selectedProfessionalId ||
+                                                                        null) &&
+                                                                rule.service_id !==
+                                                                    null &&
+                                                                selectedServiceIds.includes(
+                                                                    rule.service_id,
+                                                                ),
+                                                        );
+
+                                                    return conflicts.length >
+                                                        0 ? (
+                                                        <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                                            Já existe regra
+                                                            para:{' '}
+                                                            {conflicts
+                                                                .map(
+                                                                    (rule) =>
+                                                                        rule
+                                                                            .service
+                                                                            ?.name,
+                                                                )
+                                                                .filter(Boolean)
+                                                                .join(', ')}
+                                                            . Remova os itens
+                                                            repetidos antes de
+                                                            salvar.
+                                                        </p>
+                                                    ) : null;
+                                                })()}
                                             </>
                                         )}
                                     </FormField>
@@ -741,8 +822,11 @@ export default function CommissionsIndex({
                                     >
                                         <select
                                             name="product_id"
-                                            defaultValue={
-                                                editingRule?.product_id ?? ''
+                                            value={selectedProductId}
+                                            onChange={(event) =>
+                                                setSelectedProductId(
+                                                    event.target.value,
+                                                )
                                             }
                                             required
                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
@@ -760,6 +844,28 @@ export default function CommissionsIndex({
                                                 </option>
                                             ))}
                                         </select>
+                                        {(() => {
+                                            const conflict = rules.find(
+                                                (rule) =>
+                                                    rule.id !==
+                                                        editingRule?.id &&
+                                                    rule.professional_id ===
+                                                        (selectedProfessionalId ||
+                                                            null) &&
+                                                    rule.product_id ===
+                                                        selectedProductId,
+                                            );
+
+                                            return conflict ? (
+                                                <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                                    Já existe uma regra para{' '}
+                                                    {conflict.product?.name}.
+                                                    Remova o produto repetido
+                                                    antes de salvar.
+                                                </p>
+                                            ) : null;
+                                        })()}
                                     </FormField>
                                 )}
 
