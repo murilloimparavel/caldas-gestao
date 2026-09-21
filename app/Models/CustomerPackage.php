@@ -116,4 +116,10 @@ class CustomerPackage extends Model
     {
         return $this->hasMany(PackageUsage::class);
     }
+
+    /** @return HasMany<CustomerPackageService, $this> */
+    public function serviceBalances(): HasMany
+    {
+        return $this->hasMany(CustomerPackageService::class);
+    }
 }

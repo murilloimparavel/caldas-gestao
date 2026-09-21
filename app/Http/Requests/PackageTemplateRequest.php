@@ -9,6 +9,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class PackageTemplateRequest extends FormRequest
 {
@@ -46,8 +47,23 @@ final class PackageTemplateRequest extends FormRequest
             'is_active' => ['sometimes', 'boolean'],
             'service_ids' => ['sometimes', 'array'],
             'service_ids.*' => ['uuid', 'distinct', $serviceExists],
+            'service_quantities' => ['sometimes', 'array'],
+            'service_quantities.*' => ['integer', 'min:1', 'max:1000'],
             'lock_version' => [$this->isMethod('post') ? 'sometimes' : 'required', 'integer', 'min:0'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('service_quantities')) {
+            return;
+        }
+
+        $quantities = collect($this->input('service_quantities', []))
+            ->mapWithKeys(static fn (mixed $quantity, mixed $serviceId): array => [(string) $serviceId => (int) $quantity])
+            ->all();
+
+        $this->merge(['service_quantities' => $quantities]);
     }
 
     /** @return array<string, string> */
@@ -56,5 +72,22 @@ final class PackageTemplateRequest extends FormRequest
         return [
             'service_ids.*.exists' => 'Cada serviço deve pertencer à unidade ativa.',
         ];
+    }
+
+    /** @return array<int, callable(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $quantities = $this->input('service_quantities', []);
+            if (! is_array($quantities) || $quantities === []) {
+                return;
+            }
+
+            $total = (int) $this->input('total_sessions', 0);
+            $configured = array_sum(array_map('intval', $quantities));
+            if ($configured !== $total) {
+                $validator->errors()->add('total_sessions', "A soma das quantidades por serviço deve ser {$total} sessões.");
+            }
+        }];
     }
 }

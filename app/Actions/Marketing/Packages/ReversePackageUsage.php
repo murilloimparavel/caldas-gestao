@@ -4,6 +4,7 @@ namespace App\Actions\Marketing\Packages;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -68,6 +69,16 @@ final class ReversePackageUsage extends OperationalAction
                 'status' => 'active',
                 'lock_version' => $package->lock_version + 1,
             ])->save();
+
+            if ($usage->service_id !== null) {
+                CustomerPackageService::query()
+                    ->where('tenant_id', $context->tenant->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->where('customer_package_id', $package->getKey())
+                    ->where('service_id', $usage->service_id)
+                    ->lockForUpdate()
+                    ->increment('remaining_quantity', $usage->sessions_consumed);
+            }
 
             $usage->forceFill([
                 'reversed_at' => now(),

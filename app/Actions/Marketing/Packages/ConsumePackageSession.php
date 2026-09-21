@@ -4,6 +4,7 @@ namespace App\Actions\Marketing\Packages;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -32,12 +33,13 @@ final class ConsumePackageSession extends OperationalAction
 
         $saleId = isset($data['sale_id']) && $data['sale_id'] !== '' ? (string) $data['sale_id'] : null;
         $saleItemId = isset($data['sale_item_id']) && $data['sale_item_id'] !== '' ? (string) $data['sale_item_id'] : null;
+        $serviceId = isset($data['service_id']) && $data['service_id'] !== '' ? (string) $data['service_id'] : null;
 
         if ($saleItemId !== null && $saleId === null) {
             throw new \InvalidArgumentException('A sale item requires an associated sale.');
         }
 
-        $package = DB::transaction(function () use ($actor, $context, $unit, $customerPackage, $sessionsToConsume, $saleId, $saleItemId): ?CustomerPackage {
+        $package = DB::transaction(function () use ($actor, $context, $unit, $customerPackage, $sessionsToConsume, $saleId, $saleItemId, $serviceId): ?CustomerPackage {
             /** @var CustomerPackage $locked */
             $locked = CustomerPackage::query()
                 ->where('tenant_id', $context->tenant->getKey())
@@ -105,6 +107,33 @@ final class ConsumePackageSession extends OperationalAction
                 if (! in_array((string) $saleItem->service_id, $eligibleServiceIds, true)) {
                     throw new \InvalidArgumentException('The sale item service is not eligible for this package.');
                 }
+
+                $serviceId ??= (string) $saleItem->service_id;
+            }
+
+            if ($serviceId !== null) {
+                $balance = CustomerPackageService::query()
+                    ->where('tenant_id', $context->tenant->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->where('customer_package_id', $locked->getKey())
+                    ->where('service_id', $serviceId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($balance !== null && $balance->remaining_quantity < $sessionsToConsume) {
+                    throw new ConflictHttpException('Not enough sessions remaining for this service.');
+                }
+
+                if ($balance !== null) {
+                    CustomerPackageService::query()
+                        ->where('tenant_id', $context->tenant->getKey())
+                        ->where('unit_id', $unit->getKey())
+                        ->where('customer_package_id', $locked->getKey())
+                        ->where('service_id', $serviceId)
+                        ->update([
+                            'remaining_quantity' => $balance->remaining_quantity - $sessionsToConsume,
+                        ]);
+                }
             }
 
             if ($locked->remaining_sessions < $sessionsToConsume) {
@@ -125,6 +154,7 @@ final class ConsumePackageSession extends OperationalAction
                 'tenant_id' => $context->tenant->getKey(),
                 'unit_id' => $unit->getKey(),
                 'customer_package_id' => $locked->getKey(),
+                'service_id' => $serviceId,
                 'sale_id' => $saleId,
                 'sale_item_id' => $saleItemId,
                 'sessions_consumed' => $sessionsToConsume,

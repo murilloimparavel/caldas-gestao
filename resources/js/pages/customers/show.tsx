@@ -95,6 +95,13 @@ type CustomerPackageUsage = {
     user?: { id: string; name: string } | null;
 };
 
+type CustomerPackageServiceBalance = {
+    allocated_quantity: number;
+    remaining_quantity: number;
+    service?: { id: string; name: string };
+    service_id: string;
+};
+
 type CustomerPackageItem = {
     created_at: string;
     eligible_services_snapshot?: Array<{ id: string; name: string }> | null;
@@ -119,6 +126,7 @@ type CustomerPackageItem = {
     total_sessions_snapshot?: number | null;
     validity_days_snapshot?: number | null;
     usages?: CustomerPackageUsage[];
+    service_balances?: CustomerPackageServiceBalance[];
 };
 
 type PackageTemplateOption = {
@@ -1958,6 +1966,21 @@ export default function CustomerShow({
                                                 </span>
                                             </div>
                                         </div>
+
+                                        <FormField
+                                            id="service_id"
+                                            label="Serviço utilizado"
+                                            error={errors.service_id}
+                                        >
+                                            <select id="service_id" name="service_id" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                                <option value="">Saldo geral do pacote</option>
+                                                {(selectedPackageForConsume.service_balances ?? []).map((balance) => (
+                                                    <option key={balance.service_id} value={balance.service_id} disabled={balance.remaining_quantity < 1}>
+                                                        {balance.service?.name ?? 'Serviço'} — {balance.remaining_quantity} restantes
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </FormField>
 
                                         <FormField
                                             id="sessions_consumed"

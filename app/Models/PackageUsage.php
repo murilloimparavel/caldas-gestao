@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'tenant_id',
     'unit_id',
     'customer_package_id',
+    'service_id',
     'sale_id',
     'sale_item_id',
     'sessions_consumed',
@@ -72,6 +73,12 @@ class PackageUsage extends Model
     public function customerPackage(): BelongsTo
     {
         return $this->belongsTo(CustomerPackage::class);
+    }
+
+    /** @return BelongsTo<Service, $this> */
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
     }
 
     /** @return BelongsTo<Sale, $this> */

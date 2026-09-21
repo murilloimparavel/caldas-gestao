@@ -11,7 +11,6 @@ import {
     PageCanvas,
     Pagination,
     parseBrazilianCurrency,
-    RelationCheckboxes,
     ResourceHeader,
     SearchToolbar,
     StatusBadge,
@@ -58,6 +57,48 @@ type Props = {
     packages: Paginated<PackageTemplate>;
     serviceOptions?: RelationOption[];
 };
+
+function ServiceQuantityFields({ options }: { options: RelationOption[] }) {
+    const [selected, setSelected] = useState<Record<string, number>>({});
+
+    return (
+        <div className="grid gap-2 sm:grid-cols-2">
+            {options.map((option) => {
+                const quantity = selected[option.id] ?? 0;
+                return (
+                    <div key={option.id} className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3">
+                        <input
+                            type="checkbox"
+                            name="service_ids[]"
+                            value={option.id}
+                            checked={quantity > 0}
+                            onChange={(event) => setSelected((current) => ({
+                                ...current,
+                                [option.id]: event.target.checked ? Math.max(1, current[option.id] ?? 1) : 0,
+                            }))}
+                            className="h-4 w-4 accent-primary"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm">{option.name}</span>
+                        <input
+                            type="number"
+                            name={`service_quantities[${option.id}]`}
+                            min="1"
+                            max="1000"
+                            value={quantity || ''}
+                            disabled={quantity === 0}
+                            onChange={(event) => setSelected((current) => ({
+                                ...current,
+                                [option.id]: Math.max(1, Number(event.target.value) || 1),
+                            }))}
+                            aria-label={`Quantidade de ${option.name}`}
+                            className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm"
+                        />
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 function PackagePriceField({ initialCents = 0 }: { initialCents?: number }) {
     const [displayValue, setDisplayValue] = useState(
@@ -218,10 +259,7 @@ export default function PackagesIndex({
                                                     label="Serviços Inclusos"
                                                     error={errors.service_ids}
                                                 >
-                                                    <RelationCheckboxes
-                                                        name="service_ids"
-                                                        options={serviceOptions}
-                                                    />
+                                                        <ServiceQuantityFields options={serviceOptions} />
                                                 </FormField>
                                             )}
 

@@ -41,6 +41,8 @@ final class UpdatePackageTemplate extends OperationalAction
                 $serviceIds = is_array($data['service_ids']) ? array_values(array_map('strval', $data['service_ids'])) : [];
                 unset($data['service_ids']);
             }
+            $serviceQuantities = is_array($data['service_quantities'] ?? null) ? $data['service_quantities'] : [];
+            unset($data['service_quantities']);
 
             $locked->forceFill([
                 ...$data,
@@ -48,7 +50,7 @@ final class UpdatePackageTemplate extends OperationalAction
             ])->save();
 
             if (is_array($serviceIds)) {
-                $this->syncServices($locked, $context, $serviceIds);
+                $this->syncServices($locked, $context, $serviceIds, $serviceQuantities);
             }
 
             $this->events->record($actor, $context, 'package_template.updated', $locked, [
@@ -65,7 +67,7 @@ final class UpdatePackageTemplate extends OperationalAction
     }
 
     /** @param list<string> $serviceIds */
-    private function syncServices(PackageTemplate $template, TenantContext $context, array $serviceIds): void
+    private function syncServices(PackageTemplate $template, TenantContext $context, array $serviceIds, array $serviceQuantities = []): void
     {
         $serviceIds = array_values(array_unique($serviceIds));
 
@@ -81,12 +83,14 @@ final class UpdatePackageTemplate extends OperationalAction
             }
         }
 
-        $template->services()->syncWithPivotValues(
-            $serviceIds,
-            [
-                'tenant_id' => $context->tenant->getKey(),
-                'unit_id' => $context->unit?->getKey(),
-            ]
+        $template->services()->sync(
+            collect($serviceIds)->mapWithKeys(fn (string $serviceId): array => [
+                $serviceId => [
+                    'tenant_id' => $context->tenant->getKey(),
+                    'unit_id' => $context->unit?->getKey(),
+                    'included_quantity' => max(1, (int) ($serviceQuantities[$serviceId] ?? 1)),
+                ],
+            ])->all(),
         );
     }
 }
