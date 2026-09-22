@@ -65,6 +65,7 @@ function ServiceQuantityFields({ options }: { options: RelationOption[] }) {
         <div className="grid gap-2 sm:grid-cols-2">
             {options.map((option) => {
                 const quantity = selected[option.id] ?? 0;
+
                 return (
                     <div key={option.id} className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3">
                         <input

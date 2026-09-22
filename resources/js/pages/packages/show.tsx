@@ -114,6 +114,7 @@ function ServiceQuantityFields({ options, initial }: { options: RelationOption[]
         <div className="grid gap-2 sm:grid-cols-2">
             {options.map((option) => {
                 const quantity = selected[option.id] ?? 0;
+
                 return (
                     <div key={option.id} className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3">
                         <input type="checkbox" name="service_ids[]" value={option.id} checked={quantity > 0} onChange={(event) => setSelected((current) => ({ ...current, [option.id]: event.target.checked ? Math.max(1, current[option.id] ?? 1) : 0 }))} className="h-4 w-4 accent-primary" />
