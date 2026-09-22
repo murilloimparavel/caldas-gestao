@@ -60,57 +60,76 @@ type Props = {
 
 function ServiceQuantityFields({ options }: { options: RelationOption[] }) {
     const [selected, setSelected] = useState<Record<string, number>>({});
+    const totalSessions = Object.values(selected).reduce(
+        (total, quantity) => total + quantity,
+        0,
+    );
 
     return (
-        <div className="grid gap-2 sm:grid-cols-2">
-            {options.map((option) => {
-                const quantity = selected[option.id] ?? 0;
+        <div className="space-y-3">
+            <input type="hidden" name="total_sessions" value={totalSessions} />
+            <div className="grid gap-2 sm:grid-cols-2">
+                {options.map((option) => {
+                    const quantity = selected[option.id] ?? 0;
 
-                return (
-                    <div
-                        key={option.id}
-                        className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3"
-                    >
-                        <input
-                            type="checkbox"
-                            name="service_ids[]"
-                            value={option.id}
-                            checked={quantity > 0}
-                            onChange={(event) =>
-                                setSelected((current) => ({
-                                    ...current,
-                                    [option.id]: event.target.checked
-                                        ? Math.max(1, current[option.id] ?? 1)
-                                        : 0,
-                                }))
-                            }
-                            className="h-4 w-4 accent-primary"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm">
-                            {option.name}
-                        </span>
-                        <input
-                            type="number"
-                            name={`service_quantities[${option.id}]`}
-                            min="1"
-                            max="1000"
-                            value={quantity || ''}
-                            disabled={quantity === 0}
-                            onChange={(event) =>
-                                setSelected((current) => ({
-                                    ...current,
-                                    [option.id]: Math.max(
-                                        1,
-                                        Number(event.target.value) || 1,
-                                    ),
-                                }))
-                            }
-                            aria-label={`Quantidade de ${option.name}`}
-                            className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm"
-                        />
-                    </div>
-                );
-            })}
+                    return (
+                        <div
+                            key={option.id}
+                            className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3"
+                        >
+                            <input
+                                type="checkbox"
+                                name="service_ids[]"
+                                value={option.id}
+                                checked={quantity > 0}
+                                onChange={(event) =>
+                                    setSelected((current) => ({
+                                        ...current,
+                                        [option.id]: event.target.checked
+                                            ? Math.max(
+                                                  1,
+                                                  current[option.id] ?? 1,
+                                              )
+                                            : 0,
+                                    }))
+                                }
+                                className="h-4 w-4 accent-primary"
+                            />
+                            <span className="min-w-0 flex-1 truncate text-sm">
+                                {option.name}
+                            </span>
+                            <input
+                                type="number"
+                                name={`service_quantities[${option.id}]`}
+                                min="1"
+                                max="1000"
+                                value={quantity || ''}
+                                disabled={quantity === 0}
+                                onChange={(event) =>
+                                    setSelected((current) => ({
+                                        ...current,
+                                        [option.id]: Math.max(
+                                            1,
+                                            Number(event.target.value) || 1,
+                                        ),
+                                    }))
+                                }
+                                aria-label={`Quantidade de ${option.name}`}
+                                className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm"
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Total do pacote: </span>
+                <strong>
+                    {totalSessions} {totalSessions === 1 ? 'sessão' : 'sessões'}
+                </strong>
+                <p className="mt-1 text-xs text-muted-foreground">
+                    O total é calculado automaticamente pela soma dos serviços.
+                </p>
+            </div>
         </div>
     );
 }
@@ -221,7 +240,7 @@ export default function PackagesIndex({
                                                 />
                                             </FormField>
 
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                                 <FormField
                                                     id="price_display"
                                                     label="Preço Total"
@@ -229,25 +248,6 @@ export default function PackagesIndex({
                                                     error={errors.price_cents}
                                                 >
                                                     <PackagePriceField />
-                                                </FormField>
-
-                                                <FormField
-                                                    id="total_sessions"
-                                                    label="Qtd. de Sessões"
-                                                    required
-                                                    error={
-                                                        errors.total_sessions
-                                                    }
-                                                >
-                                                    <Input
-                                                        id="total_sessions"
-                                                        name="total_sessions"
-                                                        type="number"
-                                                        min="1"
-                                                        max="1000"
-                                                        defaultValue={5}
-                                                        required
-                                                    />
                                                 </FormField>
 
                                                 <FormField
@@ -267,6 +267,27 @@ export default function PackagesIndex({
                                                     />
                                                 </FormField>
                                             </div>
+
+                                            {serviceOptions.length === 0 && (
+                                                <FormField
+                                                    id="total_sessions"
+                                                    label="Total de sessões"
+                                                    required
+                                                    error={
+                                                        errors.total_sessions
+                                                    }
+                                                >
+                                                    <Input
+                                                        id="total_sessions"
+                                                        name="total_sessions"
+                                                        type="number"
+                                                        min="1"
+                                                        max="1000"
+                                                        defaultValue={5}
+                                                        required
+                                                    />
+                                                </FormField>
+                                            )}
 
                                             {serviceOptions.length > 0 && (
                                                 <FormField
