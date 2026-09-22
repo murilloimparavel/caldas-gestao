@@ -1972,11 +1972,36 @@ export default function CustomerShow({
                                             label="Serviço utilizado"
                                             error={errors.service_id}
                                         >
-                                            <select id="service_id" name="service_id" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                                                <option value="">Saldo geral do pacote</option>
-                                                {(selectedPackageForConsume.service_balances ?? []).map((balance) => (
-                                                    <option key={balance.service_id} value={balance.service_id} disabled={balance.remaining_quantity < 1}>
-                                                        {balance.service?.name ?? 'Serviço'} — {balance.remaining_quantity} restantes
+                                            <select
+                                                id="service_id"
+                                                name="service_id"
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            >
+                                                <option value="">
+                                                    Saldo geral do pacote
+                                                </option>
+                                                {(
+                                                    selectedPackageForConsume.service_balances ??
+                                                    []
+                                                ).map((balance) => (
+                                                    <option
+                                                        key={balance.service_id}
+                                                        value={
+                                                            balance.service_id
+                                                        }
+                                                        disabled={
+                                                            balance.remaining_quantity <
+                                                            1
+                                                        }
+                                                    >
+                                                        {balance.service
+                                                            ?.name ??
+                                                            'Serviço'}{' '}
+                                                        —{' '}
+                                                        {
+                                                            balance.remaining_quantity
+                                                        }{' '}
+                                                        restantes
                                                     </option>
                                                 ))}
                                             </select>

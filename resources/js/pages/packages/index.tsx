@@ -67,19 +67,28 @@ function ServiceQuantityFields({ options }: { options: RelationOption[] }) {
                 const quantity = selected[option.id] ?? 0;
 
                 return (
-                    <div key={option.id} className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3">
+                    <div
+                        key={option.id}
+                        className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3"
+                    >
                         <input
                             type="checkbox"
                             name="service_ids[]"
                             value={option.id}
                             checked={quantity > 0}
-                            onChange={(event) => setSelected((current) => ({
-                                ...current,
-                                [option.id]: event.target.checked ? Math.max(1, current[option.id] ?? 1) : 0,
-                            }))}
+                            onChange={(event) =>
+                                setSelected((current) => ({
+                                    ...current,
+                                    [option.id]: event.target.checked
+                                        ? Math.max(1, current[option.id] ?? 1)
+                                        : 0,
+                                }))
+                            }
                             className="h-4 w-4 accent-primary"
                         />
-                        <span className="min-w-0 flex-1 truncate text-sm">{option.name}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                            {option.name}
+                        </span>
                         <input
                             type="number"
                             name={`service_quantities[${option.id}]`}
@@ -87,10 +96,15 @@ function ServiceQuantityFields({ options }: { options: RelationOption[] }) {
                             max="1000"
                             value={quantity || ''}
                             disabled={quantity === 0}
-                            onChange={(event) => setSelected((current) => ({
-                                ...current,
-                                [option.id]: Math.max(1, Number(event.target.value) || 1),
-                            }))}
+                            onChange={(event) =>
+                                setSelected((current) => ({
+                                    ...current,
+                                    [option.id]: Math.max(
+                                        1,
+                                        Number(event.target.value) || 1,
+                                    ),
+                                }))
+                            }
                             aria-label={`Quantidade de ${option.name}`}
                             className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm"
                         />
@@ -260,7 +274,9 @@ export default function PackagesIndex({
                                                     label="Serviços Inclusos"
                                                     error={errors.service_ids}
                                                 >
-                                                        <ServiceQuantityFields options={serviceOptions} />
+                                                    <ServiceQuantityFields
+                                                        options={serviceOptions}
+                                                    />
                                                 </FormField>
                                             )}
 

@@ -86,7 +86,11 @@ type CustomerPackageRecord = {
     total_sessions_snapshot?: number | null;
     validity_days_snapshot?: number | null;
     usages: PackageUsageRecord[];
-    service_balances?: Array<{ allocated_quantity: number; remaining_quantity: number; service?: { id: string; name: string } | null }>;
+    service_balances?: Array<{
+        allocated_quantity: number;
+        remaining_quantity: number;
+        service?: { id: string; name: string } | null;
+    }>;
 };
 
 type PackageTemplate = {
@@ -107,7 +111,13 @@ type Props = {
     serviceOptions?: RelationOption[];
 };
 
-function ServiceQuantityFields({ options, initial }: { options: RelationOption[]; initial: Record<string, number> }) {
+function ServiceQuantityFields({
+    options,
+    initial,
+}: {
+    options: RelationOption[];
+    initial: Record<string, number>;
+}) {
     const [selected, setSelected] = useState<Record<string, number>>(initial);
 
     return (
@@ -116,10 +126,47 @@ function ServiceQuantityFields({ options, initial }: { options: RelationOption[]
                 const quantity = selected[option.id] ?? 0;
 
                 return (
-                    <div key={option.id} className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3">
-                        <input type="checkbox" name="service_ids[]" value={option.id} checked={quantity > 0} onChange={(event) => setSelected((current) => ({ ...current, [option.id]: event.target.checked ? Math.max(1, current[option.id] ?? 1) : 0 }))} className="h-4 w-4 accent-primary" />
-                        <span className="min-w-0 flex-1 truncate text-sm">{option.name}</span>
-                        <input type="number" name={`service_quantities[${option.id}]`} min="1" max="1000" value={quantity || ''} disabled={quantity === 0} onChange={(event) => setSelected((current) => ({ ...current, [option.id]: Math.max(1, Number(event.target.value) || 1) }))} aria-label={`Quantidade de ${option.name}`} className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm" />
+                    <div
+                        key={option.id}
+                        className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3"
+                    >
+                        <input
+                            type="checkbox"
+                            name="service_ids[]"
+                            value={option.id}
+                            checked={quantity > 0}
+                            onChange={(event) =>
+                                setSelected((current) => ({
+                                    ...current,
+                                    [option.id]: event.target.checked
+                                        ? Math.max(1, current[option.id] ?? 1)
+                                        : 0,
+                                }))
+                            }
+                            className="h-4 w-4 accent-primary"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                            {option.name}
+                        </span>
+                        <input
+                            type="number"
+                            name={`service_quantities[${option.id}]`}
+                            min="1"
+                            max="1000"
+                            value={quantity || ''}
+                            disabled={quantity === 0}
+                            onChange={(event) =>
+                                setSelected((current) => ({
+                                    ...current,
+                                    [option.id]: Math.max(
+                                        1,
+                                        Number(event.target.value) || 1,
+                                    ),
+                                }))
+                            }
+                            aria-label={`Quantidade de ${option.name}`}
+                            className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm"
+                        />
                     </div>
                 );
             })}
@@ -188,7 +235,12 @@ export default function PackageShow({
         pkg.total_sessions > 0
             ? Math.round(pkg.price_cents / pkg.total_sessions)
             : 0;
-    const selectedServiceQuantities = Object.fromEntries(pkg.services.map((service) => [service.id, service.pivot?.included_quantity ?? 1]));
+    const selectedServiceQuantities = Object.fromEntries(
+        pkg.services.map((service) => [
+            service.id,
+            service.pivot?.included_quantity ?? 1,
+        ]),
+    );
 
     return (
         <PageCanvas>
@@ -355,7 +407,14 @@ export default function PackageShow({
                                                             errors.service_ids
                                                         }
                                                     >
-                                                        <ServiceQuantityFields options={serviceOptions} initial={selectedServiceQuantities} />
+                                                        <ServiceQuantityFields
+                                                            options={
+                                                                serviceOptions
+                                                            }
+                                                            initial={
+                                                                selectedServiceQuantities
+                                                            }
+                                                        />
                                                     </FormField>
                                                 )}
 
