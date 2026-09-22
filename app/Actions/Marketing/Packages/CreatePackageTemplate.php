@@ -45,7 +45,10 @@ final class CreatePackageTemplate extends OperationalAction
         }, 5);
     }
 
-    /** @param list<string> $serviceIds */
+    /**
+     * @param  list<string>  $serviceIds
+     * @param  array<string, int>  $serviceQuantities
+     */
     private function syncServices(PackageTemplate $template, TenantContext $context, array $serviceIds, array $serviceQuantities = []): void
     {
         $serviceIds = array_values(array_unique($serviceIds));
@@ -62,14 +65,15 @@ final class CreatePackageTemplate extends OperationalAction
             }
         }
 
-        $template->services()->sync(
-            collect($serviceIds)->mapWithKeys(fn (string $serviceId): array => [
-                $serviceId => [
-                    'tenant_id' => $context->tenant->getKey(),
-                    'unit_id' => $context->unit?->getKey(),
-                    'included_quantity' => max(1, (int) ($serviceQuantities[$serviceId] ?? 1)),
-                ],
-            ])->all(),
-        );
+        $serviceSync = [];
+        foreach ($serviceIds as $serviceId) {
+            $serviceSync[$serviceId] = [
+                'tenant_id' => $context->tenant->getKey(),
+                'unit_id' => $context->unit?->getKey(),
+                'included_quantity' => max(1, (int) ($serviceQuantities[$serviceId] ?? 1)),
+            ];
+        }
+
+        $template->services()->sync($serviceSync);
     }
 }

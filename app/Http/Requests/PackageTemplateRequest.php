@@ -59,9 +59,10 @@ final class PackageTemplateRequest extends FormRequest
             return;
         }
 
-        $quantities = collect($this->input('service_quantities', []))
-            ->mapWithKeys(static fn (mixed $quantity, mixed $serviceId): array => [(string) $serviceId => (int) $quantity])
-            ->all();
+        $quantities = [];
+        foreach ($this->input('service_quantities', []) as $serviceId => $quantity) {
+            $quantities[(string) $serviceId] = (int) $quantity;
+        }
 
         $this->merge(['service_quantities' => $quantities]);
     }
