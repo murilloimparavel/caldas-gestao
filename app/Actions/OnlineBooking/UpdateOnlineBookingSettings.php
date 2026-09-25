@@ -4,6 +4,7 @@ namespace App\Actions\OnlineBooking;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\OnlineBookingSetting;
+use App\Models\OnlineBookingSite;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Unit;
@@ -93,6 +94,16 @@ final class UpdateOnlineBookingSettings extends OperationalAction
                 'website_url' => $data['website_url'] ?? null, 'brand_color' => $data['brand_color'] ?? '#2563eb',
                 'booking_flow' => $data['booking_flow'] ?? 'service_first', 'minimum_notice_minutes' => $data['minimum_notice_minutes'] ?? 0,
                 'public_hours' => $data['public_hours'] ?? null,
+            ])->save();
+
+            $site = OnlineBookingSite::query()->firstOrCreate(
+                ['tenant_id' => $context->tenant->getKey(), 'unit_id' => $lockedUnit->getKey()],
+                ['public_domain_id' => $setting->public_domain_id, 'public_slug' => $setting->public_slug],
+            );
+            $site->forceFill([
+                'public_domain_id' => $setting->public_domain_id,
+                'public_slug' => $setting->public_slug,
+                'template_key' => $data['template_key'],
             ])->save();
 
             $this->events->record($actor, $context, 'unit.online_booking_updated', $lockedUnit, [

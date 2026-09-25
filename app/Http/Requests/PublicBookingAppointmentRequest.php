@@ -21,17 +21,19 @@ final class PublicBookingAppointmentRequest extends FormRequest
             'starts_at' => ['required', 'date'],
             'name' => ['required', 'string', 'max:160'],
             'phone' => ['required', 'string', 'max:40'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 
     /**
      * @param  string|null  $key
      * @param  mixed  $default
-     * @return array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string}
+     * @return array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null}
      */
     public function validated($key = null, $default = null): array
     {
-        /** @var array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string} */
+        /** @var array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null} */
         return parent::validated($key, $default);
     }
 }

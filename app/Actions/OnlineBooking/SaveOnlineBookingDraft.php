@@ -31,7 +31,7 @@ final class SaveOnlineBookingDraft extends OperationalAction
             }
 
             $this->validateDocument($context, $unit, $content);
-            $normalized = $this->normalize($content, is_array($draft?->content) ? $draft->content : []);
+            $normalized = $this->normalize($content, is_array($draft?->content) ? $draft->content : [], $site->template_key, $unit->name);
             $revision = ($draft !== null ? $draft->revision : 0) + 1;
             $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR));
             $draft ??= new OnlineBookingDraft;
@@ -50,9 +50,11 @@ final class SaveOnlineBookingDraft extends OperationalAction
      * @param  array<string, mixed>  $base
      * @return array<string, mixed>
      */
-    private function normalize(array $content, array $base = []): array
+    private function normalize(array $content, array $base = [], ?string $templateKey = null, ?string $brandName = null): array
     {
         $merged = array_replace($base, $content);
+        $baseAppearance = is_array($base['appearance'] ?? null) ? $base['appearance'] : null;
+        $appearance = is_array($content['appearance'] ?? null) ? $content['appearance'] : null;
 
         return [
             'schema_version' => (int) ($merged['schema_version'] ?? 1),
@@ -64,6 +66,7 @@ final class SaveOnlineBookingDraft extends OperationalAction
             'professional_ids' => is_array($merged['professional_ids'] ?? null) ? array_values($merged['professional_ids']) : [],
             'public_hours' => is_array($merged['public_hours'] ?? null) ? $merged['public_hours'] : [],
             'booking_policy' => is_array($merged['booking_policy'] ?? null) ? $merged['booking_policy'] : [],
+            'appearance' => OnlineBookingAppearance::normalize($appearance, $templateKey, $baseAppearance, $brandName),
         ];
     }
 

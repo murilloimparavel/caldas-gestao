@@ -170,3 +170,32 @@ it('keeps public booking unavailable without a published pair', function () {
 
     $this->getJson(route('public_booking.show', [$tenant, $unit]))->assertJsonMissingPath('services.0');
 });
+
+it('persists the selected visual template and exposes it to the editor', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'template_key' => 'atelier-barber',
+        'lock_version' => $unit->lock_version,
+    ])->assertRedirect();
+
+    $site = OnlineBookingSite::query()->where('unit_id', $unit->getKey())->firstOrFail();
+
+    expect($site->template_key)->toBe('atelier-barber')
+        ->and($this->actingAs($owner)->getJson(route('online_booking.index'))->json('template_key'))->toBe('atelier-barber');
+});
+
+it('rejects unsupported visual templates', function () {
+    [$owner, , $unit, $service, $professional] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'template_key' => 'unknown-template',
+        'lock_version' => $unit->lock_version,
+    ])->assertRedirect()->assertSessionHasErrors('template_key');
+});

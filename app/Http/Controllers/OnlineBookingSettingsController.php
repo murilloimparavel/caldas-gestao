@@ -15,6 +15,7 @@ use App\Http\Requests\Settings\OnlineBookingDraftRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryReorderRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryStoreRequest;
 use App\Http\Requests\Settings\OnlineBookingGalleryUpdateRequest;
+use App\Http\Requests\Settings\OnlineBookingLogoStoreRequest;
 use App\Http\Requests\Settings\OnlineBookingPublishRequest;
 use App\Http\Requests\Settings\OnlineBookingSettingsRequest;
 use App\Models\OnlineBookingGalleryImage;
@@ -69,6 +70,7 @@ final class OnlineBookingSettingsController extends Controller
         $publishedContent = is_array($site->activePublication?->content) ? $site->activePublication->content : [];
         $diffLabels = [
             'identity' => 'Identidade e contato', 'theme' => 'Cores e aparência', 'sections' => 'Seções visíveis',
+            'appearance' => 'Personalização visual',
             'service_ids' => 'Serviços', 'professional_ids' => 'Profissionais', 'gallery' => 'Galeria',
             'public_hours' => 'Horários', 'booking_policy' => 'Regras de agendamento', 'seo' => 'SEO',
         ];
@@ -79,6 +81,7 @@ final class OnlineBookingSettingsController extends Controller
             'settings' => $setting,
             'gallery' => $context->unit->onlineBookingGalleryImages,
             'cover' => $setting?->cover_image_url,
+            'logo' => $setting?->logo_image_url,
             'tenant' => ['slug' => $context->tenant->slug],
             'publicUrl' => $readiness['publishable'] ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug) : null,
             'previewUrl' => $site->draft ? URL::temporarySignedRoute('online_booking.preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), [$context->tenant, $context->unit]) : null,
@@ -88,9 +91,10 @@ final class OnlineBookingSettingsController extends Controller
             'professionals' => $professionals,
             'readiness' => $readiness,
             'publication' => $site->only(['id', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version']),
+            'template_key' => $site->template_key,
             'draft' => $site->draft,
             'activePublication' => $site->activePublication?->only(['id', 'version', 'source_revision', 'published_at', 'template_key']),
-            'publicationHistory' => $site->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'published_by', 'published_at', 'superseded_at'])->map(fn (OnlineBookingPublication $publication): array => [
+            'publicationHistory' => $site->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'template_key', 'published_by', 'published_at', 'superseded_at'])->map(fn (OnlineBookingPublication $publication): array => [
                 ...$publication->toArray(),
                 'preview_url' => URL::temporarySignedRoute('online_booking.publication_preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), ['publication' => $publication->getKey()]),
             ]),
@@ -175,6 +179,40 @@ final class OnlineBookingSettingsController extends Controller
         return response()->json(['cover' => null]);
     }
 
+    public function storeLogo(OnlineBookingLogoStoreRequest $request, TenantContext $context): JsonResponse
+    {
+        $setting = $context->unit->onlineBookingSetting;
+
+        abort_unless($setting instanceof OnlineBookingSetting, 422, 'Salve as configurações do agendamento antes de enviar o logo.');
+
+        $disk = Storage::disk((string) config('filesystems.media_disk'));
+        $path = 'online-booking/'.$context->unit->getKey().'/logo/'.Str::random(40).'.webp';
+        app(UploadedImageOptimizer::class)->storeWebp($request->file('image'), $disk, $path);
+        $oldPath = $setting->logo_image_path;
+        $setting->forceFill(['logo_image_path' => $path])->save();
+
+        if ($oldPath !== null) {
+            $disk->delete($oldPath);
+        }
+
+        return response()->json(['logo' => $setting->fresh()->logo_image_url]);
+    }
+
+    public function destroyLogo(TenantContext $context): JsonResponse
+    {
+        Gate::authorize('update', $context->unit);
+        $setting = $context->unit->onlineBookingSetting;
+
+        if (! $setting instanceof OnlineBookingSetting || $setting->logo_image_path === null) {
+            return response()->json(['logo' => null]);
+        }
+
+        Storage::disk((string) config('filesystems.media_disk'))->delete($setting->logo_image_path);
+        $setting->forceFill(['logo_image_path' => null])->save();
+
+        return response()->json(['logo' => null]);
+    }
+
     public function update(OnlineBookingSettingsRequest $request, TenantContext $context, UpdateOnlineBookingSettings $update, EnsureOnlineBookingSite $ensureSite, SaveOnlineBookingDraft $saveDraft, OperationalMutation $mutation): RedirectResponse
     {
         $data = $request->validated();
@@ -182,10 +220,14 @@ final class OnlineBookingSettingsController extends Controller
             $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $ensureSite, $saveDraft, $request, $context, $data): array {
                 $unit = $update->handle($request->user(), $context, $data);
                 $site = $ensureSite->handle($context);
-                $content = $ensureSite->content($context);
+                $content = $ensureSite->content($context, $site->template_key);
                 $existingSections = $site->draft?->content['sections'] ?? null;
                 if (is_array($existingSections)) {
                     $content['sections'] = $existingSections;
+                }
+                $existingAppearance = $site->draft?->content['appearance'] ?? null;
+                if (is_array($existingAppearance)) {
+                    $content['appearance'] = $existingAppearance;
                 }
                 $saveDraft->handle($request->user(), $context, $content, (int) $site->draft_revision);
 

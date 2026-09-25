@@ -21,6 +21,7 @@ final class OnlineBookingSettingsRequest extends FormRequest
             'service_ids' => is_array($this->input('service_ids')) ? $this->input('service_ids') : [],
             'professional_ids' => is_array($this->input('professional_ids')) ? $this->input('professional_ids') : [],
             'public_slug' => $this->input('public_slug') ?: ($this->attributes->get(TenantContext::class)?->unit?->slug),
+            'template_key' => $this->input('template_key') ?: 'essential',
         ]);
     }
 
@@ -67,6 +68,7 @@ final class OnlineBookingSettingsRequest extends FormRequest
             'booking_flow' => ['nullable', Rule::in(['service_first', 'professional_first'])],
             'minimum_notice_minutes' => ['nullable', 'integer', 'min:0', 'max:10080'],
             'public_hours' => ['nullable', 'array'],
+            'template_key' => ['required', Rule::in(['essential', 'atelier-barber'])],
         ];
     }
 

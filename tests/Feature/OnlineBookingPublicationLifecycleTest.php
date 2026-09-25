@@ -6,6 +6,7 @@ use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
 use App\Enums\OnlineBookingPublicationStatus;
 use App\Models\OnlineBookingPublication;
+use App\Models\OnlineBookingSite;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -104,6 +105,47 @@ it('preserves draft sections when saving a partial editor update', function () {
     ]);
 });
 
+it('normalizes appearance defaults and preserves partial appearance updates', function () {
+    [$owner, $tenant, $unit] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+
+    $first = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'appearance' => [
+            'headline' => 'Escolha seu horário',
+            'primary_color' => '#d4af37',
+        ],
+    ], 0);
+    $second = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'appearance' => ['cta_label' => 'Avançar'],
+    ], $first->revision);
+
+    expect($second->content['appearance'])->toMatchArray([
+        'headline' => 'Escolha seu horário',
+        'primary_color' => '#D4AF37',
+        'cta_label' => 'Avançar',
+        'background_color' => '#F8FAFC',
+    ])->and($second->content['appearance']['brand_name'])->toBe($unit->name);
+});
+
+it('snapshots normalized appearance when publishing a draft', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'appearance' => ['headline' => 'Versão publicada'],
+    ], 0);
+    $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'appearance' => ['headline' => 'Rascunho posterior'],
+    ], $draft->revision);
+
+    expect($publication->fresh()->content['appearance']['headline'])->toBe('Versão publicada');
+});
+
 it('renders a signed preview from the draft without requiring publication', function () {
     [$owner, $tenant, $unit] = onlineBookingWorkspace();
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
@@ -173,10 +215,40 @@ it('accepts a partial draft update without repeating the schema version', functi
     expect($draft['content']['schema_version'])->toBe(1);
 });
 
+it('validates appearance fields on draft requests', function () {
+    [$owner] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
+        'revision' => 0,
+        'content' => ['appearance' => ['primary_color' => 'gold']],
+    ])->assertUnprocessable()->assertJsonValidationErrors('content.appearance.primary_color');
+});
+
 it('exposes the named editor, publications, and links entry points', function () {
     [$owner] = onlineBookingWorkspace();
 
     $this->actingAs($owner)->get(route('online_booking.editor'))->assertSuccessful();
     $this->actingAs($owner)->get(route('online_booking.publications.index'))->assertSuccessful();
     $this->actingAs($owner)->get(route('online_booking.links'))->assertSuccessful();
+});
+
+it('copies the configured visual template into a publication', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'template_key' => 'atelier-barber',
+        'lock_version' => $unit->lock_version,
+    ])->assertRedirect();
+
+    $site = OnlineBookingSite::query()->where('unit_id', $unit->getKey())->firstOrFail();
+    $publication = app(PublishOnlineBookingSite::class)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), $site->draft_revision);
+
+    expect($publication->template_key)->toBe('atelier-barber');
 });

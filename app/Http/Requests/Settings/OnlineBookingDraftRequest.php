@@ -38,6 +38,13 @@ final class OnlineBookingDraftRequest extends FormRequest
             'content.professional_ids' => ['sometimes', 'array', 'max:100'],
             'content.public_hours' => ['sometimes', 'array'],
             'content.booking_policy' => ['sometimes', 'array'],
+            'content.appearance' => ['sometimes', 'array'],
+            'content.appearance.brand_name' => ['sometimes', 'string', 'max:80'],
+            'content.appearance.headline' => ['sometimes', 'string', 'max:120'],
+            'content.appearance.subheadline' => ['sometimes', 'string', 'max:240'],
+            'content.appearance.primary_color' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'content.appearance.background_color' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'content.appearance.cta_label' => ['sometimes', 'string', 'max:40'],
         ];
     }
 }

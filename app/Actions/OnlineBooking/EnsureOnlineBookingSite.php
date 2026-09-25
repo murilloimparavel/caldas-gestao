@@ -30,10 +30,11 @@ final class EnsureOnlineBookingSite
             $site->forceFill([
                 'public_domain_id' => $publicDomainId ?? $site->public_domain_id,
                 'public_slug' => $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $site->public_slug) : $site->public_slug,
+                'template_key' => $site->template_key ?: 'essential',
             ])->save();
 
             if (! $site->draft()->exists()) {
-                $content = $this->content($context);
+                $content = $this->content($context, $site->template_key);
                 $draft = new OnlineBookingDraft;
                 $draft->forceFill([
                     'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(),
@@ -48,7 +49,7 @@ final class EnsureOnlineBookingSite
     }
 
     /** @return array<string, mixed> */
-    public function content(TenantContext $context): array
+    public function content(TenantContext $context, ?string $templateKey = null): array
     {
         $unit = $context->unit;
         abort_unless($unit instanceof Unit, 403);
@@ -82,6 +83,7 @@ final class EnsureOnlineBookingSite
             'gallery' => $unit->onlineBookingGalleryImages->map(fn ($image): array => ['path' => $image->path, 'thumbnail_path' => $image->thumbnail_path, 'alt_text' => $image->alt_text])->values()->all(),
             'public_hours' => $publicHours ?? [],
             'booking_policy' => ['booking_flow' => $bookingFlow ?? 'service_first', 'minimum_notice_minutes' => $minimumNoticeMinutes ?? 0],
+            'appearance' => OnlineBookingAppearance::defaults($templateKey, $unit->name),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\OnlineBooking\OnlineBookingAppearance;
 use App\Actions\PublicBooking\CreatePublicAppointment;
 use App\Http\Requests\PublicBookingAppointmentRequest;
 use App\Http\Requests\PublicBookingAvailabilityRequest;
@@ -42,14 +43,21 @@ final class PublicBookingController extends Controller
             $this->assertPublicBookingEnabled($tenant, $unit);
         }
         $setting = $unit->onlineBookingSetting;
-        $publication = is_array($preview) || ! config('online_booking.use_publication_resolver', true) ? null : OnlineBookingSite::query()
+        $site = OnlineBookingSite::query()
             ->where('tenant_id', $tenant->getKey())
             ->where('unit_id', $unit->getKey())
-            ->whereNotNull('active_publication_id')
             ->with('activePublication')
-            ->first()?->activePublication;
+            ->first();
+        $publication = is_array($preview) || ! config('online_booking.use_publication_resolver', true) ? null : $site?->activePublication;
         $publicSlug = $publication instanceof OnlineBookingPublication ? ($publication->public_slug ?? $unit->slug) : $unit->slug;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
+        $templateKey = $publication?->template_key ?? $site?->template_key ?? 'essential';
+        $appearance = OnlineBookingAppearance::normalize(
+            is_array($content['appearance'] ?? null) ? $content['appearance'] : null,
+            $templateKey,
+            null,
+            $unit->name,
+        );
         $sections = collect(is_array($content['sections'] ?? null) ? $content['sections'] : [])
             ->filter(fn (mixed $section): bool => is_array($section) && isset($section['key']))
             ->mapWithKeys(fn (array $section): array => [(string) $section['key'] => (bool) ($section['enabled'] ?? true)])
@@ -98,7 +106,10 @@ final class PublicBookingController extends Controller
                 'canonical_url' => url('/book/'.rawurlencode($publicSlug)),
                 'is_preview' => is_array($preview),
                 'cover_image_url' => $coverImagePath === null ? null : MediaUrl::for((string) $coverImagePath),
+                'logo_image_url' => $setting?->logo_image_url,
                 'brand_color' => $brandColor,
+                'template_key' => $templateKey,
+                'appearance' => $appearance,
                 'booking_flow' => $policy['booking_flow'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->booking_flow ?? 'service_first') : 'service_first'),
                 'public_hours' => $publicHours,
                 'minimum_notice_minutes' => $policy['minimum_notice_minutes'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->minimum_notice_minutes ?? 0) : 0),
@@ -107,6 +118,7 @@ final class PublicBookingController extends Controller
                 'sections' => $sections,
             ],
             ...$catalog,
+            'settings' => ['appearance' => $appearance],
         ];
 
         if (! request()->expectsJson()) {
@@ -174,8 +186,9 @@ final class PublicBookingController extends Controller
     {
         $this->assertPublicBookingEnabled($tenant, $unit);
         $data = $request->validated();
-        $service = $this->publicService($tenant, $unit, $data['service_id']);
-        $professional = $this->publicProfessional($tenant, $unit, $data['professional_id']);
+        $publication = $this->activePublicPublication($tenant, $unit);
+        $service = $this->publicService($tenant, $unit, $data['service_id'], $publication);
+        $professional = $this->publicProfessional($tenant, $unit, $data['professional_id'], $publication);
 
         if (! $professional->services()->whereKey($service->getKey())->exists()) {
             throw new NotFoundHttpException;
@@ -359,14 +372,32 @@ final class PublicBookingController extends Controller
         return compact('services', 'professionals');
     }
 
-    private function publicService(Tenant $tenant, Unit $unit, string $id): Service
+    private function publicService(Tenant $tenant, Unit $unit, string $id, ?OnlineBookingPublication $publication = null): Service
     {
-        return Service::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->firstOrFail();
+        $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
+
+        return Service::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
     }
 
-    private function publicProfessional(Tenant $tenant, Unit $unit, string $id): Professional
+    private function publicProfessional(Tenant $tenant, Unit $unit, string $id, ?OnlineBookingPublication $publication = null): Professional
     {
-        return Professional::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->firstOrFail();
+        $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['professional_ids'] ?? [], 'is_string')) : null;
+
+        return Professional::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
+    }
+
+    private function activePublicPublication(Tenant $tenant, Unit $unit): ?OnlineBookingPublication
+    {
+        if (! config('online_booking.use_publication_resolver', true)) {
+            return null;
+        }
+
+        return OnlineBookingSite::query()
+            ->where('tenant_id', $tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->with('activePublication')
+            ->first()
+            ?->activePublication;
     }
 
     private function assertPublicBookingEnabled(Tenant $tenant, Unit $unit): void

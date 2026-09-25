@@ -14,13 +14,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property array<int|string, mixed>|null $public_hours
  */
-#[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'public_slug', 'description', 'cover_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
+#[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'public_slug', 'description', 'cover_image_path', 'logo_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
 class OnlineBookingSetting extends Model
 {
     /** @use HasFactory<Factory> */
     use HasFactory, HasUuids;
 
-    protected $appends = ['cover_image_url'];
+    protected $appends = ['cover_image_url', 'logo_image_url'];
 
     protected $attributes = ['brand_color' => '#2563eb', 'booking_flow' => 'service_first', 'minimum_notice_minutes' => 0, 'lock_version' => 0];
 
@@ -35,6 +35,16 @@ class OnlineBookingSetting extends Model
         return Attribute::make(
             get: fn (): ?string => $this->cover_image_path
                 ? MediaUrl::for($this->cover_image_path)
+                : null,
+        );
+    }
+
+    /** @return Attribute<string|null, void> */
+    protected function logoImageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?string => $this->logo_image_path
+                ? MediaUrl::for($this->logo_image_path)
                 : null,
         );
     }

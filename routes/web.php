@@ -152,6 +152,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('online-booking/publications/{publication}/restore', [OnlineBookingSettingsController::class, 'restore'])->name('online_booking.publications.restore');
         Route::post('online-booking/cover', [OnlineBookingSettingsController::class, 'storeCover'])->name('online_booking.cover.store');
         Route::delete('online-booking/cover', [OnlineBookingSettingsController::class, 'destroyCover'])->name('online_booking.cover.destroy');
+        Route::post('online-booking/logo', [OnlineBookingSettingsController::class, 'storeLogo'])->name('online_booking.logo.store');
+        Route::delete('online-booking/logo', [OnlineBookingSettingsController::class, 'destroyLogo'])->name('online_booking.logo.destroy');
         Route::post('online-booking/gallery', [OnlineBookingSettingsController::class, 'storeGallery'])->name('online_booking.gallery.store');
         Route::patch('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'updateGallery'])->name('online_booking.gallery.update');
         Route::delete('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'destroyGallery'])->name('online_booking.gallery.destroy');

@@ -19,10 +19,22 @@ export type Readiness = {
     publishable: boolean;
 };
 
+export type BookingAppearance = {
+    brand_name?: string | null;
+    headline?: string | null;
+    subheadline?: string | null;
+    primary_color?: string | null;
+    background_color?: string | null;
+    cta_label?: string | null;
+};
+
 export type PublicSettings = {
+    appearance?: BookingAppearance | null;
+    template_key?: 'essential' | 'atelier-barber' | string | null;
     public_domain_id?: string | null;
     description?: string | null;
     logo_url?: string | null;
+    logo_image_url?: string | null;
     cover_url?: string | null;
     cover_image_url?: string | null;
     whatsapp?: string | null;
@@ -52,6 +64,7 @@ export type TabKey =
     | 'confirmation';
 
 export type OnlineBookingProps = {
+    template_key?: 'essential' | 'atelier-barber' | string | null;
     unit: {
         id: string;
         name: string;
@@ -59,6 +72,7 @@ export type OnlineBookingProps = {
         online_booking_enabled: boolean;
         lock_version: number;
         address?: string | Record<string, string> | null;
+        logo_image_url?: string | null;
         settings?: PublicSettings | null;
     };
     publicUrl: string | null;
@@ -77,7 +91,11 @@ export type OnlineBookingProps = {
     } | null;
     draft?: {
         revision: number;
-        content?: { sections?: { key: string; enabled: boolean }[] } | null;
+        content?: {
+            schema_version?: number;
+            sections?: { key: string; enabled: boolean }[];
+            appearance?: BookingAppearance | null;
+        } | null;
     } | null;
     activePublication?: {
         id: string;

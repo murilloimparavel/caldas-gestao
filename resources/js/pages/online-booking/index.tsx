@@ -42,7 +42,7 @@ import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
 import tenantDomains from '@/routes/tenant-domains';
 import type { SharedPageProps } from '@/types';
-import { SectionVisibilityEditor } from './components/section-visibility-editor';
+import { AppearanceEditor } from './components/appearance-editor';
 import { CoverEditor } from './components/cover-editor';
 import {
     Field,
@@ -59,6 +59,7 @@ type Props = OnlineBookingProps;
 
 export default function OnlineBookingIndex({
     unit,
+    template_key: rootTemplateKey = null,
     publicUrl,
     previewUrl: signedPreviewUrl = null,
     publicDomains,
@@ -348,7 +349,20 @@ export default function OnlineBookingIndex({
                         </CardContent>
                     </Card>
                 ) : null}
-                {draft ? <SectionVisibilityEditor draft={draft} /> : null}
+                {draft ? (
+                    <div className="mb-5 space-y-5">
+                        <AppearanceEditor
+                            draft={draft}
+                            settings={settings}
+                            unitName={unit.name}
+                            logoUrl={
+                                settings.logo_image_url ??
+                                unit.logo_image_url ??
+                                null
+                            }
+                        />
+                    </div>
+                ) : null}
                 <Form
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}
@@ -407,6 +421,38 @@ export default function OnlineBookingIndex({
                                             description="Essas informações aparecem no perfil do seu negócio."
                                         >
                                             <div className="grid gap-5 sm:grid-cols-2">
+                                                <div className="space-y-2 sm:col-span-2">
+                                                    <Label htmlFor="template_key">
+                                                        Template da página
+                                                        pública
+                                                    </Label>
+                                                    <select
+                                                        id="template_key"
+                                                        name="template_key"
+                                                        defaultValue={
+                                                            rootTemplateKey ??
+                                                            settings.template_key ??
+                                                            'essential'
+                                                        }
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                                                    >
+                                                        <option value="essential">
+                                                            Essencial — claro e
+                                                            direto
+                                                        </option>
+                                                        <option value="atelier-barber">
+                                                            Atelier Barber —
+                                                            dark premium
+                                                        </option>
+                                                    </select>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        O template altera a
+                                                        apresentação pública sem
+                                                        mudar serviços,
+                                                        disponibilidade ou
+                                                        regras de agendamento.
+                                                    </p>
+                                                </div>
                                                 <Field
                                                     label="Nome da unidade"
                                                     name="unit_name"
