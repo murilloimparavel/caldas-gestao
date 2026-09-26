@@ -2,6 +2,7 @@
 
 namespace App\Actions\Sales;
 
+use App\Actions\Appointments\TransferAppointmentItemsToSale;
 use App\Actions\Operational\OperationalAction;
 use App\Models\Appointment;
 use App\Models\AppointmentSaleLink;
@@ -17,10 +18,16 @@ use Illuminate\Validation\ValidationException;
 
 final class OpenSale extends OperationalAction
 {
+    public function __construct(
+        private readonly TransferAppointmentItemsToSale $appointmentItemTransfer = new TransferAppointmentItemsToSale,
+    ) {
+        parent::__construct();
+    }
+
     /** @param array<string, mixed> $data */
-    public function handle(User $actor, TenantContext $context, array $data): Sale
+    public function handle(User $actor, TenantContext $context, array $data, string $permission = 'sale.manage'): Sale
     {
-        $unit = $this->unit($actor, $context, 'sale.manage');
+        $unit = $this->unit($actor, $context, $permission);
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
 
@@ -73,6 +80,10 @@ final class OpenSale extends OperationalAction
             }
         }
 
+        $sourceId = isset($data['source_id']) && trim((string) $data['source_id']) !== ''
+            ? trim((string) $data['source_id'])
+            : null;
+
         $referenceLabel = isset($data['reference_label']) ? trim((string) $data['reference_label']) : null;
         if ($referenceLabel === '') {
             $referenceLabel = null;
@@ -91,7 +102,28 @@ final class OpenSale extends OperationalAction
             default => null,
         };
 
-        return DB::transaction(function () use ($actor, $context, $category, $customerId, $appointmentId, $referenceLabel, $openContextKey, $data, $tenantId, $unitId): Sale {
+        return DB::transaction(function () use ($actor, $context, $category, $customerId, $appointmentId, $referenceLabel, $openContextKey, $sourceId, $data, $tenantId, $unitId): Sale {
+            $isAutomaticAppointmentSale = is_array($data['source_metadata'] ?? null)
+                && (($data['source_metadata']['created_automatically'] ?? false) === true);
+
+            if ($sourceId !== null) {
+                /** @var Sale|null $existingSourceSale */
+                $existingSourceSale = Sale::withTrashed()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('source_id', $sourceId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingSourceSale !== null) {
+                    if ($existingSourceSale->trashed()) {
+                        $existingSourceSale->restore();
+                    }
+
+                    return $this->transferManualAppointmentItems($actor, $context, $existingSourceSale, $appointmentId, $isAutomaticAppointmentSale);
+                }
+            }
+
             if ($openContextKey !== null) {
                 /** @var Sale|null $existingSale */
                 $existingSale = Sale::query()
@@ -104,13 +136,14 @@ final class OpenSale extends OperationalAction
                     ->first();
 
                 if ($existingSale !== null) {
-                    return $existingSale;
+                    return $this->transferManualAppointmentItems($actor, $context, $existingSale, $appointmentId, $isAutomaticAppointmentSale);
                 }
             }
 
             /** @var Sale $sale */
             $sale = Sale::query()->create([
                 'id' => (string) Str::uuid7(),
+                'source_id' => $sourceId,
                 'tenant_id' => $tenantId,
                 'unit_id' => $unitId,
                 'customer_id' => $customerId,
@@ -125,6 +158,7 @@ final class OpenSale extends OperationalAction
                 'discount_amount_cents' => 0,
                 'final_amount_cents' => 0,
                 'notes' => isset($data['notes']) ? (string) $data['notes'] : null,
+                'source_metadata' => $data['source_metadata'] ?? null,
                 'lock_version' => 1,
             ]);
 
@@ -137,6 +171,10 @@ final class OpenSale extends OperationalAction
                     'sale_id' => $sale->getKey(),
                     'created_by' => $actor->getKey(),
                 ]);
+            }
+
+            if ($appointmentId !== null && ! $isAutomaticAppointmentSale) {
+                $this->appointmentItemTransfer->handle($actor, $context, $sale, Appointment::query()->findOrFail($appointmentId), 'calendar.manage');
             }
 
             SaleStatusHistory::query()->create([
@@ -156,5 +194,14 @@ final class OpenSale extends OperationalAction
 
             return $sale;
         }, 5);
+    }
+
+    private function transferManualAppointmentItems(User $actor, TenantContext $context, Sale $sale, ?string $appointmentId, bool $isAutomaticAppointmentSale): Sale
+    {
+        if ($appointmentId === null || $isAutomaticAppointmentSale) {
+            return $sale;
+        }
+
+        return $this->appointmentItemTransfer->handle($actor, $context, $sale, Appointment::query()->findOrFail($appointmentId), 'calendar.manage');
     }
 }

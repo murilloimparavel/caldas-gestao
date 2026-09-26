@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\PlatformPlan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use Illuminate\Database\Eloquent\Factories\Factory;

@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\Images\UploadedImageOptimizer;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
@@ -56,19 +57,14 @@ final class UpdateProduct extends OperationalAction
             }
 
             if ($hasImageKey) {
-                $diskName = (string) config('filesystems.media_disk', 'public');
+                $diskName = (string) config('filesystems.media_disk');
                 if ($imageFile instanceof UploadedFile) {
                     if ($locked->image_path) {
                         Storage::disk($diskName)->delete($locked->image_path);
                     }
-                    $hash = Str::random(40);
-                    $ext = $imageFile->guessExtension() ?: $imageFile->getClientOriginalExtension();
-                    $storedPath = Storage::disk($diskName)->putFileAs(
-                        "{$context->tenant->getKey()}/products/{$locked->getKey()}",
-                        $imageFile,
-                        "{$hash}.{$ext}"
-                    );
-                    $data['image_path'] = $storedPath !== false ? $storedPath : null;
+                    $path = "{$context->tenant->getKey()}/products/{$locked->getKey()}/".Str::random(40).'.webp';
+                    $stored = app(UploadedImageOptimizer::class)->storeWebp($imageFile, Storage::disk($diskName), $path);
+                    $data['image_path'] = $stored ? $path : null;
                 } elseif ($imageFile === null) {
                     if ($locked->image_path) {
                         Storage::disk($diskName)->delete($locked->image_path);

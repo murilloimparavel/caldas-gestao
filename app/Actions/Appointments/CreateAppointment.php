@@ -3,6 +3,7 @@
 namespace App\Actions\Appointments;
 
 use App\Actions\Operational\OperationalAction;
+use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\AppointmentItem;
 use App\Models\Customer;
@@ -19,8 +20,11 @@ use Illuminate\Validation\ValidationException;
 
 final class CreateAppointment extends OperationalAction
 {
-    public function __construct(private readonly CalendarAvailability $availability, private readonly AppointmentStatusTransition $transitions = new AppointmentStatusTransition)
-    {
+    public function __construct(
+        private readonly CalendarAvailability $availability,
+        private readonly AppointmentStatusTransition $transitions = new AppointmentStatusTransition,
+        private readonly CreateAppointmentSale $createAppointmentSale = new CreateAppointmentSale,
+    ) {
         parent::__construct();
     }
 
@@ -55,8 +59,10 @@ final class CreateAppointment extends OperationalAction
                 'fit_in' => $data['fit_in'] ?? false, 'notes' => $data['notes'] ?? null, 'lock_version' => 0,
             ]);
             $this->upsertItem($appointment, $service, $duration);
+            $this->createAppointmentSale->handle($actor, $context, $appointment);
             $this->recordHistory($appointment, $actor, null, $appointment->status, 'created');
             $this->events->record($actor, $context, 'appointment.created', $appointment, ['status' => $appointment->status]);
+            SyncGoogleCalendarAppointment::dispatch((string) $appointment->getKey())->afterCommit();
 
             return $appointment->fresh(['items.service', 'customer', 'professional']);
         }, 5);

@@ -37,6 +37,11 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
+import { cn } from '@/lib/utils';
 import closingSessions from '@/routes/closing-sessions';
 import sales from '@/routes/sales';
 import type {
@@ -66,21 +71,18 @@ const statusConfig: Record<
 > = {
     open: {
         label: 'Aberta',
-        bgClass:
-            'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
-        dotClass: 'bg-blue-500',
+        bgClass: 'border-info/30 bg-info/15 text-info',
+        dotClass: 'bg-info',
     },
     ready_to_bill: {
         label: 'Pronta p/ Fechar',
-        bgClass:
-            'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
-        dotClass: 'bg-amber-500',
+        bgClass: 'border-warning/30 bg-warning/15 text-warning',
+        dotClass: 'bg-warning',
     },
     finalized: {
         label: 'Finalizada',
-        bgClass:
-            'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
-        dotClass: 'bg-emerald-500',
+        bgClass: 'border-success/30 bg-success/15 text-success',
+        dotClass: 'bg-success',
     },
     cancelled: {
         label: 'Cancelada',
@@ -89,9 +91,8 @@ const statusConfig: Record<
     },
     adjusted: {
         label: 'Estornada',
-        bgClass:
-            'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
-        dotClass: 'bg-rose-500',
+        bgClass: 'border-destructive/30 bg-destructive/15 text-destructive',
+        dotClass: 'bg-destructive',
     },
     draft: {
         label: 'Rascunho',
@@ -106,11 +107,14 @@ export function SaleStatusBadge({ status }: { status: SaleStatus }) {
     return (
         <Badge
             variant="outline"
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${config.bgClass}`}
+            className={cn(
+                'rounded-full px-2.5 py-0.5 text-3xs font-semibold',
+                config.bgClass,
+            )}
         >
             <span
                 aria-hidden="true"
-                className={`mr-1.5 size-1.5 rounded-full ${config.dotClass}`}
+                className={cn('mr-1.5 size-1.5 rounded-full', config.dotClass)}
             />
             {config.label}
         </Badge>
@@ -149,6 +153,7 @@ export default function SalesIndex({
     );
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const { view, setView } = useResourceView('caldas-gestao:sales:view');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale.manage');
     const canClosePermission =
@@ -470,7 +475,7 @@ export default function SalesIndex({
                 {/* Metrics Cards */}
                 <div className="grid gap-4 sm:grid-cols-3">
                     <div className="surface-panel flex items-center gap-4 p-4 sm:p-5">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-info/10 text-info">
                             <Clock className="size-6" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
@@ -484,7 +489,7 @@ export default function SalesIndex({
                     </div>
 
                     <div className="surface-panel flex items-center gap-4 p-4 sm:p-5">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-warning/10 text-warning">
                             <AlertCircle
                                 className="size-6"
                                 aria-hidden="true"
@@ -501,7 +506,7 @@ export default function SalesIndex({
                     </div>
 
                     <div className="surface-panel flex items-center gap-4 p-4 sm:p-5">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success">
                             <WalletCards
                                 className="size-6"
                                 aria-hidden="true"
@@ -511,7 +516,7 @@ export default function SalesIndex({
                             <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 Faturamento Aberto (Hoje)
                             </p>
-                            <p className="font-display text-2xl font-bold tracking-tight text-emerald-600 sm:text-3xl dark:text-emerald-400">
+                            <p className="font-display text-2xl font-bold tracking-tight text-success sm:text-3xl">
                                 {formatMoney(metrics.today_total_cents)}
                             </p>
                         </div>
@@ -581,6 +586,10 @@ export default function SalesIndex({
                             >
                                 Filtrar
                             </Button>
+                            <ResourceViewToggle
+                                value={view}
+                                onChange={setView}
+                            />
                             {filters.search ||
                             filters.status ||
                             filters.sale_category_id ||
@@ -648,7 +657,7 @@ export default function SalesIndex({
                             {canClose ? (
                                 <Button
                                     size="sm"
-                                    className="gap-1.5 bg-emerald-600 font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                                    className="gap-1.5 bg-success font-semibold text-success-foreground hover:bg-success/90"
                                     onClick={() => {
                                         setCloseKey(
                                             createIdempotencyKey(
@@ -664,7 +673,7 @@ export default function SalesIndex({
                                 </Button>
                             ) : selectedIds.length > 1 &&
                               !canConsolidateSubject ? (
-                                <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                <span className="text-3xs font-medium text-warning">
                                     Clientes ou referências diferentes não podem
                                     ser consolidados juntos
                                 </span>
@@ -726,7 +735,7 @@ export default function SalesIndex({
                                                             s.customer?.name ||
                                                             `Comanda #${s.id.slice(0, 6)}`}
                                                     </p>
-                                                    <p className="text-[11px] text-muted-foreground">
+                                                    <p className="text-3xs text-muted-foreground">
                                                         {s.category_name_snapshot ||
                                                             s.category?.name ||
                                                             'Geral'}{' '}
@@ -815,7 +824,11 @@ export default function SalesIndex({
                 ) : (
                     <section
                         aria-label="Lista de comandas"
-                        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((sale) => {
                             const isSelected = selectedIds.includes(sale.id);
@@ -827,10 +840,16 @@ export default function SalesIndex({
                                         isSelected
                                             ? 'border-primary bg-primary/[0.03]'
                                             : ''
-                                    }`}
+                                    } ${view === 'list' ? 'max-md:min-h-0 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                                 >
                                     {/* Top Row: Select Checkbox, Reference / Identifier, Status */}
-                                    <div className="flex items-start justify-between gap-3">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                                : 'flex items-start justify-between gap-3'
+                                        }
+                                    >
                                         <div className="flex min-w-0 items-center gap-2.5">
                                             <input
                                                 type="checkbox"
@@ -861,7 +880,13 @@ export default function SalesIndex({
                                     </div>
 
                                     {/* Customer & Appointment Info */}
-                                    <div className="flex flex-col gap-1.5 border-y border-border py-2.5 text-xs text-muted-foreground">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex flex-1 flex-col gap-1.5 border-y border-border py-2.5 text-xs text-muted-foreground md:border-y-0 md:py-0'
+                                                : 'flex flex-col gap-1.5 border-y border-border py-2.5 text-xs text-muted-foreground'
+                                        }
+                                    >
                                         <div className="flex items-center gap-2">
                                             <User className="size-3.5 shrink-0 text-muted-foreground" />
                                             <span className="truncate font-medium text-foreground">
@@ -903,9 +928,15 @@ export default function SalesIndex({
                                     </div>
 
                                     {/* Bottom Row: Total & Action */}
-                                    <div className="flex items-center justify-between gap-2 pt-1">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex items-center justify-between gap-2 pt-1 md:border-l md:border-border md:pt-0 md:pl-4'
+                                                : 'flex items-center justify-between gap-2 pt-1'
+                                        }
+                                    >
                                         <div>
-                                            <span className="block text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                                            <span className="block text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
                                                 Total a Pagar
                                             </span>
                                             <span className="font-display text-lg font-bold text-foreground">

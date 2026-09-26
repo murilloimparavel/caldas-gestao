@@ -35,6 +35,10 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
 import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
 
@@ -48,7 +52,8 @@ type Service = {
     duration_minutes: number;
     id: string;
     name: string;
-    photo_url?: string | null;
+    image_url?: string | null;
+    thumbnail_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: 'active' | 'inactive';
@@ -101,6 +106,7 @@ export default function ServicesIndex({
     professionalOptions: initialProfessionalOptions,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const { view, setView } = useResourceView('caldas-gestao:services-view');
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
     const [createKey] = useState(() => createIdempotencyKey('service-create'));
     const { props } = usePage<SharedPageProps>();
@@ -272,7 +278,7 @@ export default function ServicesIndex({
                                                                         true,
                                                                     )
                                                                 }
-                                                                className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                             >
                                                                 + Novo
                                                                 Profissional
@@ -325,7 +331,9 @@ export default function ServicesIndex({
                     onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'serviço encontrado' : 'serviços encontrados'}`}
-                />
+                >
+                    <ResourceViewToggle value={view} onChange={setView} />
+                </SearchToolbar>
 
                 {paginator.data.length === 0 ? (
                     <EmptyState
@@ -353,20 +361,33 @@ export default function ServicesIndex({
                 ) : (
                     <section
                         aria-label="Lista de serviços"
-                        className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((service) => (
                             <article
                                 key={service.id}
-                                className="surface-panel flex min-h-56 flex-col gap-5 p-5 transition-colors hover:border-primary/40"
+                                className={`surface-panel flex min-h-56 flex-col gap-5 p-5 transition-colors hover:border-primary/40 ${view === 'list' ? 'max-md:min-h-56 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                             >
-                                <div className="flex items-start justify-between gap-3">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                            : 'flex items-start justify-between gap-3'
+                                    }
+                                >
                                     <div className="flex min-w-0 items-center gap-3">
-                                        {service.photo_url ? (
+                                        {service.thumbnail_url ? (
                                             <img
-                                                src={service.photo_url}
+                                                src={service.thumbnail_url}
                                                 alt={service.name}
                                                 className="size-11 shrink-0 rounded-2xl border border-border object-cover"
+                                                onError={(event) => {
+                                                    event.currentTarget.hidden = true;
+                                                }}
                                             />
                                         ) : (
                                             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
@@ -388,7 +409,13 @@ export default function ServicesIndex({
                                     </div>
                                     <StatusBadge status={service.status} />
                                 </div>
-                                <div className="flex items-center justify-between gap-3 border-y border-border py-3">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'flex flex-1 items-center justify-between gap-3 border-y border-border py-3 md:border-y-0 md:py-0'
+                                            : 'flex items-center justify-between gap-3 border-y border-border py-3'
+                                    }
+                                >
                                     <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                                         <Clock3
                                             aria-hidden="true"
@@ -400,7 +427,13 @@ export default function ServicesIndex({
                                         {formatMoney(service.price_cents)}
                                     </span>
                                 </div>
-                                <div className="space-y-2">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'space-y-2 md:w-56 md:border-l md:border-border md:pl-4'
+                                            : 'space-y-2'
+                                    }
+                                >
                                     <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                                         Profissionais
                                     </p>
@@ -408,7 +441,13 @@ export default function ServicesIndex({
                                         items={service.professionals}
                                     />
                                 </div>
-                                <div className="mt-auto flex justify-end">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'mt-auto flex justify-end md:mt-0 md:border-l md:border-border md:pl-4'
+                                            : 'mt-auto flex justify-end'
+                                    }
+                                >
                                     <Button asChild variant="outline" size="sm">
                                         <Link href={services.show(service.id)}>
                                             Ver cadastro

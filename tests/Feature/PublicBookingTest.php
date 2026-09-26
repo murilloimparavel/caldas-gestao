@@ -1,14 +1,23 @@
 <?php
 
+use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
+use App\Models\AppointmentStatusHistory;
 use App\Models\AvailabilityRule;
+use App\Models\OnlineBookingCampaignLink;
+use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
+use App\Models\OnlineBookingSite;
+use App\Models\OnlineBookingVisit;
+use App\Models\OutboxEvent;
 use App\Models\Professional;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 
 /** @return array{0: Tenant, 1: Unit, 2: Service, 3: Professional, 4: CarbonImmutable} */
@@ -38,8 +47,129 @@ it('publishes only opted-in catalog data and isolates tenant units', function ()
     $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
 
     $response->assertSuccessful()->assertJsonPath('unit.slug', $unit->slug)->assertJsonMissing(['id' => $hiddenService->getKey()]);
+    expect(OnlineBookingVisit::query()->count())->toBe(1)
+        ->and(OnlineBookingVisit::query()->firstOrFail()->visitor_hash)->toHaveLength(64);
     expect($response->json('services.0.professionals.0.id'))->toBe($professional->getKey())
         ->and($response->json('unit'))->not->toHaveKey('email');
+});
+
+it('serves the selected catalog from the active publication snapshot', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $newService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'online_booking_enabled' => true,
+    ]);
+    $newService->professionals()->attach($professional, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'status' => 'published',
+    ]);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'version' => 1,
+        'source_revision' => 1,
+        'content_hash' => hash('sha256', 'snapshot'),
+        'template_key' => 'essential',
+        'public_slug' => $unit->slug,
+        'published_at' => now(),
+        'published_by' => User::factory()->create()->getKey(),
+        'content' => [
+            'schema_version' => 1,
+            'appearance' => [
+                'brand_name' => 'Atelier Público',
+                'headline' => 'Reserve agora',
+                'primary_color' => '#D4AF37',
+                'background_color' => '#0D0D0C',
+            ],
+            'identity' => ['cover_image_path' => null],
+            'service_ids' => [$service->getKey()],
+            'professional_ids' => [$professional->getKey()],
+            'gallery' => [],
+            'sections' => [
+                ['key' => 'gallery', 'enabled' => false],
+                ['key' => 'hours', 'enabled' => true],
+            ],
+        ],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+
+    $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
+
+    $response->assertSuccessful()->assertHeader('ETag');
+    $this->withHeader('If-None-Match', $response->headers->get('ETag'))
+        ->getJson(route('public_booking.show', [$tenant, $unit]))
+        ->assertNotModified();
+    expect(collect($response->json('services'))->pluck('id')->all())->toBe([$service->getKey()]);
+    expect($response->json('unit.sections.gallery'))->toBeFalse()
+        ->and($response->json('unit.sections.services'))->toBeTrue()
+        ->and($response->json('unit.appearance.brand_name'))->toBe('Atelier Público')
+        ->and($response->json('settings.appearance.headline'))->toBe('Reserve agora');
+});
+
+it('can roll back public reads to the legacy settings resolver', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'status' => 'published',
+    ]);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'version' => 1,
+        'source_revision' => 1,
+        'content_hash' => hash('sha256', 'rollback-snapshot'),
+        'template_key' => 'essential',
+        'public_slug' => $unit->slug,
+        'published_at' => now(),
+        'published_by' => User::factory()->create()->getKey(),
+        'content' => ['service_ids' => [], 'professional_ids' => []],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+    config(['online_booking.use_publication_resolver' => false]);
+
+    $response = $this->getJson(route('public_booking.show', [$tenant, $unit]));
+
+    $response->assertSuccessful();
+    expect(collect($response->json('services'))->pluck('id')->all())->toContain($service->getKey())
+        ->and($response->headers->get('ETag'))->toBeNull()
+        ->and($professional->getKey())->not->toBeEmpty();
+});
+
+it('exposes the published visual template in the public payload', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'status' => 'published',
+        'template_key' => 'atelier-barber',
+    ]);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'version' => 1,
+        'source_revision' => 1,
+        'content_hash' => hash('sha256', 'atelier-barber'),
+        'template_key' => 'atelier-barber',
+        'public_slug' => $unit->slug,
+        'published_at' => now(),
+        'published_by' => User::factory()->create()->getKey(),
+        'content' => ['service_ids' => [$service->getKey()], 'professional_ids' => [$professional->getKey()]],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+
+    $this->getJson(route('public_booking.show', [$tenant, $unit]))
+        ->assertSuccessful()
+        ->assertJsonPath('unit.template_key', 'atelier-barber');
 });
 
 it('rejects disabled public booking and invalid relationship without enumeration', function () {
@@ -50,6 +180,61 @@ it('rejects disabled public booking and invalid relationship without enumeration
     $unit->update(['online_booking_enabled' => true]);
     $otherService = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'online_booking_enabled' => true]);
     $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $otherService->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString()]))->assertNotFound();
+});
+
+it('enforces the active publication catalog for availability and creation', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $hiddenService = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'online_booking_enabled' => true]);
+    $hiddenProfessional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'online_booking_enabled' => true]);
+    $hiddenProfessional->services()->attach($hiddenService, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $site = OnlineBookingSite::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => $unit->slug, 'status' => 'published']);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(),
+        'version' => 1, 'source_revision' => 1, 'content_hash' => hash('sha256', 'catalog-lock'),
+        'template_key' => 'essential', 'public_slug' => $unit->slug, 'published_at' => now(), 'published_by' => User::factory()->create()->getKey(),
+        'content' => ['service_ids' => [$service->getKey()], 'professional_ids' => [$professional->getKey()]],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+
+    $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $hiddenService->getKey(), 'professional_id' => $hiddenProfessional->getKey(), 'date' => $date->toDateString()]))->assertNotFound();
+    $this->withHeader('X-Idempotency-Key', 'catalog-bypass')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $hiddenService->getKey(), 'professional_id' => $hiddenProfessional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Bypass', 'phone' => '+55 11 98888-0000',
+        ])
+        ->assertNotFound();
+    expect(Appointment::query()->count())->toBe(0);
+});
+
+it('persists optional customer and appointment data and records operational side effects', function () {
+    Queue::fake();
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+
+    $this->withHeader('X-Idempotency-Key', 'optional-data')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Optional Data', 'phone' => '+55 11 97777-0000',
+            'email' => 'optional@example.com', 'notes' => 'Prefere atendimento silencioso.',
+        ])
+        ->assertCreated();
+
+    $appointment = Appointment::query()->with('customer')->sole();
+    expect($appointment->customer->email)->toBe('optional@example.com')
+        ->and($appointment->notes)->toBe('Prefere atendimento silencioso.')
+        ->and(AppointmentStatusHistory::query()->where('appointment_id', $appointment->getKey())->where('action', 'created')->exists())->toBeTrue()
+        ->and(OutboxEvent::query()->where('event_type', 'appointment.created')->where('aggregate_id', $appointment->getKey())->exists())->toBeTrue();
+    Queue::assertPushed(SyncGoogleCalendarAppointment::class, fn (SyncGoogleCalendarAppointment $job): bool => $job->appointmentId === $appointment->getKey());
+});
+
+it('resolves the canonical public slug from the publication site registry', function () {
+    [$tenant, $unit] = publicBookingWorkspace();
+    OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => 'published-'.$unit->slug,
+    ]);
+
+    $this->getJson(route('public_booking.slug', ['public_slug' => 'published-'.$unit->slug]))->assertSuccessful();
 });
 
 it('returns availability without blocked or conflicting slots', function () {
@@ -78,6 +263,21 @@ it('creates and replays a public appointment idempotently with a phone-scoped cu
     expect(Appointment::query()->count())->toBe(1)
         ->and(Appointment::query()->firstOrFail()->source)->toBe('online')
         ->and(Appointment::query()->firstOrFail()->customer->phone)->toBe('5511999991234');
+});
+
+it('attributes a public appointment to the matching campaign link', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $site = OnlineBookingSite::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => $unit->slug]);
+    $campaign = OnlineBookingCampaignLink::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(), 'created_by' => User::factory()->create()->getKey(),
+        'utm_source' => 'instagram', 'utm_medium' => 'social', 'utm_campaign' => 'setembro',
+    ]);
+    $payload = ['service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Campaign Customer', 'phone' => '+55 (11) 96666-1234'];
+
+    $response = $this->withHeader('X-Idempotency-Key', 'campaign-booking-1')->postJson(route('public_booking.appointments.store', [$tenant, $unit]).'?utm_source=instagram&utm_medium=social&utm_campaign=setembro', $payload);
+
+    $response->assertCreated();
+    expect(Appointment::query()->firstOrFail()->online_booking_campaign_link_id)->toBe($campaign->getKey());
 });
 
 it('rejects public appointments outside the unit timezone booking window', function () {

@@ -5,6 +5,7 @@ namespace App\Actions\Marketing\Packages;
 use App\Actions\Operational\OperationalAction;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\PackageTemplate;
 use App\Models\Sale;
 use App\Models\Service;
@@ -74,15 +75,16 @@ final class SellCustomerPackage extends OperationalAction
             $expiresAt = now()->addDays($template->validity_days)->toDateString();
         }
 
-        $eligibleServicesSnapshot = $template->services
+        $serviceAllocations = $template->services
             ->map(static fn (Service $service): array => [
                 'id' => (string) $service->getKey(),
                 'name' => (string) $service->name,
+                'quantity' => (int) ($service->pivot->included_quantity ?? 1),
             ])
             ->values()
             ->all();
 
-        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt, $eligibleServicesSnapshot): CustomerPackage {
+        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt, $serviceAllocations): CustomerPackage {
             $customerPackage = CustomerPackage::query()->create([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $context->tenant->getKey(),
@@ -94,13 +96,24 @@ final class SellCustomerPackage extends OperationalAction
                 'price_cents_snapshot' => $template->price_cents,
                 'total_sessions_snapshot' => $totalSessions,
                 'validity_days_snapshot' => $template->validity_days,
-                'eligible_services_snapshot' => $eligibleServicesSnapshot,
+                'eligible_services_snapshot' => $serviceAllocations,
                 'total_sessions' => $totalSessions,
                 'remaining_sessions' => $totalSessions,
                 'expires_at' => $expiresAt,
                 'status' => 'active',
                 'lock_version' => 0,
             ]);
+
+            foreach ($serviceAllocations as $allocation) {
+                CustomerPackageService::query()->create([
+                    'tenant_id' => $context->tenant->getKey(),
+                    'unit_id' => $unit->getKey(),
+                    'customer_package_id' => $customerPackage->getKey(),
+                    'service_id' => $allocation['id'],
+                    'allocated_quantity' => $allocation['quantity'],
+                    'remaining_quantity' => $allocation['quantity'],
+                ]);
+            }
 
             $this->events->record($actor, $context, 'customer_package.sold', $customerPackage, [
                 'customer_id' => $customer->getKey(),

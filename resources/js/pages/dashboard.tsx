@@ -10,7 +10,7 @@ import { TopKpiCards } from '@/features/dashboard/components/top-kpi-cards';
 import { VisitsTrendChart } from '@/features/dashboard/components/visits-trend-chart';
 import type {
     DashboardSnapshot,
-    KpiCardData,
+    PeriodFilter,
 } from '@/features/dashboard/types';
 import { dashboard } from '@/routes';
 
@@ -19,144 +19,76 @@ type Props = {
 };
 
 export default function Dashboard({ dashboard: snapshot }: Props) {
-    // 1. Format Top KPIs from snapshot if not explicitly provided
-    const formatCurrency = (cents?: number) => {
-        return ((cents ?? 0) / 100).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        });
-    };
-
-    const totalSalesKpi: KpiCardData = snapshot.topKpis?.totalSales ?? {
-        id: 'sales',
-        title: 'Vendas Totais',
-        value: formatCurrency(snapshot.total_sales_cents),
-        changePercentage: snapshot.sales_variation_percentage ?? 0,
-        trend:
-            (snapshot.sales_variation_percentage ?? 0) > 0
-                ? 'up'
-                : (snapshot.sales_variation_percentage ?? 0) < 0
-                  ? 'down'
-                  : 'neutral',
-        sparklineData: [],
-    };
-
-    const appointmentsKpi: KpiCardData = snapshot.topKpis?.appointments ?? {
-        id: 'appointments',
-        title: 'Agendamentos',
-        value: String(snapshot.total_appointments ?? 0),
-        changePercentage: snapshot.growth_rate_percentage ?? 0,
-        trend:
-            (snapshot.growth_rate_percentage ?? 0) > 0
-                ? 'up'
-                : (snapshot.growth_rate_percentage ?? 0) < 0
-                  ? 'down'
-                  : 'neutral',
-        sparklineData: [],
-    };
-
-    const ticketsKpi: KpiCardData = snapshot.topKpis?.tickets ?? {
-        id: 'tickets',
-        title: 'Ticket Médio',
-        value: formatCurrency(snapshot.ticket_medio?.current_cents),
-        changePercentage: snapshot.ticket_medio?.variation_percentage ?? 0,
-        trend:
-            (snapshot.ticket_medio?.variation_percentage ?? 0) > 0
-                ? 'up'
-                : (snapshot.ticket_medio?.variation_percentage ?? 0) < 0
-                  ? 'down'
-                  : 'neutral',
-        sparklineData: [],
-    };
-
-    const periodValue =
-        typeof snapshot.period === 'string'
-            ? snapshot.period
-            : snapshot.period?.preset;
-    const startDateValue =
-        snapshot.startDate ??
-        (typeof snapshot.period === 'object'
-            ? snapshot.period.start_date
-            : undefined);
-    const endDateValue =
-        snapshot.endDate ??
-        (typeof snapshot.period === 'object'
-            ? snapshot.period.end_date
-            : undefined);
-
     return (
         <>
             <Head title="Dashboard Operacional" />
             <div className="dashboard-canvas flex min-h-full flex-1 flex-col gap-6 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
                 {/* 1. Header with greeting, filters and refresh */}
                 <DashboardHeader
-                    userName={snapshot.userName ?? 'Usuário'}
-                    period={periodValue as any}
-                    startDate={startDateValue}
-                    endDate={endDateValue}
+                    key={`${snapshot.period.preset}-${snapshot.period.startDate}-${snapshot.period.endDate}`}
+                    userName={snapshot.userName}
+                    period={snapshot.period.preset as PeriodFilter}
+                    startDate={snapshot.period.startDate}
+                    endDate={snapshot.period.endDate}
                 />
 
-                {/* 2. Top KPI Cards (Vendas, Agendamentos, Comandas/Ticket Médio) */}
-                <TopKpiCards
-                    totalSales={totalSalesKpi}
-                    appointments={appointmentsKpi}
-                    tickets={ticketsKpi}
-                />
-
-                {/* 3. Main Operational Charts Grid */}
-                <div className="grid gap-6 lg:grid-cols-3">
-                    <div className="lg:col-span-2">
-                        <VisitsTrendChart
-                            data={snapshot.visitsTrend ?? snapshot.visits_trend}
-                        />
-                    </div>
-                    <div className="lg:col-span-1">
-                        <StatusDonutChart
-                            data={
-                                snapshot.statusBreakdown ??
-                                snapshot.status_breakdown
-                            }
-                        />
-                    </div>
-                </div>
-
-                {/* 4. Sales Category & Schedule Heatmap Grid */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    <SalesCategoryBreakdown
-                        data={
-                            snapshot.salesCategoryBreakdown ??
-                            snapshot.sales_by_category
-                        }
+                <section aria-labelledby="dashboard-kpis-title">
+                    <h2 id="dashboard-kpis-title" className="sr-only">
+                        Indicadores principais
+                    </h2>
+                    <TopKpiCards
+                        totalSales={snapshot.topKpis.totalSales}
+                        appointments={snapshot.topKpis.appointments}
+                        tickets={snapshot.topKpis.tickets}
                     />
-                    <ScheduleHeatmap
-                        data={
-                            snapshot.scheduleHeatmap ??
-                            snapshot.schedule_heatmap
-                        }
-                    />
-                </div>
+                </section>
 
-                {/* 5. Professional Performance & Today's Operational Queue */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    <ProfessionalPerformanceTable
-                        data={
-                            snapshot.professionalPerformance ??
-                            snapshot.professionals_performance
-                        }
-                    />
-                    <div className="flex flex-col gap-6">
+                <section aria-labelledby="dashboard-agenda-title">
+                    <h2 id="dashboard-agenda-title" className="sr-only">
+                        Agenda e alertas operacionais
+                    </h2>
+                    <div className="grid gap-6 md:grid-cols-2">
                         <NextAppointments
-                            appointments={snapshot.appointments ?? []}
+                            appointments={snapshot.appointments}
                         />
-                        <AttentionQueue
-                            items={
-                                snapshot.attentionItems ??
-                                snapshot.attention_items ??
-                                []
-                            }
-                        />
+                        <AttentionQueue items={snapshot.attentionItems} />
                     </div>
-                </div>
+                </section>
+
+                <section aria-labelledby="dashboard-visits-title">
+                    <h2 id="dashboard-visits-title" className="sr-only">
+                        Visitas e status dos agendamentos
+                    </h2>
+                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="min-w-0 xl:col-span-2">
+                            <VisitsTrendChart data={snapshot.visitsTrend} />
+                        </div>
+                        <div className="min-w-0">
+                            <StatusDonutChart data={snapshot.statusBreakdown} />
+                        </div>
+                    </div>
+                </section>
+
+                <section aria-labelledby="dashboard-sales-title">
+                    <h2 id="dashboard-sales-title" className="sr-only">
+                        Vendas e ocupação de horários
+                    </h2>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <SalesCategoryBreakdown
+                            data={snapshot.salesCategoryBreakdown}
+                        />
+                        <ScheduleHeatmap data={snapshot.scheduleHeatmap} />
+                    </div>
+                </section>
+
+                <section aria-labelledby="dashboard-professionals-title">
+                    <h2 id="dashboard-professionals-title" className="sr-only">
+                        Desempenho por profissional
+                    </h2>
+                    <ProfessionalPerformanceTable
+                        data={snapshot.professionalPerformance}
+                    />
+                </section>
             </div>
         </>
     );

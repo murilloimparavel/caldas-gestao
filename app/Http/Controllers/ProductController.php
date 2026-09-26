@@ -10,10 +10,13 @@ use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Support\OperationalMutation;
+use App\Support\ProductConcurrencyConflictException;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -95,7 +98,7 @@ final class ProductController extends Controller
         ]);
     }
 
-    public function store(ProductRequest $request, TenantContext $context, CreateProduct $createProduct): RedirectResponse
+    public function store(ProductRequest $request, TenantContext $context, CreateProduct $createProduct): RedirectResponse|JsonResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, function () use ($createProduct, $request, $context, $data): array {
@@ -104,6 +107,14 @@ final class ProductController extends Controller
             return ['resource_id' => $product->getKey(), 'resource_type' => 'product'];
         });
         $product = Product::query()->findOrFail($reference['resource_id']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id' => $product->id,
+                'name' => $product->name,
+                'product' => $product,
+            ], 201);
+        }
 
         return to_route('products.show', $product)->with('success', 'Produto cadastrado com sucesso.');
     }
@@ -124,11 +135,17 @@ final class ProductController extends Controller
     public function destroy(ProductRequest $request, TenantContext $context, Product $product, DeactivateProduct $deactivateProduct): RedirectResponse
     {
         $data = $request->validated();
-        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($deactivateProduct, $request, $context, $product, $data): array {
-            $deactivated = $deactivateProduct->handle($request->user(), $context, $product, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
+        try {
+            $this->mutation->execute($request, $context, $request->user(), $data, function () use ($deactivateProduct, $request, $context, $product, $data): array {
+                $deactivated = $deactivateProduct->handle($request->user(), $context, $product, isset($data['lock_version']) ? (int) $data['lock_version'] : null);
 
-            return ['resource_id' => $deactivated->getKey(), 'resource_type' => 'product'];
-        });
+                return ['resource_id' => $deactivated->getKey(), 'resource_type' => 'product'];
+            });
+        } catch (ProductConcurrencyConflictException) {
+            throw ValidationException::withMessages([
+                'lock_version' => 'Este produto foi alterado em outra tela. Recarregue os dados antes de inativá-lo.',
+            ]);
+        }
 
         return to_route('products.index')->with('success', 'Produto inativado com sucesso.');
     }

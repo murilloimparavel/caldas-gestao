@@ -1,8 +1,10 @@
 import { Form, Head, router, useHttp, usePage } from '@inertiajs/react';
 import {
     Check,
+    CheckCheck,
     ChevronDown,
     Megaphone,
+    MessageCircle,
     Play,
     RefreshCw,
     Send,
@@ -10,7 +12,7 @@ import {
     Sparkles,
     Users,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
     createIdempotencyKey,
     EmptyState,
@@ -183,6 +185,53 @@ export default function RetentionCampaigns({ campaigns }: Props) {
     );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('retention.manage');
+    const initialMessage =
+        'Olá {cliente}, sentimos sua falta aqui na {unidade}! Agende seu próximo horário e venha cuidar do visual: {link_agendamento}';
+    const [messageText, setMessageText] = useState(initialMessage);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const insertTag = (tag: string): void => {
+        const el = textareaRef.current;
+
+        if (!el) {
+            setMessageText((prev) => (prev ? `${prev} ${tag}` : tag));
+
+            return;
+        }
+
+        const start = el.selectionStart ?? el.value.length;
+        const end = el.selectionEnd ?? el.value.length;
+        const current = el.value;
+        const next = current.slice(0, start) + tag + current.slice(end);
+        setMessageText(next);
+
+        window.requestAnimationFrame(() => {
+            el.focus();
+            el.setSelectionRange(start + tag.length, start + tag.length);
+        });
+    };
+
+    const demoUnitName =
+        props.workspace?.activeUnit?.name ||
+        props.workspace?.tenant?.name ||
+        'Barbearia Caldas';
+    const demoTenantSlug = props.workspace?.tenant?.slug || 'caldas';
+    const demoUnitSlug = props.workspace?.activeUnit?.slug || 'matriz';
+    const demoBookingUrl =
+        typeof window !== 'undefined'
+            ? `${window.location.origin}/book/${demoTenantSlug}/${demoUnitSlug}`
+            : `https://caldas.app/book/${demoTenantSlug}/${demoUnitSlug}`;
+
+    const previewMessage = (messageText || 'Escreva sua mensagem...')
+        .replace(/\{cliente\}/g, 'Maria Silva')
+        .replace(/\{unidade\}/g, demoUnitName)
+        .replace(/\{link_agendamento\}/g, demoBookingUrl);
+
+    const previewTime = new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date());
+
     const createKey = useMemo(
         () => createIdempotencyKey('retention-campaign-create'),
         [],
@@ -306,7 +355,10 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                 <Form
                                     {...campaignsRoutes.store.form()}
                                     headers={{ 'X-Idempotency-Key': createKey }}
-                                    onSuccess={() => setCreateOpen(false)}
+                                    onSuccess={() => {
+                                        setCreateOpen(false);
+                                        setMessageText(initialMessage);
+                                    }}
                                     className="grid gap-4"
                                 >
                                     {({ processing, errors }) => (
@@ -440,19 +492,152 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                                 error={errors.message}
                                                 required
                                             >
-                                                <Textarea
-                                                    id="message"
-                                                    name="message"
-                                                    rows={5}
-                                                    placeholder="Escreva uma mensagem clara e responsável..."
-                                                    required
-                                                />
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Tags dinâmicas:
+                                                        </span>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    insertTag(
+                                                                        '{cliente}',
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center rounded-md border border-dashed border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/20 active:scale-95 dark:text-emerald-300"
+                                                            >
+                                                                + {'{cliente}'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    insertTag(
+                                                                        '{unidade}',
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center rounded-md border border-dashed border-blue-500/50 bg-blue-500/10 px-2 py-0.5 font-mono text-xs font-semibold text-blue-700 transition hover:bg-blue-500/20 active:scale-95 dark:text-blue-300"
+                                                            >
+                                                                + {'{unidade}'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    insertTag(
+                                                                        '{link_agendamento}',
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center rounded-md border border-dashed border-purple-500/50 bg-purple-500/10 px-2 py-0.5 font-mono text-xs font-semibold text-purple-700 transition hover:bg-purple-500/20 active:scale-95 dark:text-purple-300"
+                                                            >
+                                                                +{' '}
+                                                                {
+                                                                    '{link_agendamento}'
+                                                                }
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <Textarea
+                                                        ref={textareaRef}
+                                                        id="message"
+                                                        name="message"
+                                                        rows={4}
+                                                        value={messageText}
+                                                        onChange={(event) =>
+                                                            setMessageText(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        placeholder="Escreva uma mensagem clara e responsável..."
+                                                        required
+                                                    />
+                                                </div>
                                             </FormField>
+                                            {/* Preview do WhatsApp em Tempo Real */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                    <span className="font-semibold text-foreground">
+                                                        Preview do WhatsApp em
+                                                        Tempo Real
+                                                    </span>
+                                                    <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                                                        <MessageCircle className="size-3.5" />
+                                                        Simulação ao vivo
+                                                    </span>
+                                                </div>
+                                                <div className="overflow-hidden rounded-2xl border border-border/80 shadow-sm">
+                                                    {/* WhatsApp Header Bar */}
+                                                    <div className="flex items-center justify-between bg-[#075e54] px-3.5 py-2.5 text-white">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="flex size-7 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white uppercase">
+                                                                {demoUnitName.slice(
+                                                                    0,
+                                                                    2,
+                                                                )}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-xs leading-tight font-bold">
+                                                                    {
+                                                                        demoUnitName
+                                                                    }
+                                                                </p>
+                                                                <p className="flex items-center gap-1 text-3xs font-medium text-emerald-200">
+                                                                    <span className="size-1.5 rounded-full bg-emerald-300" />
+                                                                    online
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-3xs font-semibold text-white">
+                                                            <MessageCircle className="size-3 text-[#25D366]" />
+                                                            <span>
+                                                                WhatsApp
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {/* WhatsApp Chat Body */}
+                                                    <div className="bg-[#efeae2] p-3.5 sm:p-4 dark:bg-[#0b141a]">
+                                                        {/* Outgoing Message Bubble */}
+                                                        <div className="ml-auto max-w-[88%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] p-3 text-xs text-slate-900 shadow-xs dark:bg-[#005c4b] dark:text-white">
+                                                            <p className="leading-relaxed break-words whitespace-pre-wrap">
+                                                                {previewMessage}
+                                                            </p>
+                                                            <div className="mt-1.5 flex items-center justify-end gap-1 text-3xs text-slate-500 dark:text-emerald-200">
+                                                                <span>
+                                                                    {
+                                                                        previewTime
+                                                                    }
+                                                                </span>
+                                                                <CheckCheck className="size-3.5 text-[#53bdeb]" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {/* Footer info */}
+                                                    <div className="border-t border-border/50 bg-muted/40 px-3.5 py-1.5 text-3xs text-muted-foreground">
+                                                        Variáveis
+                                                        demonstrativas:{' '}
+                                                        <strong className="text-foreground">
+                                                            &#123;cliente&#125;
+                                                        </strong>{' '}
+                                                        ➔ Maria Silva ·{' '}
+                                                        <strong className="text-foreground">
+                                                            &#123;unidade&#125;
+                                                        </strong>{' '}
+                                                        ➔ {demoUnitName} ·{' '}
+                                                        <strong className="text-foreground">
+                                                            &#123;link_agendamento&#125;
+                                                        </strong>{' '}
+                                                        ➔ {demoBookingUrl}
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <FormActions
                                                 processing={processing}
-                                                onCancel={() =>
-                                                    setCreateOpen(false)
-                                                }
+                                                onCancel={() => {
+                                                    setCreateOpen(false);
+                                                    setMessageText(
+                                                        initialMessage,
+                                                    );
+                                                }}
                                                 submitLabel="Criar campanha"
                                             />
                                         </>

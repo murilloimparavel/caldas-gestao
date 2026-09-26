@@ -14,9 +14,12 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceDashboardController;
 use App\Http\Controllers\FinancialObligationController;
 use App\Http\Controllers\FirstLoginPasswordController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LastlinkWebhookController;
 use App\Http\Controllers\LegalRetentionController;
+use App\Http\Controllers\MetaConversionController;
+use App\Http\Controllers\OnlineBookingCampaignLinkController;
 use App\Http\Controllers\OnlineBookingSettingsController;
 use App\Http\Controllers\PackageTemplateController;
 use App\Http\Controllers\ProductController;
@@ -30,12 +33,19 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
+use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::post('/webhooks/lastlink', LastlinkWebhookController::class)
     ->middleware('throttle:30,1')
     ->name('webhooks.lastlink');
+
+Route::post('/marketing/barber/meta-events', MetaConversionController::class)
+    ->middleware('throttle:30,1')
+    ->withoutMiddleware(PreventRequestForgery::class)
+    ->name('marketing.barber.meta-events.store');
 
 Route::get('/billing', BillingController::class)
     ->middleware(['auth', 'verified', 'tenant.context'])
@@ -45,6 +55,10 @@ Route::get('/', function () {
     $domain = request()->attributes->get('tenant_domain');
 
     if ($domain?->kind?->value === 'public') {
+        if (request()->getHost() === 'romawear.com.br') {
+            return response()->file(public_path('romawear-demo/index.html'), ['Cache-Control' => 'no-store']);
+        }
+
         $tenant = $domain->tenant;
 
         return Inertia::render('public/coming-soon', [
@@ -61,6 +75,12 @@ Route::get('/', function () {
         return redirect('/login');
     }
 
+    if (request()->query('lp') === 'barber') {
+        return Inertia::render('marketing/barber/conversation', [
+            'metaPixelId' => config('services.meta.pixel_id'),
+        ]);
+    }
+
     return Inertia::render('marketing/home', [
         'branding' => [
             'name' => config('branding.name', config('app.name')),
@@ -68,6 +88,7 @@ Route::get('/', function () {
             'primaryColor' => config('branding.primary_color'),
             'accentColor' => config('branding.accent_color'),
         ],
+        'metaPixelId' => config('services.meta.pixel_id'),
     ]);
 })->name('home');
 
@@ -94,7 +115,10 @@ Route::prefix('book/{tenant:slug}/{unit:slug}')
             ->name('public_booking.appointments.store');
     });
 
+Route::get('google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google_calendar.callback');
+
 Route::middleware(['auth', 'verified'])->group(function () {
+
     Route::get('dashboard', DashboardController::class)
         ->middleware(['tenant.context', 'saas.access', 'first.login.complete'])
         ->name('dashboard');
@@ -106,14 +130,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/domains/{tenantDomain}/provision', [TenantDomainController::class, 'provision'])->name('tenant-domains.provision');
         Route::post('settings/domains/{tenantDomain}/activate', [TenantDomainController::class, 'activate'])->name('tenant-domains.activate');
         Route::get('online-booking', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.index');
+        Route::get('online-booking/editor', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.editor');
+        Route::get('online-booking/publications', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.publications.index');
+        Route::get('online-booking/preview/{tenant:slug}/{unit:slug}', [PublicBookingController::class, 'preview'])
+            ->scopeBindings()
+            ->middleware(['signed', PreventOnlineBookingPreviewCaching::class])
+            ->name('online_booking.preview');
+        Route::get('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.campaign_links.index');
+        Route::get('online-booking/publications/{publication}/preview', [PublicBookingController::class, 'previewPublication'])
+            ->middleware(PreventOnlineBookingPreviewCaching::class)
+            ->middleware('signed')
+            ->name('online_booking.publication_preview');
+        Route::get('online-booking/links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.links');
+        Route::post('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'store'])->name('online_booking.campaign_links.store');
+        Route::patch('online-booking/campaign-links/{campaignLink}/toggle', [OnlineBookingCampaignLinkController::class, 'toggle'])->name('online_booking.campaign_links.toggle');
+        Route::delete('online-booking/campaign-links/{campaignLink}', [OnlineBookingCampaignLinkController::class, 'destroy'])->name('online_booking.campaign_links.destroy');
         Route::patch('online-booking', [OnlineBookingSettingsController::class, 'update'])->name('online_booking.update');
+        Route::patch('online-booking/draft', [OnlineBookingSettingsController::class, 'saveDraft'])->name('online_booking.draft.update');
+        Route::post('online-booking/publish', [OnlineBookingSettingsController::class, 'publish'])->name('online_booking.publish');
+        Route::post('online-booking/unpublish', [OnlineBookingSettingsController::class, 'unpublish'])->name('online_booking.unpublish');
+        Route::post('online-booking/publications/{publication}/restore', [OnlineBookingSettingsController::class, 'restore'])->name('online_booking.publications.restore');
         Route::post('online-booking/cover', [OnlineBookingSettingsController::class, 'storeCover'])->name('online_booking.cover.store');
         Route::delete('online-booking/cover', [OnlineBookingSettingsController::class, 'destroyCover'])->name('online_booking.cover.destroy');
+        Route::post('online-booking/logo', [OnlineBookingSettingsController::class, 'storeLogo'])->name('online_booking.logo.store');
+        Route::delete('online-booking/logo', [OnlineBookingSettingsController::class, 'destroyLogo'])->name('online_booking.logo.destroy');
         Route::post('online-booking/gallery', [OnlineBookingSettingsController::class, 'storeGallery'])->name('online_booking.gallery.store');
         Route::patch('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'updateGallery'])->name('online_booking.gallery.update');
         Route::delete('online-booking/gallery/{image}', [OnlineBookingSettingsController::class, 'destroyGallery'])->name('online_booking.gallery.destroy');
         Route::post('online-booking/gallery/reorder', [OnlineBookingSettingsController::class, 'reorderGallery'])->name('online_booking.gallery.reorder');
         Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+        Route::get('google-calendar/status', [GoogleCalendarController::class, 'status'])->name('google_calendar.status');
+        Route::get('google-calendar/connect', [GoogleCalendarController::class, 'connect'])->name('google_calendar.connect');
+        Route::delete('google-calendar/disconnect', [GoogleCalendarController::class, 'disconnect'])->name('google_calendar.disconnect');
         Route::post('appointments', [CalendarController::class, 'store'])->name('appointments.store');
         Route::put('appointments/{appointment}', [CalendarController::class, 'update'])->name('appointments.update');
         Route::post('appointments/{appointment}/cancel', [CalendarController::class, 'cancel'])->name('appointments.cancel');

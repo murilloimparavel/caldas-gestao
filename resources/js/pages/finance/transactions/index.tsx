@@ -45,6 +45,14 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import type {
     FinancialObligation,
     FinancialObligationType,
@@ -235,7 +243,10 @@ export default function FinancialTransactionsIndex({
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full gap-2 sm:w-auto">
-                                        <Plus className="h-4 w-4" />
+                                        <Plus
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
                                         Novo Lançamento
                                     </Button>
                                 </DialogTrigger>
@@ -262,7 +273,10 @@ export default function FinancialTransactionsIndex({
                                                     : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                         >
-                                            <ArrowDownRight className="h-4 w-4 text-rose-500" />
+                                            <ArrowDownRight
+                                                className="h-4 w-4 text-rose-500"
+                                                aria-hidden="true"
+                                            />
                                             Conta a Pagar (Despesa)
                                         </button>
                                         <button
@@ -276,7 +290,10 @@ export default function FinancialTransactionsIndex({
                                                     : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                         >
-                                            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                                            <ArrowUpRight
+                                                className="h-4 w-4 text-emerald-500"
+                                                aria-hidden="true"
+                                            />
                                             Conta a Receber (Receita)
                                         </button>
                                     </div>
@@ -414,7 +431,7 @@ export default function FinancialTransactionsIndex({
                                                                             true,
                                                                         )
                                                                     }
-                                                                    className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                    className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                 >
                                                                     + Nova
                                                                     Categoria
@@ -433,7 +450,7 @@ export default function FinancialTransactionsIndex({
                                                                             .value,
                                                                     )
                                                                 }
-                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                             >
                                                                 <option value="">
                                                                     Selecione
@@ -478,7 +495,7 @@ export default function FinancialTransactionsIndex({
                                                                                 true,
                                                                             )
                                                                         }
-                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                     >
                                                                         + Novo
                                                                         Fornecedor
@@ -500,7 +517,7 @@ export default function FinancialTransactionsIndex({
                                                                                 .value,
                                                                         )
                                                                     }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                                 >
                                                                     <option value="">
                                                                         Selecione
@@ -545,7 +562,7 @@ export default function FinancialTransactionsIndex({
                                                                                 true,
                                                                             )
                                                                         }
-                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                     >
                                                                         + Novo
                                                                         Cliente
@@ -567,7 +584,7 @@ export default function FinancialTransactionsIndex({
                                                                                 .value,
                                                                         )
                                                                     }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                                 >
                                                                     <option value="">
                                                                         Selecione
@@ -660,7 +677,10 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                                <ArrowUpRight className="h-5 w-5" />
+                                <ArrowUpRight
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -678,7 +698,10 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-600">
-                                <ArrowDownRight className="h-5 w-5" />
+                                <ArrowDownRight
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -694,7 +717,10 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-                                <AlertCircle className="h-5 w-5" />
+                                <AlertCircle
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -712,7 +738,10 @@ export default function FinancialTransactionsIndex({
                                 </p>
                             </div>
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-600">
-                                <CheckCircle2 className="h-5 w-5" />
+                                <CheckCircle2
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -830,8 +859,12 @@ export default function FinancialTransactionsIndex({
                             className="flex max-w-md min-w-[240px] flex-1 items-center gap-2"
                         >
                             <div className="relative flex-1">
-                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search
+                                    className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
                                 <Input
+                                    aria-label="Buscar descrição, cliente ou fornecedor"
                                     placeholder="Buscar descrição, cliente ou fornecedor..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -846,10 +879,14 @@ export default function FinancialTransactionsIndex({
 
                     <div className="grid grid-cols-1 gap-3 border-t pt-2 text-xs sm:grid-cols-3">
                         <div>
-                            <label className="mb-1 block font-medium text-muted-foreground">
+                            <label
+                                htmlFor="filter-category"
+                                className="mb-1 block font-medium text-muted-foreground"
+                            >
                                 Categoria
                             </label>
                             <select
+                                id="filter-category"
                                 value={categoryIdFilter}
                                 onChange={(e) => {
                                     setCategoryIdFilter(e.target.value);
@@ -857,7 +894,7 @@ export default function FinancialTransactionsIndex({
                                         category_id: e.target.value,
                                     });
                                 }}
-                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:ring-1 focus:ring-ring focus:outline-none"
+                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                             >
                                 <option value="">Todas as categorias</option>
                                 {categories.map((cat) => (
@@ -868,10 +905,14 @@ export default function FinancialTransactionsIndex({
                             </select>
                         </div>
                         <div>
-                            <label className="mb-1 block font-medium text-muted-foreground">
+                            <label
+                                htmlFor="filter-date-start"
+                                className="mb-1 block font-medium text-muted-foreground"
+                            >
                                 Data De
                             </label>
                             <Input
+                                id="filter-date-start"
                                 type="date"
                                 value={dateStart}
                                 onChange={(e) => {
@@ -884,10 +925,14 @@ export default function FinancialTransactionsIndex({
                             />
                         </div>
                         <div>
-                            <label className="mb-1 block font-medium text-muted-foreground">
+                            <label
+                                htmlFor="filter-date-end"
+                                className="mb-1 block font-medium text-muted-foreground"
+                            >
                                 Data Até
                             </label>
                             <Input
+                                id="filter-date-end"
                                 type="date"
                                 value={dateEnd}
                                 onChange={(e) => {
@@ -909,224 +954,278 @@ export default function FinancialTransactionsIndex({
                             description="Não há contas a pagar ou receber correspondentes aos filtros selecionados."
                         />
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b bg-muted/40 text-xs text-muted-foreground uppercase">
-                                    <tr>
-                                        <th className="px-4 py-3">Tipo</th>
-                                        <th className="px-4 py-3">
-                                            Descrição / Contato
-                                        </th>
-                                        <th className="px-4 py-3">Categoria</th>
-                                        <th className="px-4 py-3">
-                                            Vencimento
-                                        </th>
-                                        <th className="px-4 py-3">Valor</th>
-                                        <th className="px-4 py-3">Status</th>
-                                        <th className="px-4 py-3 text-right">
-                                            Ações
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {obligations.data.map((item) => {
-                                        const overdue = isOverdue(item);
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Tipo
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Descrição / Contato
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Categoria
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Vencimento
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Valor
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-xs uppercase">
+                                        Status
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-right text-xs uppercase">
+                                        Ações
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y">
+                                {obligations.data.map((item) => {
+                                    const overdue = isOverdue(item);
 
-                                        return (
-                                            <tr
-                                                key={item.id}
-                                                className="transition-colors hover:bg-muted/30"
-                                            >
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    {item.type === 'payable' ? (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="gap-1 border-rose-500/30 bg-rose-50 font-medium text-rose-600 dark:bg-rose-950/30"
-                                                        >
-                                                            <ArrowDownRight className="h-3 w-3" />
-                                                            A Pagar
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="gap-1 border-emerald-500/30 bg-emerald-50 font-medium text-emerald-600 dark:bg-emerald-950/30"
-                                                        >
-                                                            <ArrowUpRight className="h-3 w-3" />
-                                                            A Receber
-                                                        </Badge>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <p className="font-medium text-foreground">
-                                                        {item.description}
+                                    return (
+                                        <TableRow
+                                            key={item.id}
+                                            className="transition-colors hover:bg-muted/30"
+                                        >
+                                            <TableCell className="px-4 py-3 whitespace-nowrap">
+                                                {item.type === 'payable' ? (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="gap-1 border-destructive/30 bg-destructive/10 font-medium text-destructive"
+                                                    >
+                                                        <ArrowDownRight
+                                                            className="h-3 w-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        A Pagar
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="gap-1 border-success/30 bg-success/10 font-medium text-success"
+                                                    >
+                                                        <ArrowUpRight
+                                                            className="h-3 w-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        A Receber
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3">
+                                                <p className="font-medium text-foreground">
+                                                    {item.description}
+                                                </p>
+                                                {item.supplier && (
+                                                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <Users
+                                                            className="h-3 w-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Fornecedor:{' '}
+                                                        {item.supplier.name}
                                                     </p>
-                                                    {item.supplier && (
-                                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                                            <Users className="h-3 w-3" />
-                                                            Fornecedor:{' '}
-                                                            {item.supplier.name}
-                                                        </p>
-                                                    )}
-                                                    {item.customer && (
-                                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                                            <User className="h-3 w-3" />
-                                                            Cliente:{' '}
-                                                            {item.customer.name}
-                                                        </p>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                                                    {item.category?.name || '—'}
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                                                        <span
-                                                            className={
-                                                                overdue
-                                                                    ? 'font-semibold text-rose-600'
-                                                                    : 'text-foreground'
-                                                            }
-                                                        >
-                                                            {new Date(
-                                                                item.due_date +
-                                                                    'T00:00:00',
-                                                            ).toLocaleDateString(
-                                                                'pt-BR',
-                                                            )}
-                                                        </span>
-                                                        {overdue && (
-                                                            <Badge
-                                                                variant="destructive"
-                                                                className="px-1.5 py-0 text-[10px]"
-                                                            >
-                                                                Vencido
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 font-semibold whitespace-nowrap">
+                                                )}
+                                                {item.customer && (
+                                                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <User
+                                                            className="h-3 w-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Cliente:{' '}
+                                                        {item.customer.name}
+                                                    </p>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                                                {item.category?.name || '—'}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Calendar
+                                                        className="h-3.5 w-3.5 text-muted-foreground"
+                                                        aria-hidden="true"
+                                                    />
                                                     <span
                                                         className={
-                                                            item.type ===
-                                                            'payable'
-                                                                ? 'text-rose-600 dark:text-rose-400'
-                                                                : 'text-emerald-600 dark:text-emerald-400'
+                                                            overdue
+                                                                ? 'font-semibold text-destructive'
+                                                                : 'text-foreground'
                                                         }
                                                     >
-                                                        {item.type === 'payable'
-                                                            ? '- '
-                                                            : '+ '}
-                                                        {formatMoney(
-                                                            item.amount_cents,
+                                                        {new Date(
+                                                            item.due_date +
+                                                                'T00:00:00',
+                                                        ).toLocaleDateString(
+                                                            'pt-BR',
                                                         )}
                                                     </span>
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    {item.status === 'paid' && (
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className="w-fit gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                                            >
-                                                                <CheckCircle2 className="h-3 w-3" />
-                                                                Liquidado
-                                                            </Badge>
-                                                            {item.paid_date && (
-                                                                <span className="text-[11px] text-muted-foreground">
-                                                                    {new Date(
-                                                                        item.paid_date +
-                                                                            'T00:00:00',
-                                                                    ).toLocaleDateString(
-                                                                        'pt-BR',
-                                                                    )}{' '}
-                                                                    (
-                                                                    {item.payment_method ||
-                                                                        '—'}
-                                                                    )
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {item.status ===
-                                                        'pending' && (
+                                                    {overdue && (
                                                         <Badge
-                                                            variant="outline"
-                                                            className="gap-1 border-amber-500/40 bg-amber-50 text-amber-600 dark:bg-amber-950/20"
+                                                            variant="destructive"
+                                                            className="px-1.5 py-0 text-2xs"
                                                         >
-                                                            <Clock className="h-3 w-3" />
-                                                            Pendente
+                                                            Vencido
                                                         </Badge>
                                                     )}
-                                                    {item.status ===
-                                                        'cancelled' && (
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-semibold whitespace-nowrap">
+                                                <span
+                                                    className={
+                                                        item.type === 'payable'
+                                                            ? 'text-destructive'
+                                                            : 'text-success'
+                                                    }
+                                                >
+                                                    {item.type === 'payable'
+                                                        ? '- '
+                                                        : '+ '}
+                                                    {formatMoney(
+                                                        item.amount_cents,
+                                                    )}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 whitespace-nowrap">
+                                                {item.status === 'paid' && (
+                                                    <div className="flex flex-col gap-0.5">
                                                         <Badge
                                                             variant="secondary"
-                                                            className="gap-1 bg-muted text-muted-foreground"
+                                                            className="w-fit gap-1 bg-success/15 text-success"
                                                         >
-                                                            <Ban className="h-3 w-3" />
-                                                            Cancelado
+                                                            <CheckCircle2
+                                                                className="h-3 w-3"
+                                                                aria-hidden="true"
+                                                            />
+                                                            Liquidado
                                                         </Badge>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-right whitespace-nowrap">
-                                                    {item.status ===
-                                                        'pending' && (
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            {canSettle && (
+                                                        {item.paid_date && (
+                                                            <span className="text-3xs text-muted-foreground">
+                                                                {new Date(
+                                                                    item.paid_date +
+                                                                        'T00:00:00',
+                                                                ).toLocaleDateString(
+                                                                    'pt-BR',
+                                                                )}{' '}
+                                                                (
+                                                                {item.payment_method ||
+                                                                    '—'}
+                                                                )
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {item.status === 'pending' && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="gap-1 border-warning/30 bg-warning/15 text-warning"
+                                                    >
+                                                        <Clock
+                                                            className="h-3 w-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Pendente
+                                                    </Badge>
+                                                )}
+                                                {item.status ===
+                                                    'cancelled' && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="gap-1 bg-muted text-muted-foreground"
+                                                    >
+                                                        <Ban
+                                                            className="h-3 w-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Cancelado
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right whitespace-nowrap">
+                                                {item.status === 'pending' && (
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        {canSettle && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 border-success/30 text-success hover:bg-success/10 hover:text-success"
+                                                                onClick={() =>
+                                                                    setSettlingObligation(
+                                                                        item,
+                                                                    )
+                                                                }
+                                                                aria-label={`Liquidar ${item.description || 'lançamento'}`}
+                                                            >
+                                                                <CheckCircle2
+                                                                    className="mr-1 h-3.5 w-3.5"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                Liquidar
+                                                                <span className="sr-only">
+                                                                    Liquidar{' '}
+                                                                    {item.description ||
+                                                                        'lançamento'}
+                                                                </span>
+                                                            </Button>
+                                                        )}
+                                                        {canManage && (
+                                                            <>
                                                                 <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="h-8 border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50"
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8"
                                                                     onClick={() =>
-                                                                        setSettlingObligation(
+                                                                        openEdit(
                                                                             item,
                                                                         )
                                                                     }
+                                                                    aria-label={`Editar ${item.description || 'lançamento'}`}
+                                                                    title="Editar Lançamento"
                                                                 >
-                                                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                                                    Liquidar
+                                                                    <Edit3
+                                                                        className="h-3.5 w-3.5"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    <span className="sr-only">
+                                                                        Editar{' '}
+                                                                        {item.description ||
+                                                                            'lançamento'}
+                                                                    </span>
                                                                 </Button>
-                                                            )}
-                                                            {canManage && (
-                                                                <>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-8 w-8"
-                                                                        onClick={() =>
-                                                                            openEdit(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        title="Editar Lançamento"
-                                                                    >
-                                                                        <Edit3 className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="ghost"
-                                                                        className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                                                                        onClick={() =>
-                                                                            setCancellingObligation(
-                                                                                item,
-                                                                            )
-                                                                        }
-                                                                        title="Cancelar Lançamento"
-                                                                    >
-                                                                        <Ban className="h-3.5 w-3.5" />
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                    onClick={() =>
+                                                                        setCancellingObligation(
+                                                                            item,
+                                                                        )
+                                                                    }
+                                                                    aria-label={`Cancelar ${item.description || 'lançamento'}`}
+                                                                    title="Cancelar Lançamento"
+                                                                >
+                                                                    <Ban
+                                                                        className="h-3.5 w-3.5"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    <span className="sr-only">
+                                                                        Cancelar{' '}
+                                                                        {item.description ||
+                                                                            'lançamento'}
+                                                                    </span>
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                     )}
 
                     {obligations.links && obligations.links.length > 3 && (
@@ -1265,7 +1364,7 @@ export default function FinancialTransactionsIndex({
                                                             editingObligation.category_id ||
                                                             ''
                                                         }
-                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                     >
                                                         <option value="">
                                                             Selecione uma
@@ -1304,7 +1403,7 @@ export default function FinancialTransactionsIndex({
                                                                 editingObligation.supplier_id ||
                                                                 ''
                                                             }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                         >
                                                             <option value="">
                                                                 Selecione o
@@ -1346,7 +1445,7 @@ export default function FinancialTransactionsIndex({
                                                                 editingObligation.customer_id ||
                                                                 ''
                                                             }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                                         >
                                                             <option value="">
                                                                 Selecione o
@@ -1470,7 +1569,7 @@ export default function FinancialTransactionsIndex({
                                                 name="payment_method"
                                                 required
                                                 defaultValue="pix"
-                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring focus:outline-none"
+                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                                             >
                                                 {PAYMENT_METHODS.map((pm) => (
                                                     <option

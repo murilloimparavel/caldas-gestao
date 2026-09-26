@@ -30,7 +30,15 @@ return new class extends Migration
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('CREATE UNIQUE INDEX idempotency_keys_scope_unique ON idempotency_keys (tenant_id, actor_user_id, key) NULLS NOT DISTINCT');
+            $supportsNullsNotDistinct = (int) DB::scalar('SHOW server_version_num') >= 150000;
+
+            if ($supportsNullsNotDistinct) {
+                DB::statement('CREATE UNIQUE INDEX idempotency_keys_scope_unique ON idempotency_keys (tenant_id, actor_user_id, key) NULLS NOT DISTINCT');
+            } else {
+                DB::statement('CREATE UNIQUE INDEX idempotency_keys_scope_actor_unique ON idempotency_keys (tenant_id, actor_user_id, key) WHERE actor_user_id IS NOT NULL');
+                DB::statement('CREATE UNIQUE INDEX idempotency_keys_scope_tenant_unique ON idempotency_keys (tenant_id, key) WHERE actor_user_id IS NULL');
+            }
+
             DB::statement("ALTER TABLE idempotency_keys ADD CONSTRAINT idempotency_keys_status_check CHECK (status IN ('started', 'succeeded', 'failed'))");
             DB::statement("ALTER TABLE idempotency_keys ADD CONSTRAINT idempotency_keys_completion_check CHECK ((status = 'started' AND completed_at IS NULL) OR (status IN ('succeeded', 'failed') AND completed_at IS NOT NULL))");
             DB::statement("ALTER TABLE idempotency_keys ADD CONSTRAINT idempotency_keys_response_check CHECK ((status = 'started' AND response_code IS NULL AND response_ref IS NULL) OR (status IN ('succeeded', 'failed') AND response_code IS NOT NULL AND response_ref IS NOT NULL))");
@@ -44,6 +52,8 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('DROP INDEX IF EXISTS idempotency_keys_scope_unique');
+            DB::statement('DROP INDEX IF EXISTS idempotency_keys_scope_actor_unique');
+            DB::statement('DROP INDEX IF EXISTS idempotency_keys_scope_tenant_unique');
         } elseif (DB::getDriverName() === 'sqlite') {
             DB::statement('DROP INDEX IF EXISTS idempotency_keys_scope_actor_unique');
             DB::statement('DROP INDEX IF EXISTS idempotency_keys_scope_tenant_unique');

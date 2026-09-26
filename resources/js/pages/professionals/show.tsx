@@ -1,14 +1,18 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     BriefcaseBusiness,
     Clock,
+    Check,
     Lock,
     Mail,
     Phone,
+    Plus,
+    Search,
+    Trash2,
     UserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     createIdempotencyKey,
     FormActions,
@@ -35,7 +39,13 @@ import {
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
 import { useInitials } from '@/hooks/use-initials';
+import {
+    destroy as destroyAvailabilityRule,
+    store as storeAvailabilityRule,
+    update as updateAvailabilityRule,
+} from '@/routes/availability_rules';
 import professionals from '@/routes/professionals';
+import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
 
 type ServiceSummary = {
@@ -88,6 +98,274 @@ const weekdays = [
     { day: 6, name: 'Sábado', short: 'Sáb' },
 ];
 
+type AvailabilityEditorProps = {
+    canConfigure: boolean;
+    day: (typeof weekdays)[number];
+    onClose: () => void;
+    professional: Professional;
+    rules: AvailabilityRuleSummary[];
+    timezone: string;
+};
+
+function minutesBetween(start: string, end: string): number {
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const [endHour, endMinute] = end.split(':').map(Number);
+
+    return Math.max(0, endHour * 60 + endMinute - startHour * 60 - startMinute);
+}
+
+function AvailabilityEditor({
+    canConfigure,
+    day,
+    onClose,
+    professional,
+    rules,
+    timezone,
+}: AvailabilityEditorProps) {
+    const [draftCount, setDraftCount] = useState(1);
+    const [mutationKey] = useState(() =>
+        createIdempotencyKey(`availability-rule-${day.day}`),
+    );
+
+    const goBackToProfessional = () => {
+        router.visit(professionals.show(professional.id));
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="size-4 text-primary" aria-hidden="true" />
+                    {day.name}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Adicione intervalos separados para almoço, pausas ou
+                    jornadas divididas. Sem intervalos ativos, o dia fica como
+                    folga.
+                </p>
+            </div>
+
+            {rules.map((rule) => (
+                <Form
+                    key={rule.id}
+                    {...updateAvailabilityRule.form(rule.id)}
+                    headers={{ 'X-Idempotency-Key': mutationKey }}
+                    className="rounded-xl border border-border bg-card p-4"
+                    onSuccess={goBackToProfessional}
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <FormErrorSummary errors={errors} />
+                            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                                <FormField
+                                    label="Início"
+                                    name="starts_at"
+                                    error={errors.starts_at}
+                                >
+                                    <Input
+                                        name="starts_at"
+                                        type="time"
+                                        defaultValue={rule.starts_at.slice(
+                                            0,
+                                            5,
+                                        )}
+                                        required
+                                        disabled={!canConfigure}
+                                    />
+                                </FormField>
+                                <FormField
+                                    label="Fim"
+                                    name="ends_at"
+                                    error={errors.ends_at}
+                                >
+                                    <Input
+                                        name="ends_at"
+                                        type="time"
+                                        defaultValue={rule.ends_at.slice(0, 5)}
+                                        required
+                                        disabled={!canConfigure}
+                                    />
+                                </FormField>
+                                <div className="flex gap-2 sm:pb-0.5">
+                                    <input
+                                        type="hidden"
+                                        name="professional_id"
+                                        value={professional.id}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="weekday"
+                                        value={day.day}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="timezone"
+                                        value={timezone}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="status"
+                                        value="active"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="lock_version"
+                                        value={rule.lock_version}
+                                    />
+                                    <Button
+                                        type="submit"
+                                        size="icon"
+                                        aria-label={`Salvar intervalo de ${day.name}`}
+                                        disabled={!canConfigure || processing}
+                                    >
+                                        <Check aria-hidden="true" />
+                                        <span className="sr-only">
+                                            Salvar intervalo de {day.name}
+                                        </span>
+                                    </Button>
+                                    <Form
+                                        {...destroyAvailabilityRule.form(
+                                            rule.id,
+                                        )}
+                                        headers={{
+                                            'X-Idempotency-Key': mutationKey,
+                                        }}
+                                        onSuccess={goBackToProfessional}
+                                    >
+                                        {({ processing: deleting }) => (
+                                            <>
+                                                <input
+                                                    type="hidden"
+                                                    name="lock_version"
+                                                    value={rule.lock_version}
+                                                />
+                                                <Button
+                                                    type="submit"
+                                                    size="icon"
+                                                    variant="outline"
+                                                    aria-label={`Remover intervalo de ${day.name}`}
+                                                    disabled={
+                                                        !canConfigure ||
+                                                        deleting
+                                                    }
+                                                >
+                                                    <Trash2 aria-hidden="true" />
+                                                    <span className="sr-only">
+                                                        Remover intervalo de{' '}
+                                                        {day.name}
+                                                    </span>
+                                                </Button>
+                                            </>
+                                        )}
+                                    </Form>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            ))}
+
+            {Array.from({ length: draftCount }).map((_, index) => (
+                <Form
+                    key={`new-${index}`}
+                    {...storeAvailabilityRule.form()}
+                    headers={{ 'X-Idempotency-Key': `${mutationKey}-${index}` }}
+                    className="rounded-xl border border-dashed border-primary/35 bg-primary/[0.03] p-4"
+                    onSuccess={goBackToProfessional}
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            {index === 0 ? (
+                                <p className="mb-3 text-xs font-semibold text-primary">
+                                    Novo intervalo
+                                </p>
+                            ) : null}
+                            <FormErrorSummary errors={errors} />
+                            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                                <FormField
+                                    label="Início"
+                                    name="starts_at"
+                                    error={errors.starts_at}
+                                >
+                                    <Input
+                                        name="starts_at"
+                                        type="time"
+                                        defaultValue="09:00"
+                                        required
+                                        disabled={!canConfigure}
+                                    />
+                                </FormField>
+                                <FormField
+                                    label="Fim"
+                                    name="ends_at"
+                                    error={errors.ends_at}
+                                >
+                                    <Input
+                                        name="ends_at"
+                                        type="time"
+                                        defaultValue="18:00"
+                                        required
+                                        disabled={!canConfigure}
+                                    />
+                                </FormField>
+                                <div className="sm:pb-0.5">
+                                    <input
+                                        type="hidden"
+                                        name="professional_id"
+                                        value={professional.id}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="weekday"
+                                        value={day.day}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="timezone"
+                                        value={timezone}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="status"
+                                        value="active"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        size="icon"
+                                        aria-label={`Criar intervalo de ${day.name}`}
+                                        disabled={!canConfigure || processing}
+                                    >
+                                        <Check aria-hidden="true" />
+                                        <span className="sr-only">
+                                            Criar intervalo de {day.name}
+                                        </span>
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            ))}
+
+            {canConfigure ? (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setDraftCount((count) => count + 1)}
+                >
+                    <Plus aria-hidden="true" /> Adicionar outro intervalo
+                </Button>
+            ) : null}
+            <DialogFooter>
+                <Button type="button" variant="ghost" onClick={onClose}>
+                    Fechar
+                </Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
 type Props = {
     options?: {
         services?: RelationOption[];
@@ -116,12 +394,49 @@ export default function ProfessionalShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
+    const [serviceSearch, setServiceSearch] = useState('');
+    const [availabilityDay, setAvailabilityDay] = useState<
+        (typeof weekdays)[number] | null
+    >(null);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
+    const canConfigureCalendar =
+        props.auth.permissions.includes('calendar.configure');
+    const availabilityRules =
+        professional.availability_rules ?? professional.availabilityRules ?? [];
+    const activeAvailabilityRules = availabilityRules.filter(
+        (rule) => rule.status === 'active',
+    );
+    const timezone =
+        activeAvailabilityRules[0]?.timezone ??
+        props.workspace?.activeUnit?.timezone ??
+        props.workspace?.tenant.timezone ??
+        'UTC';
+    const weeklySummary = useMemo(() => {
+        const totalMinutes = activeAvailabilityRules.reduce(
+            (total, rule) =>
+                total + minutesBetween(rule.starts_at, rule.ends_at),
+            0,
+        );
+
+        return {
+            activeDays: new Set(
+                activeAvailabilityRules.map((rule) => rule.weekday),
+            ).size,
+            hours: Math.floor(totalMinutes / 60),
+            minutes: totalMinutes % 60,
+        };
+    }, [activeAvailabilityRules]);
     const availableServices =
         serviceOptions ?? options?.services ?? professional.services;
     const hasServiceOptions =
         serviceOptions !== undefined || options?.services !== undefined;
+    const filteredServices = availableServices.filter((service) =>
+        service.name
+            .toLocaleLowerCase()
+            .includes(serviceSearch.toLocaleLowerCase()),
+    );
 
     return (
         <>
@@ -178,6 +493,7 @@ export default function ProfessionalShow({
                             </div>
                             <Form
                                 {...professionals.update.form(professional.id)}
+                                id="professional-update-form"
                                 headers={{ 'X-Idempotency-Key': updateKey }}
                                 className="space-y-5"
                             >
@@ -273,21 +589,7 @@ export default function ProfessionalShow({
                                                 </select>
                                             </FormField>
                                         </div>
-                                        {hasServiceOptions ? (
-                                            <div className="space-y-2">
-                                                <p className="text-sm font-medium text-foreground">
-                                                    Serviços habilitados
-                                                </p>
-                                                <RelationCheckboxes
-                                                    name="service_ids"
-                                                    options={availableServices}
-                                                    selectedIds={professional.services.map(
-                                                        (service) => service.id,
-                                                    )}
-                                                    disabled={!canManage}
-                                                />
-                                            </div>
-                                        ) : (
+                                        {!hasServiceOptions ? (
                                             <>
                                                 {professional.services.map(
                                                     (service) => (
@@ -307,7 +609,7 @@ export default function ProfessionalShow({
                                                     forem carregadas.
                                                 </p>
                                             </>
-                                        )}
+                                        ) : null}
                                         {canManage ? (
                                             <>
                                                 <input
@@ -337,7 +639,7 @@ export default function ProfessionalShow({
                         </section>
 
                         <section className="surface-panel p-5 sm:p-6">
-                            <div className="mb-5 flex items-center justify-between">
+                            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <h2 className="text-base font-semibold">
                                         Jornada de trabalho e disponibilidade
@@ -347,51 +649,74 @@ export default function ProfessionalShow({
                                         configurados para este profissional.
                                     </p>
                                 </div>
-                                <Clock
-                                    className="size-5 text-muted-foreground"
-                                    aria-hidden="true"
-                                />
+                                <div className="grid grid-cols-2 gap-2 sm:min-w-48">
+                                    <div className="rounded-lg bg-primary/10 px-3 py-2">
+                                        <p className="text-2xs font-semibold tracking-wide text-primary uppercase">
+                                            Dias ativos
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {weeklySummary.activeDays}
+                                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                                / 7
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div className="rounded-lg bg-emerald-500/10 px-3 py-2">
+                                        <p className="text-2xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
+                                            Horas/semana
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {weeklySummary.hours}h
+                                            {weeklySummary.minutes
+                                                ? ` ${weeklySummary.minutes}m`
+                                                : ''}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
+                            {!canConfigureCalendar ? (
+                                <p className="mb-4 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                                    Consulta liberada. A edição exige a
+                                    permissão calendar.configure.
+                                </p>
+                            ) : null}
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {weekdays.map(({ day, name, short }) => {
-                                    const dayRules = (
-                                        professional.availability_rules ??
-                                        professional.availabilityRules ??
-                                        []
-                                    ).filter(
-                                        (rule) =>
-                                            rule.weekday === day &&
-                                            rule.status === 'active',
-                                    );
+                                {weekdays.map((weekday) => {
+                                    const dayRules =
+                                        activeAvailabilityRules.filter(
+                                            (rule) =>
+                                                rule.weekday === weekday.day,
+                                        );
+                                    const canEdit = canConfigureCalendar;
 
                                     return (
-                                        <div
-                                            key={day}
-                                            className={`rounded-lg border p-3 ${
-                                                dayRules.length > 0
-                                                    ? 'border-border bg-card'
-                                                    : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'
-                                            }`}
+                                        <button
+                                            key={weekday.day}
+                                            type="button"
+                                            className={`group min-h-28 rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-sm focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 ${dayRules.length > 0 ? 'border-border bg-card' : 'border-dashed border-border/80 bg-muted/20 text-muted-foreground'}`}
+                                            onClick={() =>
+                                                setAvailabilityDay(weekday)
+                                            }
+                                            aria-label={`${canEdit ? 'Editar' : 'Consultar'} disponibilidade de ${weekday.name}`}
                                         >
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between gap-2">
                                                 <span className="text-xs font-semibold">
-                                                    {short} – {name}
+                                                    {weekday.short} –{' '}
+                                                    {weekday.name}
                                                 </span>
-                                                {dayRules.length > 0 ? (
-                                                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                        Ativo
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Folga
-                                                    </span>
-                                                )}
+                                                <span
+                                                    className={`rounded-full px-1.5 py-0.5 text-2xs font-semibold ${dayRules.length > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}
+                                                >
+                                                    {dayRules.length > 0
+                                                        ? 'Ativo'
+                                                        : 'Folga'}
+                                                </span>
                                             </div>
-                                            <div className="mt-2 space-y-1">
+                                            <div className="mt-3 space-y-1">
                                                 {dayRules.length > 0 ? (
                                                     dayRules.map((rule) => (
-                                                        <div
+                                                        <p
                                                             key={rule.id}
                                                             className="text-xs font-medium text-foreground"
                                                         >
@@ -404,19 +729,62 @@ export default function ProfessionalShow({
                                                                 0,
                                                                 5,
                                                             )}
-                                                        </div>
+                                                        </p>
                                                     ))
                                                 ) : (
-                                                    <p className="text-xs text-muted-foreground italic">
+                                                    <p className="text-xs italic">
                                                         Sem atendimento
                                                     </p>
                                                 )}
                                             </div>
-                                        </div>
+                                            <p className="mt-3 text-2xs font-medium text-muted-foreground group-hover:text-primary">
+                                                {canEdit
+                                                    ? dayRules.length > 0
+                                                        ? 'Editar horários'
+                                                        : 'Adicionar horário'
+                                                    : 'Somente consulta'}
+                                            </p>
+                                        </button>
                                     );
                                 })}
                             </div>
                         </section>
+
+                        <Dialog
+                            open={availabilityDay !== null}
+                            onOpenChange={(open) => {
+                                if (!open) {
+                                    setAvailabilityDay(null);
+                                }
+                            }}
+                        >
+                            <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:max-w-xl sm:p-6">
+                                <DialogHeader>
+                                    <DialogTitle>
+                                        Disponibilidade semanal
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        Edite os intervalos de atendimento ou
+                                        adicione uma nova jornada para o dia
+                                        selecionado.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                {availabilityDay ? (
+                                    <AvailabilityEditor
+                                        canConfigure={canConfigureCalendar}
+                                        day={availabilityDay}
+                                        onClose={() => setAvailabilityDay(null)}
+                                        professional={professional}
+                                        rules={activeAvailabilityRules.filter(
+                                            (rule) =>
+                                                rule.weekday ===
+                                                availabilityDay.day,
+                                        )}
+                                        timezone={timezone}
+                                    />
+                                ) : null}
+                            </DialogContent>
+                        </Dialog>
 
                         <section className="surface-panel p-5 sm:p-6">
                             <div className="mb-4 flex items-center justify-between">
@@ -493,19 +861,122 @@ export default function ProfessionalShow({
 
                     <aside className="space-y-5">
                         <section className="surface-panel p-5 sm:p-6">
-                            <h2 className="text-base font-semibold">
-                                Serviços habilitados
-                            </h2>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                A agenda usará estes vínculos para oferecer
-                                escolhas válidas.
-                            </p>
-                            <div className="mt-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h2 className="text-base font-semibold">
+                                        Serviços deste profissional
+                                    </h2>
+                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                        Disponíveis para seleção na agenda.
+                                    </p>
+                                </div>
+                                <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+                                    {professional.services.length}
+                                </span>
+                            </div>
+                            <div className="mt-5 space-y-3">
                                 <RelationList
                                     items={professional.services}
                                     emptyLabel="Nenhum serviço vinculado"
                                 />
+                                {canManage && hasServiceOptions ? (
+                                    <Dialog
+                                        open={servicesDialogOpen}
+                                        onOpenChange={(open) => {
+                                            setServicesDialogOpen(open);
+
+                                            if (!open) {
+                                                setServiceSearch('');
+                                            }
+                                        }}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                className="w-full"
+                                                variant="secondary"
+                                            >
+                                                <Plus aria-hidden="true" />
+                                                {professional.services.length >
+                                                0
+                                                    ? 'Gerenciar serviços'
+                                                    : 'Adicionar primeiro serviço'}
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:w-full sm:max-w-lg sm:p-6">
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Adicionar serviços
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    Selecione os serviços que{' '}
+                                                    {professional.name} realiza.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="space-y-4">
+                                                <div className="relative">
+                                                    <Search
+                                                        aria-hidden="true"
+                                                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                                    />
+                                                    <Input
+                                                        aria-label="Pesquisar serviços"
+                                                        placeholder="Pesquisar serviço"
+                                                        value={serviceSearch}
+                                                        onChange={(event) =>
+                                                            setServiceSearch(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        className="pl-9"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <RelationCheckboxes
+                                                    name="service_ids"
+                                                    options={filteredServices}
+                                                    selectedIds={professional.services.map(
+                                                        (service) => service.id,
+                                                    )}
+                                                    disabled={!canManage}
+                                                    form="professional-update-form"
+                                                />
+                                            </div>
+                                            <DialogFooter className="sticky bottom-0 -mx-4 -mb-4 flex-col gap-2 border-t border-border bg-background/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    className="w-full sm:w-auto"
+                                                >
+                                                    <Link
+                                                        href={services.index()}
+                                                    >
+                                                        <Plus aria-hidden="true" />
+                                                        Criar novo serviço
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    className="w-full sm:w-auto"
+                                                    onClick={() =>
+                                                        setServicesDialogOpen(
+                                                            false,
+                                                        )
+                                                    }
+                                                >
+                                                    Concluir seleção
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                ) : null}
                             </div>
+                            {!hasServiceOptions ? (
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    As opções de seleção ainda não foram
+                                    carregadas.
+                                </p>
+                            ) : null}
                         </section>
                         <section className="surface-panel p-5 sm:p-6">
                             <h2 className="text-base font-semibold">

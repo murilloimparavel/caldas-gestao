@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** @property int $lock_version */
-#[Fillable(['tenant_id', 'unit_id', 'name', 'email', 'phone', 'birth_date', 'notes', 'status', 'last_activity_at', 'retention_status', 'retention_marked_at', 'retention_reactivated_at', 'anonymized_at', 'anonymization_version'])]
+#[Fillable(['tenant_id', 'unit_id', 'source_id', 'name', 'email', 'phone', 'phone_normalized', 'birth_date', 'notes', 'source_metadata', 'status', 'last_activity_at', 'retention_status', 'retention_marked_at', 'retention_reactivated_at', 'anonymized_at', 'anonymization_version'])]
 #[UsePolicy(CustomerPolicy::class)]
 class Customer extends Model
 {
@@ -31,6 +31,7 @@ class Customer extends Model
     {
         return [
             'birth_date' => 'date',
+            'source_metadata' => 'array',
             'last_activity_at' => 'datetime',
             'retention_marked_at' => 'datetime',
             'retention_reactivated_at' => 'datetime',

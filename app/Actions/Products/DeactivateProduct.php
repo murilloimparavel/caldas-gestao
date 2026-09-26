@@ -5,6 +5,7 @@ namespace App\Actions\Products;
 use App\Actions\Operational\OperationalAction;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\ProductConcurrencyConflictException;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -21,14 +22,14 @@ final class DeactivateProduct extends OperationalAction
         }
 
         if ($expectedVersion === null) {
-            throw new ConflictHttpException('The product lock_version is required for this mutation.');
+            throw new ConflictHttpException('O lock_version do produto é obrigatório para esta operação.');
         }
 
         return DB::transaction(function () use ($actor, $context, $product, $expectedVersion): Product {
             $locked = Product::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
 
             if ($locked->lock_version !== $expectedVersion) {
-                throw new ConflictHttpException('The product was modified concurrently.');
+                throw new ProductConcurrencyConflictException('O produto foi alterado em outra tela.');
             }
 
             if (! $locked->is_active) {

@@ -19,6 +19,14 @@ import {
 import type { Paginated } from '@/components/operational';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import inventory from '@/routes/inventory';
 import productsRoute from '@/routes/products';
 import type { SharedPageProps } from '@/types';
@@ -64,21 +72,21 @@ function MovementTypeBadge({ type }: { type: InventoryMovementItem['type'] }) {
     switch (type) {
         case 'purchase_inflow':
             return (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">
                     <ArrowUpRight className="size-3" />
                     Compra / Entrada
                 </span>
             );
         case 'adjustment_gain':
             return (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">
                     <ArrowUpRight className="size-3" />
                     Ajuste (Ganho)
                 </span>
             );
         case 'sale_outflow':
             return (
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-info/15 px-2.5 py-0.5 text-xs font-medium text-info">
                     <ArrowDownRight className="size-3" />
                     Venda / Saída
                 </span>
@@ -233,132 +241,140 @@ export default function InventoryIndex({
                     />
                 ) : (
                     <div className="surface-panel overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-border bg-muted/30 text-xs text-muted-foreground uppercase">
-                                    <tr>
-                                        <th className="px-4 py-3">
-                                            Data / Hora
-                                        </th>
-                                        <th className="px-4 py-3">Produto</th>
-                                        <th className="px-4 py-3">Tipo</th>
-                                        <th className="px-4 py-3">Qtd</th>
-                                        <th className="px-4 py-3">Custo Un.</th>
-                                        <th className="px-4 py-3">Anterior</th>
-                                        <th className="px-4 py-3">
-                                            Resultante
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            Motivo / Ref
-                                        </th>
-                                        <th className="px-4 py-3">Operador</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border/60">
-                                    {paginator.data.map((m) => {
-                                        const isInflow =
-                                            m.type === 'purchase_inflow' ||
-                                            m.type === 'adjustment_gain';
-                                        const isOutflow =
-                                            m.type === 'sale_outflow' ||
-                                            m.type === 'adjustment_loss';
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="border-b border-border bg-muted/30 text-xs text-muted-foreground uppercase hover:bg-muted/30">
+                                    <TableHead className="px-4 py-3">
+                                        Data / Hora
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Produto
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Tipo
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Qtd
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Custo Un.
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Anterior
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Resultante
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Motivo / Ref
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3">
+                                        Operador
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y divide-border/60">
+                                {paginator.data.map((m) => {
+                                    const isInflow =
+                                        m.type === 'purchase_inflow' ||
+                                        m.type === 'adjustment_gain';
+                                    const isOutflow =
+                                        m.type === 'sale_outflow' ||
+                                        m.type === 'adjustment_loss';
 
-                                        const date = new Date(m.created_at);
-                                        const formattedDate =
-                                            date.toLocaleString('pt-BR', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                            });
+                                    const date = new Date(m.created_at);
+                                    const formattedDate = date.toLocaleString(
+                                        'pt-BR',
+                                        {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        },
+                                    );
 
-                                        return (
-                                            <tr
-                                                key={m.id}
-                                                className="hover:bg-muted/30"
-                                            >
-                                                <td className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
-                                                    {formattedDate}
-                                                </td>
-                                                <td className="px-4 py-3.5 font-medium whitespace-nowrap text-foreground">
-                                                    <Link
-                                                        href={productsRoute.show(
-                                                            m.product.id,
-                                                        )}
-                                                        className="text-primary hover:underline"
-                                                    >
-                                                        {m.product.name}
-                                                    </Link>
-                                                    {m.product.sku ? (
-                                                        <span className="block text-[11px] text-muted-foreground">
-                                                            SKU: {m.product.sku}
-                                                        </span>
-                                                    ) : null}
-                                                </td>
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
-                                                    <MovementTypeBadge
-                                                        type={m.type}
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-3.5 font-semibold whitespace-nowrap">
-                                                    <span
-                                                        className={
-                                                            isInflow
-                                                                ? 'text-emerald-600 dark:text-emerald-400'
-                                                                : isOutflow
-                                                                  ? 'text-destructive'
-                                                                  : 'text-foreground'
-                                                        }
-                                                    >
-                                                        {isInflow
-                                                            ? '+'
-                                                            : isOutflow
-                                                              ? '-'
-                                                              : ''}
-                                                        {m.quantity}{' '}
-                                                        {
-                                                            m.product
-                                                                .unit_of_measure
-                                                        }
+                                    return (
+                                        <TableRow
+                                            key={m.id}
+                                            className="hover:bg-muted/30"
+                                        >
+                                            <TableCell className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
+                                                {formattedDate}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 font-medium whitespace-nowrap text-foreground">
+                                                <Link
+                                                    href={productsRoute.show(
+                                                        m.product.id,
+                                                    )}
+                                                    className="text-primary hover:underline"
+                                                >
+                                                    {m.product.name}
+                                                </Link>
+                                                {m.product.sku ? (
+                                                    <span className="block text-3xs text-muted-foreground">
+                                                        SKU: {m.product.sku}
                                                     </span>
-                                                </td>
-                                                <td className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
-                                                    {m.unit_cost_cents > 0
-                                                        ? formatMoney(
-                                                              m.unit_cost_cents,
-                                                          )
-                                                        : '-'}
-                                                </td>
-                                                <td className="px-4 py-3.5 whitespace-nowrap text-muted-foreground">
-                                                    {m.previous_stock}{' '}
+                                                ) : null}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 whitespace-nowrap">
+                                                <MovementTypeBadge
+                                                    type={m.type}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 font-semibold whitespace-nowrap">
+                                                <span
+                                                    className={
+                                                        isInflow
+                                                            ? 'text-success'
+                                                            : isOutflow
+                                                              ? 'text-destructive'
+                                                              : 'text-foreground'
+                                                    }
+                                                >
+                                                    {isInflow
+                                                        ? '+'
+                                                        : isOutflow
+                                                          ? '-'
+                                                          : ''}
+                                                    {m.quantity}{' '}
                                                     {m.product.unit_of_measure}
-                                                </td>
-                                                <td className="px-4 py-3.5 font-semibold whitespace-nowrap text-foreground">
-                                                    {m.resulting_stock}{' '}
-                                                    {m.product.unit_of_measure}
-                                                </td>
-                                                <td className="max-w-xs truncate px-4 py-3.5 text-xs text-foreground">
-                                                    {m.reason}
-                                                    {m.reference_type ? (
-                                                        <span className="block text-[11px] text-muted-foreground">
-                                                            Ref:{' '}
-                                                            {m.reference_type}
-                                                            {m.reference_id
-                                                                ? ` #${m.reference_id.slice(0, 8)}`
-                                                                : ''}
-                                                        </span>
-                                                    ) : null}
-                                                </td>
-                                                <td className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
-                                                    {m.user?.name ?? 'Sistema'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
+                                                {m.unit_cost_cents > 0
+                                                    ? formatMoney(
+                                                          m.unit_cost_cents,
+                                                      )
+                                                    : '-'}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 whitespace-nowrap text-muted-foreground">
+                                                {m.previous_stock}{' '}
+                                                {m.product.unit_of_measure}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 font-semibold whitespace-nowrap text-foreground">
+                                                {m.resulting_stock}{' '}
+                                                {m.product.unit_of_measure}
+                                            </TableCell>
+                                            <TableCell className="max-w-xs truncate px-4 py-3.5 text-xs text-foreground">
+                                                {m.reason}
+                                                {m.reference_type ? (
+                                                    <span className="block text-3xs text-muted-foreground">
+                                                        Ref: {m.reference_type}
+                                                        {m.reference_id
+                                                            ? ` #${m.reference_id.slice(0, 8)}`
+                                                            : ''}
+                                                    </span>
+                                                ) : null}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
+                                                {m.user?.name ?? 'Sistema'}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                     </div>
                 )}
 

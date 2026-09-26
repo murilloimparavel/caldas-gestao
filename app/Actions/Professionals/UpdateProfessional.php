@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\Images\UploadedImageOptimizer;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
@@ -44,19 +45,14 @@ final class UpdateProfessional extends OperationalAction
             }
 
             if ($hasAvatarKey) {
-                $diskName = (string) config('filesystems.media_disk', 'public');
+                $diskName = (string) config('filesystems.media_disk');
                 if ($avatarFile instanceof UploadedFile) {
                     if ($locked->avatar_path) {
                         Storage::disk($diskName)->delete($locked->avatar_path);
                     }
-                    $hash = Str::random(40);
-                    $ext = $avatarFile->guessExtension() ?: $avatarFile->getClientOriginalExtension();
-                    $storedPath = Storage::disk($diskName)->putFileAs(
-                        "{$context->tenant->getKey()}/professionals/{$locked->getKey()}",
-                        $avatarFile,
-                        "{$hash}.{$ext}"
-                    );
-                    $data['avatar_path'] = $storedPath !== false ? $storedPath : null;
+                    $path = "{$context->tenant->getKey()}/professionals/{$locked->getKey()}/".Str::random(40).'.webp';
+                    $stored = app(UploadedImageOptimizer::class)->storeWebp($avatarFile, Storage::disk($diskName), $path);
+                    $data['avatar_path'] = $stored ? $path : null;
                 } elseif ($avatarFile === null) {
                     if ($locked->avatar_path) {
                         Storage::disk($diskName)->delete($locked->avatar_path);

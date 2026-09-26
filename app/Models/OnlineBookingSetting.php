@@ -2,20 +2,25 @@
 
 namespace App\Models;
 
+use App\Support\Images\MediaUrl;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['tenant_id', 'unit_id', 'public_slug', 'description', 'cover_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
+/**
+ * @property array<int|string, mixed>|null $public_hours
+ */
+#[Fillable(['tenant_id', 'unit_id', 'public_domain_id', 'public_slug', 'description', 'cover_image_path', 'logo_image_path', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url', 'brand_color', 'booking_flow', 'minimum_notice_minutes', 'public_hours'])]
 class OnlineBookingSetting extends Model
 {
+    /** @use HasFactory<Factory> */
     use HasFactory, HasUuids;
 
-    protected $appends = ['cover_image_url'];
+    protected $appends = ['cover_image_url', 'logo_image_url'];
 
     protected $attributes = ['brand_color' => '#2563eb', 'booking_flow' => 'service_first', 'minimum_notice_minutes' => 0, 'lock_version' => 0];
 
@@ -29,7 +34,17 @@ class OnlineBookingSetting extends Model
     {
         return Attribute::make(
             get: fn (): ?string => $this->cover_image_path
-                ? Storage::disk(config('filesystems.media_disk', 'public'))->url($this->cover_image_path)
+                ? MediaUrl::for($this->cover_image_path)
+                : null,
+        );
+    }
+
+    /** @return Attribute<string|null, void> */
+    protected function logoImageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?string => $this->logo_image_path
+                ? MediaUrl::for($this->logo_image_path)
                 : null,
         );
     }
@@ -44,5 +59,11 @@ class OnlineBookingSetting extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** @return BelongsTo<TenantDomain, $this> */
+    public function publicDomain(): BelongsTo
+    {
+        return $this->belongsTo(TenantDomain::class, 'public_domain_id');
     }
 }

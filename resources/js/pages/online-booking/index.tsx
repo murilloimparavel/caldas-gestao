@@ -1,4 +1,4 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -6,24 +6,21 @@ import {
     Check,
     CheckCircle2,
     ClipboardCheck,
-    Clock3,
     Copy,
     ExternalLink,
     GalleryHorizontalEnd,
+    History,
     Globe2,
     ImagePlus,
     Link2,
     Palette,
     Scissors,
     Share2,
-    Smartphone,
     UserRound,
     UsersRound,
-    XCircle,
-    Settings2,
+    RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { ReactNode } from 'react';
 import {
     FormErrorSummary,
     PageCanvas,
@@ -43,487 +40,59 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
-import galleryRoutes from '@/routes/online_booking/gallery';
+import tenantDomains from '@/routes/tenant-domains';
+import type { SharedPageProps } from '@/types';
+import { AppearanceEditor } from './components/appearance-editor';
+import { CoverEditor } from './components/cover-editor';
+import {
+    Field,
+    ReadinessRow,
+    SectionCard,
+    SelectionCard,
+} from './components/booking-form-primitives';
+import { PublicPreview } from './components/public-preview';
+import { TabNavigation } from './components/tab-navigation';
+import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
+import type { OnlineBookingProps, TabKey } from './types';
 
-type BookingItem = {
-    id: string;
-    name: string;
-    status: 'active' | 'inactive';
-    online_booking_enabled: boolean;
-    lock_version: number;
-    description?: string | null;
-    duration_minutes?: number;
-    price_cents?: number;
-    image_url?: string | null;
-    avatar_url?: string | null;
-};
-type Readiness = {
-    unit_enabled: boolean;
-    has_active_service: boolean;
-    has_active_professional: boolean;
-    has_service_professional_pair: boolean;
-    publishable: boolean;
-};
-type PublicSettings = {
-    description?: string | null;
-    logo_url?: string | null;
-    cover_url?: string | null;
-    cover_image_url?: string | null;
-    whatsapp?: string | null;
-    phone?: string | null;
-    instagram?: string | null;
-    facebook?: string | null;
-    website?: string | null;
-    brand_color?: string | null;
-    accent_color?: string | null;
-    booking_flow?: 'service_first' | 'professional_first';
-    flow?: 'service_first' | 'professional_first';
-    minimum_notice_minutes?: number | null;
-    public_slug?: string | null;
-    public_hours?: Record<
-        string,
-        { enabled?: boolean; starts_at?: string; ends_at?: string }
-    > | null;
-};
-type Props = {
-    unit: {
-        id: string;
-        name: string;
-        slug: string;
-        online_booking_enabled: boolean;
-        lock_version: number;
-        address?: string | Record<string, string> | null;
-        settings?: PublicSettings | null;
-    };
-    publicUrl: string | null;
-    services: BookingItem[];
-    professionals: BookingItem[];
-    readiness: Readiness;
-    settings?: PublicSettings | null;
-    cover?: string | null;
-    coverUploadUrl?: string | null;
-    coverDeleteUrl?: string | null;
-    gallery?: {
-        id: string;
-        url?: string | null;
-        path?: string | null;
-        alt?: string | null;
-        alt_text?: string | null;
-        position?: number;
-    }[];
-};
-type TabKey =
-    | 'details'
-    | 'settings'
-    | 'link'
-    | 'gallery'
-    | 'services'
-    | 'hours'
-    | 'confirmation';
-const tabs: { key: TabKey; label: string; icon: typeof Globe2 }[] = [
-    { key: 'details', label: 'Detalhes', icon: Globe2 },
-    { key: 'settings', label: 'Configurações', icon: Settings2 },
-    { key: 'link', label: 'Link público', icon: Link2 },
-    { key: 'gallery', label: 'Galeria', icon: GalleryHorizontalEnd },
-    { key: 'services', label: 'Serviços', icon: Scissors },
-    { key: 'hours', label: 'Horários', icon: Clock3 },
-    { key: 'confirmation', label: 'Confirmação', icon: BellRing },
-];
-
-function SelectionCard({ item, group }: { item: BookingItem; group: string }) {
-    const active = item.status === 'active';
-    const id = `${group}-${item.id}`;
-
-    return (
-        <label
-            htmlFor={id}
-            className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${active ? 'border-border bg-background hover:border-primary/50 has-checked:border-primary/70 has-checked:bg-primary/5' : 'cursor-not-allowed border-border/60 bg-muted/30 opacity-65'}`}
-        >
-            <input
-                id={id}
-                name={`${group}_ids[]`}
-                type="checkbox"
-                value={item.id}
-                defaultChecked={active && item.online_booking_enabled}
-                disabled={!active}
-                className="size-5 rounded border-input accent-primary focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                {item.name}
-            </span>
-            <Badge variant="outline" className="shrink-0 text-[10px]">
-                {active ? 'Ativo' : 'Inativo'}
-            </Badge>
-        </label>
-    );
-}
-function ReadinessRow({ label, ready }: { label: string; ready: boolean }) {
-    return (
-        <li className="flex items-start gap-3 text-sm">
-            {ready ? (
-                <CheckCircle2
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
-                />
-            ) : (
-                <XCircle
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                />
-            )}
-            <span
-                className={ready ? 'text-foreground' : 'text-muted-foreground'}
-            >
-                {label}
-            </span>
-        </li>
-    );
-}
-function Field({
-    label,
-    name,
-    defaultValue,
-    placeholder,
-    type = 'text',
-    readOnly = false,
-}: {
-    label: string;
-    name: string;
-    defaultValue?: string | null;
-    placeholder?: string;
-    type?: string;
-    readOnly?: boolean;
-}) {
-    return (
-        <div className="space-y-2">
-            <Label htmlFor={name}>{label}</Label>
-            <Input
-                id={name}
-                name={name}
-                type={type}
-                defaultValue={defaultValue ?? ''}
-                placeholder={placeholder}
-                readOnly={readOnly}
-                aria-readonly={readOnly}
-                className={readOnly ? 'bg-muted/30' : undefined}
-            />
-        </div>
-    );
-}
-function SectionCard({
-    icon: Icon,
-    title,
-    description,
-    children,
-}: {
-    icon: typeof Globe2;
-    title: string;
-    description: string;
-    children: ReactNode;
-}) {
-    return (
-        <Card className="overflow-hidden">
-            <CardHeader className="border-b border-border/60 bg-muted/20">
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Icon aria-hidden="true" className="size-4" />
-                    </span>
-                    {title}
-                </CardTitle>
-                <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 pt-5">{children}</CardContent>
-        </Card>
-    );
-}
-
-type CoverEditorProps = {
-    url?: string | null;
-    uploadUrl?: string | null;
-    deleteUrl?: string | null;
-    onUploaded: () => void;
-};
-
-function CoverEditor({
-    url,
-    uploadUrl,
-    deleteUrl,
-    onUploaded,
-}: CoverEditorProps) {
-    const [message, setMessage] = useState<string | null>(null);
-
-    const upload = (file: File): void => {
-        if (!uploadUrl) {
-            setMessage('A capa ainda não está habilitada para esta unidade.');
-
-            return;
-        }
-
-        const data = new FormData();
-        data.append('image', file);
-        router.post(uploadUrl, data, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                setMessage('Capa atualizada.');
-                onUploaded();
-            },
-        });
-    };
-
-    const remove = (): void => {
-        if (!deleteUrl) {
-            setMessage('A remoção da capa ainda não está habilitada.');
-
-            return;
-        }
-
-        router.delete(deleteUrl, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setMessage('Capa removida.');
-                onUploaded();
-            },
-        });
-    };
-
-    return (
-        <div className="flex flex-col items-center gap-3 border-b border-border/60 pb-5 sm:flex-row sm:items-start">
-            <div className="relative flex h-36 w-full max-w-60 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted/40 shadow-sm sm:h-32 sm:w-52">
-                {url ? (
-                    <img
-                        src={url}
-                        alt="Capa atual da unidade"
-                        className="size-full object-cover"
-                    />
-                ) : (
-                    <div className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
-                        <ImagePlus aria-hidden="true" className="size-8" />
-                        <span className="text-xs">Nenhuma capa definida</span>
-                    </div>
-                )}
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center sm:items-start sm:text-left">
-                <div>
-                    <p className="text-sm font-semibold">Imagem principal</p>
-                    <p className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">
-                        É a imagem em destaque no topo do canal público. A
-                        galeria continua independente e reúne as demais fotos.
-                    </p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 has-disabled:pointer-events-none has-disabled:opacity-50">
-                        <ImagePlus aria-hidden="true" className="size-4" />
-                        Alterar
-                        <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            className="sr-only"
-                            disabled={!uploadUrl}
-                            onChange={(event) => {
-                                const file = event.target.files?.[0];
-
-                                if (file) {
-                                    upload(file);
-                                }
-
-                                event.currentTarget.value = '';
-                            }}
-                        />
-                    </label>
-                    {url && (
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={remove}
-                            disabled={!deleteUrl}
-                        >
-                            Remover
-                        </Button>
-                    )}
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                    JPG, PNG ou WEBP · até 5 MB
-                </p>
-                {message && (
-                    <p role="status" className="text-xs text-primary">
-                        {message}
-                    </p>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function PublicPreview({
-    unit,
-    settings,
-    gallery,
-    services,
-}: {
-    unit: Props['unit'];
-    settings: PublicSettings;
-    gallery: NonNullable<Props['gallery']>;
-    services: BookingItem[];
-}) {
-    const coverUrl =
-        settings.cover_url ?? settings.cover_image_url ?? settings.logo_url;
-    const visibleServices = services.filter(
-        (item) => item.status === 'active' && item.online_booking_enabled,
-    );
-
-    return (
-        <Card className="border-primary/20 shadow-sm xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
-            <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <CardTitle className="text-base">
-                            Prévia pública
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                            Veja como o celular do cliente exibirá a unidade.
-                        </CardDescription>
-                    </div>
-                    <Smartphone
-                        aria-hidden="true"
-                        className="size-4 text-primary"
-                    />
-                </div>
-            </CardHeader>
-            <CardContent className="flex justify-center bg-muted/10 p-5">
-                <div className="w-full max-w-[18rem] rounded-[2rem] border-[7px] border-slate-950 bg-slate-950 p-1 shadow-2xl dark:border-slate-700">
-                    <div className="relative flex h-[33rem] flex-col overflow-hidden rounded-[1.45rem] bg-background">
-                        <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-                            <span className="max-w-[12rem] truncate text-xs font-semibold">
-                                {unit.name}
-                            </span>
-                            <span className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                                <UserRound
-                                    aria-hidden="true"
-                                    className="size-3.5"
-                                />
-                            </span>
-                        </div>
-                        <div className="flex gap-4 overflow-hidden border-b border-border/70 px-4 pt-3 text-[11px] font-semibold text-muted-foreground">
-                            <span className="border-b-2 border-primary pb-2 text-foreground">
-                                Detalhes
-                            </span>
-                            <span className="pb-2">Serviços</span>
-                            <span className="pb-2">Profissionais</span>
-                            <span className="pb-2">Avaliações</span>
-                        </div>
-                        <div className="min-h-0 flex-1 overflow-hidden">
-                            {coverUrl ? (
-                                <img
-                                    src={coverUrl}
-                                    alt=""
-                                    className="h-36 w-full object-cover"
-                                />
-                            ) : gallery[0]?.url ? (
-                                <img
-                                    src={gallery[0].url}
-                                    alt=""
-                                    className="h-36 w-full object-cover"
-                                />
-                            ) : (
-                                <div className="flex h-36 items-center justify-center bg-primary/10 text-primary">
-                                    <ImagePlus
-                                        aria-hidden="true"
-                                        className="size-8"
-                                    />
-                                </div>
-                            )}
-                            <div className="space-y-4 px-4 py-4">
-                                <div>
-                                    <p className="text-sm font-bold">
-                                        {unit.name}
-                                    </p>
-                                    <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                                        {settings.description ||
-                                            'Escolha um serviço e reserve seu horário.'}
-                                    </p>
-                                </div>
-                                <div className="rounded-xl border border-border/70 p-3">
-                                    <p className="text-[11px] font-bold">
-                                        Contato
-                                    </p>
-                                    <p className="mt-1 text-[11px] text-muted-foreground">
-                                        {settings.whatsapp ||
-                                            settings.phone ||
-                                            'WhatsApp não informado'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold">
-                                        Serviços
-                                    </p>
-                                    <div className="mt-2 space-y-2">
-                                        {visibleServices
-                                            .slice(0, 3)
-                                            .map((service) => (
-                                                <div
-                                                    key={service.id}
-                                                    className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-2.5 py-2"
-                                                >
-                                                    <span className="truncate text-[11px] font-medium">
-                                                        {service.name}
-                                                    </span>
-                                                    {service.price_cents !==
-                                                        undefined && (
-                                                        <span className="shrink-0 text-[10px] text-muted-foreground">
-                                                            {(
-                                                                service.price_cents /
-                                                                100
-                                                            ).toLocaleString(
-                                                                'pt-BR',
-                                                                {
-                                                                    style: 'currency',
-                                                                    currency:
-                                                                        'BRL',
-                                                                },
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        {!visibleServices.length && (
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Cadastre um serviço ativo.
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="border-t border-border/70 bg-background p-3">
-                            <div className="rounded-xl bg-primary px-4 py-2.5 text-center text-xs font-semibold text-primary-foreground shadow-sm">
-                                Agendar agora
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
+type Props = OnlineBookingProps;
 
 export default function OnlineBookingIndex({
     unit,
+    template_key: rootTemplateKey = null,
     publicUrl,
+    previewUrl: signedPreviewUrl = null,
+    publicDomains,
     services,
     professionals,
     readiness,
+    publication = null,
+    draft = null,
+    activePublication = null,
+    publicationHistory = [],
+    draftDiff = [],
     settings: rootSettings,
     gallery = [],
     cover,
     coverUploadUrl: coverUploadUrlProp,
     coverDeleteUrl: coverDeleteUrlProp,
 }: Props) {
+    const { flash } = usePage<SharedPageProps>().props;
     const settings = rootSettings ?? unit.settings ?? {};
     const [activeTab, setActiveTab] = useState<TabKey>('details');
-    const [copied, setCopied] = useState(false);
-    const [galleryItems, setGalleryItems] = useState(gallery);
+    const {
+        copied,
+        publicationError,
+        publicationProcessing,
+        galleryItems,
+        copyPublicUrl,
+        publishDraft,
+        unpublishSite,
+        uploadGalleryImage,
+        updateGalleryAlt,
+        deleteGalleryImage,
+        moveGalleryImage,
+    } = useOnlineBookingActions({ draft, publicUrl, gallery });
     const coverUrl =
         cover ??
         settings.cover_url ??
@@ -538,70 +107,20 @@ export default function OnlineBookingIndex({
     const activeProfessionals = professionals.filter(
         (item) => item.status === 'active',
     );
-    const copyPublicUrl = async () => {
-        if (!publicUrl || !navigator.clipboard) {
-            return;
-        }
-
-        await navigator.clipboard.writeText(publicUrl);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2200);
-    };
-    const uploadGalleryImage = (file: File): void => {
-        const data = new FormData();
-        data.append('image', file);
-        router.post(galleryRoutes.store.url(), data, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['gallery'] }),
-        });
-    };
-    const updateGalleryAlt = (id: string, alt_text: string): void => {
-        router.patch(
-            galleryRoutes.update.url(id),
-            { alt_text },
-            {
-                preserveScroll: true,
-                onSuccess: () =>
-                    setGalleryItems((items) =>
-                        items.map((item) =>
-                            item.id === id
-                                ? { ...item, alt: alt_text, alt_text }
-                                : item,
-                        ),
-                    ),
-            },
-        );
-    };
-    const deleteGalleryImage = (id: string): void => {
-        router.delete(galleryRoutes.destroy.url(id), {
-            preserveScroll: true,
-            onSuccess: () =>
-                setGalleryItems((items) =>
-                    items.filter((item) => item.id !== id),
-                ),
-        });
-    };
-    const moveGalleryImage = (id: string, direction: -1 | 1): void => {
-        const index = galleryItems.findIndex((item) => item.id === id);
-        const nextIndex = index + direction;
-
-        if (index < 0 || nextIndex < 0 || nextIndex >= galleryItems.length) {
-            return;
-        }
-
-        const reordered = [...galleryItems];
-        [reordered[index], reordered[nextIndex]] = [
-            reordered[nextIndex],
-            reordered[index],
-        ];
-        setGalleryItems(reordered);
-        router.post(
-            galleryRoutes.reorder.url(),
-            { image_ids: reordered.map((item) => item.id) },
-            { preserveScroll: true, onError: () => setGalleryItems(gallery) },
-        );
-    };
+    const hasPendingChanges = Boolean(
+        publication?.status === 'published' &&
+        draft &&
+        activePublication &&
+        draft.revision > activePublication.source_revision,
+    );
+    const publicationLabel =
+        !publication || publication.status === 'unpublished'
+            ? draft
+                ? 'Rascunho salvo'
+                : 'Não publicada'
+            : hasPendingChanges
+              ? 'Alterações para publicar'
+              : 'Publicada';
 
     return (
         <>
@@ -630,6 +149,220 @@ export default function OnlineBookingIndex({
                         </div>
                     }
                 />
+                <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                    <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Globe2 aria-hidden="true" className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-foreground">
+                                    Página pública
+                                </p>
+                                <Badge
+                                    variant={
+                                        publication?.status === 'published' &&
+                                        !hasPendingChanges
+                                            ? 'default'
+                                            : 'secondary'
+                                    }
+                                >
+                                    {publicationLabel}
+                                </Badge>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {publication?.status === 'published' &&
+                                !hasPendingChanges
+                                    ? 'Seus clientes estão vendo a última versão publicada.'
+                                    : 'Suas alterações ficam no rascunho até você publicar.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                        {publicationError ? (
+                            <p
+                                role="alert"
+                                className="text-sm text-destructive sm:mr-2 sm:self-center"
+                            >
+                                {publicationError}
+                            </p>
+                        ) : null}
+                        <Button asChild type="button" variant="ghost">
+                            <Link
+                                href={onlineBooking.campaign_links.index.url()}
+                            >
+                                <Share2 aria-hidden="true" />
+                                Links de divulgação
+                            </Link>
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                                publicUrl &&
+                                window.open(
+                                    signedPreviewUrl ?? publicUrl,
+                                    '_blank',
+                                    'noopener,noreferrer',
+                                )
+                            }
+                            disabled={!publicUrl}
+                        >
+                            <ExternalLink aria-hidden="true" />
+                            Visualizar página
+                        </Button>
+                        {publication?.status === 'published' ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={unpublishSite}
+                                disabled={publicationProcessing}
+                            >
+                                Retirar do ar
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                onClick={publishDraft}
+                                disabled={
+                                    !draft ||
+                                    !readiness.publishable ||
+                                    publicationProcessing
+                                }
+                            >
+                                Publicar página
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                {hasPendingChanges && draftDiff?.length ? (
+                    <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle
+                                className="mt-0.5 size-4 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <div>
+                                <p className="text-sm font-semibold">
+                                    Alterações aguardando publicação
+                                </p>
+                                <p className="mt-1 text-xs opacity-80">
+                                    A versão pública continua intacta até você
+                                    publicar.
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {draftDiff.map((label: string) => (
+                                        <Badge
+                                            key={label}
+                                            variant="outline"
+                                            className="border-current/30"
+                                        >
+                                            {label}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+                {publicationHistory.length > 0 ? (
+                    <Card className="mb-5">
+                        <CardHeader className="border-b border-border/60 bg-muted/20">
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <History
+                                    aria-hidden="true"
+                                    className="size-4 text-primary"
+                                />
+                                Histórico de publicações
+                            </CardTitle>
+                            <CardDescription>
+                                Cada versão é imutável. Restaurar cria um novo
+                                rascunho sem alterar o histórico.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="divide-y divide-border/60 p-0">
+                            {publicationHistory.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                                            v{item.version}
+                                        </span>
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                Publicada em{' '}
+                                                {item.published_at
+                                                    ? new Date(
+                                                          item.published_at,
+                                                      ).toLocaleString('pt-BR')
+                                                    : 'data indisponível'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Revisão {item.source_revision}
+                                                {item.published_by?.name
+                                                    ? ` · ${item.published_by.name}`
+                                                    : ''}
+                                                {item.superseded_at
+                                                    ? ' · substituída'
+                                                    : ' · ativa'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <a
+                                                href={item.preview_url ?? '#'}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                <ExternalLink aria-hidden="true" />
+                                                Visualizar
+                                            </a>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                router.post(
+                                                    onlineBooking.publications.restore.url(
+                                                        item.id,
+                                                    ),
+                                                    {},
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        >
+                                            <RotateCcw aria-hidden="true" />
+                                            Restaurar como rascunho
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                ) : null}
+                {draft ? (
+                    <div className="mb-5 space-y-5">
+                        <AppearanceEditor
+                            draft={draft}
+                            settings={settings}
+                            unitName={unit.name}
+                            logoUrl={
+                                settings.logo_image_url ??
+                                unit.logo_image_url ??
+                                null
+                            }
+                        />
+                    </div>
+                ) : null}
                 <Form
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}
@@ -638,6 +371,26 @@ export default function OnlineBookingIndex({
                     {({ errors, processing, wasSuccessful }) => (
                         <>
                             <FormErrorSummary errors={errors} />
+                            {flash.error ? (
+                                <div
+                                    role="alert"
+                                    className="flex items-start gap-3 rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200"
+                                >
+                                    <AlertCircle
+                                        aria-hidden="true"
+                                        className="mt-0.5 size-4 shrink-0"
+                                    />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Configuração atualizada em outro
+                                            lugar
+                                        </p>
+                                        <p className="mt-0.5 text-xs leading-5 opacity-90">
+                                            {flash.error}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : null}
                             <input
                                 type="hidden"
                                 name="online_booking_enabled"
@@ -655,30 +408,10 @@ export default function OnlineBookingIndex({
                                     Configurações salvas com sucesso.
                                 </div>
                             )}
-                            <div className="overflow-x-auto border-b border-border/70">
-                                <nav
-                                    aria-label="Configuração do agendamento online"
-                                    className="flex min-w-max gap-1"
-                                    role="tablist"
-                                >
-                                    {tabs.map(({ key, label, icon: Icon }) => (
-                                        <button
-                                            key={key}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={activeTab === key}
-                                            onClick={() => setActiveTab(key)}
-                                            className={`relative flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 ${activeTab === key ? 'text-primary after:bg-primary' : 'text-muted-foreground after:bg-transparent hover:text-foreground'}`}
-                                        >
-                                            <Icon
-                                                aria-hidden="true"
-                                                className="size-4"
-                                            />
-                                            {label}
-                                        </button>
-                                    ))}
-                                </nav>
-                            </div>
+                            <TabNavigation
+                                activeTab={activeTab}
+                                onChange={setActiveTab}
+                            />
                             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] xl:items-start">
                                 <div className="space-y-5">
                                     {activeTab === 'details' && (
@@ -688,6 +421,38 @@ export default function OnlineBookingIndex({
                                             description="Essas informações aparecem no perfil do seu negócio."
                                         >
                                             <div className="grid gap-5 sm:grid-cols-2">
+                                                <div className="space-y-2 sm:col-span-2">
+                                                    <Label htmlFor="template_key">
+                                                        Template da página
+                                                        pública
+                                                    </Label>
+                                                    <select
+                                                        id="template_key"
+                                                        name="template_key"
+                                                        defaultValue={
+                                                            rootTemplateKey ??
+                                                            settings.template_key ??
+                                                            'essential'
+                                                        }
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                                                    >
+                                                        <option value="essential">
+                                                            Essencial — claro e
+                                                            direto
+                                                        </option>
+                                                        <option value="atelier-barber">
+                                                            Atelier Barber —
+                                                            dark premium
+                                                        </option>
+                                                    </select>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        O template altera a
+                                                        apresentação pública sem
+                                                        mudar serviços,
+                                                        disponibilidade ou
+                                                        regras de agendamento.
+                                                    </p>
+                                                </div>
                                                 <Field
                                                     label="Nome da unidade"
                                                     name="unit_name"
@@ -834,6 +599,63 @@ export default function OnlineBookingIndex({
                                                 }
                                                 placeholder="minha-unidade"
                                             />
+                                            <div className="space-y-2">
+                                                <Label htmlFor="public_domain_id">
+                                                    Domínio do link
+                                                </Label>
+                                                <select
+                                                    id="public_domain_id"
+                                                    name="public_domain_id"
+                                                    defaultValue={
+                                                        settings.public_domain_id ??
+                                                        ''
+                                                    }
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                                    disabled={
+                                                        publicDomains.length ===
+                                                        0
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        Domínio padrão do
+                                                        sistema
+                                                    </option>
+                                                    {publicDomains.map(
+                                                        (domain) => (
+                                                            <option
+                                                                key={domain.id}
+                                                                value={
+                                                                    domain.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    domain.hostname
+                                                                }
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                                {publicDomains.length > 0 ? (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        O link será aberto neste
+                                                        domínio público ativo.
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Cadastre e ative um
+                                                        domínio público em{' '}
+                                                        <a
+                                                            className="text-primary underline underline-offset-4"
+                                                            href={tenantDomains.index.url()}
+                                                        >
+                                                            Configurações →
+                                                            Domínios
+                                                        </a>{' '}
+                                                        para personalizar este
+                                                        link.
+                                                    </p>
+                                                )}
+                                            </div>
                                             <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 font-mono text-sm break-all text-muted-foreground">
                                                 {publicUrl ??
                                                     'Disponível quando a unidade estiver pronta para publicar.'}
@@ -967,7 +789,7 @@ export default function OnlineBookingIndex({
                                                                         )
                                                                     }
                                                                     placeholder="Texto alternativo"
-                                                                    className="h-7 text-[11px]"
+                                                                    className="h-7 text-3xs"
                                                                 />
                                                                 <div className="flex gap-1">
                                                                     <Button
@@ -1031,7 +853,7 @@ export default function OnlineBookingIndex({
                                                     <span className="text-xs font-medium">
                                                         Adicionar foto
                                                     </span>
-                                                    <span className="text-[11px] text-muted-foreground">
+                                                    <span className="text-3xs text-muted-foreground">
                                                         JPG, PNG, WEBP até 5MB
                                                     </span>
                                                     <input
@@ -1244,6 +1066,7 @@ export default function OnlineBookingIndex({
                                         settings={settings}
                                         gallery={galleryItems}
                                         services={services}
+                                        previewUrl={signedPreviewUrl}
                                     />
                                     <Card>
                                         <CardContent className="pt-5">

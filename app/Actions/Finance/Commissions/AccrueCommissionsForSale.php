@@ -31,7 +31,7 @@ final class AccrueCommissionsForSale extends OperationalAction
 
         $accruals = new Collection;
 
-        $sale->loadMissing('items');
+        $sale->loadMissing(['items.service:id,category_id', 'items.product:id,category_id']);
 
         foreach ($sale->items as $item) {
             if ($item->professional_id === null) {
@@ -114,27 +114,42 @@ final class AccrueCommissionsForSale extends OperationalAction
             return null;
         }
 
-        $serviceMatches = ($item->service_id !== null && $rule->service_id === $item->service_id);
-        $productMatches = ($item->product_id !== null && $rule->product_id === $item->product_id);
-        $isItemSpecific = ($serviceMatches || $productMatches);
-        $isRuleItemGeneric = ($rule->service_id === null && $rule->product_id === null);
+        $serviceMatches = $item->service_id !== null
+            && $rule->scope === 'service'
+            && ($rule->service_id === null || $rule->service_id === $item->service_id);
+        $productMatches = $item->product_id !== null
+            && $rule->scope === 'product'
+            && ($rule->product_id === null || $rule->product_id === $item->product_id);
+        $itemCategoryId = $item->service_id !== null
+            ? $item->service->category_id
+            : $item->product?->category_id;
+        $categoryMatches = $itemCategoryId !== null
+            && $rule->category_id === $itemCategoryId
+            && (($item->service_id !== null && $rule->scope === 'service_category')
+                || ($item->product_id !== null && $rule->scope === 'product_category'));
+        $isItemSpecific = ($serviceMatches && $rule->service_id !== null)
+            || ($productMatches && $rule->product_id !== null);
+        $isCategorySpecific = $categoryMatches;
+        $isRuleItemGeneric = $rule->scope === 'all'
+            || ($rule->scope === 'service' && $rule->service_id === null && $item->service_id !== null)
+            || ($rule->scope === 'product' && $rule->product_id === null && $item->product_id !== null);
 
-        if (! $isItemSpecific && ! $isRuleItemGeneric) {
+        if (! $isItemSpecific && ! $isCategorySpecific && ! $isRuleItemGeneric) {
             return null;
         }
 
-        // Scoring:
-        // Specific professional + Specific item => 4
-        // Specific professional + Generic item  => 3
-        // Generic professional  + Specific item => 2
-        // Generic professional  + Generic item  => 1
+        // Professional + item > professional + category > professional + type.
         $score = 1;
 
         if ($rule->professional_id !== null) {
-            $score += 2;
+            $score += 3;
         }
 
         if ($isItemSpecific) {
+            $score += 3;
+        } elseif ($isCategorySpecific) {
+            $score += 2;
+        } elseif (($rule->scope ?? 'all') !== 'all') {
             $score += 1;
         }
 

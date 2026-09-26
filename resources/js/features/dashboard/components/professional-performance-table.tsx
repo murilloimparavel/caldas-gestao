@@ -49,108 +49,207 @@ export function ProfessionalPerformanceTable({
                         Nenhum profissional com atendimentos no período
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                            <thead>
-                                <tr className="border-y border-border/50 bg-muted/30 text-muted-foreground">
-                                    <th className="px-4 py-2.5 font-medium">
-                                        Profissional
-                                    </th>
-                                    <th className="px-4 py-2.5 text-center font-medium">
-                                        Atendimentos
-                                    </th>
-                                    <th className="px-4 py-2.5 text-center font-medium">
-                                        Variação %
-                                    </th>
-                                    <th className="px-4 py-2.5 text-right font-medium">
-                                        Ticket Médio
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/40">
-                                {data.map((prof) => {
-                                    const avatarUrl =
-                                        prof.avatar_url ?? prof.avatarUrl ?? '';
-                                    const totalServices =
-                                        prof.services_count ??
-                                        prof.totalServices ??
-                                        0;
-                                    const variation =
-                                        prof.variation_percentage ??
-                                        prof.changePercentage ??
-                                        0;
-                                    const avgTicket =
-                                        prof.average_ticket_cents !== undefined
-                                            ? formatCurrency(
-                                                  prof.average_ticket_cents,
-                                              )
-                                            : formatCurrency(
-                                                  prof.averageTicket,
-                                              );
+                    <>
+                        <div className="grid gap-2 p-3 sm:hidden">
+                            {data.map((prof) => {
+                                const totalServices =
+                                    prof.services_count ??
+                                    prof.totalServices ??
+                                    0;
 
-                                    const initials = prof.name
-                                        .split(' ')
-                                        .map((n) => n[0])
-                                        .join('')
-                                        .slice(0, 2)
-                                        .toUpperCase();
+                                const variation =
+                                    prof.variation_percentage ??
+                                    prof.changePercentage ??
+                                    0;
+                                const avgTicket =
+                                    prof.average_ticket_cents !== undefined
+                                        ? formatCurrency(
+                                              prof.average_ticket_cents,
+                                          )
+                                        : formatCurrency(prof.averageTicket);
+                                const initials = prof.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .join('')
+                                    .slice(0, 2)
+                                    .toUpperCase();
 
-                                    const isUp = variation >= 0;
-
-                                    return (
-                                        <tr
-                                            key={prof.id}
-                                            className="transition-colors hover:bg-muted/20"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2.5">
-                                                    <Avatar className="size-8 border border-border/50">
-                                                        {avatarUrl && (
-                                                            <AvatarImage
-                                                                src={avatarUrl}
-                                                                alt={prof.name}
-                                                            />
-                                                        )}
-                                                        <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
-                                                            {initials || (
-                                                                <User className="size-3.5" />
-                                                            )}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium text-foreground">
-                                                        {prof.name}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-center font-semibold text-foreground">
-                                                {totalServices}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span
-                                                    className={`inline-flex items-center gap-1 font-semibold ${
-                                                        isUp
-                                                            ? 'text-emerald-600 dark:text-emerald-400'
-                                                            : 'text-red-600 dark:text-red-400'
-                                                    }`}
-                                                >
-                                                    {isUp ? (
-                                                        <TrendingUp className="size-3" />
-                                                    ) : (
-                                                        <TrendingDown className="size-3" />
+                                return (
+                                    <article
+                                        key={prof.id}
+                                        className="rounded-xl border border-border/60 bg-muted/20 p-3"
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <Avatar className="size-9 border border-border/50">
+                                                {(prof.avatar_url ??
+                                                    prof.avatarUrl) && (
+                                                    <AvatarImage
+                                                        src={
+                                                            prof.avatar_url ??
+                                                            prof.avatarUrl
+                                                        }
+                                                        alt=""
+                                                    />
+                                                )}
+                                                <AvatarFallback className="bg-primary/10 text-2xs font-semibold text-primary">
+                                                    {initials || (
+                                                        <User className="size-3.5" />
                                                     )}
-                                                    {isUp ? '+' : ''}
-                                                    {variation}%
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-medium text-foreground">
-                                                {avgTicket}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                                                {prof.name}
+                                            </span>
+                                            <span
+                                                className={`inline-flex items-center gap-1 text-xs font-semibold ${variation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
+                                            >
+                                                {variation >= 0 ? (
+                                                    <TrendingUp
+                                                        className="size-3"
+                                                        aria-hidden="true"
+                                                    />
+                                                ) : (
+                                                    <TrendingDown
+                                                        className="size-3"
+                                                        aria-hidden="true"
+                                                    />
+                                                )}
+                                                {variation >= 0 ? '+' : ''}
+                                                {variation}%
+                                            </span>
+                                        </div>
+                                        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                            <div>
+                                                <dt className="text-muted-foreground">
+                                                    Atendimentos
+                                                </dt>
+                                                <dd className="mt-0.5 font-semibold text-foreground">
+                                                    {totalServices}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-muted-foreground">
+                                                    Ticket médio
+                                                </dt>
+                                                <dd className="mt-0.5 font-semibold text-foreground">
+                                                    {avgTicket}
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                        <div className="hidden overflow-x-auto sm:block">
+                            <table className="w-full text-left text-xs">
+                                <thead>
+                                    <tr className="border-y border-border/50 bg-muted/30 text-muted-foreground">
+                                        <th className="px-4 py-2.5 font-medium">
+                                            Profissional
+                                        </th>
+                                        <th className="px-4 py-2.5 text-center font-medium">
+                                            Atendimentos
+                                        </th>
+                                        <th className="px-4 py-2.5 text-center font-medium">
+                                            Variação %
+                                        </th>
+                                        <th className="px-4 py-2.5 text-right font-medium">
+                                            Ticket Médio
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/40">
+                                    {data.map((prof) => {
+                                        const avatarUrl =
+                                            prof.avatar_url ??
+                                            prof.avatarUrl ??
+                                            '';
+                                        const totalServices =
+                                            prof.services_count ??
+                                            prof.totalServices ??
+                                            0;
+                                        const variation =
+                                            prof.variation_percentage ??
+                                            prof.changePercentage ??
+                                            0;
+                                        const avgTicket =
+                                            prof.average_ticket_cents !==
+                                            undefined
+                                                ? formatCurrency(
+                                                      prof.average_ticket_cents,
+                                                  )
+                                                : formatCurrency(
+                                                      prof.averageTicket,
+                                                  );
+
+                                        const initials = prof.name
+                                            .split(' ')
+                                            .map((n) => n[0])
+                                            .join('')
+                                            .slice(0, 2)
+                                            .toUpperCase();
+
+                                        const isUp = variation >= 0;
+
+                                        return (
+                                            <tr
+                                                key={prof.id}
+                                                className="transition-colors hover:bg-muted/20"
+                                            >
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Avatar className="size-8 border border-border/50">
+                                                            {avatarUrl && (
+                                                                <AvatarImage
+                                                                    src={
+                                                                        avatarUrl
+                                                                    }
+                                                                    alt={
+                                                                        prof.name
+                                                                    }
+                                                                />
+                                                            )}
+                                                            <AvatarFallback className="bg-primary/10 text-2xs font-semibold text-primary">
+                                                                {initials || (
+                                                                    <User className="size-3.5" />
+                                                                )}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="font-medium text-foreground">
+                                                            {prof.name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center font-semibold text-foreground">
+                                                    {totalServices}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 font-semibold ${
+                                                            isUp
+                                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                                : 'text-red-600 dark:text-red-400'
+                                                        }`}
+                                                    >
+                                                        {isUp ? (
+                                                            <TrendingUp className="size-3" />
+                                                        ) : (
+                                                            <TrendingDown className="size-3" />
+                                                        )}
+                                                        {isUp ? '+' : ''}
+                                                        {variation}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-medium text-foreground">
+                                                    {avgTicket}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </CardContent>
         </Card>

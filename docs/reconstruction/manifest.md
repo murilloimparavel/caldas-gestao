@@ -55,7 +55,7 @@
 | `marketing-strategy-observed.md` | ativo | posicionamento, funil, segmentos e monetização públicos |
 | `flows/` | ativo | FLOW-001 a FLOW-005 |
 | `behavior-rules.md` | ativo | regras observadas/inferidas/propostas |
-| `network-observations.md` | scaffold honesto | nenhuma captura autenticada preservada ainda |
+| `network-observations.md` | scaffold honesto | nenhuma captura autenticada preservada ainda; DOM keys registradas em EV-012 |
 | `api-proposal.md` | proposto | contrato original, não API do alvo |
 | `roles-permissions.md` | proposto | um único papel real observado |
 | `design-system-observed.md` | ativo | evidência desktop |

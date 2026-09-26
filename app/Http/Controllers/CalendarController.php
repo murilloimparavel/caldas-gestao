@@ -39,7 +39,7 @@ final class CalendarController extends Controller
         $end = $start->addDays(42);
         $appointments = Appointment::query()
             ->with([
-                'customer:id,name,phone',
+                'customer:id,name,phone,notes',
                 'professional:id,name',
                 'items.service:id,name',
                 'saleLinks.sale:id,status,reference_label',
@@ -56,12 +56,17 @@ final class CalendarController extends Controller
         $appointments = $appointments->map(function (Appointment $appointment): array {
             $item = $appointment->items->first();
             $saleLink = $appointment->saleLinks->first();
+            $saleMetadata = $saleLink?->sale?->source_metadata;
+            $createdAutomatically = is_array($saleMetadata)
+                && (($saleMetadata['created_automatically'] ?? false) === true
+                    || in_array(($saleMetadata['origin'] ?? null), ['appointment_automation', 'automatic'], true));
 
             return [
                 ...$appointment->toArray(),
                 'duration_minutes' => $item?->duration_minutes,
                 'service_id' => $item?->service_id,
                 'service' => $item?->service?->only(['id', 'name']),
+                'online_booking' => $appointment->source === 'online' || $appointment->online_booking_campaign_link_id !== null,
                 'sale_link' => $saleLink ? [
                     'id' => $saleLink->getKey(),
                     'sale_id' => $saleLink->sale_id,
@@ -69,13 +74,16 @@ final class CalendarController extends Controller
                         'id' => $saleLink->sale->getKey(),
                         'status' => $saleLink->sale->status,
                         'reference_label' => $saleLink->sale->reference_label,
+                        'created_automatically' => $createdAutomatically,
+                        'automatic' => $createdAutomatically,
+                        'origin' => is_array($saleMetadata) ? ($saleMetadata['origin'] ?? null) : null,
                     ] : null,
                 ] : null,
             ];
         })->values();
 
         $options = [
-            'customers' => Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone']),
+            'customers' => Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone', 'notes']),
             'professionals' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'avatar_path'])->map(fn (Professional $p) => [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -120,7 +128,14 @@ final class CalendarController extends Controller
                 ])->values(),
         ];
 
-        return Inertia::render('calendar/index', ['appointments' => $appointments, 'options' => $options, 'filters' => $filters, 'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()], 'calendarSettings' => $calendarSettings]);
+        return Inertia::render('calendar/index', [
+            'appointments' => $appointments,
+            'options' => $options,
+            'filters' => $filters,
+            'range' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
+            'calendarSettings' => $calendarSettings,
+            'scheduleBlocks' => $calendarSettings['schedule_blocks'],
+        ]);
     }
 
     public function store(AppointmentRequest $request, TenantContext $context, CreateAppointment $create): RedirectResponse

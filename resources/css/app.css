@@ -1,8 +1,9 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 
 @import 'tw-animate-css';
 
 @source '../views';
+@source '../js';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @custom-variant dark (&:is(.dark *));
@@ -14,6 +15,11 @@
         'Noto Color Emoji';
     --font-display: Inter, 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'SFMono-Regular', ui-monospace, monospace;
+
+    --text-2xs: 0.625rem;
+    --text-2xs--line-height: 0.875rem;
+    --text-3xs: 0.6875rem;
+    --text-3xs--line-height: 1rem;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -42,6 +48,13 @@
 
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
 
     --color-border: var(--border);
     --color-input: var(--input);
@@ -80,6 +93,12 @@
     --accent-foreground: #9c4e3c;
     --destructive: #b74d4d;
     --destructive-foreground: #ffffff;
+    --success: oklch(0.62 0.17 145);
+    --success-foreground: #ffffff;
+    --warning: oklch(0.72 0.16 75);
+    --warning-foreground: #2a1b02;
+    --info: oklch(0.6 0.16 235);
+    --info-foreground: #ffffff;
     --border: #dcd7cf;
     --input: #dcd7cf;
     --ring: #efa83f;
@@ -116,6 +135,12 @@
     --accent-foreground: #ffc6b7;
     --destructive: #e07a72;
     --destructive-foreground: #35110f;
+    --success: oklch(0.68 0.17 145);
+    --success-foreground: #0b1e13;
+    --warning: oklch(0.76 0.15 75);
+    --warning-foreground: #221401;
+    --info: oklch(0.7 0.15 235);
+    --info-foreground: #0b172a;
     --border: #294146;
     --input: #294146;
     --ring: #f0b35a;
@@ -189,5 +214,29 @@
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
+    }
+}
+
+@media print {
+    @page {
+        margin: 4mm;
+        size: auto;
+    }
+
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .no-print,
+    header,
+    nav,
+    aside,
+    [aria-label='Breadcrumb'],
+    [data-sidebar='sidebar'],
+    [data-slot='sidebar'] {
+        display: none !important;
     }
 }

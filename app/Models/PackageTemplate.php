@@ -77,7 +77,7 @@ class PackageTemplate extends Model
     public function services(): BelongsToMany
     {
         return $this->belongsToMany(Service::class, 'package_template_services')
-            ->withPivot(['tenant_id', 'unit_id'])
+            ->withPivot(['tenant_id', 'unit_id', 'included_quantity'])
             ->withTimestamps();
     }
 

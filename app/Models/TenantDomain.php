@@ -11,7 +11,18 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property TenantDomainKind $kind
+ * @property TenantDomainStatus $status
+ * @property Carbon|null $verified_at
+ * @property Carbon|null $activated_at
+ * @property Carbon|null $disabled_at
+ * @property Carbon|null $ssl_verified_at
+ * @property Carbon|null $last_dns_check_at
+ * @property array<string, mixed>|null $metadata
+ */
 #[Fillable(['tenant_id', 'hostname', 'kind', 'status', 'verification_token', 'expected_cname', 'verified_at', 'activated_at', 'disabled_at', 'ssl_status', 'ssl_verified_at', 'last_dns_check_at', 'last_dns_error', 'metadata'])]
 class TenantDomain extends Model
 {

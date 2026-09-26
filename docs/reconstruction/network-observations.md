@@ -2,7 +2,7 @@
 
 ## Estado
 
-Nenhum contrato de rede autenticado foi preservado até o momento. Os batches EV-001 a EV-007 analisaram DOM, comportamento visível e rotas de página, sem registrar bodies, headers, cookies, tokens ou payloads pessoais.
+Nenhum contrato de rede autenticado foi preservado até o momento. Os batches EV-001 a EV-007 analisaram DOM, comportamento visível e rotas de página, sem registrar bodies, headers, cookies, tokens ou payloads pessoais. A inspeção posterior identificou chaves `data-row-key` em linhas de Clientes, Serviços e Comandas, mas isso é evidência DOM, não contrato de API; ver EV-012.
 
 Isso significa:
 
@@ -10,6 +10,7 @@ Isso significa:
 - ações e estados visíveis **não** provam formato de requests;
 - `api-proposal.md` é uma proposta original, não reconstrução da API alvo;
 - não existem claims `NET-*` confirmados nesta fase.
+- `data-row-key` foi observado como identificador renderizado em algumas listagens, sem inferir a origem backend.
 
 ## Interações candidatas para captura futura
 

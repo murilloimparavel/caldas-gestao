@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property string $id
+ * @property string|null $source_id
  * @property string $tenant_id
  * @property string $unit_id
  * @property string $sale_id
@@ -25,8 +26,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $quantity
  * @property int $discount_cents
  * @property int $total_cents
+ * @property array<string, mixed>|null $source_metadata
  */
 #[Fillable([
+    'source_id',
     'tenant_id',
     'unit_id',
     'sale_id',
@@ -39,6 +42,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'quantity',
     'discount_cents',
     'total_cents',
+    'source_metadata',
 ])]
 class SaleItem extends Model
 {
@@ -58,6 +62,7 @@ class SaleItem extends Model
             'quantity' => 'integer',
             'discount_cents' => 'integer',
             'total_cents' => 'integer',
+            'source_metadata' => 'array',
         ];
     }
 

@@ -11,7 +11,6 @@ import {
     PageCanvas,
     Pagination,
     parseBrazilianCurrency,
-    RelationCheckboxes,
     ResourceHeader,
     SearchToolbar,
     StatusBadge,
@@ -58,6 +57,82 @@ type Props = {
     packages: Paginated<PackageTemplate>;
     serviceOptions?: RelationOption[];
 };
+
+function ServiceQuantityFields({ options }: { options: RelationOption[] }) {
+    const [selected, setSelected] = useState<Record<string, number>>({});
+    const totalSessions = Object.values(selected).reduce(
+        (total, quantity) => total + quantity,
+        0,
+    );
+
+    return (
+        <div className="space-y-3">
+            <input type="hidden" name="total_sessions" value={totalSessions} />
+            <div className="grid gap-2 sm:grid-cols-2">
+                {options.map((option) => {
+                    const quantity = selected[option.id] ?? 0;
+
+                    return (
+                        <div
+                            key={option.id}
+                            className="flex items-center gap-3 rounded-lg border bg-muted/20 p-3"
+                        >
+                            <input
+                                type="checkbox"
+                                name="service_ids[]"
+                                value={option.id}
+                                checked={quantity > 0}
+                                onChange={(event) =>
+                                    setSelected((current) => ({
+                                        ...current,
+                                        [option.id]: event.target.checked
+                                            ? Math.max(
+                                                  1,
+                                                  current[option.id] ?? 1,
+                                              )
+                                            : 0,
+                                    }))
+                                }
+                                className="h-4 w-4 accent-primary"
+                            />
+                            <span className="min-w-0 flex-1 truncate text-sm">
+                                {option.name}
+                            </span>
+                            <input
+                                type="number"
+                                name={`service_quantities[${option.id}]`}
+                                min="1"
+                                max="1000"
+                                value={quantity || ''}
+                                disabled={quantity === 0}
+                                onChange={(event) =>
+                                    setSelected((current) => ({
+                                        ...current,
+                                        [option.id]: Math.max(
+                                            1,
+                                            Number(event.target.value) || 1,
+                                        ),
+                                    }))
+                                }
+                                aria-label={`Quantidade de ${option.name}`}
+                                className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm"
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Total do pacote: </span>
+                <strong>
+                    {totalSessions} {totalSessions === 1 ? 'sessão' : 'sessões'}
+                </strong>
+                <p className="mt-1 text-xs text-muted-foreground">
+                    O total é calculado automaticamente pela soma dos serviços.
+                </p>
+            </div>
+        </div>
+    );
+}
 
 function PackagePriceField({ initialCents = 0 }: { initialCents?: number }) {
     const [displayValue, setDisplayValue] = useState(
@@ -165,7 +240,7 @@ export default function PackagesIndex({
                                                 />
                                             </FormField>
 
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                                 <FormField
                                                     id="price_display"
                                                     label="Preço Total"
@@ -173,25 +248,6 @@ export default function PackagesIndex({
                                                     error={errors.price_cents}
                                                 >
                                                     <PackagePriceField />
-                                                </FormField>
-
-                                                <FormField
-                                                    id="total_sessions"
-                                                    label="Qtd. de Sessões"
-                                                    required
-                                                    error={
-                                                        errors.total_sessions
-                                                    }
-                                                >
-                                                    <Input
-                                                        id="total_sessions"
-                                                        name="total_sessions"
-                                                        type="number"
-                                                        min="1"
-                                                        max="1000"
-                                                        defaultValue={5}
-                                                        required
-                                                    />
                                                 </FormField>
 
                                                 <FormField
@@ -212,14 +268,34 @@ export default function PackagesIndex({
                                                 </FormField>
                                             </div>
 
+                                            {serviceOptions.length === 0 && (
+                                                <FormField
+                                                    id="total_sessions"
+                                                    label="Total de sessões"
+                                                    required
+                                                    error={
+                                                        errors.total_sessions
+                                                    }
+                                                >
+                                                    <Input
+                                                        id="total_sessions"
+                                                        name="total_sessions"
+                                                        type="number"
+                                                        min="1"
+                                                        max="1000"
+                                                        defaultValue={5}
+                                                        required
+                                                    />
+                                                </FormField>
+                                            )}
+
                                             {serviceOptions.length > 0 && (
                                                 <FormField
                                                     id="service_ids"
                                                     label="Serviços Inclusos"
                                                     error={errors.service_ids}
                                                 >
-                                                    <RelationCheckboxes
-                                                        name="service_ids"
+                                                    <ServiceQuantityFields
                                                         options={serviceOptions}
                                                     />
                                                 </FormField>
@@ -326,7 +402,7 @@ export default function PackagesIndex({
                                                     <Badge
                                                         key={srv.id}
                                                         variant="secondary"
-                                                        className="text-[11px] font-normal"
+                                                        className="text-3xs font-normal"
                                                     >
                                                         <Scissors className="mr-1 h-3 w-3" />
                                                         {srv.name}
@@ -335,7 +411,7 @@ export default function PackagesIndex({
                                             {pkg.services.length > 3 && (
                                                 <Badge
                                                     variant="outline"
-                                                    className="text-[11px] font-normal"
+                                                    className="text-3xs font-normal"
                                                 >
                                                     +{pkg.services.length - 3}{' '}
                                                     mais

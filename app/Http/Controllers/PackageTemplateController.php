@@ -90,7 +90,9 @@ final class PackageTemplateController extends Controller
         $customerPackages = $packageTemplate->customerPackages()
             ->with([
                 'customer:id,name,phone,email',
+                'serviceBalances.service:id,name',
                 'usages.user:id,name',
+                'usages.service:id,name',
             ])
             ->orderByDesc('created_at')
             ->paginate(15)

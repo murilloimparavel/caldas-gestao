@@ -37,6 +37,10 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
 import inventory from '@/routes/inventory';
 import products from '@/routes/products';
 import type { SharedPageProps } from '@/types';
@@ -125,6 +129,7 @@ export default function ProductsIndex({
     categoryOptions: initialCategoryOptions = [],
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const { view, setView } = useResourceView('caldas-gestao:products-view');
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
     const [createKey] = useState(() => createIdempotencyKey('product-create'));
     const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(
@@ -283,7 +288,7 @@ export default function ProductsIndex({
                                                                                 true,
                                                                             )
                                                                         }
-                                                                        className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                        className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                     >
                                                                         + Nova
                                                                         Categoria
@@ -480,7 +485,9 @@ export default function ProductsIndex({
                     onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome, SKU ou código de barras"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'produto encontrado' : 'produtos encontrados'}`}
-                />
+                >
+                    <ResourceViewToggle value={view} onChange={setView} />
+                </SearchToolbar>
 
                 {paginator.data.length === 0 ? (
                     <EmptyState
@@ -508,7 +515,11 @@ export default function ProductsIndex({
                 ) : (
                     <section
                         aria-label="Lista de produtos"
-                        className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((product) => {
                             const isLowStock =
@@ -517,9 +528,15 @@ export default function ProductsIndex({
                             return (
                                 <article
                                     key={product.id}
-                                    className="surface-panel flex min-h-56 flex-col gap-4 p-5 transition-colors hover:border-primary/40"
+                                    className={`surface-panel flex min-h-56 flex-col gap-4 p-5 transition-colors hover:border-primary/40 ${view === 'list' ? 'max-md:min-h-56 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                                 >
-                                    <div className="flex items-start justify-between gap-3">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                                : 'flex items-start justify-between gap-3'
+                                        }
+                                    >
                                         <div className="flex min-w-0 items-center gap-3">
                                             {product.photo_url ||
                                             product.image_url ? (
@@ -571,7 +588,7 @@ export default function ProductsIndex({
                                                 }
                                             />
                                             {isLowStock ? (
-                                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-500">
+                                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-3xs font-semibold text-amber-500">
                                                     <AlertTriangle className="size-3" />
                                                     Estoque baixo
                                                 </span>
@@ -579,7 +596,13 @@ export default function ProductsIndex({
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-3 border-y border-border py-3">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex flex-1 items-center justify-between gap-3 border-y border-border py-3 md:border-y-0 md:py-0'
+                                                : 'flex items-center justify-between gap-3 border-y border-border py-3'
+                                        }
+                                    >
                                         <div>
                                             <span className="block text-xs text-muted-foreground">
                                                 Preço de venda
@@ -612,7 +635,13 @@ export default function ProductsIndex({
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'flex items-center justify-between text-xs text-muted-foreground md:w-44 md:gap-3 md:border-l md:border-border md:pl-4'
+                                                : 'flex items-center justify-between text-xs text-muted-foreground'
+                                        }
+                                    >
                                         <span>
                                             Custo:{' '}
                                             {formatMoney(
@@ -625,7 +654,13 @@ export default function ProductsIndex({
                                         </span>
                                     </div>
 
-                                    <div className="mt-auto flex items-center justify-between gap-2">
+                                    <div
+                                        className={
+                                            view === 'list'
+                                                ? 'mt-auto flex items-center justify-between gap-2 md:mt-0 md:w-auto md:border-l md:border-border md:pl-4'
+                                                : 'mt-auto flex items-center justify-between gap-2'
+                                        }
+                                    >
                                         {canAdjustStock ? (
                                             <Button
                                                 type="button"

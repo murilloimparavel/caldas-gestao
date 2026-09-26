@@ -137,3 +137,46 @@ it('uses the unit timezone for appointment timestamps and stored timezone', func
     expect($updated->timezone)->toBe('America/Sao_Paulo')
         ->and($updated->starts_at->format('H:i'))->toBe('11:00');
 });
+
+it('normalizes reminder_enabled boolean input on create and update', function () {
+    [$owner, $tenantId, $unitId, $customer, $professional, $service] = calendarWorkspace();
+    $headers = $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner);
+
+    $payloadWithOn = [
+        'customer_id' => $customer->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => '2030-02-10 10:00',
+        'duration_minutes' => 60,
+        'reminder_enabled' => 'on',
+    ];
+
+    $headers->post(route('appointments.store'), $payloadWithOn)->assertRedirect();
+    $firstAppointment = Appointment::query()->firstOrFail();
+    expect($firstAppointment->reminder_enabled)->toBeTrue();
+
+    $payloadWithZero = [
+        'customer_id' => $customer->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => '2030-02-10 12:00',
+        'duration_minutes' => 60,
+        'reminder_enabled' => '0',
+    ];
+
+    $headers->post(route('appointments.store'), $payloadWithZero)->assertRedirect();
+    $secondAppointment = Appointment::query()->where('id', '!=', $firstAppointment->getKey())->firstOrFail();
+    expect($secondAppointment->reminder_enabled)->toBeFalse();
+
+    $headers->put(route('appointments.update', $firstAppointment), [
+        'customer_id' => $customer->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => '2030-02-10 10:00',
+        'duration_minutes' => 60,
+        'reminder_enabled' => '0',
+        'lock_version' => 0,
+    ])->assertRedirect();
+
+    expect($firstAppointment->fresh()->reminder_enabled)->toBeFalse();
+});

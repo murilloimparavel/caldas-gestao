@@ -181,6 +181,25 @@ it('rejects stale lock_version when updating products', function () {
         ->and($product->fresh()->lock_version)->toBe(1);
 });
 
+it('returns a contextual validation error when inactivating a stale product', function () {
+    [$owner, $tenant, $unit] = productTestWorkspace();
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Produto alterado em outra tela',
+        'lock_version' => 2,
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson(route('products.destroy', $product), ['lock_version' => 1])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'lock_version' => 'Este produto foi alterado em outra tela. Recarregue os dados antes de inativá-lo.',
+        ]);
+
+    expect($product->fresh()->is_active)->toBeTrue();
+});
+
 it('enforces RBAC permissions on products', function () {
     [$owner, $tenant, $unit] = productTestWorkspace();
     $reader = User::factory()->create();

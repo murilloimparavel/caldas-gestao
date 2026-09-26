@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
@@ -29,6 +30,35 @@ export default [
     js.configs.recommended,
     reactHooks.configs.flat['recommended-latest'],
     ...typescript.configs.recommended,
+    jsxA11y.flatConfigs.recommended,
+    {
+        rules: {
+            'jsx-a11y/no-autofocus': 'off',
+            'jsx-a11y/no-static-element-interactions': 'off',
+            'jsx-a11y/label-has-associated-control': [
+                'error',
+                {
+                    labelComponents: ['Label'],
+                    labelAttributes: ['htmlFor'],
+                    controlComponents: [
+                        'Input',
+                        'Select',
+                        'Textarea',
+                        'Checkbox',
+                        'Switch',
+                    ],
+                    assert: 'either',
+                    depth: 25,
+                },
+            ],
+            'jsx-a11y/no-noninteractive-tabindex': [
+                'error',
+                {
+                    roles: ['gridcell'],
+                },
+            ],
+        },
+    },
     {
         ...react.configs.flat.recommended,
         ...react.configs.flat['jsx-runtime'],
@@ -82,7 +112,11 @@ export default [
             '@stylistic': stylistic,
         },
         rules: {
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
             '@stylistic/padding-line-between-statements': [
                 'error',
                 ...paddingAroundControl,
@@ -91,11 +125,21 @@ export default [
     },
     {
         ignores: [
+            '.worktrees/**',
+            '**/.worktrees/**',
+            '.runtime/**',
+            '.playwright/**',
+            '.playwright-cli/**',
+            '.playwright-mcp/**',
             'vendor',
+            'vendor/**',
+            '**/vendor/**',
             'node_modules',
+            'node_modules/**',
             'public',
+            'public/**',
             'bootstrap/ssr',
-            'tailwind.config.js',
+            'bootstrap/ssr/**',
             'vite.config.ts',
             'resources/js/actions/**',
             'resources/js/components/ui/*',
@@ -110,7 +154,11 @@ export default [
         },
         rules: {
             curly: ['error', 'all'],
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
         },
     },
 ];

@@ -17,8 +17,11 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 /**
  * @property UnitStatus $status
  * @property int $lock_version
+ * @property bool $appointment_sales_automation_enabled
+ * @property string|null $appointment_default_sale_category_id
+ * @property-read OnlineBookingSetting|null $onlineBookingSetting
  */
-#[Fillable(['tenant_id', 'slug', 'name', 'status', 'timezone', 'address', 'online_booking_enabled'])]
+#[Fillable(['tenant_id', 'slug', 'name', 'status', 'timezone', 'address', 'online_booking_enabled', 'appointment_sales_automation_enabled', 'appointment_default_sale_category_id'])]
 class Unit extends Model
 {
     /** @use HasFactory<UnitFactory> */
@@ -27,6 +30,7 @@ class Unit extends Model
     protected $attributes = [
         'status' => UnitStatus::Active->value,
         'online_booking_enabled' => false,
+        'appointment_sales_automation_enabled' => false,
         'lock_version' => 0,
     ];
 
@@ -36,6 +40,7 @@ class Unit extends Model
             'status' => UnitStatus::class,
             'address' => 'array',
             'online_booking_enabled' => 'boolean',
+            'appointment_sales_automation_enabled' => 'boolean',
             'lock_version' => 'integer',
         ];
     }
@@ -70,6 +75,12 @@ class Unit extends Model
     public function onlineBookingSetting(): HasOne
     {
         return $this->hasOne(OnlineBookingSetting::class);
+    }
+
+    /** @return BelongsTo<SaleCategory, $this> */
+    public function appointmentDefaultSaleCategory(): BelongsTo
+    {
+        return $this->belongsTo(SaleCategory::class, 'appointment_default_sale_category_id');
     }
 
     /** @return HasMany<OnlineBookingGalleryImage, $this> */

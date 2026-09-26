@@ -84,15 +84,22 @@ export function RelationCheckboxes({
     selectedIds = [],
     initialSelected,
     disabled = false,
+    form,
+    onSelectionChange,
 }: {
     name: string;
     options: RelationOption[];
     selectedIds?: string[];
     initialSelected?: string[];
     disabled?: boolean;
+    form?: string;
+    onSelectionChange?: (selectedIds: string[]) => void;
 }) {
-    const selectedOptionIds =
-        selectedIds.length > 0 ? selectedIds : (initialSelected ?? []);
+    const selectedOptionIds = onSelectionChange
+        ? selectedIds
+        : selectedIds.length > 0
+          ? selectedIds
+          : (initialSelected ?? []);
 
     if (options.length === 0) {
         return (
@@ -118,9 +125,34 @@ export function RelationCheckboxes({
                             type="checkbox"
                             name={`${name}[]`}
                             value={option.id}
-                            defaultChecked={selectedOptionIds.includes(
-                                option.id,
-                            )}
+                            form={form}
+                            {...(onSelectionChange
+                                ? {
+                                      checked: selectedOptionIds.includes(
+                                          option.id,
+                                      ),
+                                      onChange: (
+                                          event: FormEvent<HTMLInputElement>,
+                                      ) => {
+                                          const nextSelectedIds = new Set(
+                                              selectedOptionIds,
+                                          );
+
+                                          if (event.currentTarget.checked) {
+                                              nextSelectedIds.add(option.id);
+                                          } else {
+                                              nextSelectedIds.delete(option.id);
+                                          }
+
+                                          onSelectionChange(
+                                              Array.from(nextSelectedIds),
+                                          );
+                                      },
+                                  }
+                                : {
+                                      defaultChecked:
+                                          selectedOptionIds.includes(option.id),
+                                  })}
                             disabled={disabled}
                             className="size-4 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring"
                         />
@@ -128,7 +160,7 @@ export function RelationCheckboxes({
                             {option.name}
                         </span>
                         {option.status === 'inactive' ? (
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                            <span className="text-2xs font-medium text-muted-foreground uppercase">
                                 Inativo
                             </span>
                         ) : null}
@@ -372,7 +404,26 @@ export function FormActions({
     );
 }
 
-export function formatMoney(cents: number): string {
+export function formatMoney(cents: number, prefix?: string): string {
+    if (prefix !== undefined) {
+        if (!Number.isFinite(cents) || cents < 0) {
+            cents = 0;
+        }
+
+        const formatted = (cents / 100).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        if (!prefix) {
+            return formatted;
+        }
+
+        const separator = prefix.endsWith(' ') ? '' : ' ';
+
+        return `${prefix}${separator}${formatted}`;
+    }
+
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
@@ -398,7 +449,7 @@ export function StatusBadge({ status }: { status: ResourceStatus }) {
         <Badge
             variant="outline"
             className={cn(
-                'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                'rounded-full px-2.5 py-1 text-3xs font-semibold',
                 status === 'active'
                     ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
                     : 'border-border bg-muted text-muted-foreground',
@@ -663,6 +714,7 @@ export function Pagination({
                     >
                         <Link href={resolvedLinks[0].url} preserveScroll>
                             <ChevronLeft aria-hidden="true" />
+                            <span className="sr-only">Página anterior</span>
                         </Link>
                     </Button>
                 ) : null}
@@ -673,6 +725,7 @@ export function Pagination({
                         variant={link.active ? 'default' : 'outline'}
                         size="icon"
                         aria-current={link.active ? 'page' : undefined}
+                        aria-label={`Página ${link.label}`}
                         disabled={!link.url}
                     >
                         {link.url ? (
@@ -696,6 +749,7 @@ export function Pagination({
                             preserveScroll
                         >
                             <ChevronRight aria-hidden="true" />
+                            <span className="sr-only">Próxima página</span>
                         </Link>
                     </Button>
                 ) : null}
@@ -766,3 +820,6 @@ export function RelationList({
         <span className="text-sm text-muted-foreground">{emptyLabel}</span>
     );
 }
+
+export * from './masked-inputs';
+export * from './denomination-shortcuts';

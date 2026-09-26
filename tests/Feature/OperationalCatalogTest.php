@@ -94,6 +94,21 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
 
     $serviceResponse->assertRedirect(route('services.show', $service));
 
+    $this->actingAs($owner)
+        ->get(route('professionals.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('professionals/index')
+            ->where('serviceOptions.0.id', $service->getKey())
+            ->where('serviceOptions.0.name', 'Corte feminino'),
+        );
+
+    $this->actingAs($owner)
+        ->get(route('services.show', $service))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('services/show')
+            ->where('professionalOptions', []),
+        );
+
     $professionalResponse = $this->actingAs($owner)->post(route('professionals.store'), [
         'name' => 'Beatriz Profissional',
         'email' => null,
@@ -110,6 +125,13 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
         ->and(OutboxEvent::query()->where('event_type', 'professional.created')->where('aggregate_id', $professional->getKey())->firstOrFail()->payload['service_ids'])->toBe([$service->getKey()]);
 
     $this->actingAs($owner)
+        ->get(route('services.show', $service))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('professionalOptions.0.id', $professional->getKey())
+            ->where('professionalOptions.0.name', $professional->name),
+        );
+
+    $this->actingAs($owner)
         ->patch(route('services.update', $service), [
             'name' => 'Corte feminino premium',
             'duration_minutes' => 90,
@@ -122,6 +144,13 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
     expect($service->fresh()->name)->toBe('Corte feminino premium')
         ->and($service->fresh()->price_cents)->toBe(15000)
         ->and($service->fresh()->professionals()->whereKey($professional->getKey())->exists())->toBeTrue();
+
+    $this->actingAs($owner)
+        ->get(route('professionals.show', $professional))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('serviceOptions.0.id', $service->getKey())
+            ->where('serviceOptions.0.name', 'Corte feminino premium'),
+        );
 });
 
 it('supports professional inactivation without requiring a full delete payload', function () {

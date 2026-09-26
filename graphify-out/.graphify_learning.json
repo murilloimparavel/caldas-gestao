@@ -1,5 +1,54 @@
 {
-  "generated_at": "2026-08-26T01:19:12.803845+00:00",
-  "nodes": {},
+  "generated_at": "2026-09-09T13:49:47.556616+00:00",
+  "nodes": {
+    "app_domain_calendar_readme_calendar": {
+      "code_fingerprint": "73f3574fe5f9e9d51900ad54691f2df4804e24701b17f195a562830e49a33c01",
+      "label": "Calendar",
+      "last": "2026-08-26T01:21:35.621050+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T01:21:35.621050+00:00",
+          "outcome": "useful",
+          "q": "analisa o progresso atual de desenvolvimento do app vs o backlog"
+        }
+      ],
+      "score": 0.714999389,
+      "source_file": "app/Domain/Calendar/README.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "app_domain_finance_readme_finance": {
+      "code_fingerprint": "a920ab68c3c0e53d65ec53c6ebb8ec244a4aa9e202a44ecb703b5e198c34359e",
+      "label": "Finance",
+      "last": "2026-08-26T01:21:35.621050+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T01:21:35.621050+00:00",
+          "outcome": "useful",
+          "q": "analisa o progresso atual de desenvolvimento do app vs o backlog"
+        }
+      ],
+      "score": 0.714999389,
+      "source_file": "app/Domain/Finance/README.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "docs_architecture_sprint_1_fase_6_pacotes_servicos_sprint_1_da_fase_6_pacotes_de_serviços_packagetemplate_customerpackage": {
+      "code_fingerprint": "c8fec111667744b347010316378bee3cc54665d1014f93c2aa5ab6db2d3f18ef",
+      "label": "Sprint 1 da Fase 6: Pacotes de Serviços (PackageTemplate & CustomerPackage)",
+      "last": "2026-08-26T01:21:35.621050+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T01:21:35.621050+00:00",
+          "outcome": "useful",
+          "q": "analisa o progresso atual de desenvolvimento do app vs o backlog"
+        }
+      ],
+      "score": 0.714999389,
+      "source_file": "docs/architecture/sprint-1-fase-6-pacotes-servicos.md",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
   "version": 1
 }

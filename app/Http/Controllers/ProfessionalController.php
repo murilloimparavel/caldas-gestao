@@ -8,6 +8,7 @@ use App\Actions\Professionals\ReactivateProfessional;
 use App\Actions\Professionals\UpdateProfessional;
 use App\Http\Requests\ProfessionalRequest;
 use App\Models\Professional;
+use App\Models\Service;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,7 @@ final class ProfessionalController extends Controller
 
         return Inertia::render('professionals/index', [
             'professionals' => $professionals,
+            'serviceOptions' => $this->serviceOptions($context),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -46,7 +48,7 @@ final class ProfessionalController extends Controller
         ]);
     }
 
-    public function show(Professional $professional): Response
+    public function show(Professional $professional, TenantContext $context): Response
     {
         Gate::authorize('view', $professional);
 
@@ -56,7 +58,27 @@ final class ProfessionalController extends Controller
                 'availabilityRules' => fn ($query) => $query->orderBy('weekday')->orderBy('starts_at'),
                 'scheduleBlocks' => fn ($query) => $query->where('status', 'active')->orderBy('starts_at'),
             ]),
+            'serviceOptions' => $this->serviceOptions($context),
         ]);
+    }
+
+    /** @return array<int, array{id:string,name:string}> */
+    private function serviceOptions(TenantContext $context): array
+    {
+        return $context->unit === null
+            ? []
+            : Service::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $context->unit->getKey())
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Service $service): array => [
+                    'id' => (string) $service->getKey(),
+                    'name' => $service->name,
+                ])
+                ->values()
+                ->all();
     }
 
     public function store(ProfessionalRequest $request, TenantContext $context, CreateProfessional $createProfessional): RedirectResponse|JsonResponse

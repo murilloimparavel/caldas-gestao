@@ -216,10 +216,14 @@ export default function ProfessionalCommissionShow({
                         className="flex flex-wrap items-end gap-3"
                     >
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">
+                            <label
+                                htmlFor="filter-status"
+                                className="text-xs font-medium text-muted-foreground"
+                            >
                                 Status
                             </label>
                             <select
+                                id="filter-status"
                                 name="status"
                                 defaultValue={filters.status}
                                 className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
@@ -236,10 +240,14 @@ export default function ProfessionalCommissionShow({
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">
+                            <label
+                                htmlFor="filter-date-start"
+                                className="text-xs font-medium text-muted-foreground"
+                            >
                                 A partir de
                             </label>
                             <Input
+                                id="filter-date-start"
                                 type="date"
                                 name="date_start"
                                 defaultValue={filters.date_start}
@@ -248,10 +256,14 @@ export default function ProfessionalCommissionShow({
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">
+                            <label
+                                htmlFor="filter-date-end"
+                                className="text-xs font-medium text-muted-foreground"
+                            >
                                 Até
                             </label>
                             <Input
+                                id="filter-date-end"
                                 type="date"
                                 name="date_end"
                                 defaultValue={filters.date_end}

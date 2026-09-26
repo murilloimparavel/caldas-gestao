@@ -24,6 +24,10 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
 import customers from '@/routes/customers';
 import type { SharedPageProps } from '@/types';
 
@@ -47,6 +51,7 @@ export default function CustomersIndex({
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [createKey] = useState(() => createIdempotencyKey('customer-create'));
+    const { view, setView } = useResourceView('caldas-gestao:customers-view');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('customer.manage');
 
@@ -197,7 +202,9 @@ export default function CustomersIndex({
                     onStatusChange={handleStatusChange}
                     placeholder="Buscar por nome ou telefone"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'cliente encontrado' : 'clientes encontrados'}`}
-                />
+                >
+                    <ResourceViewToggle value={view} onChange={setView} />
+                </SearchToolbar>
 
                 {paginator.data.length === 0 ? (
                     <EmptyState
@@ -225,14 +232,24 @@ export default function CustomersIndex({
                 ) : (
                     <section
                         aria-label="Lista de clientes"
-                        className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((customer) => (
                             <article
                                 key={customer.id}
-                                className="surface-panel flex min-h-48 flex-col gap-5 p-5 transition-colors hover:border-primary/40"
+                                className={`surface-panel flex min-h-48 flex-col gap-5 p-5 transition-colors hover:border-primary/40 ${view === 'list' ? 'max-md:min-h-48 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                             >
-                                <div className="flex items-start justify-between gap-3">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                            : 'flex items-start justify-between gap-3'
+                                    }
+                                >
                                     <div className="flex min-w-0 items-center gap-3">
                                         <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
                                             <UserRound
@@ -253,7 +270,13 @@ export default function CustomersIndex({
                                     </div>
                                     <StatusBadge status={customer.status} />
                                 </div>
-                                <div className="grid gap-2 text-sm text-muted-foreground">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'grid flex-1 gap-2 text-sm text-muted-foreground md:grid-cols-2'
+                                            : 'grid gap-2 text-sm text-muted-foreground'
+                                    }
+                                >
                                     <p>
                                         {customer.email ||
                                             'E-mail não informado'}
@@ -264,7 +287,13 @@ export default function CustomersIndex({
                                             : 'Data de nascimento não informada'}
                                     </p>
                                 </div>
-                                <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'mt-auto flex items-center justify-between gap-3 border-t border-border pt-4 md:mt-0 md:w-auto md:border-t-0 md:border-l md:pt-0 md:pl-4'
+                                            : 'mt-auto flex items-center justify-between gap-3 border-t border-border pt-4'
+                                    }
+                                >
                                     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                                         <UserRoundCheck
                                             aria-hidden="true"

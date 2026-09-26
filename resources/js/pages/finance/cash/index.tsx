@@ -12,11 +12,13 @@ import {
 import { useState } from 'react';
 import {
     createIdempotencyKey,
+    DenominationShortcuts,
     EmptyState,
     FormActions,
     FormErrorSummary,
     FormField,
     formatMoney,
+    MoneyInput,
     PageCanvas,
     ResourceHeader,
 } from '@/components/operational';
@@ -119,26 +121,22 @@ export default function CashIndex({ active_shift, metrics }: Props) {
 
     // Initial Shift Form
     const [initialAmountFloat, setInitialAmountFloat] = useState('0,00');
+    const [initialAmountCents, setInitialAmountCents] = useState(0);
     const [openNotes, setOpenNotes] = useState('');
 
-    // Movement Forms
-    const [movementAmountFloat, setMovementAmountFloat] = useState('');
-    const [movementReason, setMovementReason] = useState('');
+    // Movement Forms (Suprimento & Sangria)
+    const [supplyAmountFloat, setSupplyAmountFloat] = useState('');
+    const [supplyAmountCents, setSupplyAmountCents] = useState(0);
+    const [supplyReason, setSupplyReason] = useState('');
+
+    const [bleedAmountFloat, setBleedAmountFloat] = useState('');
+    const [bleedAmountCents, setBleedAmountCents] = useState(0);
+    const [bleedReason, setBleedReason] = useState('');
 
     // Close Shift Form
     const [finalAmountFloat, setFinalAmountFloat] = useState('');
+    const [finalAmountCents, setFinalAmountCents] = useState(0);
     const [closeNotes, setCloseNotes] = useState('');
-
-    const parseMoneyToCents = (val: string): number => {
-        const cleaned = val.replace(/[^\d,]/g, '').replace(',', '.');
-        const num = parseFloat(cleaned);
-
-        return isNaN(num) ? 0 : Math.round(num * 100);
-    };
-
-    const initialAmountCents = parseMoneyToCents(initialAmountFloat);
-    const movementAmountCents = parseMoneyToCents(movementAmountFloat);
-    const finalAmountCents = parseMoneyToCents(finalAmountFloat);
 
     const calculatedDifferenceCents = active_shift
         ? finalAmountCents - active_shift.expected_amount_cents
@@ -197,7 +195,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         </DialogHeader>
 
                         <Form
-                            {...cashShifts.store.post()}
+                            {...cashShifts.store.form()}
                             headers={{
                                 'X-Idempotency-Key': createIdempotencyKey(
                                     'cash-shift-open',
@@ -206,6 +204,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                             }}
                             onSuccess={() => {
                                 setOpenModalOpen(false);
+                                setInitialAmountCents(0);
                                 setInitialAmountFloat('0,00');
                                 setOpenNotes('');
                             }}
@@ -221,26 +220,48 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         required
                                         error={errors.initial_amount_cents}
                                     >
-                                        <div className="relative">
-                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
-                                                R$
-                                            </span>
-                                            <Input
-                                                type="text"
-                                                className="pl-10 text-lg font-bold"
-                                                placeholder="0,00"
-                                                value={initialAmountFloat}
-                                                onChange={(e) =>
-                                                    setInitialAmountFloat(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </div>
+                                        <MoneyInput
+                                            id="initial_amount"
+                                            prefix="R$"
+                                            className="text-lg font-bold"
+                                            placeholder="0,00"
+                                            value={initialAmountFloat}
+                                            onValueChange={(
+                                                cents,
+                                                formatted,
+                                            ) => {
+                                                setInitialAmountCents(cents);
+                                                setInitialAmountFloat(
+                                                    formatted,
+                                                );
+                                            }}
+                                            required
+                                        />
                                         <input
                                             type="hidden"
                                             name="initial_amount_cents"
                                             value={initialAmountCents}
+                                        />
+                                        <DenominationShortcuts
+                                            disabled={processing}
+                                            onAdd={(amountInReais) => {
+                                                const nextCents =
+                                                    initialAmountCents +
+                                                    amountInReais * 100;
+                                                setInitialAmountCents(
+                                                    nextCents,
+                                                );
+                                                setInitialAmountFloat(
+                                                    formatMoney(
+                                                        nextCents,
+                                                        'R$',
+                                                    ),
+                                                );
+                                            }}
+                                            onReset={() => {
+                                                setInitialAmountCents(0);
+                                                setInitialAmountFloat('0,00');
+                                            }}
                                         />
                                     </FormField>
 
@@ -447,7 +468,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.move.post({
+                                            {...cashShifts.move.form({
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
@@ -459,8 +480,9 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                             }}
                                             onSuccess={() => {
                                                 setSupplyModalOpen(false);
-                                                setMovementAmountFloat('');
-                                                setMovementReason('');
+                                                setSupplyAmountCents(0);
+                                                setSupplyAmountFloat('');
+                                                setSupplyReason('');
                                             }}
                                             className="space-y-4"
                                         >
@@ -491,31 +513,63 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                             errors.amount_cents
                                                         }
                                                     >
-                                                        <div className="relative">
-                                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
-                                                                R$
-                                                            </span>
-                                                            <Input
-                                                                type="text"
-                                                                className="pl-10 text-lg font-bold"
-                                                                placeholder="0,00"
-                                                                value={
-                                                                    movementAmountFloat
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setMovementAmountFloat(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
+                                                        <MoneyInput
+                                                            id="supply_amount"
+                                                            prefix="R$"
+                                                            className="text-lg font-bold"
+                                                            placeholder="0,00"
+                                                            value={
+                                                                supplyAmountFloat
+                                                            }
+                                                            onValueChange={(
+                                                                cents,
+                                                                formatted,
+                                                            ) => {
+                                                                setSupplyAmountCents(
+                                                                    cents,
+                                                                );
+                                                                setSupplyAmountFloat(
+                                                                    formatted,
+                                                                );
+                                                            }}
+                                                            required
+                                                        />
                                                         <input
                                                             type="hidden"
                                                             name="amount_cents"
                                                             value={
-                                                                movementAmountCents
+                                                                supplyAmountCents
                                                             }
+                                                        />
+                                                        <DenominationShortcuts
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            onAdd={(
+                                                                amountInReais,
+                                                            ) => {
+                                                                const nextCents =
+                                                                    supplyAmountCents +
+                                                                    amountInReais *
+                                                                        100;
+                                                                setSupplyAmountCents(
+                                                                    nextCents,
+                                                                );
+                                                                setSupplyAmountFloat(
+                                                                    formatMoney(
+                                                                        nextCents,
+                                                                        'R$',
+                                                                    ),
+                                                                );
+                                                            }}
+                                                            onReset={() => {
+                                                                setSupplyAmountCents(
+                                                                    0,
+                                                                );
+                                                                setSupplyAmountFloat(
+                                                                    '0,00',
+                                                                );
+                                                            }}
                                                         />
                                                     </FormField>
 
@@ -528,11 +582,9 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <Input
                                                             type="text"
                                                             placeholder="Ex: Troco adicional em moedas"
-                                                            value={
-                                                                movementReason
-                                                            }
+                                                            value={supplyReason}
                                                             onChange={(e) =>
-                                                                setMovementReason(
+                                                                setSupplyReason(
                                                                     e.target
                                                                         .value,
                                                                 )
@@ -588,7 +640,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.move.post({
+                                            {...cashShifts.move.form({
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
@@ -600,8 +652,9 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                             }}
                                             onSuccess={() => {
                                                 setBleedModalOpen(false);
-                                                setMovementAmountFloat('');
-                                                setMovementReason('');
+                                                setBleedAmountCents(0);
+                                                setBleedAmountFloat('');
+                                                setBleedReason('');
                                             }}
                                             className="space-y-4"
                                         >
@@ -642,31 +695,63 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                             errors.amount_cents
                                                         }
                                                     >
-                                                        <div className="relative">
-                                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
-                                                                R$
-                                                            </span>
-                                                            <Input
-                                                                type="text"
-                                                                className="pl-10 text-lg font-bold"
-                                                                placeholder="0,00"
-                                                                value={
-                                                                    movementAmountFloat
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setMovementAmountFloat(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
+                                                        <MoneyInput
+                                                            id="bleed_amount"
+                                                            prefix="R$"
+                                                            className="text-lg font-bold"
+                                                            placeholder="0,00"
+                                                            value={
+                                                                bleedAmountFloat
+                                                            }
+                                                            onValueChange={(
+                                                                cents,
+                                                                formatted,
+                                                            ) => {
+                                                                setBleedAmountCents(
+                                                                    cents,
+                                                                );
+                                                                setBleedAmountFloat(
+                                                                    formatted,
+                                                                );
+                                                            }}
+                                                            required
+                                                        />
                                                         <input
                                                             type="hidden"
                                                             name="amount_cents"
                                                             value={
-                                                                movementAmountCents
+                                                                bleedAmountCents
                                                             }
+                                                        />
+                                                        <DenominationShortcuts
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            onAdd={(
+                                                                amountInReais,
+                                                            ) => {
+                                                                const nextCents =
+                                                                    bleedAmountCents +
+                                                                    amountInReais *
+                                                                        100;
+                                                                setBleedAmountCents(
+                                                                    nextCents,
+                                                                );
+                                                                setBleedAmountFloat(
+                                                                    formatMoney(
+                                                                        nextCents,
+                                                                        'R$',
+                                                                    ),
+                                                                );
+                                                            }}
+                                                            onReset={() => {
+                                                                setBleedAmountCents(
+                                                                    0,
+                                                                );
+                                                                setBleedAmountFloat(
+                                                                    '0,00',
+                                                                );
+                                                            }}
                                                         />
                                                     </FormField>
 
@@ -679,11 +764,9 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                         <Input
                                                             type="text"
                                                             placeholder="Ex: Transferência para cofre principal"
-                                                            value={
-                                                                movementReason
-                                                            }
+                                                            value={bleedReason}
                                                             onChange={(e) =>
-                                                                setMovementReason(
+                                                                setBleedReason(
                                                                     e.target
                                                                         .value,
                                                                 )
@@ -740,7 +823,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                         </DialogHeader>
 
                                         <Form
-                                            {...cashShifts.close.post({
+                                            {...cashShifts.close.form({
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
@@ -752,6 +835,7 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                             }}
                                             onSuccess={() => {
                                                 setCloseModalOpen(false);
+                                                setFinalAmountCents(0);
                                                 setFinalAmountFloat('');
                                                 setCloseNotes('');
                                             }}
@@ -803,32 +887,64 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                             errors.final_amount_cents
                                                         }
                                                     >
-                                                        <div className="relative">
-                                                            <span className="absolute top-2.5 left-3 text-sm font-semibold text-muted-foreground">
-                                                                R$
-                                                            </span>
-                                                            <Input
-                                                                type="text"
-                                                                className="pl-10 text-xl font-black"
-                                                                placeholder="0,00"
-                                                                value={
-                                                                    finalAmountFloat
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setFinalAmountFloat(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                autoFocus
-                                                            />
-                                                        </div>
+                                                        <MoneyInput
+                                                            id="final_amount"
+                                                            prefix="R$"
+                                                            className="text-xl font-black"
+                                                            placeholder="0,00"
+                                                            value={
+                                                                finalAmountFloat
+                                                            }
+                                                            onValueChange={(
+                                                                cents,
+                                                                formatted,
+                                                            ) => {
+                                                                setFinalAmountCents(
+                                                                    cents,
+                                                                );
+                                                                setFinalAmountFloat(
+                                                                    formatted,
+                                                                );
+                                                            }}
+                                                            autoFocus
+                                                            required
+                                                        />
                                                         <input
                                                             type="hidden"
                                                             name="final_amount_cents"
                                                             value={
                                                                 finalAmountCents
                                                             }
+                                                        />
+                                                        <DenominationShortcuts
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            onAdd={(
+                                                                amountInReais,
+                                                            ) => {
+                                                                const nextCents =
+                                                                    finalAmountCents +
+                                                                    amountInReais *
+                                                                        100;
+                                                                setFinalAmountCents(
+                                                                    nextCents,
+                                                                );
+                                                                setFinalAmountFloat(
+                                                                    formatMoney(
+                                                                        nextCents,
+                                                                        'R$',
+                                                                    ),
+                                                                );
+                                                            }}
+                                                            onReset={() => {
+                                                                setFinalAmountCents(
+                                                                    0,
+                                                                );
+                                                                setFinalAmountFloat(
+                                                                    '0,00',
+                                                                );
+                                                            }}
                                                         />
                                                     </FormField>
 

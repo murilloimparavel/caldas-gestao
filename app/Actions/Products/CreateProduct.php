@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\Images\UploadedImageOptimizer;
 use App\Support\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -39,15 +40,9 @@ final class CreateProduct extends OperationalAction
             $productId = (string) Str::uuid7();
             $imagePath = null;
             if ($imageFile instanceof UploadedFile) {
-                $hash = Str::random(40);
-                $ext = $imageFile->guessExtension() ?: $imageFile->getClientOriginalExtension();
-                $diskName = (string) config('filesystems.media_disk', 'public');
-                $storedPath = Storage::disk($diskName)->putFileAs(
-                    "{$context->tenant->getKey()}/products/{$productId}",
-                    $imageFile,
-                    "{$hash}.{$ext}"
-                );
-                $imagePath = $storedPath !== false ? $storedPath : null;
+                $path = "{$context->tenant->getKey()}/products/{$productId}/".Str::random(40).'.webp';
+                $stored = app(UploadedImageOptimizer::class)->storeWebp($imageFile, Storage::disk((string) config('filesystems.media_disk')), $path);
+                $imagePath = $stored ? $path : null;
             }
 
             $product = new Product;

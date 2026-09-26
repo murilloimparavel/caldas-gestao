@@ -30,19 +30,23 @@ export function ImageUploader({
 }: ImageUploaderProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewError, setPreviewError] = useState(false);
 
     useEffect(() => {
         if (!value) {
             setPreviewUrl(null);
+            setPreviewError(false);
             return;
         }
 
         if (typeof value === 'string') {
             setPreviewUrl(value);
+            setPreviewError(false);
             return;
         }
 
         if (value instanceof File) {
+            setPreviewError(false);
             const url = URL.createObjectURL(value);
             setPreviewUrl(url);
             return () => {
@@ -106,14 +110,15 @@ export function ImageUploader({
                 )}
                 style={previewHeight ? { height: previewHeight } : undefined}
             >
-                {previewUrl ? (
+                {previewUrl && !previewError ? (
                     <div className="relative size-full overflow-hidden rounded-lg">
                         <img
                             src={previewUrl}
                             alt="Preview da foto"
                             className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            onError={() => setPreviewError(true)}
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center gap-2">
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                             <Button
                                 type="button"
                                 variant="secondary"
@@ -147,9 +152,11 @@ export function ImageUploader({
                             <ImagePlus className="size-5" />
                         </div>
                         <p className="text-xs font-medium text-foreground">
-                            Clique para selecionar uma imagem
+                            {previewError
+                                ? 'Imagem indisponível — clique para substituir'
+                                : 'Clique para selecionar uma imagem'}
                         </p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">
+                        <p className="mt-1 text-3xs text-muted-foreground">
                             JPG, PNG ou WEBP
                         </p>
                     </div>

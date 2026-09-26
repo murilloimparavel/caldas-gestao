@@ -19,7 +19,9 @@ final class CreatePackageTemplate extends OperationalAction
 
         return DB::transaction(function () use ($actor, $context, $data, $unit): PackageTemplate {
             $serviceIds = $data['service_ids'] ?? [];
+            $serviceQuantities = $data['service_quantities'] ?? [];
             unset($data['service_ids']);
+            unset($data['service_quantities']);
 
             $template = PackageTemplate::query()->create([
                 ...$data,
@@ -29,7 +31,7 @@ final class CreatePackageTemplate extends OperationalAction
                 'lock_version' => 0,
             ]);
 
-            $this->syncServices($template, $context, $serviceIds);
+            $this->syncServices($template, $context, $serviceIds, $serviceQuantities);
 
             $this->events->record($actor, $context, 'package_template.created', $template, [
                 'is_active' => $template->is_active,
@@ -43,8 +45,11 @@ final class CreatePackageTemplate extends OperationalAction
         }, 5);
     }
 
-    /** @param list<string> $serviceIds */
-    private function syncServices(PackageTemplate $template, TenantContext $context, array $serviceIds): void
+    /**
+     * @param  list<string>  $serviceIds
+     * @param  array<string, int>  $serviceQuantities
+     */
+    private function syncServices(PackageTemplate $template, TenantContext $context, array $serviceIds, array $serviceQuantities = []): void
     {
         $serviceIds = array_values(array_unique($serviceIds));
 
@@ -60,12 +65,15 @@ final class CreatePackageTemplate extends OperationalAction
             }
         }
 
-        $template->services()->syncWithPivotValues(
-            $serviceIds,
-            [
+        $serviceSync = [];
+        foreach ($serviceIds as $serviceId) {
+            $serviceSync[$serviceId] = [
                 'tenant_id' => $context->tenant->getKey(),
                 'unit_id' => $context->unit?->getKey(),
-            ]
-        );
+                'included_quantity' => max(1, (int) ($serviceQuantities[$serviceId] ?? 1)),
+            ];
+        }
+
+        $template->services()->sync($serviceSync);
     }
 }

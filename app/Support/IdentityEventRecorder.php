@@ -17,13 +17,13 @@ final class IdentityEventRecorder
     ) {}
 
     /** @param array<string, mixed> $metadata */
-    public function record(User $actor, TenantContext $context, string $action, Model $resource, array $metadata = []): void
+    public function record(?User $actor, TenantContext $context, string $action, Model $resource, array $metadata = []): void
     {
         $this->recordForTenant($actor, $context->tenant, $action, $resource, $metadata, $context->unit?->getKey());
     }
 
     /** @param array<string, mixed> $metadata */
-    public function recordForTenant(User $actor, Tenant $tenant, string $action, Model $resource, array $metadata = [], ?string $unitId = null): void
+    public function recordForTenant(?User $actor, Tenant $tenant, string $action, Model $resource, array $metadata = [], ?string $unitId = null): void
     {
         if (DB::transactionLevel() < 1) {
             throw new \LogicException('Identity audit and outbox events require an active transaction.');
@@ -40,7 +40,7 @@ final class IdentityEventRecorder
             'event_id' => $eventId,
             'tenant_id' => $tenant->getKey(),
             'unit_id' => $unitId,
-            'actor_user_id' => $actor->getKey(),
+            'actor_user_id' => $actor?->getKey(),
             'action' => $action,
             'resource_type' => $resourceType,
             'resource_id' => is_string($resourceId) ? $resourceId : null,
@@ -53,7 +53,7 @@ final class IdentityEventRecorder
             'event_id' => $eventId,
             'tenant_id' => $tenant->getKey(),
             'unit_id' => $unitId,
-            'actor_user_id' => $actor->getKey(),
+            'actor_user_id' => $actor?->getKey(),
             'aggregate_type' => $resourceType,
             'aggregate_id' => (string) $resourceId,
             'aggregate_version' => max(1, (int) ($resource->getAttribute('lock_version') ?? 1)),

@@ -72,6 +72,7 @@ final class CustomerController extends Controller
             'customerPackages' => fn ($query) => $query
                 ->with([
                     'packageTemplate.services:id,name,price_cents',
+                    'serviceBalances.service:id,name',
                     'usages.user:id,name',
                 ])
                 ->orderBy('created_at', 'desc'),

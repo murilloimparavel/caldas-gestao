@@ -6,6 +6,9 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\Images\UploadedImageOptimizer;
 use App\Support\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +17,14 @@ use Illuminate\Support\Str;
 
 final class CreateService extends OperationalAction
 {
+    public function __construct(
+        private readonly UploadedImageOptimizer $imageOptimizer,
+        AuthorizationService $authorization,
+        IdentityEventRecorder $events,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, array $data): Service
     {
@@ -29,16 +40,18 @@ final class CreateService extends OperationalAction
 
             $serviceId = (string) Str::uuid7();
             $imagePath = null;
+            $thumbnailPath = null;
             if ($imageFile instanceof UploadedFile) {
                 $hash = Str::random(40);
-                $ext = $imageFile->guessExtension() ?: $imageFile->getClientOriginalExtension();
-                $diskName = (string) config('filesystems.media_disk', 'public');
-                $storedPath = Storage::disk($diskName)->putFileAs(
-                    "{$context->tenant->getKey()}/services/{$serviceId}",
-                    $imageFile,
-                    "{$hash}.{$ext}"
+                $diskName = (string) config('filesystems.media_disk');
+                $path = "{$context->tenant->getKey()}/services/{$serviceId}/{$hash}.webp";
+                $stored = Storage::disk($diskName)->put(
+                    $path,
+                    $this->imageOptimizer->encodeWebp($imageFile),
                 );
-                $imagePath = $storedPath !== false ? $storedPath : null;
+                $imagePath = $stored ? $path : null;
+                $thumbnail = "{$context->tenant->getKey()}/services/{$serviceId}/thumbnail-{$hash}.webp";
+                $thumbnailPath = $this->imageOptimizer->storeSquareWebp($imageFile, Storage::disk($diskName), $thumbnail) ? $thumbnail : null;
             }
 
             $service = new Service;
@@ -46,6 +59,7 @@ final class CreateService extends OperationalAction
             $service->tenant_id = $context->tenant->getKey();
             $service->unit_id = $unit->getKey();
             $service->image_path = $imagePath;
+            $service->thumbnail_path = $thumbnailPath;
             $service->lock_version = 0;
             $service->fill($data);
             $service->save();

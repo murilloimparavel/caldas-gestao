@@ -69,7 +69,8 @@ it('snapshots package terms and rejects a source sale for another customer', fun
         ->and($package->price_cents_snapshot)->toBe(24900)
         ->and($package->total_sessions_snapshot)->toBe(4)
         ->and($package->validity_days_snapshot)->toBe(30)
-        ->and($package->eligible_services_snapshot)->toBe([['id' => $service->getKey(), 'name' => 'Corte']]);
+        ->and($package->eligible_services_snapshot)->toBe([['id' => $service->getKey(), 'name' => 'Corte', 'quantity' => 1]])
+        ->and($package->serviceBalances()->first()->remaining_quantity)->toBe(1);
 
     $template->update(['name' => 'Novo nome', 'price_cents' => 29900]);
     $package->refresh();
@@ -119,6 +120,42 @@ it('consumes only an eligible service item from the selected customer sale', fun
         'sale_id' => $sale->getKey(),
         'sale_item_id' => $ineligibleItem->getKey(),
     ]))->toThrow(InvalidArgumentException::class, 'not eligible');
+});
+
+it('tracks quantities and consumption independently for each package service', function (): void {
+    [$owner, $tenant, $unit] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $beard = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Barba']);
+    $botox = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Botox']);
+
+    $this->actingAs($owner)->post(route('packages.store'), [
+        'name' => 'Combo personalizado',
+        'price_cents' => 30000,
+        'total_sessions' => 5,
+        'validity_days' => 90,
+        'service_ids' => [$beard->getKey(), $botox->getKey()],
+        'service_quantities' => [$beard->getKey() => 3, $botox->getKey() => 2],
+    ])->assertSessionHasNoErrors();
+
+    $template = PackageTemplate::query()->where('name', 'Combo personalizado')->firstOrFail();
+
+    $this->actingAs($owner)->post(route('customer-packages.store'), [
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+    ])->assertSessionHasNoErrors();
+
+    $package = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
+    expect($package->serviceBalances()->where('service_id', $beard->getKey())->value('allocated_quantity'))->toBe(3)
+        ->and($package->serviceBalances()->where('service_id', $botox->getKey())->value('allocated_quantity'))->toBe(2);
+
+    $this->actingAs($owner)->post(route('customer-packages.consume', $package), [
+        'service_id' => $beard->getKey(),
+        'sessions_consumed' => 2,
+    ])->assertSessionHasNoErrors();
+
+    expect($package->serviceBalances()->where('service_id', $beard->getKey())->value('remaining_quantity'))->toBe(1)
+        ->and($package->serviceBalances()->where('service_id', $botox->getKey())->value('remaining_quantity'))->toBe(2)
+        ->and(PackageUsage::query()->where('customer_package_id', $package->getKey())->value('service_id'))->toBe($beard->getKey());
 });
 
 it('scopes package idempotency to the customer package route resource', function (): void {

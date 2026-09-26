@@ -10,6 +10,7 @@ import {
     DollarSign,
     FolderTree,
     History,
+    LoaderCircle,
     RotateCcw,
     SlidersHorizontal,
     TrendingUp,
@@ -198,6 +199,8 @@ export default function ProductShow({
         createIdempotencyKey('product-reactivate'),
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
+    const [inactivateConflict, setInactivateConflict] = useState(false);
+    const [inactivateProcessing, setInactivateProcessing] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [adjustOpen, setAdjustOpen] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<File | string | null>(
@@ -489,9 +492,16 @@ export default function ProductShow({
                                             {product.is_active ? (
                                                 <Dialog
                                                     open={inactivateOpen}
-                                                    onOpenChange={
-                                                        setInactivateOpen
-                                                    }
+                                                    onOpenChange={(open) => {
+                                                        if (
+                                                            !open &&
+                                                            inactivateProcessing
+                                                        ) {
+                                                            return;
+                                                        }
+
+                                                        setInactivateOpen(open);
+                                                    }}
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -508,15 +518,24 @@ export default function ProductShow({
                                                                 produto?
                                                             </DialogTitle>
                                                             <DialogDescription>
-                                                                O histórico de
+                                                                Você está
+                                                                inativando{' '}
+                                                                <strong>
+                                                                    {
+                                                                        product.name
+                                                                    }
+                                                                </strong>
+                                                                . O histórico de
                                                                 vendas e
                                                                 movimentações
-                                                                passadas será
-                                                                preservado, mas
-                                                                o produto não
-                                                                poderá ser
-                                                                adicionado a
-                                                                novas comandas.
+                                                                será preservado.
+                                                                O produto
+                                                                deixará de
+                                                                aparecer em
+                                                                novas comandas,
+                                                                e poderá ser
+                                                                reativado
+                                                                depois.
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <Form
@@ -528,17 +547,87 @@ export default function ProductShow({
                                                                     destroyKey,
                                                             }}
                                                             method="delete"
+                                                            onBefore={() => {
+                                                                setInactivateConflict(
+                                                                    false,
+                                                                );
+                                                                setInactivateProcessing(
+                                                                    true,
+                                                                );
+
+                                                                return true;
+                                                            }}
                                                             onSuccess={() =>
                                                                 setInactivateOpen(
                                                                     false,
                                                                 )
                                                             }
+                                                            onFinish={() =>
+                                                                setInactivateProcessing(
+                                                                    false,
+                                                                )
+                                                            }
+                                                            onError={(
+                                                                errors,
+                                                            ) => {
+                                                                if (
+                                                                    errors.lock_version
+                                                                ) {
+                                                                    setInactivateConflict(
+                                                                        true,
+                                                                    );
+                                                                }
+                                                            }}
                                                         >
                                                             {({
+                                                                errors,
                                                                 processing:
                                                                     inactivating,
                                                             }) => (
                                                                 <>
+                                                                    <FormErrorSummary
+                                                                        errors={
+                                                                            errors
+                                                                        }
+                                                                    />
+                                                                    {inactivateConflict ? (
+                                                                        <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
+                                                                            <p className="font-medium">
+                                                                                O
+                                                                                cadastro
+                                                                                mudou
+                                                                                em
+                                                                                outra
+                                                                                tela.
+                                                                            </p>
+                                                                            <p className="mt-1">
+                                                                                Recarregar
+                                                                                os
+                                                                                dados
+                                                                                fechará
+                                                                                esta
+                                                                                confirmação
+                                                                                e
+                                                                                descartará
+                                                                                alterações
+                                                                                não
+                                                                                salvas
+                                                                                neste
+                                                                                formulário.
+                                                                            </p>
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="outline"
+                                                                                className="mt-3"
+                                                                                onClick={() => {
+                                                                                    window.location.reload();
+                                                                                }}
+                                                                            >
+                                                                                Recarregar
+                                                                                dados
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : null}
                                                                     <input
                                                                         type="hidden"
                                                                         name="lock_version"
@@ -555,6 +644,9 @@ export default function ProductShow({
                                                                                     false,
                                                                                 )
                                                                             }
+                                                                            disabled={
+                                                                                inactivating
+                                                                            }
                                                                         >
                                                                             Cancelar
                                                                         </Button>
@@ -562,12 +654,24 @@ export default function ProductShow({
                                                                             type="submit"
                                                                             variant="destructive"
                                                                             disabled={
+                                                                                inactivating ||
+                                                                                inactivateConflict
+                                                                            }
+                                                                            aria-busy={
                                                                                 inactivating
                                                                             }
                                                                         >
-                                                                            {inactivating
-                                                                                ? 'Inativando...'
-                                                                                : 'Confirmar inativação'}
+                                                                            {inactivating ? (
+                                                                                <>
+                                                                                    <LoaderCircle
+                                                                                        className="animate-spin"
+                                                                                        aria-hidden="true"
+                                                                                    />{' '}
+                                                                                    Inativando...
+                                                                                </>
+                                                                            ) : (
+                                                                                'Confirmar inativação'
+                                                                            )}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </>
@@ -906,7 +1010,7 @@ export default function ProductShow({
                                                 <td className="max-w-xs truncate px-3 py-3 text-xs text-foreground">
                                                     {m.reason}
                                                     {m.reference_type ? (
-                                                        <span className="block text-[11px] text-muted-foreground">
+                                                        <span className="block text-3xs text-muted-foreground">
                                                             Ref:{' '}
                                                             {m.reference_type}
                                                             {m.reference_id

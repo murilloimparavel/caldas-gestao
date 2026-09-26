@@ -1,0 +1,41 @@
+name: Deploy Caldas Gestão no Coolify
+
+on:
+  workflow_run:
+    workflows:
+      - Build and publish Caldas Gestão image
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Disparar deploy no Coolify
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar configuração do webhook
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: test -n "$COOLIFY_DEPLOY_TOKEN"
+
+      - name: Garantir tag de imagem de produção
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: >-
+          curl --fail-with-body --silent --show-error --request PATCH
+          --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN"
+          --header "Content-Type: application/json"
+          --data '{"docker_registry_image_tag":"production"}'
+          "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv"
+
+      - name: Disparar deploy
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: >-
+          curl --fail-with-body --silent --show-error --request POST
+          --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN"
+          "https://cy.caldasindica.com/api/v1/deploy?uuid=svurav3cvfovuz8adtv1fuwv&force=true"

@@ -8,9 +8,11 @@ import {
     Package,
     Percent,
     Plus,
+    Printer,
     Receipt,
     RotateCcw,
     Scissors,
+    Search,
     Sparkles,
     Trash2,
     Undo2,
@@ -209,6 +211,30 @@ export default function SalesShow({
     const isSaleActive =
         sale.status === 'open' || sale.status === 'ready_to_bill';
     const isSaleOpen = sale.status === 'open';
+    const isSaleClosed =
+        sale.status === 'finalized' || (sale.status as string) === 'closed';
+
+    const [catalogSearch, setCatalogSearch] = useState('');
+
+    const filteredServices = catalogSearch.trim()
+        ? services.filter(
+              (srv) =>
+                  srv.id === selectedServiceId ||
+                  srv.name
+                      .toLowerCase()
+                      .includes(catalogSearch.trim().toLowerCase()),
+          )
+        : services;
+
+    const filteredProducts = catalogSearch.trim()
+        ? products.filter(
+              (prod) =>
+                  prod.id === selectedProductId ||
+                  prod.name
+                      .toLowerCase()
+                      .includes(catalogSearch.trim().toLowerCase()),
+          )
+        : products;
 
     const selectedService = services.find((s) => s.id === selectedServiceId);
     const selectedProduct = products.find((p) => p.id === selectedProductId);
@@ -241,6 +267,7 @@ export default function SalesShow({
         setCustomPriceStr('');
         setQuantity(1);
         setItemDiscountStr('');
+        setCatalogSearch('');
     };
 
     const latestAdjustment = (sale.status_histories ?? [])
@@ -256,7 +283,7 @@ export default function SalesShow({
             <PageCanvas>
                 {/* Back Link & Header */}
                 <div className="flex flex-col gap-4">
-                    <div>
+                    <div className="no-print print:hidden">
                         <Button
                             asChild
                             variant="ghost"
@@ -300,7 +327,7 @@ export default function SalesShow({
 
                         {/* Status Transition Action Buttons */}
                         {canManage && isSaleActive ? (
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="no-print flex flex-wrap items-center gap-2 print:hidden">
                                 {isSaleOpen ? (
                                     <Form
                                         {...sales.transition.form(sale.id)}
@@ -566,8 +593,18 @@ export default function SalesShow({
                                     </DialogContent>
                                 </Dialog>
                             </div>
-                        ) : sale.status === 'finalized' ? (
-                            <div className="flex flex-wrap items-center gap-2">
+                        ) : isSaleClosed ? (
+                            <div className="no-print flex flex-wrap items-center gap-2 print:hidden">
+                                <Button
+                                    type="button"
+                                    onClick={() => window.print()}
+                                    variant="outline"
+                                    className="gap-2"
+                                >
+                                    <Printer className="size-4" />
+                                    Imprimir Recibo
+                                </Button>
+
                                 {sale.closing_sessions &&
                                 sale.closing_sessions.length > 0 ? (
                                     <Button
@@ -730,7 +767,7 @@ export default function SalesShow({
                                             {latestAdjustment.reason}
                                         </p>
                                     ) : null}
-                                    <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80">
+                                    <p className="text-3xs text-rose-700/80 dark:text-rose-400/80">
                                         Estorno realizado por{' '}
                                         <span className="font-medium">
                                             {latestAdjustment?.user?.name ??
@@ -829,9 +866,9 @@ export default function SalesShow({
 
                                                         {/* Type Selector */}
                                                         <div className="space-y-1.5">
-                                                            <label className="text-sm font-medium text-foreground">
+                                                            <span className="text-sm font-medium text-foreground">
                                                                 Tipo de Item
-                                                            </label>
+                                                            </span>
                                                             <div className="grid grid-cols-3 gap-2">
                                                                 {(
                                                                     [
@@ -891,6 +928,27 @@ export default function SalesShow({
                                                         {itemType ===
                                                         'service' ? (
                                                             <div className="space-y-3">
+                                                                <div className="relative">
+                                                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Filtrar serviços por nome..."
+                                                                        value={
+                                                                            catalogSearch
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            setCatalogSearch(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        className="pl-9 text-sm"
+                                                                    />
+                                                                </div>
+
                                                                 <FormField
                                                                     label="Serviço"
                                                                     name="service_id"
@@ -905,7 +963,7 @@ export default function SalesShow({
                                                                                     true,
                                                                                 )
                                                                             }
-                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                            className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                         >
                                                                             +
                                                                             Novo
@@ -936,7 +994,7 @@ export default function SalesShow({
                                                                             o
                                                                             serviço
                                                                         </option>
-                                                                        {services.map(
+                                                                        {filteredServices.map(
                                                                             (
                                                                                 srv,
                                                                             ) => (
@@ -962,6 +1020,17 @@ export default function SalesShow({
                                                                                     min)
                                                                                 </option>
                                                                             ),
+                                                                        )}
+                                                                        {filteredServices.length ===
+                                                                            0 && (
+                                                                            <option
+                                                                                value=""
+                                                                                disabled
+                                                                            >
+                                                                                Nenhum
+                                                                                serviço
+                                                                                encontrado
+                                                                            </option>
                                                                         )}
                                                                     </select>
                                                                 </FormField>
@@ -1010,6 +1079,27 @@ export default function SalesShow({
                                                         {itemType ===
                                                         'product' ? (
                                                             <div className="space-y-3">
+                                                                <div className="relative">
+                                                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="Filtrar produtos por nome..."
+                                                                        value={
+                                                                            catalogSearch
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            setCatalogSearch(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        className="pl-9 text-sm"
+                                                                    />
+                                                                </div>
+
                                                                 <FormField
                                                                     label="Produto"
                                                                     name="product_id"
@@ -1024,7 +1114,7 @@ export default function SalesShow({
                                                                                     true,
                                                                                 )
                                                                             }
-                                                                            className="text-xs font-semibold text-primary hover:underline focus:outline-none"
+                                                                            className="rounded-xs text-xs font-semibold text-primary hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                                                                         >
                                                                             +
                                                                             Novo
@@ -1055,7 +1145,7 @@ export default function SalesShow({
                                                                             o
                                                                             produto
                                                                         </option>
-                                                                        {products.map(
+                                                                        {filteredProducts.map(
                                                                             (
                                                                                 prd,
                                                                             ) => (
@@ -1082,6 +1172,17 @@ export default function SalesShow({
                                                                                     )
                                                                                 </option>
                                                                             ),
+                                                                        )}
+                                                                        {filteredProducts.length ===
+                                                                            0 && (
+                                                                            <option
+                                                                                value=""
+                                                                                disabled
+                                                                            >
+                                                                                Nenhum
+                                                                                produto
+                                                                                encontrado
+                                                                            </option>
                                                                         )}
                                                                     </select>
                                                                 </FormField>
@@ -1737,7 +1838,7 @@ export default function SalesShow({
                                                 </p>
                                             ) : null}
                                             {history.user?.name ? (
-                                                <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+                                                <p className="mt-0.5 text-2xs text-muted-foreground/80">
                                                     Por {history.user.name}
                                                 </p>
                                             ) : null}

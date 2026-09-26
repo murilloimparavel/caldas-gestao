@@ -1,5 +1,13 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Receipt, ShieldAlert, Sparkles, Tag } from 'lucide-react';
+import {
+    ArrowLeft,
+    CheckCircle2,
+    Receipt,
+    ShieldAlert,
+    Sparkles,
+    Tag,
+    Zap,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -10,6 +18,10 @@ import {
     ResourceHeader,
     StatusBadge,
 } from '@/components/operational';
+import {
+    AutomationFeedback,
+    automationIssueFromErrors,
+} from '@/components/appointment-sale-automation-feedback';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -28,8 +40,20 @@ type SaleCategoryType = 'service' | 'product' | 'mixed';
 type UniquenessScope = 'customer' | 'appointment' | 'reference' | 'none';
 
 type SaleCategory = {
+    appointment_automation_enabled?: boolean;
+    appointment_automation?: {
+        category_id?: string | null;
+        enabled?: boolean | null;
+        is_enabled?: boolean | null;
+        supported?: boolean | null;
+    } | null;
+    appointment_automation_supported?: boolean | null;
+    appointment_default?: boolean | null;
     created_at?: string;
+    default_for_appointments?: boolean | null;
     id: string;
+    is_default_for_appointments?: boolean | null;
+    is_appointment_default?: boolean | null;
     is_active: boolean;
     key: string;
     lock_version: number;
@@ -40,6 +64,12 @@ type SaleCategory = {
 };
 
 type Props = {
+    appointment_automation?: {
+        appointment_automation_enabled?: boolean;
+        default_appointment_category_id?: string | null;
+        default_sale_category_id?: string | null;
+        enabled?: boolean;
+    };
     category: SaleCategory;
 };
 
@@ -66,7 +96,10 @@ const uniquenessScopeDescriptions: Record<UniquenessScope, string> = {
     none: 'Permite abrir qualquer quantidade de comandas nesta categoria sem restrição de duplicidade.',
 };
 
-export default function SaleCategoryShow({ category }: Props) {
+export default function SaleCategoryShow({
+    appointment_automation: automation,
+    category,
+}: Props) {
     const [updateKey] = useState(() =>
         createIdempotencyKey('sale-category-update'),
     );
@@ -80,6 +113,26 @@ export default function SaleCategoryShow({ category }: Props) {
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale_category.manage');
+    const flashAutomationError = props.flash?.error ?? undefined;
+    const flashAutomationIssue = flashAutomationError
+        ? automationIssueFromErrors({ flash: flashAutomationError })
+        : null;
+    const defaultCategoryId =
+        automation?.default_sale_category_id ??
+        automation?.default_appointment_category_id;
+    const isDefaultCategory = Boolean(
+        category.is_default_for_appointments ??
+        (defaultCategoryId && defaultCategoryId === category.id),
+    );
+    const automationEnabled = Boolean(
+        (automation?.enabled ?? category.appointment_automation_enabled) &&
+        isDefaultCategory,
+    );
+    const acceptsServices =
+        category.type === 'service' || category.type === 'mixed';
+    const canBeAutomationCategory = category.is_active && acceptsServices;
+    const canToggleAutomation =
+        canManage && canBeAutomationCategory && isDefaultCategory;
 
     return (
         <>
@@ -140,14 +193,46 @@ export default function SaleCategoryShow({ category }: Props) {
                                 ) : null}
                             </div>
                         ) : null}
+                        {flashAutomationIssue ? (
+                            <AutomationFeedback
+                                kind={flashAutomationIssue}
+                                onReload={() => window.location.reload()}
+                            >
+                                {flashAutomationError}
+                            </AutomationFeedback>
+                        ) : null}
                         <Form
                             {...saleCategories.update.form(category.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
                             className="space-y-5"
                         >
-                            {({ errors, processing }) => (
+                            {({ errors, processing, submit }) => (
                                 <>
                                     <FormErrorSummary errors={errors} />
+                                    {automationIssueFromErrors(errors) ? (
+                                        <AutomationFeedback
+                                            kind={
+                                                automationIssueFromErrors(
+                                                    errors,
+                                                ) ?? 'category'
+                                            }
+                                            onAction={
+                                                automationIssueFromErrors(
+                                                    errors,
+                                                ) === 'stale'
+                                                    ? undefined
+                                                    : submit
+                                            }
+                                            onReload={
+                                                automationIssueFromErrors(
+                                                    errors,
+                                                ) === 'stale'
+                                                    ? () =>
+                                                          window.location.reload()
+                                                    : undefined
+                                            }
+                                        />
+                                    ) : null}
                                     <input
                                         type="hidden"
                                         name="lock_version"
@@ -244,6 +329,123 @@ export default function SaleCategoryShow({ category }: Props) {
                                                 </select>
                                             </FormField>
                                         </div>
+                                    </div>
+                                    <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                <Zap
+                                                    aria-hidden="true"
+                                                    className="size-4"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h3 className="text-sm font-semibold text-foreground">
+                                                    Automação com a Agenda
+                                                </h3>
+                                                <p className="text-xs leading-5 text-muted-foreground">
+                                                    Ao criar um novo agendamento
+                                                    com serviço, o sistema pode
+                                                    abrir uma comanda nesta
+                                                    categoria e incluir o
+                                                    serviço automaticamente.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {!canBeAutomationCategory ? (
+                                            <AutomationFeedback
+                                                kind="category"
+                                                title="Esta categoria não pode ser usada pela Agenda"
+                                            >
+                                                A automação exige uma categoria
+                                                ativa que aceite serviços.
+                                                Reative a categoria ou altere o
+                                                tipo antes de defini-la como
+                                                padrão.
+                                            </AutomationFeedback>
+                                        ) : null}
+                                        {canToggleAutomation ? (
+                                            <>
+                                                <input
+                                                    type="hidden"
+                                                    name="appointment_automation_enabled"
+                                                    value="0"
+                                                />
+                                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/70 bg-background/50 p-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="appointment_automation_enabled"
+                                                        value="1"
+                                                        defaultChecked={
+                                                            automationEnabled
+                                                        }
+                                                        className="mt-0.5 size-4 accent-primary"
+                                                    />
+                                                    <span className="space-y-0.5">
+                                                        <span className="block text-sm font-medium text-foreground">
+                                                            Criar comandas
+                                                            automaticamente
+                                                        </span>
+                                                        <span className="block text-xs leading-5 text-muted-foreground">
+                                                            A automação vale
+                                                            para novos
+                                                            agendamentos desta
+                                                            unidade e não altera
+                                                            comandas já
+                                                            existentes.
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            </>
+                                        ) : (
+                                            <div className="rounded-lg border border-border/70 bg-background/50 p-3 text-xs leading-5 text-muted-foreground">
+                                                {canBeAutomationCategory
+                                                    ? 'Defina esta categoria como padrão para controlar a automação. Depois, você poderá ativar ou desativar a criação automática aqui.'
+                                                    : 'Disponível somente para categorias ativas que aceitam serviços.'}
+                                            </div>
+                                        )}
+                                        <input
+                                            type="hidden"
+                                            name="is_default_for_appointments"
+                                            value="0"
+                                        />
+                                        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/70 bg-background/50 p-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                                            <input
+                                                type="checkbox"
+                                                name="is_default_for_appointments"
+                                                value="1"
+                                                defaultChecked={
+                                                    isDefaultCategory
+                                                }
+                                                disabled={
+                                                    !canManage ||
+                                                    !canBeAutomationCategory
+                                                }
+                                                className="mt-0.5 size-4 accent-primary"
+                                            />
+                                            <span className="space-y-0.5">
+                                                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                                                    <CheckCircle2
+                                                        aria-hidden="true"
+                                                        className="size-4 text-emerald-600"
+                                                    />
+                                                    Usar esta como categoria
+                                                    padrão
+                                                </span>
+                                                <span className="block text-xs leading-5 text-muted-foreground">
+                                                    Apenas uma categoria por
+                                                    unidade pode ser padrão.
+                                                    Marcar esta substitui a
+                                                    anterior.
+                                                </span>
+                                            </span>
+                                        </label>
+                                        {isDefaultCategory &&
+                                        automationEnabled ? (
+                                            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                                Esta categoria está ativa como
+                                                padrão para novos agendamentos.
+                                            </p>
+                                        ) : null}
                                     </div>
                                     {canManage ? (
                                         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">

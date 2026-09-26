@@ -2,6 +2,9 @@ import { Head, useHttp } from '@inertiajs/react';
 import {
     CheckCircle2,
     Clock3,
+    ChevronRight,
+    ArrowLeft,
+    CalendarDays,
     Instagram,
     MapPin,
     MessageCircle,
@@ -27,6 +30,14 @@ type Address = {
     state?: string;
     postal_code?: string;
 };
+type BookingAppearance = {
+    brand_name?: string | null;
+    headline?: string | null;
+    subheadline?: string | null;
+    primary_color?: string | null;
+    background_color?: string | null;
+    cta_label?: string | null;
+};
 type Unit = {
     tenant_slug: string;
     slug: string;
@@ -37,6 +48,13 @@ type Unit = {
     cover_image_url?: string | null;
     cover_url?: string | null;
     brand_color?: string | null;
+    template_key?: 'essential' | 'atelier-barber' | string | null;
+    logo_image_url?: string | null;
+    appearance?: BookingAppearance | null;
+    settings?: {
+        appearance?: BookingAppearance | null;
+        logo_image_url?: string | null;
+    } | null;
     contacts?: {
         phone?: string | null;
         whatsapp?: string | null;
@@ -44,7 +62,11 @@ type Unit = {
         facebook_url?: string | null;
         website_url?: string | null;
     };
-    gallery?: { url?: string | null; alt_text?: string | null }[];
+    gallery?: {
+        url?: string | null;
+        thumbnail_url?: string | null;
+        alt_text?: string | null;
+    }[];
     public_hours?: Record<
         string,
         {
@@ -56,6 +78,20 @@ type Unit = {
         }
     >;
     booking_flow?: 'service_first' | 'professional_first';
+    seo?: { title?: string | null; description?: string | null };
+    canonical_url?: string | null;
+    is_preview?: boolean;
+    sections?: Partial<
+        Record<
+            | 'hero'
+            | 'services'
+            | 'professionals'
+            | 'gallery'
+            | 'hours'
+            | 'contact',
+            boolean
+        >
+    >;
 };
 type Professional = { id: string; name: string; avatar_url?: string | null };
 type Service = {
@@ -64,6 +100,7 @@ type Service = {
     description: string | null;
     duration_minutes: number;
     image_url?: string | null;
+    thumbnail_url?: string | null;
     photo_url?: string | null;
     price_cents: number;
     professionals: Professional[];
@@ -91,6 +128,8 @@ type AppointmentData = {
     starts_at: string;
     name: string;
     phone: string;
+    email?: string;
+    notes?: string;
 };
 type AppointmentResponse = {
     appointment: { id: string; status: string };
@@ -110,6 +149,15 @@ const time = (iso: string, timezone: string): string =>
         minute: '2-digit',
         timeZone: timezone,
     }).format(new Date(iso));
+const formatDateTimeSlot = (iso: string, timezone: string): string => {
+    const formattedDate = new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        timeZone: timezone,
+    }).format(new Date(iso));
+
+    return `${formattedDate} às ${time(iso, timezone)}`;
+};
 const today = (): string => new Date().toISOString().slice(0, 10);
 const limit = (): string => {
     const date = new Date();
@@ -127,6 +175,54 @@ const addressLabel = (address: Address | null): string | null =>
               .filter(Boolean)
               .join(' — ')
         : null;
+const safeColor = (
+    value: string | null | undefined,
+    fallback: string,
+): string => (value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback);
+const errorText = (value: unknown): string | null => {
+    if (Array.isArray(value)) {
+        return value.length > 0 ? String(value[0]) : null;
+    }
+
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
+};
+type ResolvedBookingAppearance = Record<keyof BookingAppearance, string>;
+const resolveAppearance = (unit: Unit): ResolvedBookingAppearance => ({
+    brand_name:
+        unit.appearance?.brand_name?.trim() ||
+        unit.settings?.appearance?.brand_name?.trim() ||
+        unit.name,
+    headline:
+        unit.appearance?.headline?.trim() ||
+        unit.settings?.appearance?.headline?.trim() ||
+        'Agende seu horário.',
+    subheadline:
+        unit.appearance?.subheadline?.trim() ||
+        unit.settings?.appearance?.subheadline?.trim() ||
+        'Escolha um serviço para começar seu agendamento.',
+    primary_color: safeColor(
+        unit.appearance?.primary_color ??
+            unit.settings?.appearance?.primary_color ??
+            unit.brand_color,
+        unit.template_key === 'atelier-barber' ? '#d4af37' : '#2563eb',
+    ),
+    background_color: safeColor(
+        unit.appearance?.background_color ??
+            unit.settings?.appearance?.background_color,
+        unit.template_key === 'atelier-barber' ? '#0d0d0c' : '#f7f5f0',
+    ),
+    cta_label:
+        unit.appearance?.cta_label?.trim() ||
+        unit.settings?.appearance?.cta_label?.trim() ||
+        'Confirmar agendamento',
+});
+const appearanceStyle = (
+    appearance: ResolvedBookingAppearance,
+): React.CSSProperties =>
+    ({
+        '--booking-primary': appearance.primary_color,
+        '--booking-background': appearance.background_color,
+    }) as React.CSSProperties;
 const dayNames = [
     'Domingo',
     'Segunda-feira',
@@ -202,6 +298,7 @@ export default function PublicBooking({
     services,
     professionals = [],
 }: Props) {
+    const appearance = resolveAppearance(unit);
     const [tab, setTab] = useState<Tab>('details');
     const [serviceId, setServiceId] = useState('');
     const [professionalId, setProfessionalId] = useState('');
@@ -209,10 +306,17 @@ export default function PublicBooking({
     const [slot, setSlot] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+    const [bookingError, setBookingError] = useState<string | null>(null);
+    const [bookingErrorKind, setBookingErrorKind] = useState<
+        'catalog' | 'slot' | 'generic' | null
+    >(null);
     const [query, setQuery] = useState('');
     const getInitials = useInitials();
     const args = routeArgs(unit);
     const bookingFlow = unit.booking_flow ?? 'service_first';
+    const sectionEnabled = (
+        key: keyof NonNullable<Unit['sections']>,
+    ): boolean => unit.sections?.[key] !== false;
     const selectedService = useMemo(
         () => services.find((item) => item.id === serviceId) ?? null,
         [serviceId, services],
@@ -243,6 +347,8 @@ export default function PublicBooking({
         starts_at: '',
         name: '',
         phone: '',
+        email: '',
+        notes: '',
     });
     useEffect(() => {
         if (!serviceId || !professionalId || !date) {
@@ -262,7 +368,15 @@ export default function PublicBooking({
                     date,
                 },
             }),
-            { onError: () => setSlot('') },
+            {
+                onError: () => {
+                    setSlot('');
+                    setBookingError(
+                        'Não foi possível carregar os horários. Escolha outra data ou tente novamente.',
+                    );
+                    setBookingErrorKind('slot');
+                },
+            },
         ); // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date, professionalId, serviceId]);
     const chooseService = (id: string): void => {
@@ -274,6 +388,8 @@ export default function PublicBooking({
 
         setDate('');
         setSlot('');
+        setBookingError(null);
+        setBookingErrorKind(null);
         setTab('services');
         setSubmitted(false);
     };
@@ -281,6 +397,8 @@ export default function PublicBooking({
         setProfessionalId(id);
         setDate('');
         setSlot('');
+        setBookingError(null);
+        setBookingErrorKind(null);
     };
     const submit = async (
         event: React.FormEvent<HTMLFormElement>,
@@ -290,6 +408,20 @@ export default function PublicBooking({
         if (!slot) {
             return;
         }
+
+        appointmentRequest.transform((data) => {
+            const payload: Record<string, unknown> = { ...data };
+
+            if (!data.email?.trim()) {
+                delete payload.email;
+            }
+
+            if (!data.notes?.trim()) {
+                delete payload.notes;
+            }
+
+            return payload;
+        });
 
         appointmentRequest.setData((current) => ({
             ...current,
@@ -305,24 +437,179 @@ export default function PublicBooking({
                         : `${Date.now()}-${Math.random()}`,
             },
             onSuccess: (response) => {
+                setBookingError(null);
+                setBookingErrorKind(null);
                 setWhatsappUrl(response.whatsapp_url ?? null);
                 setSubmitted(true);
             },
+            onError: (errors) => {
+                const catalogError =
+                    errorText(errors.service_id) ||
+                    errorText(errors.professional_id);
+                const slotError = errorText(errors.starts_at);
+
+                if (catalogError) {
+                    setBookingError(
+                        catalogError ||
+                            'Este serviço ou profissional não está mais disponível para agendamento.',
+                    );
+                    setBookingErrorKind('catalog');
+                } else if (slotError) {
+                    setBookingError(
+                        slotError ||
+                            'Esse horário acabou de ficar indisponível. Escolha outro horário.',
+                    );
+                    setBookingErrorKind('slot');
+                    setSlot('');
+                } else {
+                    setBookingError(
+                        errorText(
+                            (errors as Record<string, unknown>).message,
+                        ) ||
+                            'Não foi possível concluir o agendamento. Revise os dados e tente novamente.',
+                    );
+                    setBookingErrorKind('generic');
+                }
+            },
         });
     };
-    const focusBooking = (): void => {
-        setTab('services');
-        window.setTimeout(() => {
-            document.getElementById('booking-flow')?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-            });
-        }, 0);
+    const recoverBookingError = (): void => {
+        setBookingError(null);
+        setBookingErrorKind(null);
+        setSlot('');
+
+        if (bookingErrorKind === 'catalog') {
+            setServiceId('');
+            setProfessionalId('');
+            setDate('');
+        }
     };
+    const rawContactPhone = unit.contacts?.whatsapp || unit.contacts?.phone;
+    const cleanPhone = rawContactPhone
+        ? rawContactPhone.replace(/\D/g, '')
+        : '';
+    const waPhone = cleanPhone
+        ? cleanPhone.length <= 11 && !cleanPhone.startsWith('55')
+            ? `55${cleanPhone}`
+            : cleanPhone
+        : '';
+
+    const formattedSlotDate = slot
+        ? new Intl.DateTimeFormat('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              timeZone: unit.timezone,
+          }).format(new Date(slot))
+        : '';
+    const formattedSlotTime = slot ? time(slot, unit.timezone) : '';
+
+    const preformattedWaMessage = [
+        `Olá! Acabei de agendar um horário em *${unit.name}*:`,
+        '',
+        `👤 *Cliente:* ${appointmentRequest.data.name || 'Cliente'}`,
+        `✂️ *Serviço:* ${selectedService?.name || 'Serviço'}`,
+        selectedProfessional
+            ? `💈 *Profissional:* ${selectedProfessional.name}`
+            : null,
+        formattedSlotDate ? `📅 *Data:* ${formattedSlotDate}` : null,
+        formattedSlotTime ? `⏰ *Horário:* ${formattedSlotTime}` : null,
+        '',
+        'Gostaria de confirmar o agendamento!',
+    ]
+        .filter((line): line is string => line !== null)
+        .join('\n');
+
+    const generatedWhatsappUrl = waPhone
+        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(preformattedWaMessage)}`
+        : null;
+
+    const finalWhatsappUrl = whatsappUrl || generatedWhatsappUrl;
+
+    if (unit.template_key === 'atelier-barber') {
+        return (
+            <AtelierBarberView
+                unit={unit}
+                appearance={appearance}
+                logoUrl={unit.logo_image_url ?? unit.settings?.logo_image_url}
+                services={services}
+                professionals={professionals}
+                selectedService={selectedService}
+                selectedProfessional={selectedProfessional}
+                serviceId={serviceId}
+                professionalId={professionalId}
+                date={date}
+                slot={slot}
+                query={query}
+                slots={availabilityRequest.response?.slots ?? []}
+                availabilityTimezone={
+                    availabilityRequest.response?.timezone ?? unit.timezone
+                }
+                customerName={appointmentRequest.data.name}
+                customerPhone={appointmentRequest.data.phone}
+                customerEmail={appointmentRequest.data.email ?? ''}
+                customerNotes={appointmentRequest.data.notes ?? ''}
+                processing={appointmentRequest.processing}
+                submitted={submitted}
+                bookingError={bookingError}
+                bookingErrorKind={bookingErrorKind}
+                finalWhatsappUrl={finalWhatsappUrl}
+                onQueryChange={setQuery}
+                onServiceChange={chooseService}
+                onProfessionalChange={chooseProfessional}
+                onDateChange={setDate}
+                onSlotChange={setSlot}
+                onCustomerChange={(field, value) =>
+                    appointmentRequest.setData(field, value)
+                }
+                onRecoverBookingError={recoverBookingError}
+                onSubmit={submit}
+            />
+        );
+    }
+
+    const scrollToStep = (elementId: string): void => {
+        if (tab !== 'services') {
+            setTab('services');
+        }
+
+        window.setTimeout(() => {
+            const el = document.getElementById(elementId);
+
+            if (el) {
+                el.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                });
+            }
+        }, 50);
+    };
+
+    const handleBottomBarAction = (): void => {
+        if (!selectedService) {
+            scrollToStep('booking-step-service');
+        } else if (!slot) {
+            scrollToStep('booking-step-datetime');
+        } else {
+            scrollToStep('booking-step-customer');
+            window.setTimeout(() => {
+                document.getElementById('name')?.focus();
+            }, 300);
+        }
+    };
+
+    const ctaLabel = !selectedService
+        ? 'Escolha o serviço'
+        : !slot
+          ? 'Escolher horário →'
+          : 'Finalizar agendamento →';
 
     if (submitted) {
         return (
-            <PublicShell unit={unit}>
+            <PublicShell
+                appearance={appearance}
+                logoUrl={unit.logo_image_url ?? unit.settings?.logo_image_url}
+            >
                 <Head title={`Agendamento confirmado · ${unit.name}`} />
                 <section className="mx-auto max-w-xl rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-sm dark:border-emerald-900 dark:bg-slate-900">
                     <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
@@ -337,14 +624,18 @@ export default function PublicBooking({
                         , às {time(slot, unit.timezone)}. Aguarde a confirmação
                         do profissional.
                     </p>
-                    {whatsappUrl ? (
-                        <Button asChild className="mt-6 w-full">
+                    {finalWhatsappUrl ? (
+                        <Button
+                            asChild
+                            className="mt-6 w-full bg-[#25D366] py-6 text-base font-bold text-black shadow-md hover:bg-[#20bd5a]"
+                        >
                             <a
-                                href={whatsappUrl}
+                                href={finalWhatsappUrl}
                                 target="_blank"
                                 rel="noreferrer"
+                                className="flex items-center justify-center gap-2"
                             >
-                                <MessageCircle />
+                                <MessageCircle className="size-5 fill-black/20" />
                                 Falar pelo WhatsApp
                             </a>
                         </Button>
@@ -360,13 +651,77 @@ export default function PublicBooking({
     }
 
     return (
-        <PublicShell unit={unit}>
-            <Head title={`Agendar · ${unit.name}`} />
+        <PublicShell
+            appearance={appearance}
+            logoUrl={unit.logo_image_url ?? unit.settings?.logo_image_url}
+        >
+            <Head title={unit.seo?.title || `Agendar · ${unit.name}`}>
+                <meta
+                    name="description"
+                    content={
+                        unit.seo?.description ||
+                        unit.description ||
+                        `Agende seu horário em ${unit.name}.`
+                    }
+                />
+                {unit.canonical_url ? (
+                    <link rel="canonical" href={unit.canonical_url} />
+                ) : null}
+                {unit.is_preview ? (
+                    <meta name="robots" content="noindex,nofollow,noarchive" />
+                ) : null}
+                {unit.cover_image_url ? (
+                    <meta property="og:image" content={unit.cover_image_url} />
+                ) : null}
+                <meta
+                    property="og:title"
+                    content={unit.seo?.title || unit.name}
+                />
+                <meta
+                    property="og:description"
+                    content={
+                        unit.seo?.description ||
+                        unit.description ||
+                        `Agende seu horário em ${unit.name}.`
+                    }
+                />
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'BeautySalon',
+                        name: unit.name,
+                        description:
+                            unit.seo?.description ||
+                            unit.description ||
+                            undefined,
+                        url: unit.canonical_url || undefined,
+                        image: unit.cover_image_url || undefined,
+                        telephone:
+                            unit.contacts?.phone ||
+                            unit.contacts?.whatsapp ||
+                            undefined,
+                        address: unit.address
+                            ? {
+                                  '@type': 'PostalAddress',
+                                  streetAddress: [
+                                      unit.address.street,
+                                      unit.address.number,
+                                  ]
+                                      .filter(Boolean)
+                                      .join(', '),
+                                  addressLocality: unit.address.city,
+                                  addressRegion: unit.address.state,
+                                  postalCode: unit.address.postal_code,
+                              }
+                            : undefined,
+                    })}
+                </script>
+            </Head>
             <div className="mx-auto max-w-6xl space-y-6">
                 <header
                     className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900"
                     style={{
-                        borderTopColor: unit.brand_color ?? '#2563eb',
+                        borderTopColor: appearance.primary_color,
                         borderTopWidth: '4px',
                     }}
                 >
@@ -376,7 +731,7 @@ export default function PublicBooking({
                                 Atendimento com hora marcada
                             </p>
                             <h1 className="mt-2 max-w-3xl font-display text-3xl leading-tight font-semibold tracking-[-0.04em] sm:text-4xl">
-                                {unit.name}
+                                {appearance.headline}
                             </h1>
                         </div>
                         <span
@@ -388,9 +743,9 @@ export default function PublicBooking({
                             {businessStatus.label}
                         </span>
                     </div>
-                    {unit.description && (
+                    {(unit.description || appearance.subheadline) && (
                         <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-                            {unit.description}
+                            {unit.description || appearance.subheadline}
                         </p>
                     )}
                     {address && (
@@ -407,29 +762,66 @@ export default function PublicBooking({
                     {(
                         [
                             ['details', 'Detalhes'],
-                            ['services', 'Serviços'],
-                            ['professionals', 'Profissionais'],
+                            ...(sectionEnabled('services')
+                                ? [['services', 'Serviços'] as [Tab, string]]
+                                : []),
+                            ...(sectionEnabled('professionals')
+                                ? [
+                                      ['professionals', 'Profissionais'] as [
+                                          Tab,
+                                          string,
+                                      ],
+                                  ]
+                                : []),
                             ['reviews', 'Avaliações'],
                         ] as [Tab, string][]
                     ).map(([key, label]) => (
                         <button
                             key={key}
                             type="button"
+                            role="tab"
+                            aria-selected={tab === key}
+                            aria-controls={`public-booking-panel-${key}`}
                             onClick={() => setTab(key)}
-                            className={`rounded-xl px-4 py-2.5 text-sm font-medium whitespace-nowrap transition ${tab === key ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950' : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}
+                            className={`rounded-xl px-4 py-2.5 text-sm font-medium whitespace-nowrap transition ${tab === key ? 'bg-foreground text-background' : 'text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white'}`}
                         >
                             {label}
                         </button>
                     ))}
                 </nav>
+                {bookingError ? (
+                    <div
+                        role="alert"
+                        className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                    >
+                        <p>{bookingError}</p>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0 border-amber-300 dark:border-amber-800"
+                            onClick={recoverBookingError}
+                        >
+                            {bookingErrorKind === 'catalog'
+                                ? 'Escolher outro serviço'
+                                : 'Escolher outro horário'}
+                        </Button>
+                    </div>
+                ) : null}
                 {tab === 'details' && (
-                    <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                    <section
+                        id="public-booking-panel-details"
+                        className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]"
+                    >
                         <div className="space-y-5">
                             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                                 {coverUrl ? (
                                     <img
                                         src={coverUrl}
                                         alt={`Imagem de ${unit.name}`}
+                                        width={1280}
+                                        height={640}
+                                        fetchPriority="high"
+                                        decoding="async"
                                         className="h-52 w-full object-cover sm:h-72"
                                     />
                                 ) : (
@@ -437,7 +829,7 @@ export default function PublicBooking({
                                         className="flex h-52 items-center justify-center text-white sm:h-72"
                                         style={{
                                             backgroundColor:
-                                                unit.brand_color ?? '#2563eb',
+                                                appearance.primary_color,
                                         }}
                                     >
                                         <Globe2
@@ -447,100 +839,147 @@ export default function PublicBooking({
                                     </div>
                                 )}
                             </div>
+                            {sectionEnabled('gallery') &&
+                            unit.gallery?.length ? (
+                                <InfoCard title="Galeria">
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                        {unit.gallery.map((image, index) => (
+                                            <a
+                                                key={`${image.url}-${index}`}
+                                                href={image.url ?? undefined}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="group block overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700"
+                                            >
+                                                <img
+                                                    src={
+                                                        image.thumbnail_url ??
+                                                        image.url ??
+                                                        undefined
+                                                    }
+                                                    alt={
+                                                        image.alt_text ??
+                                                        `Imagem ${index + 1} de ${unit.name}`
+                                                    }
+                                                    width={400}
+                                                    height={400}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    className="aspect-square w-full object-cover transition group-hover:scale-105"
+                                                />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </InfoCard>
+                            ) : null}
                             <InfoCard title="Sobre o espaço">
                                 <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                                     {unit.description ||
                                         'Conheça nosso espaço e escolha o melhor momento para seu atendimento.'}
                                 </p>
                             </InfoCard>
-                            <InfoCard title="Contato">
-                                <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                                    {unit.contacts?.phone && (
-                                        <p>Telefone: {unit.contacts.phone}</p>
-                                    )}
-                                    {unit.contacts?.whatsapp && (
-                                        <p className="flex items-center gap-2">
-                                            <MessageCircle className="size-4" />
-                                            WhatsApp: {unit.contacts.whatsapp}
-                                        </p>
-                                    )}
-                                    {unit.contacts?.instagram_url && (
-                                        <a
-                                            href={unit.contacts.instagram_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 underline-offset-4 hover:underline"
-                                        >
-                                            <Instagram className="size-4" />
-                                            Instagram
-                                        </a>
-                                    )}
-                                    {unit.contacts?.website_url && (
-                                        <a
-                                            href={unit.contacts.website_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 underline-offset-4 hover:underline"
-                                        >
-                                            Site
-                                        </a>
-                                    )}
-                                    {!unit.contacts?.phone &&
-                                        !unit.contacts?.whatsapp &&
-                                        !unit.contacts?.instagram_url &&
-                                        !unit.contacts?.website_url && (
-                                            <p>Contato ainda não informado.</p>
+                            {sectionEnabled('contact') && (
+                                <InfoCard title="Contato">
+                                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                                        {unit.contacts?.phone && (
+                                            <p>
+                                                Telefone: {unit.contacts.phone}
+                                            </p>
                                         )}
-                                </div>
-                            </InfoCard>
+                                        {unit.contacts?.whatsapp && (
+                                            <p className="flex items-center gap-2">
+                                                <MessageCircle className="size-4" />
+                                                WhatsApp:{' '}
+                                                {unit.contacts.whatsapp}
+                                            </p>
+                                        )}
+                                        {unit.contacts?.instagram_url && (
+                                            <a
+                                                href={
+                                                    unit.contacts.instagram_url
+                                                }
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 underline-offset-4 hover:underline"
+                                            >
+                                                <Instagram className="size-4" />
+                                                Instagram
+                                            </a>
+                                        )}
+                                        {unit.contacts?.website_url && (
+                                            <a
+                                                href={unit.contacts.website_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 underline-offset-4 hover:underline"
+                                            >
+                                                Site
+                                            </a>
+                                        )}
+                                        {!unit.contacts?.phone &&
+                                            !unit.contacts?.whatsapp &&
+                                            !unit.contacts?.instagram_url &&
+                                            !unit.contacts?.website_url && (
+                                                <p>
+                                                    Contato ainda não informado.
+                                                </p>
+                                            )}
+                                    </div>
+                                </InfoCard>
+                            )}
                         </div>
                         <div className="space-y-5">
-                            <InfoCard title="Horário de atendimento">
-                                <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                                    <span
-                                        className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
-                                    />
-                                    <span>{businessStatus.label}</span>
-                                </div>
-                                <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                                    {Object.entries(unit.public_hours ?? {})
-                                        .sort(
-                                            ([first], [second]) =>
-                                                Number(first) - Number(second),
-                                        )
-                                        .map(([day, hours]) => {
-                                            const start =
-                                                hours.starts_at ?? hours.start;
-                                            const end =
-                                                hours.ends_at ?? hours.end;
+                            {sectionEnabled('hours') && (
+                                <InfoCard title="Horário de atendimento">
+                                    <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+                                        <span
+                                            className={`size-2 rounded-full ${businessStatus.open ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                                        />
+                                        <span>{businessStatus.label}</span>
+                                    </div>
+                                    <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                                        {Object.entries(unit.public_hours ?? {})
+                                            .sort(
+                                                ([first], [second]) =>
+                                                    Number(first) -
+                                                    Number(second),
+                                            )
+                                            .map(([day, hours]) => {
+                                                const start =
+                                                    hours.starts_at ??
+                                                    hours.start;
+                                                const end =
+                                                    hours.ends_at ?? hours.end;
 
-                                            return hours.enabled !== false &&
-                                                start &&
-                                                end ? (
-                                                <p
-                                                    key={day}
-                                                    className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800"
-                                                >
-                                                    <span>
-                                                        {dayNames[
-                                                            Number(day)
-                                                        ] ?? day}
-                                                    </span>
-                                                    <span className="font-medium text-slate-950 dark:text-white">
-                                                        {start} – {end}
-                                                    </span>
-                                                </p>
-                                            ) : null;
-                                        })}
-                                    {!Object.keys(unit.public_hours ?? {})
-                                        .length && (
-                                        <p>
-                                            Consulte os horários disponíveis
-                                            durante o agendamento.
-                                        </p>
-                                    )}
-                                </div>
-                            </InfoCard>
+                                                return hours.enabled !==
+                                                    false &&
+                                                    start &&
+                                                    end ? (
+                                                    <p
+                                                        key={day}
+                                                        className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800"
+                                                    >
+                                                        <span>
+                                                            {dayNames[
+                                                                Number(day)
+                                                            ] ?? day}
+                                                        </span>
+                                                        <span className="font-medium text-slate-950 dark:text-white">
+                                                            {start} – {end}
+                                                        </span>
+                                                    </p>
+                                                ) : null;
+                                            })}
+                                        {!Object.keys(unit.public_hours ?? {})
+                                            .length && (
+                                            <p>
+                                                Consulte os horários disponíveis
+                                                durante o agendamento.
+                                            </p>
+                                        )}
+                                    </div>
+                                </InfoCard>
+                            )}
                             {address && (
                                 <InfoCard title="Onde estamos">
                                     <p className="flex gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -553,7 +992,10 @@ export default function PublicBooking({
                     </section>
                 )}
                 {tab === 'reviews' && (
-                    <InfoCard title="Avaliações">
+                    <InfoCard
+                        id="public-booking-panel-reviews"
+                        title="Avaliações"
+                    >
                         <div className="flex items-center gap-3">
                             <Star className="size-5 fill-amber-400 text-amber-400" />
                             <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -562,8 +1004,11 @@ export default function PublicBooking({
                         </div>
                     </InfoCard>
                 )}
-                {tab === 'professionals' && (
-                    <InfoCard title="Nossa equipe">
+                {tab === 'professionals' && sectionEnabled('professionals') && (
+                    <InfoCard
+                        id="public-booking-panel-professionals"
+                        title="Nossa equipe"
+                    >
                         <div className="grid gap-3 sm:grid-cols-2">
                             {(professionals.length
                                 ? professionals
@@ -601,14 +1046,15 @@ export default function PublicBooking({
                         </div>
                     </InfoCard>
                 )}
-                {tab === 'services' && (
+                {tab === 'services' && sectionEnabled('services') && (
                     <form
-                        id="booking-flow"
+                        id="public-booking-panel-services"
                         onSubmit={submit}
                         className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.75fr)]"
                     >
                         <div className="flex flex-col gap-5">
                             <InfoCard
+                                id="booking-step-service"
                                 className={
                                     bookingFlow === 'service_first'
                                         ? 'order-1'
@@ -639,15 +1085,19 @@ export default function PublicBooking({
                                                 }
                                                 className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${serviceId === service.id ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950' : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900'}`}
                                             >
-                                                {(service.image_url ||
-                                                    service.photo_url) && (
+                                                {(service.thumbnail_url ||
+                                                    service.image_url) && (
                                                     <img
                                                         src={
+                                                            service.thumbnail_url ||
                                                             service.image_url ||
-                                                            service.photo_url ||
                                                             undefined
                                                         }
                                                         alt=""
+                                                        width={56}
+                                                        height={56}
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         className="size-14 shrink-0 rounded-xl object-cover"
                                                     />
                                                 )}
@@ -743,7 +1193,10 @@ export default function PublicBooking({
                             </InfoCard>
                         </div>
                         <div className="space-y-5">
-                            <InfoCard title="Data e horário">
+                            <InfoCard
+                                id="booking-step-datetime"
+                                title="Data e horário"
+                            >
                                 <Label htmlFor="date">Data</Label>
                                 <Input
                                     id="date"
@@ -791,7 +1244,10 @@ export default function PublicBooking({
                                     </div>
                                 ) : null}
                             </InfoCard>
-                            <InfoCard title="Seus dados">
+                            <InfoCard
+                                id="booking-step-customer"
+                                title="Seus dados"
+                            >
                                 <div className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Nome</Label>
@@ -825,7 +1281,53 @@ export default function PublicBooking({
                                             disabled={!slot}
                                         />
                                     </div>
-                                    <Textarea className="hidden" name="notes" />
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">
+                                            E-mail{' '}
+                                            <span className="font-normal text-muted-foreground">
+                                                (opcional)
+                                            </span>
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={
+                                                appointmentRequest.data.email ??
+                                                ''
+                                            }
+                                            onChange={(event) =>
+                                                appointmentRequest.setData(
+                                                    'email',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            disabled={!slot}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="notes">
+                                            Observação{' '}
+                                            <span className="font-normal text-muted-foreground">
+                                                (opcional)
+                                            </span>
+                                        </Label>
+                                        <Textarea
+                                            id="notes"
+                                            maxLength={500}
+                                            value={
+                                                appointmentRequest.data.notes ??
+                                                ''
+                                            }
+                                            onChange={(event) =>
+                                                appointmentRequest.setData(
+                                                    'notes',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            disabled={!slot}
+                                            placeholder="Alguma informação para o atendimento?"
+                                        />
+                                    </div>
                                     <Button
                                         type="submit"
                                         className="w-full"
@@ -846,30 +1348,720 @@ export default function PublicBooking({
                         </div>
                     </form>
                 )}
-                <button
-                    type="button"
-                    onClick={focusBooking}
-                    className="fixed right-4 bottom-4 left-4 z-20 rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-xl transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-offset-2 sm:hidden"
-                    style={{ backgroundColor: unit.brand_color ?? '#111827' }}
-                >
-                    Agendar agora
-                </button>
+                {/* Bottom Bar Mobile Persistente e Inteligente */}
+                <div className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between border-t border-border bg-background/95 p-3.5 shadow-2xl backdrop-blur-md sm:hidden">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center pr-3">
+                        <span className="truncate text-xs font-bold text-foreground">
+                            {selectedService?.name || 'Selecione um serviço'}
+                        </span>
+                        <span className="truncate text-2xs text-muted-foreground">
+                            {selectedService ? (
+                                <>
+                                    <span>
+                                        {selectedService.duration_minutes} min
+                                    </span>
+                                    <span className="mx-1">·</span>
+                                    <span className="font-semibold text-foreground">
+                                        {money(selectedService.price_cents)}
+                                    </span>
+                                    {slot ? (
+                                        <>
+                                            <span className="mx-1">·</span>
+                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                                {formatDateTimeSlot(
+                                                    slot,
+                                                    unit.timezone,
+                                                )}
+                                            </span>
+                                        </>
+                                    ) : null}
+                                </>
+                            ) : (
+                                'Escolha o atendimento'
+                            )}
+                        </span>
+                    </div>
+                    <Button
+                        type="button"
+                        onClick={handleBottomBarAction}
+                        className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                        style={{
+                            backgroundColor: unit.brand_color ?? '#111827',
+                        }}
+                    >
+                        {appearance.cta_label || ctaLabel}
+                    </Button>
+                </div>
             </div>
         </PublicShell>
     );
 }
 
+type AtelierBarberViewProps = {
+    unit: Unit;
+    appearance: ResolvedBookingAppearance;
+    logoUrl?: string | null;
+    services: Service[];
+    professionals: Professional[];
+    selectedService: Service | null;
+    selectedProfessional?: Professional;
+    serviceId: string;
+    professionalId: string;
+    date: string;
+    slot: string;
+    query: string;
+    slots: { starts_at: string; ends_at: string }[];
+    availabilityTimezone: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    customerNotes: string;
+    processing: boolean;
+    submitted: boolean;
+    bookingError: string | null;
+    bookingErrorKind: 'catalog' | 'slot' | 'generic' | null;
+    finalWhatsappUrl: string | null;
+    onQueryChange: (value: string) => void;
+    onServiceChange: (id: string) => void;
+    onProfessionalChange: (id: string) => void;
+    onDateChange: (value: string) => void;
+    onSlotChange: (value: string) => void;
+    onCustomerChange: (
+        field: 'name' | 'phone' | 'email' | 'notes',
+        value: string,
+    ) => void;
+    onRecoverBookingError: () => void;
+    onSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
+};
+
+function AtelierBarberView({
+    unit,
+    appearance,
+    logoUrl,
+    services,
+    professionals,
+    selectedService,
+    selectedProfessional,
+    serviceId,
+    professionalId,
+    date,
+    slot,
+    query,
+    slots,
+    availabilityTimezone,
+    customerName,
+    customerPhone,
+    customerEmail,
+    customerNotes,
+    processing,
+    submitted,
+    bookingError,
+    bookingErrorKind,
+    finalWhatsappUrl,
+    onQueryChange,
+    onServiceChange,
+    onProfessionalChange,
+    onDateChange,
+    onSlotChange,
+    onCustomerChange,
+    onRecoverBookingError,
+    onSubmit,
+}: AtelierBarberViewProps) {
+    const activeStep = submitted
+        ? 4
+        : !serviceId
+          ? 1
+          : !professionalId
+            ? 2
+            : !slot
+              ? 3
+              : 4;
+    const serviceProfessionals = selectedService?.professionals.length
+        ? selectedService.professionals
+        : professionals;
+    const filteredServices = services.filter((service) =>
+        service.name.toLowerCase().includes(query.toLowerCase()),
+    );
+    const stepLabels = ['Serviços', 'Profissional', 'Horário', 'Confirmar'];
+
+    const goBack = (): void => {
+        if (activeStep === 2) {
+            onServiceChange('');
+        } else if (activeStep === 3) {
+            onProfessionalChange('');
+        } else if (activeStep === 4) {
+            onSlotChange('');
+        }
+    };
+
+    const selectedSummary = selectedService ? (
+        <div className="flex items-center justify-between gap-3 border-t border-[#373229] pt-4 font-['DM_Sans'] text-xs text-[#a9a39a]">
+            <span className="min-w-0 truncate">
+                {selectedService.name} · {selectedService.duration_minutes} min
+            </span>
+            <span className="shrink-0 font-['Space_Grotesk'] font-semibold text-[#d4af37]">
+                {money(selectedService.price_cents)}
+            </span>
+        </div>
+    ) : null;
+
+    const stepCta =
+        activeStep === 1
+            ? 'Escolher profissional'
+            : activeStep === 2
+              ? 'Escolher horário'
+              : activeStep === 3
+                ? 'Continuar'
+                : appearance.cta_label;
+
+    return (
+        <main
+            className="mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30"
+            style={appearanceStyle(appearance)}
+        >
+            <Head title={`Agendar · ${unit.name}`}>
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link
+                    rel="preconnect"
+                    href="https://fonts.gstatic.com"
+                    crossOrigin="anonymous"
+                />
+                <link
+                    rel="stylesheet"
+                    href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Manrope:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+                />
+            </Head>
+            <div className="w-full">
+                <header className="fixed top-0 right-0 left-0 z-40 mx-auto flex h-16 w-full max-w-[390px] items-center justify-between border-b border-[#4d4635]/20 bg-[#0e0e0e]/95 px-4 shadow-[0_12px_36px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+                    <div className="flex items-center justify-between gap-4">
+                        {activeStep > 1 && !submitted ? (
+                            <button
+                                type="button"
+                                onClick={goBack}
+                                className="flex size-9 items-center justify-center rounded-full border border-[#4d4635]/30 bg-[#1f2020] text-[#d4af37] transition hover:border-[#d4af37] hover:text-[#d4af37]"
+                                aria-label="Voltar"
+                            >
+                                <ArrowLeft className="size-4" />
+                            </button>
+                        ) : (
+                            <span className="size-9" />
+                        )}
+                        <div className="text-center">
+                            {logoUrl ? (
+                                <img
+                                    src={logoUrl}
+                                    alt={appearance.brand_name}
+                                    className="mx-auto max-h-10 max-w-36 object-contain"
+                                />
+                            ) : (
+                                <p className="font-['Bodoni_Moda'] text-[18px] font-semibold tracking-[0.2em] text-[#ffe9b0] uppercase">
+                                    {appearance.brand_name}
+                                </p>
+                            )}
+                            <p className="mt-0.5 font-['Manrope'] text-[9px] tracking-[0.18em] text-[#e9c176] uppercase">
+                                agendamento online
+                            </p>
+                        </div>
+                        <span className="flex size-9 items-center justify-center rounded border border-[#d4af37]/30 bg-[#d4af37]/10 font-['Manrope'] text-[10px] font-semibold text-[#ffe9b0]">
+                            {activeStep}/4
+                        </span>
+                    </div>
+                    <div className="hidden" />
+                </header>
+                <div className="px-4 pt-20">
+                    <div className="mb-5 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 font-['Manrope'] text-[10px] font-bold tracking-[0.16em] text-[#ffe9b0] uppercase">
+                                <span className="size-1.5 rounded-full bg-[#d4af37]" />
+                                Etapa {activeStep} de 4 ·{' '}
+                                {stepLabels[activeStep - 1]}
+                            </span>
+                            <span className="font-['Manrope'] text-[10px] tracking-widest text-[#a69e94] uppercase">
+                                {activeStep * 25}% concluído
+                            </span>
+                        </div>
+                        <div className="h-1 overflow-hidden rounded-full bg-[#353535]">
+                            <div
+                                className="h-full rounded-full bg-[#d4af37] shadow-[0_0_8px_rgba(242,202,80,0.5)] transition-all duration-500"
+                                style={{ width: `${activeStep * 25}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+                {bookingError ? (
+                    <div
+                        role="alert"
+                        className="mx-4 mb-4 flex flex-col gap-3 rounded-xl border border-[#8b6530] bg-[#2b2114] p-4 font-['DM_Sans'] text-xs leading-5 text-[#f3dca4]"
+                    >
+                        <p>{bookingError}</p>
+                        <button
+                            type="button"
+                            onClick={onRecoverBookingError}
+                            className="self-start rounded-lg border border-[#d4af37]/60 px-3 py-2 font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase transition hover:bg-[#d4af37]/10"
+                        >
+                            {bookingErrorKind === 'catalog'
+                                ? 'Escolher outro serviço'
+                                : 'Escolher outro horário'}
+                        </button>
+                    </div>
+                ) : null}
+                {submitted ? (
+                    <section className="rounded-xl border border-[#d4af37]/30 bg-[#1a181c] p-7 text-center shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-10">
+                        <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
+                            <CheckCircle2 className="size-8 text-[#d4af37]" />
+                        </div>
+                        <p className="mt-6 font-['Manrope'] text-[10px] font-semibold tracking-[0.24em] text-[#d4af37] uppercase">
+                            Agendamento confirmado
+                        </p>
+                        <h2 className="mt-3 font-['Bodoni_Moda'] text-4xl text-[#f8f2e8]">
+                            Até breve.
+                        </h2>
+                        <p className="mx-auto mt-3 max-w-sm font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
+                            {selectedService?.name}{' '}
+                            {selectedProfessional
+                                ? `com ${selectedProfessional.name}`
+                                : ''}
+                            <br />
+                            {slot
+                                ? formatDateTimeSlot(slot, unit.timezone)
+                                : ''}
+                            .
+                        </p>
+                        {finalWhatsappUrl ? (
+                            <a
+                                href={finalWhatsappUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-7 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#d4af37] px-5 font-['Space_Grotesk'] text-sm font-bold text-[#17140d] transition hover:bg-[#edca55] focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171612]"
+                            >
+                                <MessageCircle className="size-4" /> Falar pelo
+                                WhatsApp
+                            </a>
+                        ) : null}
+                    </section>
+                ) : (
+                    <form onSubmit={onSubmit} className="space-y-5 px-4">
+                        {activeStep === 1 ? (
+                            <section className="overflow-hidden bg-[#131313]">
+                                {unit.cover_image_url || unit.cover_url ? (
+                                    <div className="relative h-32 overflow-hidden">
+                                        <img
+                                            src={
+                                                unit.cover_image_url ??
+                                                unit.cover_url ??
+                                                undefined
+                                            }
+                                            alt=""
+                                            className="size-full object-cover opacity-55"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/95 via-[#0e0e0e]/65 to-transparent" />
+                                    </div>
+                                ) : null}
+                                <div className="pt-5">
+                                    <p className="font-['Manrope'] text-[10px] font-bold tracking-[0.18em] text-[#e9c176] uppercase">
+                                        {appearance.brand_name}
+                                    </p>
+                                    <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] tracking-[0.04em] text-[#fdfbf7]">
+                                        {appearance.headline ||
+                                            'O que você quer fazer hoje?'}
+                                    </h1>
+                                    <p className="mt-2 font-['Manrope'] text-sm leading-6 text-[#d0c5af]">
+                                        {appearance.subheadline ||
+                                            'Escolha um ou mais serviços para o seu atendimento.'}
+                                    </p>
+                                    <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+                                        {[
+                                            'Todos',
+                                            'Cabelo',
+                                            'Barba',
+                                            'Cuidados',
+                                        ].map((category) => (
+                                            <button
+                                                type="button"
+                                                key={category}
+                                                onClick={() =>
+                                                    category === 'Todos' &&
+                                                    onQueryChange('')
+                                                }
+                                                className={`shrink-0 rounded-full px-4 py-2 font-['Manrope'] text-xs font-semibold transition ${!query && category === 'Todos' ? 'bg-[#ffe9b0] text-[#261900]' : 'bg-[#1f2020] text-[#d0c5af] hover:bg-[#353535]'}`}
+                                            >
+                                                {category}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="mt-7 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-px w-4 bg-[#e9c176]" />
+                                            <span className="font-['Manrope'] text-[10px] font-bold tracking-[0.2em] text-[#e9c176] uppercase">
+                                                Mais escolhidos
+                                            </span>
+                                        </div>
+                                        <span className="font-['Manrope'] text-[10px] tracking-widest text-[#a69e94]">
+                                            Seleção múltipla
+                                        </span>
+                                    </div>
+                                    <div className="mt-3 grid gap-3">
+                                        {filteredServices.map((service) => (
+                                            <button
+                                                type="button"
+                                                key={service.id}
+                                                onClick={() =>
+                                                    onServiceChange(service.id)
+                                                }
+                                                aria-pressed={
+                                                    serviceId === service.id
+                                                }
+                                                className={`flex min-h-[122px] items-center gap-3 rounded-xl border p-4 text-left shadow-[0_4px_20px_rgba(5,4,3,0.55)] transition ${serviceId === service.id ? 'border-[#d4af37]/40 bg-[#353535]' : 'border-transparent bg-[#1f1f1f] hover:border-[#8b7635]'}`}
+                                            >
+                                                {service.thumbnail_url ||
+                                                service.image_url ? (
+                                                    <img
+                                                        src={
+                                                            service.thumbnail_url ||
+                                                            service.image_url ||
+                                                            undefined
+                                                        }
+                                                        alt=""
+                                                        className="size-14 shrink-0 rounded-lg object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-[#4a4332]">
+                                                        <Star className="size-4 text-[#d4af37]" />
+                                                    </span>
+                                                )}
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block truncate font-['Bodoni_Moda'] text-lg font-semibold text-[#fdfbf7]">
+                                                        {service.name}
+                                                    </span>
+                                                    <span className="mt-1 flex items-center gap-2 font-['Manrope'] text-xs text-[#d0c5af]">
+                                                        <Clock3 className="size-3" />
+                                                        {
+                                                            service.duration_minutes
+                                                        }{' '}
+                                                        min
+                                                    </span>
+                                                </span>
+                                                <span className="font-['Plus_Jakarta_Sans'] text-base font-extrabold text-[#ffe9b0]">
+                                                    {money(service.price_cents)}
+                                                </span>
+                                                <span
+                                                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${serviceId === service.id ? 'bg-[#ffe9b0] text-[#261900] shadow-[0_0_8px_rgba(242,202,80,0.5)]' : 'bg-[#353535] text-[#d0c5af]'}`}
+                                                >
+                                                    {serviceId ===
+                                                    service.id ? (
+                                                        <CheckCircle2 className="size-5" />
+                                                    ) : (
+                                                        <span className="text-xl leading-none">
+                                                            +
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+                        ) : null}
+
+                        {activeStep === 2 ? (
+                            <section className="bg-[#131313] p-0">
+                                <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
+                                    Seu serviço
+                                </p>
+                                <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
+                                    Com quem você{' '}
+                                    <em className="text-[#d4af37]">prefere?</em>
+                                </h1>
+                                <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
+                                    Escolha o profissional que cuidará do seu
+                                    atendimento.
+                                </p>
+                                <div className="mt-6 grid gap-3">
+                                    {serviceProfessionals.map((person) => (
+                                        <button
+                                            type="button"
+                                            key={person.id}
+                                            disabled={!serviceId}
+                                            onClick={() =>
+                                                onProfessionalChange(person.id)
+                                            }
+                                            aria-pressed={
+                                                professionalId === person.id
+                                            }
+                                            className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${professionalId === person.id ? 'border-[#d4af37] bg-[#282317]' : 'border-[#39362f] bg-[#1d1b17] hover:border-[#8b7635]'}`}
+                                        >
+                                            <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-[#302c22] font-['DM_Sans'] text-xs font-semibold text-[#d4af37]">
+                                                {person.avatar_url ? (
+                                                    <img
+                                                        src={person.avatar_url}
+                                                        alt=""
+                                                        className="size-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <UserRound className="size-4" />
+                                                )}
+                                            </span>
+                                            <span className="min-w-0 flex-1 font-['DM_Sans'] text-sm font-medium text-[#eee7dc]">
+                                                {person.name}
+                                                <span className="mt-1 block font-['Space_Grotesk'] text-[10px] tracking-wide text-[#8f887b]">
+                                                    Atendimento presencial
+                                                </span>
+                                            </span>
+                                            {professionalId === person.id ? (
+                                                <CheckCircle2 className="size-4 shrink-0 text-[#d4af37]" />
+                                            ) : null}
+                                        </button>
+                                    ))}
+                                </div>
+                                {selectedSummary}
+                            </section>
+                        ) : null}
+
+                        {activeStep === 3 ? (
+                            <section className="bg-[#131313] p-0">
+                                <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
+                                    Escolha do horário
+                                </p>
+                                <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
+                                    Encontre o melhor{' '}
+                                    <em className="text-[#d4af37]">momento.</em>
+                                </h1>
+                                <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
+                                    Reserve um horário disponível para você.
+                                </p>
+                                <div className="mt-6 grid gap-4">
+                                    <label className="flex h-12 items-center gap-2 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-3 focus-within:border-[#d4af37]">
+                                        <CalendarDays className="size-4 text-[#d4af37]" />
+                                        <span className="sr-only">Data</span>
+                                        <input
+                                            type="date"
+                                            value={date}
+                                            min={today()}
+                                            max={limit()}
+                                            disabled={!professionalId}
+                                            onChange={(event) =>
+                                                onDateChange(event.target.value)
+                                            }
+                                            className="w-full bg-transparent font-['DM_Sans'] text-sm text-[#f4efe6] [color-scheme:dark] outline-none"
+                                        />
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                        {slots.map((item) => (
+                                            <button
+                                                type="button"
+                                                key={item.starts_at}
+                                                onClick={() =>
+                                                    onSlotChange(item.starts_at)
+                                                }
+                                                className={`rounded-lg border px-2 py-2.5 font-['Space_Grotesk'] text-xs font-semibold transition ${slot === item.starts_at ? 'border-[#d4af37] bg-[#d4af37] text-[#17140d]' : 'border-[#39362f] bg-[#1d1b17] text-[#d6cfc2] hover:border-[#8b7635]'}`}
+                                            >
+                                                {time(
+                                                    item.starts_at,
+                                                    availabilityTimezone,
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {professionalId && date && !slots.length ? (
+                                    <p className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]">
+                                        Nenhum horário disponível para esta
+                                        data.
+                                    </p>
+                                ) : null}
+                                {selectedSummary}
+                            </section>
+                        ) : null}
+
+                        {activeStep === 4 ? (
+                            <section className="bg-[#131313] p-0">
+                                <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
+                                    Revise os detalhes
+                                </p>
+                                <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
+                                    Confirme seu{' '}
+                                    <em className="text-[#d4af37]">
+                                        agendamento.
+                                    </em>
+                                </h1>
+                                <div className="mt-6 rounded-xl border border-[#39362f] bg-[#0f0f0d] p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                Serviço
+                                            </p>
+                                            <p className="mt-1 font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
+                                                {selectedService?.name}
+                                            </p>
+                                        </div>
+                                        <p className="font-['Space_Grotesk'] text-sm font-semibold text-[#d4af37]">
+                                            {selectedService
+                                                ? money(
+                                                      selectedService.price_cents,
+                                                  )
+                                                : ''}
+                                        </p>
+                                    </div>
+                                    <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#373229] pt-4">
+                                        <div>
+                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                Profissional
+                                            </p>
+                                            <p className="mt-1 truncate font-['DM_Sans'] text-xs text-[#d6cfc2]">
+                                                {selectedProfessional?.name}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                Data e hora
+                                            </p>
+                                            <p className="mt-1 font-['DM_Sans'] text-xs text-[#d6cfc2]">
+                                                {slot
+                                                    ? formatDateTimeSlot(
+                                                          slot,
+                                                          unit.timezone,
+                                                      )
+                                                    : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-5 grid gap-3">
+                                    <label
+                                        className="sr-only"
+                                        htmlFor="atelier-name"
+                                    >
+                                        Nome
+                                    </label>
+                                    <input
+                                        id="atelier-name"
+                                        value={customerName}
+                                        onChange={(event) =>
+                                            onCustomerChange(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
+                                        disabled={!slot}
+                                        required
+                                        placeholder="Seu nome"
+                                        className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                    />
+                                    <label
+                                        className="sr-only"
+                                        htmlFor="atelier-email"
+                                    >
+                                        E-mail (opcional)
+                                    </label>
+                                    <input
+                                        id="atelier-email"
+                                        type="email"
+                                        value={customerEmail}
+                                        onChange={(event) =>
+                                            onCustomerChange(
+                                                'email',
+                                                event.target.value,
+                                            )
+                                        }
+                                        disabled={!slot}
+                                        placeholder="E-mail (opcional)"
+                                        className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                    />
+                                    <label
+                                        className="sr-only"
+                                        htmlFor="atelier-notes"
+                                    >
+                                        Observação (opcional)
+                                    </label>
+                                    <textarea
+                                        id="atelier-notes"
+                                        value={customerNotes}
+                                        maxLength={500}
+                                        onChange={(event) =>
+                                            onCustomerChange(
+                                                'notes',
+                                                event.target.value,
+                                            )
+                                        }
+                                        disabled={!slot}
+                                        placeholder="Observação (opcional)"
+                                        rows={3}
+                                        className="rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 py-3 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                    />
+                                    <label
+                                        className="sr-only"
+                                        htmlFor="atelier-phone"
+                                    >
+                                        Telefone
+                                    </label>
+                                    <input
+                                        id="atelier-phone"
+                                        value={customerPhone}
+                                        onChange={(event) =>
+                                            onCustomerChange(
+                                                'phone',
+                                                event.target.value,
+                                            )
+                                        }
+                                        disabled={!slot}
+                                        required
+                                        placeholder="WhatsApp / telefone"
+                                        className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                    />
+                                </div>
+                            </section>
+                        ) : null}
+                        <button
+                            type="submit"
+                            onClick={(event) => {
+                                if (activeStep < 4) {
+                                    event.preventDefault();
+                                }
+                            }}
+                            disabled={
+                                activeStep === 1
+                                    ? !serviceId
+                                    : activeStep === 2
+                                      ? !professionalId
+                                      : activeStep === 3
+                                        ? !slot
+                                        : !customerName ||
+                                          !customerPhone ||
+                                          processing
+                            }
+                            className="fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-[390px] items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40"
+                            style={{
+                                backgroundColor: 'var(--booking-primary)',
+                            }}
+                        >
+                            {processing ? 'Confirmando…' : stepCta}
+                            <ChevronRight className="size-4" />
+                        </button>
+                    </form>
+                )}
+                <footer className="mt-10 text-center font-['DM_Sans'] text-[11px] text-[#6f6a61]">
+                    Seus dados são usados somente para organizar este
+                    atendimento.
+                </footer>
+            </div>
+        </main>
+    );
+}
+
 function InfoCard({
+    id,
     className,
     title,
     children,
 }: {
+    id?: string;
     className?: string;
     title: string;
     children: React.ReactNode;
 }) {
     return (
         <section
+            id={id}
             className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 dark:border-slate-800 dark:bg-slate-900 ${className ?? ''}`}
         >
             <h2 className="font-display text-xl font-semibold text-slate-950 dark:text-white">
@@ -880,18 +2072,31 @@ function InfoCard({
     );
 }
 function PublicShell({
-    unit,
+    appearance,
+    logoUrl,
     children,
 }: {
-    unit: Unit;
+    appearance: ResolvedBookingAppearance;
+    logoUrl?: string | null;
     children: React.ReactNode;
 }) {
     return (
-        <main className="min-h-dvh bg-[#f7f5f0] px-4 py-5 text-slate-950 sm:px-6 sm:py-8 dark:bg-slate-950 dark:text-white">
+        <main
+            className="min-h-dvh bg-[var(--booking-background)] px-4 pt-5 pb-24 text-slate-950 sm:px-6 sm:py-8 dark:text-white"
+            style={appearanceStyle(appearance)}
+        >
             <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between">
-                <span className="font-display text-lg font-semibold tracking-tight">
-                    {unit.name}
-                </span>
+                {logoUrl ? (
+                    <img
+                        src={logoUrl}
+                        alt={appearance.brand_name}
+                        className="max-h-10 max-w-40 object-contain"
+                    />
+                ) : (
+                    <span className="font-display text-lg font-semibold tracking-tight">
+                        {appearance.brand_name}
+                    </span>
+                )}
                 <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                     Agendamento online
                 </span>

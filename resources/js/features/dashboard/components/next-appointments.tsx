@@ -1,16 +1,21 @@
 import { Clock3 } from 'lucide-react';
 import type { AppointmentSummary } from '../types';
+import { DashboardPanel } from './dashboard-panel';
+import { EmptyState } from './empty-state';
 
 const statusLabel: Record<AppointmentSummary['status'], string> = {
+    scheduled: 'Agendado',
     confirmed: 'Confirmado',
-    waiting: 'Aguardando',
-    'in-service': 'Em atendimento',
+    checked_in: 'Aguardando',
+    in_service: 'Em atendimento',
 };
 
 const statusClass: Record<AppointmentSummary['status'], string> = {
+    scheduled: 'bg-muted text-muted-foreground',
     confirmed: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200',
-    waiting: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
-    'in-service':
+    checked_in:
+        'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
+    in_service:
         'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200',
 };
 
@@ -20,29 +25,17 @@ export function NextAppointments({
     appointments: AppointmentSummary[];
 }) {
     return (
-        <section
-            className="surface-panel min-w-0 overflow-hidden"
-            aria-labelledby="appointments-title"
+        <DashboardPanel
+            title="Próximos atendimentos"
+            eyebrow="Agenda"
+            description="Acompanhe os próximos horários e o status de cada atendimento."
         >
-            <header className="border-b border-border px-5 py-4 sm:px-6">
-                <div>
-                    <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-                        Agenda
-                    </p>
-                    <h2
-                        id="appointments-title"
-                        className="mt-1 text-lg font-semibold tracking-tight text-foreground"
-                    >
-                        Próximos atendimentos
-                    </h2>
-                </div>
-            </header>
             {appointments.length > 0 ? (
                 <ol className="divide-y divide-border">
                     {appointments.map((appointment) => (
                         <li
                             key={appointment.id}
-                            className="grid min-h-20 grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:px-6"
+                            className="grid min-h-20 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 px-4 py-3 sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:px-6"
                         >
                             <span className="flex items-center gap-1.5 font-mono text-sm font-semibold text-foreground">
                                 <Clock3
@@ -61,19 +54,17 @@ export function NextAppointments({
                                 </span>
                             </span>
                             <span
-                                className={`hidden rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex ${statusClass[appointment.status]}`}
+                                className={`col-start-2 w-fit rounded-full px-2 py-1 text-2xs font-semibold sm:col-start-auto sm:px-2.5 sm:text-xs ${statusClass[appointment.status] ?? statusClass.scheduled}`}
                             >
-                                {statusLabel[appointment.status]}
+                                {statusLabel[appointment.status] ??
+                                    statusLabel.scheduled}
                             </span>
                         </li>
                     ))}
                 </ol>
             ) : (
-                <p className="px-5 py-8 text-sm text-muted-foreground sm:px-6">
-                    Nenhum atendimento disponível ainda. A agenda conectada
-                    aparecerá nesta área.
-                </p>
+                <EmptyState message="Nenhum próximo atendimento no período." />
             )}
-        </section>
+        </DashboardPanel>
     );
 }

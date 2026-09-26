@@ -37,7 +37,7 @@ final class UpdateCustomerCommunicationPreference extends OperationalAction
                 ->where('channel', $data['channel'])
                 ->lockForUpdate()
                 ->first();
-            $attributes = ['opted_in' => $optedIn, 'source' => $data['source'] ?? 'staff', 'consented_at' => $optedIn ? now() : ($preference?->consented_at), 'revoked_at' => $optedIn ? null : now(), 'lock_version' => ($preference?->lock_version ?? 0) + 1];
+            $attributes = ['opted_in' => $optedIn, 'source' => $data['source'] ?? 'staff', 'consented_at' => $optedIn ? now() : ($preference?->consented_at), 'revoked_at' => $optedIn ? null : now(), 'lock_version' => ($preference === null ? 0 : $preference->lock_version) + 1];
             if ($preference === null) {
                 $preference = CustomerCommunicationPreference::query()->create(['id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'channel' => $data['channel'], ...$attributes]);
             } else {

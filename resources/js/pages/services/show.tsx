@@ -1,5 +1,12 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Clock3, Scissors, UsersRound } from 'lucide-react';
+import {
+    ArrowLeft,
+    Clock3,
+    Plus,
+    Search,
+    Scissors,
+    UsersRound,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -27,6 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import professionals from '@/routes/professionals';
 import services from '@/routes/services';
 import type { SharedPageProps } from '@/types';
 
@@ -41,7 +49,7 @@ type Service = {
     id: string;
     lock_version: number;
     name: string;
-    photo_url?: string | null;
+    image_url?: string | null;
     price_cents: number;
     professionals: ProfessionalSummary[];
     status: ResourceStatus;
@@ -100,8 +108,18 @@ export default function ServiceShow({
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [hasImageError, setHasImageError] = useState(false);
+    const [professionalsDialogOpen, setProfessionalsDialogOpen] =
+        useState(false);
+    const [professionalSearch, setProfessionalSearch] = useState('');
+    const [selectedProfessionalIds, setSelectedProfessionalIds] = useState(() =>
+        service.professionals.map((professional) => professional.id),
+    );
+    const [draftProfessionalIds, setDraftProfessionalIds] = useState<string[]>(
+        [],
+    );
     const [selectedPhoto, setSelectedPhoto] = useState<File | string | null>(
-        service.photo_url ?? null,
+        service.image_url ?? null,
     );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
@@ -110,6 +128,35 @@ export default function ServiceShow({
     const hasProfessionalOptions =
         professionalOptions !== undefined ||
         options?.professionals !== undefined;
+    const filteredProfessionals = availableProfessionals.filter(
+        (professional) =>
+            professional.name
+                .toLocaleLowerCase()
+                .includes(professionalSearch.toLocaleLowerCase()),
+    );
+    const displayedProfessionals = hasProfessionalOptions
+        ? availableProfessionals.filter((professional) =>
+              selectedProfessionalIds.includes(professional.id),
+          )
+        : service.professionals;
+
+    function openProfessionalsDialog(): void {
+        setDraftProfessionalIds(selectedProfessionalIds);
+        setProfessionalSearch('');
+        setProfessionalsDialogOpen(true);
+    }
+
+    function cancelProfessionalsDialog(): void {
+        setDraftProfessionalIds(selectedProfessionalIds);
+        setProfessionalSearch('');
+        setProfessionalsDialogOpen(false);
+    }
+
+    function applyProfessionalSelection(): void {
+        setSelectedProfessionalIds(draftProfessionalIds);
+        setProfessionalsDialogOpen(false);
+        setProfessionalSearch('');
+    }
 
     return (
         <>
@@ -143,6 +190,7 @@ export default function ServiceShow({
                         </div>
                         <Form
                             {...services.update.form(service.id)}
+                            id="service-update-form"
                             headers={{ 'X-Idempotency-Key': updateKey }}
                             className="space-y-5"
                         >
@@ -161,8 +209,7 @@ export default function ServiceShow({
                                                     onChange={setSelectedPhoto}
                                                     disabled={!canManage}
                                                     error={errors.photo}
-                                                    aspectRatio="auto"
-                                                    previewHeight="140px"
+                                                    aspectRatio="video"
                                                 />
                                             </FormField>
                                         </div>
@@ -251,42 +298,27 @@ export default function ServiceShow({
                                             </FormField>
                                         </div>
                                     </div>
-                                    {hasProfessionalOptions ? (
-                                        <div className="space-y-2">
-                                            <p className="text-sm font-medium text-foreground">
-                                                Profissionais habilitados
-                                            </p>
-                                            <RelationCheckboxes
-                                                name="professional_ids"
-                                                options={availableProfessionals}
-                                                selectedIds={service.professionals.map(
-                                                    (professional) =>
-                                                        professional.id,
-                                                )}
-                                                disabled={!canManage}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {service.professionals.map(
-                                                (professional) => (
-                                                    <input
-                                                        key={professional.id}
-                                                        type="hidden"
-                                                        name="professional_ids[]"
-                                                        value={professional.id}
-                                                    />
-                                                ),
-                                            )}
-                                            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                                                Os vínculos atuais são
-                                                preservados ao salvar. A seleção
-                                                ficará disponível quando as
-                                                opções da unidade forem
-                                                carregadas.
-                                            </p>
-                                        </>
-                                    )}
+                                    {(hasProfessionalOptions
+                                        ? selectedProfessionalIds
+                                        : service.professionals.map(
+                                              (professional) => professional.id,
+                                          )
+                                    ).map((professionalId) => (
+                                        <input
+                                            key={professionalId}
+                                            type="hidden"
+                                            name="professional_ids[]"
+                                            value={professionalId}
+                                        />
+                                    ))}
+                                    {!hasProfessionalOptions ? (
+                                        <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                            Os vínculos atuais são preservados
+                                            ao salvar. A seleção ficará
+                                            disponível quando as opções da
+                                            unidade forem carregadas.
+                                        </p>
+                                    ) : null}
                                     {canManage ? (
                                         <>
                                             <input
@@ -318,12 +350,13 @@ export default function ServiceShow({
                             <h2 className="text-base font-semibold">
                                 Resumo operacional
                             </h2>
-                            {service.photo_url ? (
+                            {!hasImageError && service.image_url ? (
                                 <div className="mt-4 overflow-hidden rounded-xl border border-border">
                                     <img
-                                        src={service.photo_url}
+                                        src={service.image_url}
                                         alt={service.name}
-                                        className="h-40 w-full object-cover"
+                                        className="aspect-video max-h-72 w-full bg-muted/30 object-contain sm:max-h-80"
+                                        onError={() => setHasImageError(true)}
                                     />
                                 </div>
                             ) : null}
@@ -376,19 +409,164 @@ export default function ServiceShow({
                             </div>
                         </section>
                         <section className="surface-panel p-5 sm:p-6">
-                            <h2 className="text-base font-semibold">
-                                Profissionais habilitados
-                            </h2>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                Somente estes profissionais devem aparecer para
-                                este serviço.
-                            </p>
-                            <div className="mt-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h2 className="text-base font-semibold">
+                                        Profissionais habilitados
+                                    </h2>
+                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                        Somente estes profissionais devem
+                                        aparecer para este serviço.
+                                    </p>
+                                </div>
+                                <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+                                    {displayedProfessionals.length}
+                                </span>
+                            </div>
+                            <div className="mt-5 space-y-3">
                                 <RelationList
-                                    items={service.professionals}
+                                    items={displayedProfessionals}
                                     emptyLabel="Nenhum profissional vinculado"
                                 />
+                                {canManage && hasProfessionalOptions ? (
+                                    <Dialog
+                                        open={professionalsDialogOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                openProfessionalsDialog();
+                                            } else {
+                                                cancelProfessionalsDialog();
+                                            }
+                                        }}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                className="w-full"
+                                                onClick={
+                                                    openProfessionalsDialog
+                                                }
+                                            >
+                                                <Plus aria-hidden="true" />
+                                                {displayedProfessionals.length >
+                                                0
+                                                    ? 'Gerenciar profissionais'
+                                                    : 'Adicionar primeiro profissional'}
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:w-full sm:max-w-lg sm:p-6">
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Gerenciar profissionais
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    Selecione quem pode realizar{' '}
+                                                    {service.name}.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="space-y-4">
+                                                <div className="relative">
+                                                    <Search
+                                                        aria-hidden="true"
+                                                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                                    />
+                                                    <Input
+                                                        aria-label="Pesquisar profissionais"
+                                                        placeholder="Pesquisar profissional"
+                                                        value={
+                                                            professionalSearch
+                                                        }
+                                                        onChange={(event) =>
+                                                            setProfessionalSearch(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        className="pl-9"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {
+                                                        draftProfessionalIds.length
+                                                    }{' '}
+                                                    selecionado
+                                                    {draftProfessionalIds.length ===
+                                                    1
+                                                        ? ''
+                                                        : 's'}
+                                                </p>
+                                                {filteredProfessionals.length >
+                                                0 ? (
+                                                    <RelationCheckboxes
+                                                        name="professional_ids"
+                                                        options={
+                                                            filteredProfessionals
+                                                        }
+                                                        selectedIds={
+                                                            draftProfessionalIds
+                                                        }
+                                                        onSelectionChange={
+                                                            setDraftProfessionalIds
+                                                        }
+                                                        disabled={!canManage}
+                                                    />
+                                                ) : (
+                                                    <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Nenhum profissional
+                                                            encontrado.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <DialogFooter className="sticky bottom-0 -mx-4 -mb-4 flex-col gap-2 border-t border-border bg-background/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="w-full sm:w-auto"
+                                                    onClick={
+                                                        cancelProfessionalsDialog
+                                                    }
+                                                >
+                                                    Cancelar
+                                                </Button>
+                                                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                                                    <Button
+                                                        asChild
+                                                        variant="ghost"
+                                                        className="w-full sm:w-auto"
+                                                    >
+                                                        <Link
+                                                            href={professionals.index()}
+                                                        >
+                                                            <Plus aria-hidden="true" />
+                                                            Criar novo
+                                                            profissional
+                                                        </Link>
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        className="w-full sm:w-auto"
+                                                        onClick={
+                                                            applyProfessionalSelection
+                                                        }
+                                                    >
+                                                        Aplicar seleção
+                                                    </Button>
+                                                </div>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                ) : null}
                             </div>
+                            {!hasProfessionalOptions ? (
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    As opções de seleção ainda não foram
+                                    carregadas.
+                                </p>
+                            ) : null}
                         </section>
                         {canManage ? (
                             service.status === 'inactive' ? (

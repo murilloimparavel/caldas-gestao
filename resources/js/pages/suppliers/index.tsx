@@ -24,6 +24,10 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    ResourceViewToggle,
+    useResourceView,
+} from '@/components/resource-view-toggle';
 import suppliers from '@/routes/suppliers';
 import type { SharedPageProps } from '@/types';
 
@@ -49,6 +53,7 @@ export default function SuppliersIndex({
     filters,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
+    const { view, setView } = useResourceView('caldas-gestao:suppliers-view');
     const [createKey] = useState(() => createIdempotencyKey('supplier-store'));
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('supplier.manage');
@@ -229,7 +234,9 @@ export default function SuppliersIndex({
                     onStatusChange={handleStatusChange}
                     placeholder="Buscar por razão social, nome fantasia ou documento"
                     resultLabel={`${paginator.total} ${paginator.total === 1 ? 'fornecedor encontrado' : 'fornecedores encontrados'}`}
-                />
+                >
+                    <ResourceViewToggle value={view} onChange={setView} />
+                </SearchToolbar>
 
                 {paginator.data.length === 0 ? (
                     <EmptyState
@@ -257,14 +264,24 @@ export default function SuppliersIndex({
                 ) : (
                     <section
                         aria-label="Lista de fornecedores"
-                        className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        className={
+                            view === 'cards'
+                                ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'
+                                : 'grid gap-3 md:gap-0 md:divide-y md:overflow-hidden md:rounded-xl md:border md:border-border'
+                        }
                     >
                         {paginator.data.map((supplier) => (
                             <article
                                 key={supplier.id}
-                                className="surface-panel flex min-h-52 flex-col gap-4 p-5 transition-colors hover:border-primary/40"
+                                className={`surface-panel flex min-h-52 flex-col gap-4 p-5 transition-colors hover:border-primary/40 ${view === 'list' ? 'max-md:min-h-52 md:min-h-0 md:flex-row md:items-center md:gap-4 md:rounded-none md:border-0 md:border-b md:p-4 md:last:border-b-0' : ''}`}
                             >
-                                <div className="flex items-start justify-between gap-3">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'flex items-start justify-between gap-3 md:w-1/3'
+                                            : 'flex items-start justify-between gap-3'
+                                    }
+                                >
                                     <div className="flex min-w-0 items-center gap-3">
                                         <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
                                             <Truck
@@ -297,7 +314,13 @@ export default function SuppliersIndex({
                                     />
                                 </div>
 
-                                <div className="grid gap-2 border-y border-border py-3 text-xs text-muted-foreground">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'grid flex-1 gap-2 border-y border-border py-3 text-xs text-muted-foreground md:border-y-0 md:border-l md:py-0 md:pl-4'
+                                            : 'grid gap-2 border-y border-border py-3 text-xs text-muted-foreground'
+                                    }
+                                >
                                     <div className="flex items-center gap-2">
                                         <FileText className="size-3.5 shrink-0 text-muted-foreground" />
                                         <span className="truncate">
@@ -322,7 +345,13 @@ export default function SuppliersIndex({
                                     </div>
                                 </div>
 
-                                <div className="mt-auto flex justify-end">
+                                <div
+                                    className={
+                                        view === 'list'
+                                            ? 'mt-auto flex justify-end md:mt-0 md:border-l md:border-border md:pl-4'
+                                            : 'mt-auto flex justify-end'
+                                    }
+                                >
                                     <Button asChild variant="outline" size="sm">
                                         <Link
                                             href={suppliers.show(supplier.id)}

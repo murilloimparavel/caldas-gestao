@@ -17,6 +17,9 @@ class ResolveTenantDomain
         $officialHosts = array_filter([
             parse_url((string) config('app.url'), PHP_URL_HOST),
             ...((array) config('app.official_hosts', [])),
+            ...((array) config('domains.official_hosts', [])),
+            'localhost',
+            '127.0.0.1',
         ]);
 
         if (in_array($rawHostname, $officialHosts, true)) {

@@ -154,6 +154,138 @@ it('opens a sale linked to an appointment with Appointment 0..N Sale and Sale 0.
     expect(AppointmentSaleLink::query()->where('appointment_id', $appointment->getKey())->count())->toBe(2);
 });
 
+it('copies the appointment service into a manually opened sale', function () {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+        'uniqueness_scope' => 'appointment',
+        'is_active' => true,
+    ]);
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'price_cents' => 3500,
+    ]);
+    $appointment = Appointment::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'professional_id' => $professional->getKey(),
+    ]);
+    $appointmentItem = $appointment->items()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'service_name_snapshot' => 'Serviço agendado',
+        'duration_minutes' => 45,
+        'price_cents' => 3500,
+        'position' => 1,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('sales.store'), [
+        'sale_category_id' => $category->getKey(),
+        'customer_id' => $customer->getKey(),
+        'appointment_id' => $appointment->getKey(),
+    ]);
+
+    $sale = AppointmentSaleLink::query()
+        ->where('appointment_id', $appointment->getKey())
+        ->firstOrFail()
+        ->sale;
+    $item = $sale->items()->firstOrFail();
+
+    $response->assertRedirect(route('sales.show', $sale));
+    expect($sale->total_amount_cents)->toBe(3500)
+        ->and($item->service_id)->toBe($service->getKey())
+        ->and($item->professional_id)->toBe($professional->getKey())
+        ->and($item->name_snapshot)->toBe($appointmentItem->service_name_snapshot)
+        ->and($item->unit_price_cents)->toBe(3500)
+        ->and($item->source_metadata)->toMatchArray([
+            'origin' => 'appointment',
+            'appointment_id' => $appointment->getKey(),
+            'appointment_item_id' => $appointmentItem->getKey(),
+        ]);
+});
+
+it('transfers newly available appointment services when reopening an existing manual sale', function () {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'appointment',
+        'is_active' => true,
+    ]);
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 3500]);
+    $appointment = Appointment::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'professional_id' => $professional->getKey(),
+    ]);
+
+    $this->actingAs($owner)->post(route('sales.store'), [
+        'sale_category_id' => $category->getKey(),
+        'customer_id' => $customer->getKey(),
+        'appointment_id' => $appointment->getKey(),
+    ])->assertRedirect();
+
+    $sale = Sale::query()->where('sale_category_id', $category->getKey())->firstOrFail();
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'custom',
+        'name_snapshot' => 'Item adicionado pelo operador',
+        'unit_price_cents' => 1000,
+        'total_cents' => 1000,
+        'source_id' => null,
+        'source_metadata' => null,
+    ]);
+    $appointmentItem = $appointment->items()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'service_name_snapshot' => 'Serviço agendado depois da abertura',
+        'duration_minutes' => 45,
+        'price_cents' => 3500,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)->post(route('sales.store'), [
+        'sale_category_id' => $category->getKey(),
+        'customer_id' => $customer->getKey(),
+        'appointment_id' => $appointment->getKey(),
+    ])->assertRedirect(route('sales.show', $sale));
+
+    $sale->refresh();
+    $transferredItem = $sale->items()->where('service_id', $service->getKey())->firstOrFail();
+
+    expect($sale->items()->count())->toBe(2)
+        ->and($sale->total_amount_cents)->toBe(4500)
+        ->and($transferredItem->name_snapshot)->toBe($appointmentItem->service_name_snapshot)
+        ->and($transferredItem->professional_id)->toBe($professional->getKey());
+
+    $this->actingAs($owner)->post(route('sales.store'), [
+        'sale_category_id' => $category->getKey(),
+        'customer_id' => $customer->getKey(),
+        'appointment_id' => $appointment->getKey(),
+    ])->assertRedirect(route('sales.show', $sale));
+
+    expect($sale->items()->count())->toBe(2)
+        ->and($sale->items()->where('name_snapshot', 'Item adicionado pelo operador')->exists())->toBeTrue();
+});
+
 it('handles uniqueness scopes and returns existing active sale idempotently', function () {
     [$owner, $tenant, $unit] = saleTestWorkspace();
 

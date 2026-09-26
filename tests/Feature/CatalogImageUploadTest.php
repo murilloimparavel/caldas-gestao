@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
+    config(['filesystems.media_disk' => 'public']);
     Storage::fake('public');
 });
 
@@ -42,8 +43,12 @@ it('uploads image successfully when creating a service and a product', function 
     $service = Service::query()->where('name', 'Corte Masculino com Foto')->firstOrFail();
     expect($service->image_path)->not()->toBeNull()
         ->and($service->image_path)->toBe("{$tenant->getKey()}/services/{$service->getKey()}/".basename($service->image_path))
+        ->and($service->image_path)->toEndWith('.webp')
+        ->and($service->thumbnail_path)->toEndWith('.webp')
+        ->and($service->thumbnail_url)->toBe(Storage::disk('public')->url($service->thumbnail_path))
         ->and($service->image_url)->toBe(Storage::disk('public')->url($service->image_path));
     Storage::disk('public')->assertExists($service->image_path);
+    Storage::disk('public')->assertExists($service->thumbnail_path);
 
     $productFile = UploadedFile::fake()->image('product.jpg', 600, 600);
     $responseProduct = $this->actingAs($owner)->post(route('products.store'), [
@@ -64,6 +69,27 @@ it('uploads image successfully when creating a service and a product', function 
     Storage::disk('public')->assertExists($product->image_path);
 });
 
+it('stores service images on the configured media disk', function () {
+    config(['filesystems.media_disk' => 's3']);
+    Storage::fake('s3');
+    [$owner, $tenant] = catalogImageWorkspace();
+
+    $this->actingAs($owner)->post(route('services.store'), [
+        'name' => 'Serviço no MinIO',
+        'duration_minutes' => 30,
+        'price_cents' => 5000,
+        'image' => UploadedFile::fake()->image('service.png', 400, 400),
+    ])->assertRedirect();
+
+    $service = Service::query()->where('name', 'Serviço no MinIO')->firstOrFail();
+    expect($service->image_path)->toEndWith('.webp')
+        ->and($service->thumbnail_path)->toEndWith('.webp')
+        ->and($service->image_url)->toContain($service->image_path)
+        ->and($service->image_url)->toContain('expiration=');
+    Storage::disk('s3')->assertExists($service->image_path);
+    Storage::disk('s3')->assertExists($service->thumbnail_path);
+});
+
 it('replaces photo on update and deletes old photo from storage', function () {
     [$owner, $tenant] = catalogImageWorkspace();
 
@@ -76,6 +102,7 @@ it('replaces photo on update and deletes old photo from storage', function () {
     ]);
     $service = Service::query()->where('name', 'Serviço Foto Antiga')->firstOrFail();
     $oldServicePath = $service->image_path;
+    $oldServiceThumbnailPath = $service->thumbnail_path;
     Storage::disk('public')->assertExists($oldServicePath);
 
     $newServiceFile = UploadedFile::fake()->image('new_service.webp');
@@ -90,7 +117,9 @@ it('replaces photo on update and deletes old photo from storage', function () {
     $service->refresh();
     expect($service->image_path)->not()->toBe($oldServicePath);
     Storage::disk('public')->assertMissing($oldServicePath);
+    Storage::disk('public')->assertMissing($oldServiceThumbnailPath);
     Storage::disk('public')->assertExists($service->image_path);
+    Storage::disk('public')->assertExists($service->thumbnail_path);
 
     $oldProductFile = UploadedFile::fake()->image('old_product.png');
     $this->actingAs($owner)->post(route('products.store'), [

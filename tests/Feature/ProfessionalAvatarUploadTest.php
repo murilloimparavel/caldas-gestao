@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
+    config(['filesystems.media_disk' => 'public']);
     Storage::fake('public');
 });
 
