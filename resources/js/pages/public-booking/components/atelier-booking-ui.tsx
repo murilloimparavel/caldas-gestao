@@ -60,3 +60,33 @@ export function AtelierSectionHeading({
         </div>
     );
 }
+
+export function AtelierSelectionSummary({
+    count,
+    totalCents,
+    totalMinutes,
+    formatMoney,
+}: {
+    count: number;
+    totalCents: number;
+    totalMinutes: number;
+    formatMoney: (cents: number) => string;
+}): ReactNode {
+    return (
+        <div className="fixed right-0 bottom-[76px] left-0 z-40 mx-auto flex w-full max-w-[390px] items-center justify-between border-t border-[#4d4635]/30 bg-[#171612] px-4 py-3 md:max-w-5xl md:px-10">
+            <div className="min-w-0">
+                <p className="truncate font-['Manrope'] text-[10px] font-bold tracking-[0.14em] text-[#d4af37] uppercase">
+                    {count
+                        ? `${count} serviço${count > 1 ? 's' : ''} selecionado${count > 1 ? 's' : ''}`
+                        : 'Nenhum serviço'}
+                </p>
+                <p className="font-['Plus_Jakarta_Sans'] text-lg font-extrabold text-[#ffe9b0]">
+                    {formatMoney(totalCents)}{' '}
+                    <span className="font-['Manrope'] text-xs font-medium text-[#a9a39a]">
+                        · {totalMinutes} min
+                    </span>
+                </p>
+            </div>
+        </div>
+    );
+}

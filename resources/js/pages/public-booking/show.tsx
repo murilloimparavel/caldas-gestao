@@ -23,6 +23,7 @@ import { availability } from '@/routes/public_booking';
 import { store } from '@/routes/public_booking/appointments';
 import {
     AtelierProgress,
+    AtelierSelectionSummary,
     AtelierSectionHeading,
 } from '@/pages/public-booking/components/atelier-booking-ui';
 
@@ -2042,21 +2043,12 @@ function AtelierBarberView({
                             </section>
                         ) : null}
                         {activeStep === 1 ? (
-                            <div className="fixed right-0 bottom-[76px] left-0 z-40 mx-auto flex w-full max-w-[390px] items-center justify-between border-t border-[#4d4635]/30 bg-[#171612] px-4 py-3 md:max-w-5xl md:px-10">
-                                <div className="min-w-0">
-                                    <p className="truncate font-['Manrope'] text-[10px] font-bold tracking-[0.14em] text-[#d4af37] uppercase">
-                                        {selectedServices.length
-                                            ? `${selectedServices.length} serviço${selectedServices.length > 1 ? 's' : ''} selecionado${selectedServices.length > 1 ? 's' : ''}`
-                                            : 'Nenhum serviço'}
-                                    </p>
-                                    <p className="font-['Plus_Jakarta_Sans'] text-lg font-extrabold text-[#ffe9b0]">
-                                        {money(selectedTotalCents)}{' '}
-                                        <span className="font-['Manrope'] text-xs font-medium text-[#a9a39a]">
-                                            · {selectedTotalMinutes} min
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
+                            <AtelierSelectionSummary
+                                count={selectedServices.length}
+                                totalCents={selectedTotalCents}
+                                totalMinutes={selectedTotalMinutes}
+                                formatMoney={money}
+                            />
                         ) : null}
                         <button
                             type="submit"
