@@ -1,9 +1,9 @@
-name: Build and publish Caldas Gestão image
+name: Produção · Construir e publicar imagem
 
 on:
   push:
     branches:
-      - main
+      - production
   workflow_dispatch:
 
 permissions:
@@ -14,100 +14,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
-jobs:
-  quality:
-    name: Quality checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: caldas_gestao_test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d caldas_gestao_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      APP_ENV: testing
-      DB_CONNECTION: pgsql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 5432
-      DB_DATABASE: caldas_gestao_test
-      DB_USERNAME: caldas_runtime
-      DB_PASSWORD: caldas_runtime_test
-      DB_SCHEMA: app
-      DB_SEARCH_PATH: app,public
-      DB_SSLMODE: disable
-      DB_RUNTIME_ROLE: caldas_runtime
-      DB_PROVISION_STRICT: true
-      MIGRATION_DB_CONNECTION: pgsql
-      MIGRATION_DB_HOST: 127.0.0.1
-      MIGRATION_DB_PORT: 5432
-      MIGRATION_DB_DATABASE: caldas_gestao_test
-      MIGRATION_DB_USERNAME: postgres
-      MIGRATION_DB_PASSWORD: postgres
-      MIGRATION_DB_SSLMODE: disable
-      CACHE_STORE: array
-      SESSION_DRIVER: array
-      QUEUE_CONNECTION: sync
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          tools: composer:v2
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql, pgsql, redis
-          coverage: none
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Create least-privilege runtime role
-        env:
-          PGPASSWORD: postgres
-        run: >-
-          psql --host=127.0.0.1 --username=postgres --dbname=caldas_gestao_test
-          --set=ON_ERROR_STOP=1
-          --command="CREATE ROLE caldas_runtime LOGIN PASSWORD 'caldas_runtime_test'"
-
-      - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Prepare application key
-        run: |
-          cp .env.example .env
-          php artisan key:generate --force --no-interaction
-          php artisan db:provision-schema --database=migration --no-interaction
-          php artisan migrate --database=migration --force --no-interaction
-
-      - name: Install JavaScript dependencies
-        run: npm ci
-
-      - name: Generate frontend route bindings
-        run: npm run build
-
-      - name: Run quality checks
-        run: |
-          npm run lint:check
-          npm run format:check
-          npm run types:check
-          npm run build
-
   publish:
-    name: Publish image to GHCR
-    needs: quality
+    name: Publicar imagem no GHCR
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

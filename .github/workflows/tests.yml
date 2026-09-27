@@ -1,4 +1,4 @@
-name: tests
+name: CI · Testes e qualidade
 
 on:
   push:
@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  quality:
+    name: Validar aplicação
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
