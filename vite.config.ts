@@ -19,7 +19,10 @@ export default defineConfig({
         }),
         tailwindcss(),
         wayfinder({
-            command: process.env.VITE_WAYFINDER_COMMAND,
+            command:
+                process.env.WAYFINDER_SKIP_GENERATE === 'true'
+                    ? 'true'
+                    : process.env.VITE_WAYFINDER_COMMAND,
             formVariants: true,
         }),
     ],
