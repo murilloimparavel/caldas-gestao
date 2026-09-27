@@ -1521,7 +1521,7 @@ function AtelierBarberView({
 
     return (
         <main
-            className="mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30"
+            className="mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30 md:max-w-6xl md:bg-[#0e0e0e] md:pb-32"
             style={appearanceStyle(appearance)}
         >
             <Head title={`Agendar · ${unit.name}`}>
@@ -1537,7 +1537,7 @@ function AtelierBarberView({
                 />
             </Head>
             <div className="w-full">
-                <header className="fixed top-0 right-0 left-0 z-40 mx-auto flex h-16 w-full max-w-[390px] items-center justify-between border-b border-[#4d4635]/20 bg-[#0e0e0e]/95 px-4 shadow-[0_12px_36px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+                <header className="fixed top-0 right-0 left-0 z-40 mx-auto flex h-16 w-full max-w-[390px] items-center justify-between border-b border-[#4d4635]/20 bg-[#0e0e0e]/95 px-4 shadow-[0_12px_36px_rgba(0,0,0,0.65)] backdrop-blur-xl md:max-w-6xl md:px-10">
                     <div className="flex items-center justify-between gap-4">
                         {activeStep > 1 && !submitted ? (
                             <button
@@ -1573,7 +1573,7 @@ function AtelierBarberView({
                     </div>
                     <div className="hidden" />
                 </header>
-                <div className="px-4 pt-20">
+                <div className="px-4 pt-20 md:px-10 md:pt-24">
                     <div className="mb-5 flex flex-col gap-1.5">
                         <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5 font-['Manrope'] text-[10px] font-bold tracking-[0.16em] text-[#ffe9b0] uppercase">
@@ -1645,7 +1645,7 @@ function AtelierBarberView({
                         ) : null}
                     </section>
                 ) : (
-                    <form onSubmit={onSubmit} className="space-y-5 px-4">
+                    <form onSubmit={onSubmit} className="mx-auto space-y-5 px-4 md:max-w-5xl md:px-0">
                         {activeStep === 1 ? (
                             <section className="overflow-hidden bg-[#131313]">
                                 {unit.cover_image_url || unit.cover_url ? (
@@ -1705,7 +1705,7 @@ function AtelierBarberView({
                                             Seleção múltipla
                                         </span>
                                     </div>
-                                    <div className="mt-3 grid gap-3">
+                                    <div className="mt-3 grid gap-3 md:grid-cols-2">
                                         {filteredServices.map((service) => (
                                             <button
                                                 type="button"
@@ -1781,7 +1781,7 @@ function AtelierBarberView({
                                     Escolha o profissional que cuidará do seu
                                     atendimento.
                                 </p>
-                                <div className="mt-6 grid gap-3">
+                                <div className="mt-6 grid gap-3 md:grid-cols-2">
                                     {serviceProfessionals.map((person) => (
                                         <button
                                             type="button"
@@ -2035,7 +2035,7 @@ function AtelierBarberView({
                                           !customerPhone ||
                                           processing
                             }
-                            className="fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-[390px] items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40"
+                            className="fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-[390px] items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40 md:max-w-5xl md:rounded-t-2xl md:border-x md:px-10"
                             style={{
                                 backgroundColor: 'var(--booking-primary)',
                             }}
