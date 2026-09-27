@@ -113,24 +113,36 @@ final class OnlineBookingSettingsController extends Controller
         return response()->json(['draft' => $draft, 'status' => 'draft_saved']);
     }
 
-    public function publish(OnlineBookingPublishRequest $request, TenantContext $context, PublishOnlineBookingSite $publish): JsonResponse
+    public function publish(OnlineBookingPublishRequest $request, TenantContext $context, PublishOnlineBookingSite $publish): JsonResponse|RedirectResponse
     {
         $publication = $publish->handle($request->user(), $context, (int) $request->validated('revision'));
+
+        if ($request->header('X-Inertia') === 'true') {
+            return to_route('online_booking.index')->with('success', 'Página pública publicada.');
+        }
 
         return response()->json(['publication' => $publication, 'status' => 'published']);
     }
 
-    public function unpublish(TenantContext $context, UnpublishOnlineBookingSite $unpublish): JsonResponse
+    public function unpublish(TenantContext $context, UnpublishOnlineBookingSite $unpublish): JsonResponse|RedirectResponse
     {
         $site = $unpublish->handle(request()->user(), $context);
+
+        if (request()->header('X-Inertia') === 'true') {
+            return to_route('online_booking.index')->with('success', 'Página pública retirada do ar.');
+        }
 
         return response()->json(['publication' => $site, 'status' => 'unpublished']);
     }
 
-    public function restore(string $publication, TenantContext $context, RestoreOnlineBookingPublication $restore): JsonResponse
+    public function restore(string $publication, TenantContext $context, RestoreOnlineBookingPublication $restore): JsonResponse|RedirectResponse
     {
         $record = OnlineBookingPublication::query()->findOrFail($publication);
         $draft = $restore->handle(request()->user(), $context, $record);
+
+        if (request()->header('X-Inertia') === 'true') {
+            return to_route('online_booking.index')->with('success', 'Publicação restaurada como rascunho.');
+        }
 
         return response()->json(['draft' => $draft, 'status' => 'draft_restored']);
     }

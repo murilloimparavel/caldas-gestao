@@ -86,6 +86,36 @@ it('exposes the draft and publication lifecycle through the authorized routes', 
     expect($unit->refresh()->tenant_id)->toBe($tenant->getKey());
 });
 
+it('redirects Inertia publication actions back to the editor with feedback', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $professional->services()->syncWithoutDetaching([$service->getKey()]);
+
+    $draft = $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
+        'revision' => 0,
+        'content' => [
+            'theme' => [],
+            'sections' => [],
+            'service_ids' => [],
+            'professional_ids' => [],
+        ],
+    ])->assertOk()->json('draft');
+
+    $this->actingAs($owner)
+        ->withHeaders(['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
+        ->post(route('online_booking.publish'), ['revision' => $draft['revision']])
+        ->assertRedirect(route('online_booking.index'))
+        ->assertSessionHas('success', 'Página pública publicada.');
+
+    $this->actingAs($owner)
+        ->withHeaders(['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
+        ->post(route('online_booking.unpublish'))
+        ->assertRedirect(route('online_booking.index'))
+        ->assertSessionHas('success', 'Página pública retirada do ar.');
+});
+
 it('preserves draft sections when saving a partial editor update', function () {
     [$owner, $tenant, $unit] = onlineBookingWorkspace();
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
