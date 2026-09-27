@@ -1467,15 +1467,7 @@ function AtelierBarberView({
     onRecoverBookingError,
     onSubmit,
 }: AtelierBarberViewProps) {
-    const activeStep = submitted
-        ? 4
-        : !serviceId
-          ? 1
-          : !professionalId
-            ? 2
-            : !slot
-              ? 3
-              : 4;
+    const [activeStep, setActiveStep] = useState(submitted ? 4 : 1);
     const serviceProfessionals = selectedService?.professionals.length
         ? selectedService.professionals
         : professionals;
@@ -1487,10 +1479,23 @@ function AtelierBarberView({
     const goBack = (): void => {
         if (activeStep === 2) {
             onServiceChange('');
+            setActiveStep(1);
         } else if (activeStep === 3) {
             onProfessionalChange('');
+            setActiveStep(2);
         } else if (activeStep === 4) {
             onSlotChange('');
+            setActiveStep(3);
+        }
+    };
+
+    const advanceStep = (): void => {
+        if (activeStep === 1 && serviceId) {
+            setActiveStep(2);
+        } else if (activeStep === 2 && professionalId) {
+            setActiveStep(3);
+        } else if (activeStep === 3 && slot) {
+            setActiveStep(4);
         }
     };
 
@@ -2016,6 +2021,7 @@ function AtelierBarberView({
                             onClick={(event) => {
                                 if (activeStep < 4) {
                                     event.preventDefault();
+                                    advanceStep();
                                 }
                             }}
                             disabled={
