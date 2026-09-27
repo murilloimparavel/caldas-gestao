@@ -3,7 +3,7 @@ name: Produção · Deploy no Coolify
 on:
   workflow_run:
     workflows:
-      - Build and publish Caldas Gestão image
+      - Produção · Construir e publicar imagem
     types:
       - completed
   workflow_dispatch:
