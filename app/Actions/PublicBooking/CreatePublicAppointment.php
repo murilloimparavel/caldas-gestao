@@ -32,17 +32,27 @@ final class CreatePublicAppointment
         private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
     ) {}
 
-    /** @param array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null, online_booking_campaign_link_id?: string|null} $data */
+    /** @param array{service_id?: string|null, service_ids?: list<string>, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null, online_booking_campaign_link_id?: string|null} $data */
     public function handle(Tenant $tenant, Unit $unit, array $data): Appointment
     {
-        $service = Service::query()
-            ->whereKey($data['service_id'])
+        $serviceIds = array_values(array_unique(array_filter(
+            $data['service_ids'] ?? [$data['service_id'] ?? null],
+            'is_string',
+        )));
+        $publishedServiceIds = $this->publishedCatalogIds($tenant, $unit, 'service_ids');
+        $services = Service::query()
             ->whereBelongsTo($tenant)
             ->whereBelongsTo($unit)
             ->where('status', 'active')
             ->where('online_booking_enabled', true)
-            ->when(($ids = $this->publishedCatalogIds($tenant, $unit, 'service_ids')) !== null, fn ($query) => $query->whereIn('id', $ids))
-            ->firstOrFail();
+            ->whereIn('id', $serviceIds)
+            ->when($publishedServiceIds !== null, fn ($query) => $query->whereIn('id', $publishedServiceIds))
+            ->with('category')
+            ->get();
+        if ($services->count() !== count($serviceIds)) {
+            abort(404);
+        }
+        $service = $services->firstOrFail();
         $professional = Professional::query()
             ->whereKey($data['professional_id'])
             ->whereBelongsTo($tenant)
@@ -52,7 +62,7 @@ final class CreatePublicAppointment
             ->when(($ids = $this->publishedCatalogIds($tenant, $unit, 'professional_ids')) !== null, fn ($query) => $query->whereIn('id', $ids))
             ->firstOrFail();
 
-        if (! $professional->services()->whereKey($service->getKey())->exists()) {
+        if ($services->contains(fn (Service $candidate): bool => ! $professional->services()->whereKey($candidate->getKey())->exists())) {
             abort(404);
         }
 
@@ -68,11 +78,11 @@ final class CreatePublicAppointment
         $hours = $setting instanceof OnlineBookingSetting ? $setting->getAttribute('public_hours') : null;
         if (is_array($hours)) {
             $window = $hours[(string) $startsAt->dayOfWeek] ?? $hours[$startsAt->dayOfWeek] ?? null;
-            if (! is_array($window) || ($window['enabled'] ?? true) === false || $startsAt->format('H:i') < ($window['starts_at'] ?? '') || $startsAt->addMinutes((int) $service->duration_minutes)->format('H:i') > ($window['ends_at'] ?? '')) {
+            if (! is_array($window) || ($window['enabled'] ?? true) === false || $startsAt->format('H:i') < ($window['starts_at'] ?? '') || $startsAt->addMinutes((int) $services->sum('duration_minutes'))->format('H:i') > ($window['ends_at'] ?? '')) {
                 throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
             }
         }
-        $duration = (int) $service->duration_minutes;
+        $duration = (int) $services->sum('duration_minutes');
         $endsAt = $startsAt->addMinutes($duration);
         $phone = $this->normalizePhone($data['phone']);
         $email = trim((string) ($data['email'] ?? ''));
@@ -80,8 +90,8 @@ final class CreatePublicAppointment
 
         $lockKey = sprintf('public-booking:%s:%s:%s', $tenant->getKey(), $unit->getKey(), $professional->getKey());
 
-        return Cache::lock($lockKey, 10)->block(5, function () use ($tenant, $unit, $data, $service, $professional, $startsAt, $endsAt, $timezone, $duration, $phone, $email, $notes): Appointment {
-            return DB::transaction(function () use ($tenant, $unit, $data, $service, $professional, $startsAt, $endsAt, $timezone, $duration, $phone, $email, $notes): Appointment {
+        return Cache::lock($lockKey, 10)->block(5, function () use ($tenant, $unit, $data, $services, $professional, $startsAt, $endsAt, $timezone, $phone, $email, $notes): Appointment {
+            return DB::transaction(function () use ($tenant, $unit, $data, $services, $professional, $startsAt, $endsAt, $timezone, $phone, $email, $notes): Appointment {
                 $this->availability->assertAvailable(
                     (string) $tenant->getKey(),
                     (string) $unit->getKey(),
@@ -147,19 +157,21 @@ final class CreatePublicAppointment
                     'lock_version' => 0,
                 ]);
 
-                AppointmentItem::query()->create([
-                    'id' => (string) Str::uuid7(),
-                    'tenant_id' => $tenant->getKey(),
-                    'unit_id' => $unit->getKey(),
-                    'appointment_id' => $appointment->getKey(),
-                    'service_id' => $service->getKey(),
-                    'professional_id' => $professional->getKey(),
-                    'service_name_snapshot' => $service->name,
-                    'duration_minutes' => $duration,
-                    'price_cents' => $service->price_cents,
-                    'currency' => $tenant->default_currency,
-                    'position' => 1,
-                ]);
+                foreach ($services as $position => $service) {
+                    AppointmentItem::query()->create([
+                        'id' => (string) Str::uuid7(),
+                        'tenant_id' => $tenant->getKey(),
+                        'unit_id' => $unit->getKey(),
+                        'appointment_id' => $appointment->getKey(),
+                        'service_id' => $service->getKey(),
+                        'professional_id' => $professional->getKey(),
+                        'service_name_snapshot' => $service->name,
+                        'duration_minutes' => $service->duration_minutes,
+                        'price_cents' => $service->price_cents,
+                        'currency' => $tenant->default_currency,
+                        'position' => $position + 1,
+                    ]);
+                }
 
                 $this->createAppointmentSale->handlePublic($tenant, $unit, $appointment);
                 $appointment->statusHistories()->create([

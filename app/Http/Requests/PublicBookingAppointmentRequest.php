@@ -16,7 +16,9 @@ final class PublicBookingAppointmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'service_id' => ['required', 'uuid'],
+            'service_id' => ['nullable', 'uuid', 'required_without:service_ids'],
+            'service_ids' => ['nullable', 'array', 'min:1', 'max:8', 'required_without:service_id'],
+            'service_ids.*' => ['required', 'uuid', 'distinct'],
             'professional_id' => ['required', 'uuid'],
             'starts_at' => ['required', 'date'],
             'name' => ['required', 'string', 'max:160'],
@@ -29,11 +31,11 @@ final class PublicBookingAppointmentRequest extends FormRequest
     /**
      * @param  string|null  $key
      * @param  mixed  $default
-     * @return array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null}
+     * @return array{service_id?: string|null, service_ids?: list<string>, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null}
      */
     public function validated($key = null, $default = null): array
     {
-        /** @var array{service_id: string, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null} */
+        /** @var array{service_id?: string|null, service_ids?: list<string>, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null} */
         return parent::validated($key, $default);
     }
 }

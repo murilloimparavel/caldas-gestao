@@ -9,8 +9,10 @@ import {
     MapPin,
     MessageCircle,
     Star,
+    ShieldCheck,
     UserRound,
     Globe2,
+    Zap,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -388,6 +390,19 @@ export default function PublicBooking({
         ); // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date, professionalId, serviceId]);
     const chooseService = (id: string): void => {
+        if (!id) {
+            setSelectedServiceIds([]);
+            setServiceId('');
+            setProfessionalId('');
+            setDate('');
+            setSlot('');
+            setBookingError(null);
+            setBookingErrorKind(null);
+            setSubmitted(false);
+
+            return;
+        }
+
         const nextIds = selectedServiceIds.includes(id)
             ? selectedServiceIds.filter((selectedId) => selectedId !== id)
             : [...selectedServiceIds, id];
@@ -1515,6 +1530,55 @@ function AtelierBarberView({
         (total, service) => total + service.duration_minutes,
         0,
     );
+    const selectedServiceLabel = selectedServices.length
+        ? selectedServices.map((service) => service.name).join(' + ')
+        : selectedService?.name;
+    const firstSlot = slots[0];
+    const selectedDateLabel = date
+        ? new Intl.DateTimeFormat('pt-BR', {
+              day: '2-digit',
+              month: 'short',
+              timeZone: availabilityTimezone,
+          })
+              .format(new Date(`${date}T12:00:00`))
+              .replace('.', '')
+        : 'Escolha uma data';
+    const slotGroups = [
+        {
+            label: 'MANHÃ',
+            slots: slots.filter(
+                (item) =>
+                    Number(
+                        time(item.starts_at, availabilityTimezone).slice(0, 2),
+                    ) < 12,
+            ),
+        },
+        {
+            label: 'TARDE',
+            slots: slots.filter((item) => {
+                const hour = Number(
+                    time(item.starts_at, availabilityTimezone).slice(0, 2),
+                );
+
+                return hour >= 12 && hour < 18;
+            }),
+        },
+        {
+            label: 'NOITE',
+            slots: slots.filter(
+                (item) =>
+                    Number(
+                        time(item.starts_at, availabilityTimezone).slice(0, 2),
+                    ) >= 18,
+            ),
+        },
+    ].filter((group) => group.slots.length > 0);
+    const dateChoices = Array.from({ length: 5 }, (_, index) => {
+        const option = new Date();
+        option.setDate(option.getDate() + index);
+
+        return option.toISOString().slice(0, 10);
+    });
     const stepLabels = ['Serviços', 'Profissional', 'Horário', 'Confirmar'];
 
     const goBack = (): void => {
@@ -1672,7 +1736,10 @@ function AtelierBarberView({
                         ) : null}
                     </section>
                 ) : (
-                    <form onSubmit={onSubmit} className="mx-auto space-y-5 px-4 md:max-w-5xl md:px-0">
+                    <form
+                        onSubmit={onSubmit}
+                        className="mx-auto space-y-5 px-4 md:max-w-5xl md:px-0"
+                    >
                         {activeStep === 1 ? (
                             <section className="overflow-hidden bg-[#131313]">
                                 {unit.cover_image_url || unit.cover_url ? (
@@ -1713,6 +1780,7 @@ function AtelierBarberView({
                                                 key={category}
                                                 onClick={() => {
                                                     onCategoryChange(category);
+
                                                     if (category === 'Todos') {
                                                         onQueryChange('');
                                                     }
@@ -1736,11 +1804,9 @@ function AtelierBarberView({
                                                 onClick={() =>
                                                     onServiceChange(service.id)
                                                 }
-                                                aria-pressed={
-                                                    selectedServiceIds.includes(
-                                                        service.id,
-                                                    )
-                                                }
+                                                aria-pressed={selectedServiceIds.includes(
+                                                    service.id,
+                                                )}
                                                 className={`flex min-h-[122px] items-center gap-3 rounded-xl border p-4 text-left shadow-[0_4px_20px_rgba(5,4,3,0.55)] transition ${selectedServiceIds.includes(service.id) ? 'border-[#d4af37]/40 bg-[#353535]' : 'border-transparent bg-[#1f1f1f] hover:border-[#8b7635]'}`}
                                             >
                                                 {service.thumbnail_url ||
@@ -1804,10 +1870,76 @@ function AtelierBarberView({
                                     <em className="text-[#d4af37]">prefere?</em>
                                 </h1>
                                 <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
-                                    Escolha o profissional que cuidará do seu
-                                    atendimento.
+                                    Escolha um profissional ou encontre o
+                                    primeiro disponível.
                                 </p>
-                                <div className="mt-6 grid gap-3 md:grid-cols-2">
+                                <div className="mt-5 flex items-center justify-between rounded-xl border border-[#39362f] bg-[#151513] p-4">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#332b17] text-[#d4af37]">
+                                            <Star className="size-4" />
+                                        </span>
+                                        <div className="min-w-0">
+                                            <p className="truncate font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
+                                                {selectedServiceLabel ||
+                                                    'Serviço selecionado'}
+                                            </p>
+                                            <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.12em] text-[#918b80] uppercase">
+                                                {selectedServices.length || 1}{' '}
+                                                serviço
+                                                {selectedServices.length > 1
+                                                    ? 's'
+                                                    : ''}{' '}
+                                                ·{' '}
+                                                {selectedTotalMinutes ||
+                                                    selectedService?.duration_minutes ||
+                                                    0}{' '}
+                                                min
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="shrink-0 font-['Space_Grotesk'] text-sm font-semibold text-[#d4af37]">
+                                        {money(
+                                            selectedTotalCents ||
+                                                selectedService?.price_cents ||
+                                                0,
+                                        )}
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={
+                                        !serviceId ||
+                                        serviceProfessionals.length === 0
+                                    }
+                                    onClick={() =>
+                                        onProfessionalChange(
+                                            serviceProfessionals[0]?.id ?? '',
+                                        )
+                                    }
+                                    className={`mt-3 flex w-full items-center gap-3 rounded-xl border p-4 text-left transition ${professionalId === serviceProfessionals[0]?.id ? 'border-[#d4af37] bg-[#282317]' : 'border-[#4d4330] bg-[#171612] hover:border-[#d4af37]/70'}`}
+                                >
+                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-[#d4af37]/70 text-[#d4af37]">
+                                        <Zap className="size-5" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block font-['DM_Sans'] text-base font-semibold text-[#f4efe6]">
+                                            Primeiro disponível
+                                        </span>
+                                        <span className="mt-1 block font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
+                                            Encontre o melhor horário disponível
+                                            entre os profissionais.
+                                        </span>
+                                    </span>
+                                    <span
+                                        className={`size-6 shrink-0 rounded-full border ${professionalId === serviceProfessionals[0]?.id ? 'border-[#d4af37] bg-[#d4af37]' : 'border-[#706752]'}`}
+                                    />
+                                </button>
+                                <div className="mt-8 flex items-end justify-between gap-4">
+                                    <AtelierSectionHeading eyebrow="Profissionais para seus serviços">
+                                        Todos realizam o atendimento
+                                    </AtelierSectionHeading>
+                                </div>
+                                <div className="mt-3 grid gap-3">
                                     {serviceProfessionals.map((person) => (
                                         <button
                                             type="button"
@@ -1819,9 +1951,9 @@ function AtelierBarberView({
                                             aria-pressed={
                                                 professionalId === person.id
                                             }
-                                            className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${professionalId === person.id ? 'border-[#d4af37] bg-[#282317]' : 'border-[#39362f] bg-[#1d1b17] hover:border-[#8b7635]'}`}
+                                            className={`flex min-h-[106px] items-center gap-3 rounded-xl border p-4 text-left transition ${professionalId === person.id ? 'border-[#d4af37] bg-[#201d16]' : 'border-[#39362f] bg-[#151513] hover:border-[#8b7635]'}`}
                                         >
-                                            <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-[#302c22] font-['DM_Sans'] text-xs font-semibold text-[#d4af37]">
+                                            <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#5b4d2b] bg-[#302c22] font-['DM_Sans'] text-xs font-semibold text-[#d4af37]">
                                                 {person.avatar_url ? (
                                                     <img
                                                         src={person.avatar_url}
@@ -1834,8 +1966,9 @@ function AtelierBarberView({
                                             </span>
                                             <span className="min-w-0 flex-1 font-['DM_Sans'] text-sm font-medium text-[#eee7dc]">
                                                 {person.name}
-                                                <span className="mt-1 block font-['Space_Grotesk'] text-[10px] tracking-wide text-[#8f887b]">
-                                                    Atendimento presencial
+                                                <span className="mt-1 block font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                    Atendimento presencial ·
+                                                    Próximo horário disponível
                                                 </span>
                                             </span>
                                             {professionalId === person.id ? (
@@ -1844,6 +1977,11 @@ function AtelierBarberView({
                                         </button>
                                     ))}
                                 </div>
+                                <p className="mt-7 flex items-start gap-2 font-['DM_Sans'] text-xs leading-5 text-[#777168]">
+                                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#d4af37]" />
+                                    Padrão de excelência garantido em todas as
+                                    cadeiras.
+                                </p>
                                 {selectedSummary}
                             </section>
                         ) : null}
@@ -1858,49 +1996,202 @@ function AtelierBarberView({
                                     <em className="text-[#d4af37]">momento.</em>
                                 </h1>
                                 <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
-                                    Reserve um horário disponível para você.
+                                    Reserve seu intervalo exclusivo com
+                                    atendimento pontual.
                                 </p>
-                                <div className="mt-6 grid gap-4">
-                                    <label className="flex h-12 items-center gap-2 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-3 focus-within:border-[#d4af37]">
-                                        <CalendarDays className="size-4 text-[#d4af37]" />
-                                        <span className="sr-only">Data</span>
-                                        <input
-                                            type="date"
-                                            value={date}
-                                            min={today()}
-                                            max={limit()}
-                                            disabled={!professionalId}
-                                            onChange={(event) =>
-                                                onDateChange(event.target.value)
-                                            }
-                                            className="w-full bg-transparent font-['DM_Sans'] text-sm text-[#f4efe6] [color-scheme:dark] outline-none"
-                                        />
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                                        {slots.map((item) => (
-                                            <button
-                                                type="button"
-                                                key={item.starts_at}
-                                                onClick={() =>
-                                                    onSlotChange(item.starts_at)
-                                                }
-                                                className={`rounded-lg border px-2 py-2.5 font-['Space_Grotesk'] text-xs font-semibold transition ${slot === item.starts_at ? 'border-[#d4af37] bg-[#d4af37] text-[#17140d]' : 'border-[#39362f] bg-[#1d1b17] text-[#d6cfc2] hover:border-[#8b7635]'}`}
-                                            >
-                                                {time(
-                                                    item.starts_at,
-                                                    availabilityTimezone,
-                                                )}
-                                            </button>
-                                        ))}
+                                <div className="mt-5 flex items-center justify-between rounded-xl border border-[#39362f] bg-[#151513] p-4">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#29251c] text-[#d4af37]">
+                                            <CalendarDays className="size-4" />
+                                        </span>
+                                        <div className="min-w-0">
+                                            <p className="truncate font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
+                                                {selectedServiceLabel ||
+                                                    'Serviço selecionado'}{' '}
+                                                ·{' '}
+                                                {selectedProfessional?.name ||
+                                                    'Profissional'}
+                                            </p>
+                                            <p className="font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                {selectedTotalMinutes ||
+                                                    selectedService?.duration_minutes ||
+                                                    0}{' '}
+                                                min contínuos
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#918b80] uppercase">
+                                            Valor
+                                        </p>
+                                        <p className="font-['Bodoni_Moda'] text-xl text-[#d4af37]">
+                                            {money(
+                                                selectedTotalCents ||
+                                                    selectedService?.price_cents ||
+                                                    0,
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
+                                {firstSlot ? (
+                                    <div className="mt-4 rounded-xl border border-[#8b7635] bg-[#211e17] p-4 shadow-[0_10px_30px_rgba(212,175,55,0.08)]">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <span className="rounded-full border border-[#8b7635] px-2 py-1 font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.14em] text-[#d4af37] uppercase">
+                                                    Sugestão ágil
+                                                </span>
+                                                <p className="mt-3 font-['Bodoni_Moda'] text-xl text-[#f8f2e8]">
+                                                    Próximo horário disponível
+                                                </p>
+                                                <p className="font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                    {selectedDateLabel} ·{' '}
+                                                    {selectedProfessional?.name ||
+                                                        'Profissional'}
+                                                </p>
+                                            </div>
+                                            <p className="font-['Bodoni_Moda'] text-3xl text-[#d4af37]">
+                                                {time(
+                                                    firstSlot.starts_at,
+                                                    availabilityTimezone,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onSlotChange(
+                                                    firstSlot.starts_at,
+                                                )
+                                            }
+                                            className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#d4af37] font-['Space_Grotesk'] text-xs font-bold tracking-[0.12em] text-[#17140d] uppercase transition hover:bg-[#edca55]"
+                                        >
+                                            Escolher{' '}
+                                            {time(
+                                                firstSlot.starts_at,
+                                                availabilityTimezone,
+                                            )}{' '}
+                                            agora{' '}
+                                            <ChevronRight className="size-4" />
+                                        </button>
+                                    </div>
+                                ) : null}
+                                <div className="mt-7 flex items-end justify-between gap-4">
+                                    <h2 className="font-['Bodoni_Moda'] text-xl text-[#f8f2e8] italic">
+                                        Outros horários
+                                    </h2>
+                                    <span className="font-['DM_Sans'] text-xs text-[#918b80]">
+                                        Fuso horário: Brasília
+                                    </span>
+                                </div>
+                                <div className="mt-3 grid grid-cols-5 gap-2 overflow-x-auto pb-1">
+                                    {dateChoices.map((choice) => {
+                                        const option = new Date(
+                                            `${choice}T12:00:00`,
+                                        );
+                                        const active = choice === date;
+
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={choice}
+                                                onClick={() =>
+                                                    onDateChange(choice)
+                                                }
+                                                disabled={!professionalId}
+                                                className={`min-w-[62px] rounded-lg border px-2 py-2 text-center transition ${active ? 'border-[#d4af37] bg-[#272117]' : 'border-[#39362f] bg-[#171616] hover:border-[#8b7635]'}`}
+                                            >
+                                                <span className="block font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.12em] text-[#d4af37] uppercase">
+                                                    {option
+                                                        .toLocaleDateString(
+                                                            'pt-BR',
+                                                            {
+                                                                weekday:
+                                                                    'short',
+                                                            },
+                                                        )
+                                                        .replace('.', '')}
+                                                </span>
+                                                <span className="mt-1 block font-['Bodoni_Moda'] text-lg text-[#f4efe6]">
+                                                    {option.getDate()}
+                                                </span>
+                                                <span className="block font-['DM_Sans'] text-[9px] text-[#918b80] uppercase">
+                                                    {option
+                                                        .toLocaleDateString(
+                                                            'pt-BR',
+                                                            { month: 'short' },
+                                                        )
+                                                        .replace('.', '')}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <label className="mt-4 flex h-11 items-center gap-2 rounded-lg border border-[#39362f] bg-[#0f0f0d] px-3 focus-within:border-[#d4af37]">
+                                    <CalendarDays className="size-4 text-[#d4af37]" />
+                                    <span className="sr-only">
+                                        Escolher outra data
+                                    </span>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        min={today()}
+                                        max={limit()}
+                                        disabled={!professionalId}
+                                        onChange={(event) =>
+                                            onDateChange(event.target.value)
+                                        }
+                                        className="w-full bg-transparent font-['DM_Sans'] text-sm text-[#f4efe6] [color-scheme:dark] outline-none"
+                                    />
+                                </label>
+                                {slotGroups.map((group) => (
+                                    <div key={group.label} className="mt-6">
+                                        <div className="flex items-center gap-3 border-b border-[#2b2925] pb-2">
+                                            <span className="font-['Space_Grotesk'] text-xs font-semibold tracking-[0.16em] text-[#d4af37] uppercase">
+                                                {group.label}
+                                            </span>
+                                            <span className="h-px flex-1 bg-[#2b2925]" />
+                                        </div>
+                                        <div className="mt-3 grid grid-cols-3 gap-2">
+                                            {group.slots.map((item) => (
+                                                <button
+                                                    type="button"
+                                                    key={item.starts_at}
+                                                    onClick={() =>
+                                                        onSlotChange(
+                                                            item.starts_at,
+                                                        )
+                                                    }
+                                                    className={`min-h-12 rounded-lg border px-2 font-['Space_Grotesk'] text-xs font-semibold transition ${slot === item.starts_at ? 'border-[#d4af37] bg-[#2a261e] text-[#d4af37]' : 'border-[#2b2925] bg-[#171616] text-[#f4efe6] hover:border-[#8b7635]'}`}
+                                                >
+                                                    {time(
+                                                        item.starts_at,
+                                                        availabilityTimezone,
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                                 {professionalId && date && !slots.length ? (
                                     <p className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]">
                                         Nenhum horário disponível para esta
                                         data.
                                     </p>
                                 ) : null}
-                                {selectedSummary}
+                                {slot ? (
+                                    <div className="mt-5 rounded-lg border border-[#8b7635] bg-[#211e17] p-3 font-['DM_Sans'] text-xs text-[#d6cfc2]">
+                                        <p className="font-semibold text-[#f4efe6]">
+                                            Horário de{' '}
+                                            {time(slot, availabilityTimezone)}{' '}
+                                            selecionado
+                                        </p>
+                                        <p className="mt-1">
+                                            Seu atendimento está temporariamente
+                                            reservado enquanto você finaliza a
+                                            confirmação.
+                                        </p>
+                                    </div>
+                                ) : null}
                             </section>
                         ) : null}
 
@@ -1915,47 +2206,94 @@ function AtelierBarberView({
                                         agendamento.
                                     </em>
                                 </h1>
-                                <div className="mt-6 rounded-xl border border-[#39362f] bg-[#0f0f0d] p-4">
-                                    <div className="flex items-start justify-between gap-3">
+                                <div className="mt-6 overflow-hidden rounded-xl border border-[#4a454e] bg-[#19171b]">
+                                    <div className="flex items-center justify-between border-b border-[#39362f] p-4">
+                                        <p className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.18em] text-[#c7bfce] uppercase">
+                                            Resumo da reserva
+                                        </p>
+                                        <span className="flex items-center gap-1.5 font-['DM_Sans'] text-xs text-[#d4af37]">
+                                            <ShieldCheck className="size-4" />{' '}
+                                            Vaga reservada
+                                        </span>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                    Serviços
+                                                </p>
+                                                <p className="mt-1 font-['DM_Sans'] text-base font-semibold text-[#f4efe6]">
+                                                    {selectedServiceLabel}
+                                                </p>
+                                                <p className="mt-1 font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                    {selectedTotalMinutes ||
+                                                        selectedService?.duration_minutes ||
+                                                        0}{' '}
+                                                    min de atendimento
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onServiceChange('')
+                                                }
+                                                className="shrink-0 font-['Space_Grotesk'] text-xs font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
+                                            >
+                                                Alterar
+                                            </button>
+                                        </div>
+                                        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#373229] pt-4">
+                                            <div>
+                                                <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                    Profissional
+                                                </p>
+                                                <p className="mt-1 truncate font-['DM_Sans'] text-sm text-[#f4efe6]">
+                                                    {selectedProfessional?.name}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                    Data e hora
+                                                </p>
+                                                <p className="mt-1 font-['DM_Sans'] text-sm text-[#f4efe6]">
+                                                    {slot
+                                                        ? formatDateTimeSlot(
+                                                              slot,
+                                                              unit.timezone,
+                                                          )
+                                                        : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-end justify-between border-t border-[#4a454e] p-4">
                                         <div>
-                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                Serviço
+                                            <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.16em] text-[#c7bfce] uppercase">
+                                                Total estimado
                                             </p>
-                                            <p className="mt-1 font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
-                                                {selectedService?.name}
+                                            <p className="mt-1 flex items-center gap-1 font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                <span className="size-2 rounded-full bg-[#ffe9b0]" />{' '}
+                                                Pagamento no local após
+                                                atendimento
                                             </p>
                                         </div>
-                                        <p className="font-['Space_Grotesk'] text-sm font-semibold text-[#d4af37]">
-                                            {selectedService
-                                                ? money(
-                                                      selectedService.price_cents,
-                                                  )
-                                                : ''}
+                                        <p className="font-['Bodoni_Moda'] text-3xl text-[#ffe9b0]">
+                                            {money(
+                                                selectedTotalCents ||
+                                                    selectedService?.price_cents ||
+                                                    0,
+                                            )}
                                         </p>
                                     </div>
-                                    <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#373229] pt-4">
-                                        <div>
-                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                Profissional
-                                            </p>
-                                            <p className="mt-1 truncate font-['DM_Sans'] text-xs text-[#d6cfc2]">
-                                                {selectedProfessional?.name}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                Data e hora
-                                            </p>
-                                            <p className="mt-1 font-['DM_Sans'] text-xs text-[#d6cfc2]">
-                                                {slot
-                                                    ? formatDateTimeSlot(
-                                                          slot,
-                                                          unit.timezone,
-                                                      )
-                                                    : ''}
-                                            </p>
-                                        </div>
-                                    </div>
+                                </div>
+                                <div className="mt-7">
+                                    <h2 className="font-['Bodoni_Moda'] text-2xl text-[#f8f2e8]">
+                                        Para quem reservamos?
+                                    </h2>
+                                    <p className="mt-1 font-['DM_Sans'] text-sm text-[#a9a39a]">
+                                        Identificação direta. Sem burocracia ou
+                                        senhas.
+                                    </p>
                                 </div>
                                 <div className="mt-5 grid gap-3">
                                     <label
@@ -1998,6 +2336,27 @@ function AtelierBarberView({
                                         placeholder="E-mail (opcional)"
                                         className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
                                     />
+                                    <p className="-mt-1 flex items-center gap-2 font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                        <MessageCircle className="size-3 text-[#d4af37]" />{' '}
+                                        Para envio do lembrete e comprovante via
+                                        WhatsApp.
+                                    </p>
+                                    <div className="flex items-start gap-3 rounded-xl border border-[#39362f] bg-[#171616] p-4">
+                                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#8b7635] text-[#d4af37]">
+                                            <Clock3 className="size-4" />
+                                        </span>
+                                        <div>
+                                            <p className="font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
+                                                Flexibilidade & transparência
+                                            </p>
+                                            <p className="mt-1 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
+                                                Cancelamento ou reagendamento
+                                                sem custo até 2 horas antes do
+                                                horário. O valor é pago
+                                                diretamente no local.
+                                            </p>
+                                        </div>
+                                    </div>
                                     <label
                                         className="sr-only"
                                         htmlFor="atelier-notes"
