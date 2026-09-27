@@ -1,4 +1,4 @@
-name: Deploy Caldas Gestão no Coolify
+name: Produção · Deploy no Coolify
 
 on:
   workflow_run:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Disparar deploy no Coolify
+    name: Publicar aplicação no Coolify
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'production')
     runs-on: ubuntu-latest
     steps:
