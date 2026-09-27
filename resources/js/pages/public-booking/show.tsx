@@ -102,6 +102,7 @@ type Service = {
     image_url?: string | null;
     thumbnail_url?: string | null;
     photo_url?: string | null;
+    category_name?: string | null;
     price_cents: number;
     professionals: Professional[];
 };
@@ -301,6 +302,7 @@ export default function PublicBooking({
     const appearance = resolveAppearance(unit);
     const [tab, setTab] = useState<Tab>('details');
     const [serviceId, setServiceId] = useState('');
+    const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
     const [professionalId, setProfessionalId] = useState('');
     const [date, setDate] = useState('');
     const [slot, setSlot] = useState('');
@@ -311,6 +313,7 @@ export default function PublicBooking({
         'catalog' | 'slot' | 'generic' | null
     >(null);
     const [query, setQuery] = useState('');
+    const [serviceCategory, setServiceCategory] = useState('Todos');
     const getInitials = useInitials();
     const args = routeArgs(unit);
     const bookingFlow = unit.booking_flow ?? 'service_first';
@@ -380,7 +383,12 @@ export default function PublicBooking({
         ); // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date, professionalId, serviceId]);
     const chooseService = (id: string): void => {
-        setServiceId(id);
+        const nextIds = selectedServiceIds.includes(id)
+            ? selectedServiceIds.filter((selectedId) => selectedId !== id)
+            : [...selectedServiceIds, id];
+
+        setSelectedServiceIds(nextIds);
+        setServiceId(nextIds[0] ?? '');
 
         if (bookingFlow === 'service_first') {
             setProfessionalId('');
@@ -535,6 +543,8 @@ export default function PublicBooking({
                 services={services}
                 professionals={professionals}
                 selectedService={selectedService}
+                selectedServiceIds={selectedServiceIds}
+                serviceCategory={serviceCategory}
                 selectedProfessional={selectedProfessional}
                 serviceId={serviceId}
                 professionalId={professionalId}
@@ -555,6 +565,7 @@ export default function PublicBooking({
                 bookingErrorKind={bookingErrorKind}
                 finalWhatsappUrl={finalWhatsappUrl}
                 onQueryChange={setQuery}
+                onCategoryChange={setServiceCategory}
                 onServiceChange={chooseService}
                 onProfessionalChange={chooseProfessional}
                 onDateChange={setDate}
@@ -1404,6 +1415,8 @@ type AtelierBarberViewProps = {
     services: Service[];
     professionals: Professional[];
     selectedService: Service | null;
+    selectedServiceIds: string[];
+    serviceCategory: string;
     selectedProfessional?: Professional;
     serviceId: string;
     professionalId: string;
@@ -1422,6 +1435,7 @@ type AtelierBarberViewProps = {
     bookingErrorKind: 'catalog' | 'slot' | 'generic' | null;
     finalWhatsappUrl: string | null;
     onQueryChange: (value: string) => void;
+    onCategoryChange: (value: string) => void;
     onServiceChange: (id: string) => void;
     onProfessionalChange: (id: string) => void;
     onDateChange: (value: string) => void;
@@ -1441,6 +1455,8 @@ function AtelierBarberView({
     services,
     professionals,
     selectedService,
+    selectedServiceIds,
+    serviceCategory,
     selectedProfessional,
     serviceId,
     professionalId,
@@ -1459,6 +1475,7 @@ function AtelierBarberView({
     bookingErrorKind,
     finalWhatsappUrl,
     onQueryChange,
+    onCategoryChange,
     onServiceChange,
     onProfessionalChange,
     onDateChange,
@@ -1471,8 +1488,27 @@ function AtelierBarberView({
     const serviceProfessionals = selectedService?.professionals.length
         ? selectedService.professionals
         : professionals;
-    const filteredServices = services.filter((service) =>
-        service.name.toLowerCase().includes(query.toLowerCase()),
+    const filteredServices = services.filter((service) => {
+        const category = (service.category_name ?? service.name).toLowerCase();
+        const categoryMatches =
+            serviceCategory === 'Todos' ||
+            category.includes(serviceCategory.toLowerCase());
+
+        return (
+            categoryMatches &&
+            service.name.toLowerCase().includes(query.toLowerCase())
+        );
+    });
+    const selectedServices = services.filter((service) =>
+        selectedServiceIds.includes(service.id),
+    );
+    const selectedTotalCents = selectedServices.reduce(
+        (total, service) => total + service.price_cents,
+        0,
+    );
+    const selectedTotalMinutes = selectedServices.reduce(
+        (total, service) => total + service.duration_minutes,
+        0,
     );
     const stepLabels = ['Serviços', 'Profissional', 'Horário', 'Confirmar'];
 
@@ -1684,11 +1720,13 @@ function AtelierBarberView({
                                             <button
                                                 type="button"
                                                 key={category}
-                                                onClick={() =>
-                                                    category === 'Todos' &&
-                                                    onQueryChange('')
-                                                }
-                                                className={`shrink-0 rounded-full px-4 py-2 font-['Manrope'] text-xs font-semibold transition ${!query && category === 'Todos' ? 'bg-[#ffe9b0] text-[#261900]' : 'bg-[#1f2020] text-[#d0c5af] hover:bg-[#353535]'}`}
+                                                onClick={() => {
+                                                    onCategoryChange(category);
+                                                    if (category === 'Todos') {
+                                                        onQueryChange('');
+                                                    }
+                                                }}
+                                                className={`shrink-0 rounded-full px-4 py-2 font-['Manrope'] text-xs font-semibold transition ${serviceCategory === category ? 'bg-[#ffe9b0] text-[#261900]' : 'bg-[#1f2020] text-[#d0c5af] hover:bg-[#353535]'}`}
                                             >
                                                 {category}
                                             </button>
@@ -1714,9 +1752,11 @@ function AtelierBarberView({
                                                     onServiceChange(service.id)
                                                 }
                                                 aria-pressed={
-                                                    serviceId === service.id
+                                                    selectedServiceIds.includes(
+                                                        service.id,
+                                                    )
                                                 }
-                                                className={`flex min-h-[122px] items-center gap-3 rounded-xl border p-4 text-left shadow-[0_4px_20px_rgba(5,4,3,0.55)] transition ${serviceId === service.id ? 'border-[#d4af37]/40 bg-[#353535]' : 'border-transparent bg-[#1f1f1f] hover:border-[#8b7635]'}`}
+                                                className={`flex min-h-[122px] items-center gap-3 rounded-xl border p-4 text-left shadow-[0_4px_20px_rgba(5,4,3,0.55)] transition ${selectedServiceIds.includes(service.id) ? 'border-[#d4af37]/40 bg-[#353535]' : 'border-transparent bg-[#1f1f1f] hover:border-[#8b7635]'}`}
                                             >
                                                 {service.thumbnail_url ||
                                                 service.image_url ? (
@@ -1750,10 +1790,11 @@ function AtelierBarberView({
                                                     {money(service.price_cents)}
                                                 </span>
                                                 <span
-                                                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${serviceId === service.id ? 'bg-[#ffe9b0] text-[#261900] shadow-[0_0_8px_rgba(242,202,80,0.5)]' : 'bg-[#353535] text-[#d0c5af]'}`}
+                                                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${selectedServiceIds.includes(service.id) ? 'bg-[#ffe9b0] text-[#261900] shadow-[0_0_8px_rgba(242,202,80,0.5)]' : 'bg-[#353535] text-[#d0c5af]'}`}
                                                 >
-                                                    {serviceId ===
-                                                    service.id ? (
+                                                    {selectedServiceIds.includes(
+                                                        service.id,
+                                                    ) ? (
                                                         <CheckCircle2 className="size-5" />
                                                     ) : (
                                                         <span className="text-xl leading-none">
@@ -2015,6 +2056,23 @@ function AtelierBarberView({
                                     />
                                 </div>
                             </section>
+                        ) : null}
+                        {activeStep === 1 ? (
+                            <div className="fixed right-0 bottom-[76px] left-0 z-40 mx-auto flex w-full max-w-[390px] items-center justify-between border-t border-[#4d4635]/30 bg-[#171612] px-4 py-3 md:max-w-5xl md:px-10">
+                                <div className="min-w-0">
+                                    <p className="truncate font-['Manrope'] text-[10px] font-bold tracking-[0.14em] text-[#d4af37] uppercase">
+                                        {selectedServices.length
+                                            ? `${selectedServices.length} serviço${selectedServices.length > 1 ? 's' : ''} selecionado${selectedServices.length > 1 ? 's' : ''}`
+                                            : 'Nenhum serviço'}
+                                    </p>
+                                    <p className="font-['Plus_Jakarta_Sans'] text-lg font-extrabold text-[#ffe9b0]">
+                                        {money(selectedTotalCents)}{' '}
+                                        <span className="font-['Manrope'] text-xs font-medium text-[#a9a39a]">
+                                            · {selectedTotalMinutes} min
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
                         ) : null}
                         <button
                             type="submit"
