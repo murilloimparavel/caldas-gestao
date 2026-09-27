@@ -1,7 +1,6 @@
 FROM node:22-bookworm-slim AS assets
 
 WORKDIR /app
-ENV VITE_WAYFINDER_COMMAND=true
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY resources resources
