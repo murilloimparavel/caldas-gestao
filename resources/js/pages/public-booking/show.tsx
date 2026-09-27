@@ -21,6 +21,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useInitials } from '@/hooks/use-initials';
 import { availability } from '@/routes/public_booking';
 import { store } from '@/routes/public_booking/appointments';
+import {
+    AtelierProgress,
+    AtelierSectionHeading,
+} from '@/pages/public-booking/components/atelier-booking-ui';
 
 type Address = {
     street?: string;
@@ -1610,24 +1614,10 @@ function AtelierBarberView({
                     <div className="hidden" />
                 </header>
                 <div className="px-4 pt-20 md:px-10 md:pt-24">
-                    <div className="mb-5 flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 font-['Manrope'] text-[10px] font-bold tracking-[0.16em] text-[#ffe9b0] uppercase">
-                                <span className="size-1.5 rounded-full bg-[#d4af37]" />
-                                Etapa {activeStep} de 4 ·{' '}
-                                {stepLabels[activeStep - 1]}
-                            </span>
-                            <span className="font-['Manrope'] text-[10px] tracking-widest text-[#a69e94] uppercase">
-                                {activeStep * 25}% concluído
-                            </span>
-                        </div>
-                        <div className="h-1 overflow-hidden rounded-full bg-[#353535]">
-                            <div
-                                className="h-full rounded-full bg-[#d4af37] shadow-[0_0_8px_rgba(242,202,80,0.5)] transition-all duration-500"
-                                style={{ width: `${activeStep * 25}%` }}
-                            />
-                        </div>
-                    </div>
+                    <AtelierProgress
+                        activeStep={activeStep}
+                        label={stepLabels[activeStep - 1]}
+                    />
                 </div>
                 {bookingError ? (
                     <div
@@ -1732,16 +1722,10 @@ function AtelierBarberView({
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="mt-7 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="h-px w-4 bg-[#e9c176]" />
-                                            <span className="font-['Manrope'] text-[10px] font-bold tracking-[0.2em] text-[#e9c176] uppercase">
-                                                Mais escolhidos
-                                            </span>
-                                        </div>
-                                        <span className="font-['Manrope'] text-[10px] tracking-widest text-[#a69e94]">
+                                    <div className="mt-7">
+                                        <AtelierSectionHeading eyebrow="Mais escolhidos">
                                             Seleção múltipla
-                                        </span>
+                                        </AtelierSectionHeading>
                                     </div>
                                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                                         {filteredServices.map((service) => (
