@@ -21,11 +21,7 @@ import {
     RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
-import {
-    FormErrorSummary,
-    PageCanvas,
-    ResourceHeader,
-} from '@/components/operational';
+import { FormErrorSummary, PageCanvas } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -125,30 +121,36 @@ export default function OnlineBookingIndex({
     return (
         <>
             <Head title="Agendamento online" />
-            <PageCanvas>
-                <ResourceHeader
-                    eyebrow="Gestão"
-                    title="Agendamento online"
-                    description={`Escolha o que ${unit.name} oferece para clientes e profissionais no canal público.`}
-                    status={
-                        <div className="mt-3 flex flex-wrap gap-2">
-                            <Badge
-                                variant={
-                                    readiness.publishable
-                                        ? 'default'
-                                        : 'secondary'
-                                }
-                            >
+            <PageCanvas className="bg-[#f6f5f2]">
+                <div className="relative overflow-hidden rounded-[2rem] bg-[#111112] px-5 py-7 text-white shadow-2xl shadow-slate-900/10 sm:px-8 sm:py-9">
+                    <div className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-amber-300/10 blur-3xl" />
+                    <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <div className="mb-4 flex items-center gap-3 text-[11px] font-bold tracking-[0.28em] text-amber-200 uppercase">
+                                <span className="size-2 rounded-full bg-amber-300" />
+                                Canal público
+                            </div>
+                            <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">
+                                Seu agendamento, do seu jeito.
+                            </h1>
+                            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+                                Configure o link que seus clientes vão usar para
+                                escolher serviços, profissionais e horários de
+                                {` ${unit.name}`}.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge className="border-0 bg-amber-300 text-slate-950">
                                 {readiness.publishable
-                                    ? 'Publicável'
+                                    ? 'Pronto para publicar'
                                     : 'Em preparação'}
                             </Badge>
-                            <Badge variant="outline">
+                            <Badge className="border border-white/15 bg-white/10 text-white">
                                 /{settings.public_slug ?? unit.slug}
                             </Badge>
                         </div>
-                    }
-                />
+                    </div>
+                </div>
                 <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                     <div className="flex items-start gap-3">
                         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -408,6 +410,20 @@ export default function OnlineBookingIndex({
                                     Configurações salvas com sucesso.
                                 </div>
                             )}
+                            <div className="mb-3 flex items-end justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900">
+                                        Configuração rápida
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        Ajuste identidade, catálogo e horários
+                                        em um só lugar.
+                                    </p>
+                                </div>
+                                <span className="hidden text-xs font-medium text-slate-400 sm:block">
+                                    As alterações ficam no rascunho
+                                </span>
+                            </div>
                             <TabNavigation
                                 activeTab={activeTab}
                                 onChange={setActiveTab}

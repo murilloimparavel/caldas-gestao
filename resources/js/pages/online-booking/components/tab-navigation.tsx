@@ -29,10 +29,10 @@ export function TabNavigation({
     onChange: (tab: TabKey) => void;
 }) {
     return (
-        <div className="overflow-x-auto border-b border-border/70">
+        <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-2 shadow-xl shadow-slate-950/10">
             <div
                 aria-label="Configuração do agendamento online"
-                className="flex min-w-max gap-1"
+                className="flex min-w-max gap-1 lg:grid lg:grid-cols-7"
                 role="tablist"
             >
                 {tabs.map(({ key, label, icon: Icon }) => (
@@ -42,7 +42,7 @@ export function TabNavigation({
                         role="tab"
                         aria-selected={activeTab === key}
                         onClick={() => onChange(key)}
-                        className={`relative flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 ${activeTab === key ? 'text-primary after:bg-primary' : 'text-muted-foreground after:bg-transparent hover:text-foreground'}`}
+                        className={`relative flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold transition-all ${activeTab === key ? 'bg-amber-300 text-slate-950 shadow-lg shadow-amber-300/20' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
                     >
                         <Icon aria-hidden="true" className="size-4" />
                         {label}

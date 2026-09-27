@@ -56,7 +56,15 @@ Route::get('/', function () {
 
     if ($domain?->kind?->value === 'public') {
         if (request()->getHost() === 'romawear.com.br') {
-            return response()->file(public_path('romawear-demo/index.html'), ['Cache-Control' => 'no-store']);
+            $unit = $domain->tenant->units()
+                ->where('status', 'active')
+                ->where('online_booking_enabled', true)
+                ->orderBy('name')
+                ->first();
+
+            if ($unit !== null) {
+                return app(PublicBookingController::class)->show($domain->tenant, $unit);
+            }
         }
 
         $tenant = $domain->tenant;
