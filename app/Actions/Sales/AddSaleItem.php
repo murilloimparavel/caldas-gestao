@@ -189,6 +189,25 @@ final class AddSaleItem extends OperationalAction
                 }
             }
 
+            $sellerProfessionalId = isset($data['seller_professional_id']) && ! empty($data['seller_professional_id'])
+                ? (string) $data['seller_professional_id']
+                : null;
+
+            if ($sellerProfessionalId !== null) {
+                $sellerProfessionalExists = Professional::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('status', 'active')
+                    ->whereKey($sellerProfessionalId)
+                    ->exists();
+
+                if (! $sellerProfessionalExists) {
+                    throw ValidationException::withMessages([
+                        'seller_professional_id' => 'O profissional vendedor selecionado não pertence a esta unidade ou está inativo.',
+                    ]);
+                }
+            }
+
             $quantity = max(1, (int) ($data['quantity'] ?? 1));
             $discountCents = max(0, (int) ($data['discount_cents'] ?? 0));
             $grossCents = $unitPriceCents * $quantity;
@@ -212,6 +231,7 @@ final class AddSaleItem extends OperationalAction
                 'service_id' => $serviceId,
                 'product_id' => $productId,
                 'professional_id' => $professionalId,
+                'seller_professional_id' => $sellerProfessionalId,
                 'name_snapshot' => $nameSnapshot,
                 'unit_price_cents' => $unitPriceCents,
                 'quantity' => $quantity,

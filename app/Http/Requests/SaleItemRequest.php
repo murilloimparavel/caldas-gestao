@@ -25,6 +25,7 @@ final class SaleItemRequest extends FormRequest
             'service_id' => ['nullable', 'required_if:item_type,service', 'uuid'],
             'product_id' => ['nullable', 'required_if:item_type,product', 'uuid'],
             'professional_id' => ['nullable', 'uuid'],
+            'seller_professional_id' => ['nullable', 'uuid'],
             'name_snapshot' => ['nullable', 'required_if:item_type,custom', 'string', 'max:160'],
             'unit_price_cents' => ['nullable', 'required_if:item_type,custom', 'integer', 'min:0'],
             'quantity' => ['nullable', 'integer', 'min:1'],

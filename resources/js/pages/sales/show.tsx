@@ -151,6 +151,7 @@ export default function SalesShow({
     );
     const [selectedServiceId, setSelectedServiceId] = useState('');
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [sellerProfessionalId, setSellerProfessionalId] = useState('');
     const [customName, setCustomName] = useState('');
     const [customPriceStr, setCustomPriceStr] = useState('');
     const [quantity, setQuantity] = useState(1);
@@ -263,6 +264,7 @@ export default function SalesShow({
     const resetItemForm = () => {
         setSelectedServiceId('');
         setSelectedProductId('');
+        setSellerProfessionalId('');
         setCustomName('');
         setCustomPriceStr('');
         setQuantity(1);
@@ -1186,6 +1188,56 @@ export default function SalesShow({
                                                                         )}
                                                                     </select>
                                                                 </FormField>
+
+                                                                <FormField
+                                                                    label="Profissional vendedor (opcional)"
+                                                                    name="seller_professional_id"
+                                                                    error={
+                                                                        errors.seller_professional_id
+                                                                    }
+                                                                >
+                                                                    <select
+                                                                        id="seller_professional_id"
+                                                                        name="seller_professional_id"
+                                                                        value={
+                                                                            sellerProfessionalId
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            setSellerProfessionalId(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                                    >
+                                                                        <option value="">
+                                                                            Sem
+                                                                            vendedor
+                                                                            atribuído
+                                                                        </option>
+                                                                        {professionals.map(
+                                                                            (
+                                                                                p,
+                                                                            ) => (
+                                                                                <option
+                                                                                    key={
+                                                                                        p.id
+                                                                                    }
+                                                                                    value={
+                                                                                        p.id
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        p.name
+                                                                                    }
+                                                                                </option>
+                                                                            ),
+                                                                        )}
+                                                                    </select>
+                                                                </FormField>
                                                             </div>
                                                         ) : null}
 
@@ -1432,7 +1484,7 @@ export default function SalesShow({
                                                     Item / Descrição
                                                 </th>
                                                 <th className="px-3 py-3">
-                                                    Profissional
+                                                    Executor / Vendedor
                                                 </th>
                                                 <th className="px-3 py-3 text-center">
                                                     Qtd
@@ -1479,8 +1531,27 @@ export default function SalesShow({
                                                             </div>
                                                         </td>
                                                         <td className="px-3 py-3.5 text-xs text-muted-foreground">
-                                                            {item.professional
-                                                                ?.name ?? '—'}
+                                                            <div className="flex flex-col gap-1">
+                                                                <span>
+                                                                    Executor:{' '}
+                                                                    {item
+                                                                        .professional
+                                                                        ?.name ??
+                                                                        '—'}
+                                                                </span>
+                                                                {item.item_type ===
+                                                                    'product' &&
+                                                                item.seller_professional ? (
+                                                                    <span className="text-purple-700 dark:text-purple-300">
+                                                                        Vendedor:{' '}
+                                                                        {
+                                                                            item
+                                                                                .seller_professional
+                                                                                .name
+                                                                        }
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
                                                         </td>
                                                         <td className="px-3 py-3.5 text-center font-medium">
                                                             {item.quantity}

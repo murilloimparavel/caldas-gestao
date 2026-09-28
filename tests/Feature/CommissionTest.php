@@ -181,6 +181,64 @@ it('automatically accrues percentage and fixed commissions upon closing session 
     expect(AuditEvent::query()->where('action', 'commission_accrual.created')->count())->toBe(2);
 });
 
+it('accrues a product commission to the seller instead of the executor', function () {
+    [$owner, $tenant, $unit, $context] = commissionTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'product',
+        'is_active' => true,
+    ]);
+    $executor = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $seller = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_price_cents' => 5000,
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+    CommissionRule::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $seller->getKey(),
+        'product_id' => $product->getKey(),
+        'type' => 'percentage',
+        'value_rate' => 20,
+        'is_active' => true,
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'product_id' => $product->getKey(),
+        'professional_id' => $executor->getKey(),
+        'seller_professional_id' => $seller->getKey(),
+        'item_type' => 'product',
+        'name_snapshot' => $product->name,
+        'unit_price_cents' => 5000,
+        'total_cents' => 5000,
+    ]);
+
+    $accruals = app(AccrueCommissionsForSale::class)->handle($owner, $context, $sale);
+
+    expect($accruals)->toHaveCount(1)
+        ->and($accruals->first()->professional_id)->toBe($seller->getKey())
+        ->and($accruals->first()->sale_item_id)->toBe($item->getKey())
+        ->and($accruals->first()->commission_amount_cents)->toBe(1000);
+});
+
 it('prioritizes specific rule over generic rule during commission accrual', function () {
     [$owner, $tenant, $unit] = commissionTestWorkspace();
 
