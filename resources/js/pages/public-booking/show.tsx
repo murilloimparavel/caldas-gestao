@@ -5,6 +5,7 @@ import {
     ChevronRight,
     ArrowLeft,
     CalendarDays,
+    Facebook,
     Instagram,
     MapPin,
     MessageCircle,
@@ -915,6 +916,19 @@ export default function PublicBooking({
                                                 Instagram
                                             </a>
                                         )}
+                                        {unit.contacts?.facebook_url && (
+                                            <a
+                                                href={
+                                                    unit.contacts.facebook_url
+                                                }
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 underline-offset-4 hover:underline"
+                                            >
+                                                <Facebook className="size-4" />
+                                                Facebook
+                                            </a>
+                                        )}
                                         {unit.contacts?.website_url && (
                                             <a
                                                 href={unit.contacts.website_url}
@@ -928,6 +942,7 @@ export default function PublicBooking({
                                         {!unit.contacts?.phone &&
                                             !unit.contacts?.whatsapp &&
                                             !unit.contacts?.instagram_url &&
+                                            !unit.contacts?.facebook_url &&
                                             !unit.contacts?.website_url && (
                                                 <p>
                                                     Contato ainda não informado.
