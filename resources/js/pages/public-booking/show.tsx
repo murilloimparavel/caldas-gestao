@@ -126,6 +126,7 @@ type Props = {
 };
 type AppointmentData = {
     service_id: string;
+    service_ids: string[];
     professional_id: string;
     starts_at: string;
     name: string;
@@ -357,6 +358,7 @@ export default function PublicBooking({
     });
     const appointmentRequest = useHttp<AppointmentData, AppointmentResponse>({
         service_id: '',
+        service_ids: [],
         professional_id: '',
         starts_at: '',
         name: '',
@@ -429,6 +431,7 @@ export default function PublicBooking({
         appointmentRequest.setData((current) => ({
             ...current,
             service_id: serviceId,
+            service_ids: selectedServiceIds,
             professional_id: professionalId,
             starts_at: slot,
         }));
@@ -1483,11 +1486,36 @@ function AtelierBarberView({
     const serviceProfessionals = selectedService?.professionals.length
         ? selectedService.professionals
         : professionals;
+    const serviceCategories = useMemo(() => {
+        const seen = new Set<string>();
+
+        return [
+            'Todos',
+            ...services.flatMap((service) => {
+                const label = service.category_name?.trim();
+
+                if (!label) {
+                    return [];
+                }
+
+                const key = label.toLocaleLowerCase();
+
+                if (key === 'todos' || seen.has(key)) {
+                    return [];
+                }
+
+                seen.add(key);
+
+                return [label];
+            }),
+        ];
+    }, [services]);
     const filteredServices = services.filter((service) => {
-        const category = (service.category_name ?? service.name).toLowerCase();
+        const category = service.category_name?.trim().toLocaleLowerCase();
+        const selectedCategory = serviceCategory.trim().toLocaleLowerCase();
         const categoryMatches =
-            serviceCategory === 'Todos' ||
-            category.includes(serviceCategory.toLowerCase());
+            selectedCategory === 'todos' ||
+            (category !== undefined && category === selectedCategory);
 
         return (
             categoryMatches &&
@@ -1714,12 +1742,7 @@ function AtelierBarberView({
                                             'Escolha um ou mais serviços para o seu atendimento.'}
                                     </p>
                                     <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-                                        {[
-                                            'Todos',
-                                            'Cabelo',
-                                            'Barba',
-                                            'Cuidados',
-                                        ].map((category) => (
+                                        {serviceCategories.map((category) => (
                                             <button
                                                 type="button"
                                                 key={category}
@@ -1730,6 +1753,9 @@ function AtelierBarberView({
                                                         onQueryChange('');
                                                     }
                                                 }}
+                                                aria-pressed={
+                                                    serviceCategory === category
+                                                }
                                                 className={`shrink-0 rounded-full px-4 py-2 font-['Manrope'] text-xs font-semibold transition ${serviceCategory === category ? 'bg-[#ffe9b0] text-[#261900]' : 'bg-[#1f2020] text-[#d0c5af] hover:bg-[#353535]'}`}
                                             >
                                                 {category}
