@@ -3,17 +3,13 @@ import {
     AlertCircle,
     BellRing,
     CalendarDays,
-    Check,
     CheckCircle2,
     ClipboardCheck,
-    Copy,
     ExternalLink,
     GalleryHorizontalEnd,
     History,
     ImagePlus,
-    Link2,
     Scissors,
-    Share2,
     UserRound,
     RotateCcw,
 } from 'lucide-react';
@@ -29,14 +25,11 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
-import tenantDomains from '@/routes/tenant-domains';
 import type { SharedPageProps } from '@/types';
 import { AppearanceEditor } from './components/appearance-editor';
 import {
-    Field,
     ReadinessRow,
     SectionCard,
 } from './components/booking-form-primitives';
@@ -46,6 +39,7 @@ import { bookingUi } from './components/design-tokens';
 import { BookingHero } from './components/booking-hero';
 import { IdentitySettingsPanel } from './components/identity-settings-panel';
 import { OperationalSettingsPanel } from './components/operational-settings-panel';
+import { PublicLinkSettingsPanel } from './components/public-link-settings-panel';
 import { CatalogSettingsPanel } from './components/catalog-settings-panel';
 import { PublicationToolbar } from './components/publication-toolbar';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
@@ -353,11 +347,15 @@ export default function OnlineBookingIndex({
                                         />
                                     )}
                                     {activeTab === 'link' && (
-                                        <SectionCard
-                                            icon={Link2}
-                                            title="Link público"
-                                            description="Compartilhe este endereço em redes sociais e mensagens."
-                                        >
+                                        <PublicLinkSettingsPanel
+                                            settings={settings}
+                                            unitSlug={unit.slug}
+                                            publicDomains={publicDomains}
+                                            publicUrl={publicUrl}
+                                            copied={copied}
+                                            onCopy={copyPublicUrl}
+                                        />
+                                        /*
                                             <Field
                                                 label="Slug público"
                                                 name="public_slug"
@@ -502,7 +500,7 @@ export default function OnlineBookingIndex({
                                                     </p>
                                                 </div>
                                             </div>
-                                        </SectionCard>
+                                        </SectionCard> */
                                     )}
                                     {activeTab === 'gallery' && (
                                         <SectionCard
