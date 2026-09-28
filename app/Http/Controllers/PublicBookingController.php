@@ -192,7 +192,7 @@ final class PublicBookingController extends Controller
         $services = $this->publicServices($tenant, $unit, $serviceIds, $publication);
         $professional = $this->publicProfessional($tenant, $unit, $data['professional_id'], $publication);
 
-        if ($services->count() !== count($serviceIds) || $services->contains(fn (Service $service): bool => ! $professional->services()->whereKey($service->getKey())->exists())) {
+        if ($services->count() !== count($serviceIds) || $services->pluck('id')->diff($professional->services->pluck('id'))->isNotEmpty()) {
             throw new NotFoundHttpException;
         }
         $duration = (int) $services->sum('duration_minutes');
@@ -377,14 +377,10 @@ final class PublicBookingController extends Controller
         return compact('services', 'professionals');
     }
 
-    private function publicService(Tenant $tenant, Unit $unit, string $id, ?OnlineBookingPublication $publication = null): Service
-    {
-        $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
-
-        return Service::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
-    }
-
-    /** @param list<string> $ids */
+    /**
+     * @param  list<string>  $ids
+     * @return Collection<int, Service>
+     */
     private function publicServices(Tenant $tenant, Unit $unit, array $ids, ?OnlineBookingPublication $publication = null): Collection
     {
         $publishedIds = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
@@ -403,7 +399,15 @@ final class PublicBookingController extends Controller
     {
         $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['professional_ids'] ?? [], 'is_string')) : null;
 
-        return Professional::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
+        return Professional::query()
+            ->whereKey($id)
+            ->whereBelongsTo($tenant)
+            ->whereBelongsTo($unit)
+            ->where('status', 'active')
+            ->where('online_booking_enabled', true)
+            ->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))
+            ->with(['services' => fn ($query) => $query->select('services.id')->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())])
+            ->firstOrFail();
     }
 
     private function activePublicPublication(Tenant $tenant, Unit $unit): ?OnlineBookingPublication
