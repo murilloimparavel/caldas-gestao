@@ -14,6 +14,18 @@ class ResolveTenantDomain
     public function handle(Request $request, Closure $next): Response
     {
         $rawHostname = strtolower(trim($request->getHost()));
+        $sharedBookingHost = strtolower(trim((string) config('domains.shared_booking_host')));
+
+        if ($sharedBookingHost !== '' && $rawHostname === $sharedBookingHost) {
+            if (! $this->isPublicBookingPath($request)) {
+                abort(404, 'Rota não disponível neste domínio.');
+            }
+
+            $request->attributes->set('public_booking_shared_host', true);
+
+            return $next($request);
+        }
+
         $officialHosts = array_filter([
             parse_url((string) config('app.url'), PHP_URL_HOST),
             ...((array) config('app.official_hosts', [])),
@@ -45,5 +57,16 @@ class ResolveTenantDomain
         $request->attributes->set('tenant_domain', $domain);
 
         return $next($request);
+    }
+
+    private function isPublicBookingPath(Request $request): bool
+    {
+        $path = trim($request->path(), '/');
+
+        if ($path === '' || str_starts_with($path, 'book/')) {
+            return true;
+        }
+
+        return $request->route()?->getName() === 'public_booking.shared_slug';
     }
 }

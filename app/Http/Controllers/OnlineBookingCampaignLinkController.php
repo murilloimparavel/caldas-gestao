@@ -10,7 +10,6 @@ use App\Models\OnlineBookingCampaignLink;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,8 +54,8 @@ final class OnlineBookingCampaignLinkController extends Controller
     {
         $domain = $link->site->publicDomain;
         $base = $domain !== null && $domain->kind === TenantDomainKind::Public && $domain->status === TenantDomainStatus::Active
-            ? 'https://'.$domain->hostname.'/book/'.rawurlencode($link->site->public_slug)
-            : URL::route('public_booking.slug', ['public_slug' => $link->site->public_slug]);
+            ? 'https://'.$domain->hostname.'/'
+            : rtrim((string) request()->getScheme().'://'.config('domains.shared_booking_host'), '/').'/'.rawurlencode($link->site->public_slug);
 
         return $base.'?'.http_build_query(array_filter([
             'utm_source' => $link->utm_source,

@@ -5,6 +5,7 @@ import billing from '@/routes/billing';
 
 type Props = {
     checkoutUrl: string | null;
+    onlineBookingCount: number;
     subscription: {
         status: string;
         starts_at: string | null;
@@ -23,11 +24,19 @@ const labels: Record<string, string> = {
     cancelled: 'Cancelada',
 };
 
-export default function BillingIndex({ checkoutUrl, subscription }: Props) {
+export default function BillingIndex({
+    checkoutUrl,
+    onlineBookingCount,
+    subscription,
+}: Props) {
     const accessBlocked = !['trial', 'active', 'grace'].includes(
         subscription.status,
     );
     const endsAt = subscription.ends_at ?? subscription.grace_ends_at;
+    const onlineBookingLabel =
+        onlineBookingCount === 1
+            ? 'agendamento online ativo'
+            : 'agendamentos online ativos';
 
     return (
         <PageCanvas>
@@ -60,6 +69,16 @@ export default function BillingIndex({ checkoutUrl, subscription }: Props) {
                         <p className="mt-4 rounded-md bg-destructive/10 p-3 text-sm">
                             O acesso operacional está suspenso. Renove sua
                             assinatura para continuar usando o sistema.
+                        </p>
+                    )}
+                    {accessBlocked && onlineBookingCount > 0 && (
+                        <p
+                            className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground"
+                            role="status"
+                        >
+                            Há {onlineBookingCount} {onlineBookingLabel} nesta
+                            conta. O acesso aos detalhes está indisponível
+                            enquanto a assinatura não for regularizada.
                         </p>
                     )}
                     {checkoutUrl && (

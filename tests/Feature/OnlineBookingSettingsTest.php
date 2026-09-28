@@ -46,7 +46,8 @@ it('updates publish flags, publishes the public link only for a valid pair, and 
 
     $this->actingAs($owner)->getJson(route('online_booking.index'))
         ->assertJsonPath('readiness.publishable', true)
-        ->assertJsonPath('publicUrl', route('public_booking.show', [$tenant, $unit]));
+        ->assertJsonPath('publicUrl', null)
+        ->assertJsonPath('canonicalUrl', null);
 
     $this->flushHeaders()->actingAs($owner)->patch(route('online_booking.update'), [
         ...$payload,
@@ -134,7 +135,8 @@ it('uses an active public tenant domain for the booking link', function () {
 
     $this->actingAs($owner)->getJson(route('online_booking.index'))
         ->assertJsonPath('settings.public_domain_id', $domain->getKey())
-        ->assertJsonPath('publicUrl', 'https://romawear.com.br/book/'.$unit->slug);
+        ->assertJsonPath('publicUrl', null)
+        ->assertJsonPath('canonicalUrl', null);
 });
 
 it('keeps the published slug and domain live until the edited link is republished', function () {
@@ -165,7 +167,7 @@ it('keeps the published slug and domain live until the edited link is republishe
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
 
-    $firstLiveUrl = 'https://'.$firstDomain->hostname.'/book/published-old-link';
+    $firstLiveUrl = 'https://'.$firstDomain->hostname.'/';
     $this->actingAs($owner)->getJson(route('online_booking.index'))
         ->assertSuccessful()
         ->assertJsonPath('publicUrl', $firstLiveUrl)
@@ -184,25 +186,37 @@ it('keeps the published slug and domain live until the edited link is republishe
         ->assertJsonPath('settings.public_slug', 'draft-new-link')
         ->assertJsonPath('publicUrl', $firstLiveUrl)
         ->assertJsonPath('canonicalUrl', $firstLiveUrl);
+    $secondLiveUrl = 'https://'.$secondDomain->hostname.'/';
     $this->getJson($firstLiveUrl)->assertSuccessful();
     $this->getJson('https://'.$secondDomain->hostname.'/book/published-old-link')->assertNotFound();
     $this->getJson('https://'.$secondDomain->hostname.'/book/draft-new-link')->assertNotFound();
+    $this->get('https://'.$firstDomain->hostname.'/book/published-old-link')
+        ->assertStatus(302)
+        ->assertHeader('Location', $firstLiveUrl);
+    $this->get('https://'.$secondDomain->hostname.'/')
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page->component('public/coming-soon'));
+    $this->get('https://'.$firstDomain->hostname.'/')->assertSuccessful();
     $previewUrl = $this->getJson(route('online_booking.index'))->json('previewUrl');
     $this->get($previewUrl)
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('public-booking/show')
-            ->where('unit.canonical_url', url('/book/draft-new-link')));
+            ->where('unit.canonical_url', 'https://barber.caldasindica.com/published-old-link'));
 
     $site->refresh();
     app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
-    $secondLiveUrl = 'https://'.$secondDomain->hostname.'/book/draft-new-link';
     $this->actingAs($owner)->getJson(route('online_booking.index'))
         ->assertSuccessful()
         ->assertJsonPath('publicUrl', $secondLiveUrl)
         ->assertJsonPath('canonicalUrl', $secondLiveUrl);
     $this->getJson($secondLiveUrl)->assertSuccessful();
-    $this->getJson($firstLiveUrl)->assertNotFound();
+    $this->get('https://'.$firstDomain->hostname.'/book/published-old-link')
+        ->assertStatus(302)
+        ->assertHeader('Location', $secondLiveUrl);
+    $this->get($firstLiveUrl)
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page->component('public/coming-soon'));
 });
 
 it('serves default publications on the management host but scopes custom domains to their public host', function () {
@@ -232,7 +246,9 @@ it('serves default publications on the management host but scopes custom domains
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
 
-    $this->getJson('https://'.$managementDomain->hostname.'/book/default-booking-link')->assertSuccessful();
+    $this->getJson('https://'.$managementDomain->hostname.'/book/default-booking-link')
+        ->assertStatus(302)
+        ->assertHeader('Location', 'https://barber.caldasindica.com/default-booking-link');
 
     $this->actingAs($owner)->patch(route('online_booking.update'), [
         ...$payload,
@@ -244,7 +260,9 @@ it('serves default publications on the management host but scopes custom domains
     app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
 
     $this->getJson('https://'.$managementDomain->hostname.'/book/custom-booking-link')->assertNotFound();
-    $this->getJson('https://'.$publicDomain->hostname.'/book/custom-booking-link')->assertSuccessful();
+    $this->getJson('https://'.$publicDomain->hostname.'/book/custom-booking-link')
+        ->assertStatus(302)
+        ->assertHeader('Location', 'https://'.$publicDomain->hostname.'/');
 });
 
 it('redirects stale Inertia saves with a recoverable message', function () {
