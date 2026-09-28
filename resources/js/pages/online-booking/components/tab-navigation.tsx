@@ -10,6 +10,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import type { TabKey } from '../types';
+import { bookingUi } from './design-tokens';
 
 export const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
     { key: 'details', label: 'Detalhes', icon: Globe2 },
@@ -29,7 +30,7 @@ export function TabNavigation({
     onChange: (tab: TabKey) => void;
 }) {
     return (
-        <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-2 shadow-xl shadow-slate-950/10">
+        <div className={`overflow-x-auto ${bookingUi.nav}`}>
             <div
                 aria-label="Configuração do agendamento online"
                 className="flex min-w-max gap-1 lg:grid lg:grid-cols-7"
@@ -42,7 +43,7 @@ export function TabNavigation({
                         role="tab"
                         aria-selected={activeTab === key}
                         onClick={() => onChange(key)}
-                        className={`relative flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold transition-all ${activeTab === key ? 'bg-amber-300 text-slate-950 shadow-lg shadow-amber-300/20' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}
+                        className={`relative flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold transition-all ${activeTab === key ? bookingUi.navActive : bookingUi.navIdle}`}
                     >
                         <Icon aria-hidden="true" className="size-4" />
                         {label}

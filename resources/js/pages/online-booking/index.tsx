@@ -48,6 +48,7 @@ import {
 } from './components/booking-form-primitives';
 import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
+import { bookingUi } from './components/design-tokens';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
@@ -121,8 +122,8 @@ export default function OnlineBookingIndex({
     return (
         <>
             <Head title="Agendamento online" />
-            <PageCanvas className="bg-[#f6f5f2]">
-                <div className="relative overflow-hidden rounded-[2rem] bg-[#111112] px-5 py-7 text-white shadow-2xl shadow-slate-900/10 sm:px-8 sm:py-9">
+            <PageCanvas className={bookingUi.shell}>
+                <div className={`${bookingUi.hero} px-5 py-7 sm:px-8 sm:py-9`}>
                     <div className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-amber-300/10 blur-3xl" />
                     <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
                         <div>
