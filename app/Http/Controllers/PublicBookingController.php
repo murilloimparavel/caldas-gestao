@@ -51,7 +51,7 @@ final class PublicBookingController extends Controller
         $publication = is_array($preview) || ! config('online_booking.use_publication_resolver', true) ? null : $site?->activePublication;
         $publicSlug = $publication instanceof OnlineBookingPublication ? ($publication->public_slug ?? $unit->slug) : $unit->slug;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
-        $templateKey = $publication->template_key ?? $site?->template_key ?? 'essential';
+        $templateKey = $publication->template_key ?? $site->template_key ?? 'essential';
         $appearance = OnlineBookingAppearance::normalize(
             is_array($content['appearance'] ?? null) ? $content['appearance'] : null,
             $templateKey,
