@@ -3,6 +3,7 @@ import { ExternalLink, Globe2, Share2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import onlineBooking from '@/routes/online_booking';
+import { bookingUi } from './design-tokens';
 
 type PublicationStatus = 'unpublished' | 'published';
 
@@ -32,7 +33,9 @@ export function PublicationToolbar({
     const isPublished = status === 'published';
 
     return (
-        <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div
+            className={`mb-5 grid gap-4 ${bookingUi.publication} p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center`}
+        >
             <div className="flex items-start gap-3">
                 <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Globe2 aria-hidden="true" className="size-4" />

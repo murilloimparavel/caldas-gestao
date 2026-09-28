@@ -12,7 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { BookingItem } from '../types';
-import { bookingUi } from './design-tokens';
+import { bookingTokens, bookingUi } from './design-tokens';
 
 export function SelectionCard({
     item,
@@ -27,7 +27,7 @@ export function SelectionCard({
     return (
         <label
             htmlFor={id}
-            className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${active ? 'border-slate-200 bg-white hover:border-amber-400 has-checked:border-amber-400 has-checked:bg-amber-50' : 'cursor-not-allowed border-slate-200/60 bg-slate-100/50 opacity-65'}`}
+            className={`flex min-h-14 cursor-pointer items-center gap-3 ${bookingTokens.radius.control} border ${bookingTokens.space.control} ${bookingTokens.state.transition} ${active ? `${bookingTokens.color.borderStrong} ${bookingTokens.color.surface} ${bookingTokens.state.hoverAccent} ${bookingTokens.state.checkedSelection}` : `cursor-not-allowed border-slate-200/60 ${bookingTokens.color.disabledSurface} opacity-65`}`}
         >
             <input
                 id={id}
@@ -93,7 +93,7 @@ export function Field({
     readOnly?: boolean;
 }) {
     return (
-        <div className="space-y-2">
+        <div className={bookingTokens.space.controlGroup}>
             <Label htmlFor={name}>{label}</Label>
             <Input
                 id={name}
@@ -103,7 +103,7 @@ export function Field({
                 placeholder={placeholder}
                 readOnly={readOnly}
                 aria-readonly={readOnly}
-                className={`${bookingUi.field} ${readOnly ? 'bg-slate-100/60' : ''}`}
+                className={`${bookingUi.field} ${readOnly ? bookingTokens.color.readOnlySurface : ''}`}
             />
         </div>
     );
@@ -131,7 +131,9 @@ export function SectionCard({
                 </CardTitle>
                 <CardDescription>{description}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5 pt-5">{children}</CardContent>
+            <CardContent className={bookingUi.sectionContent}>
+                {children}
+            </CardContent>
         </Card>
     );
 }

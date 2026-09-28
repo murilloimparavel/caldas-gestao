@@ -35,7 +35,6 @@ import { OperationalSettingsPanel } from './components/operational-settings-pane
 import { PublicLinkSettingsPanel } from './components/public-link-settings-panel';
 import { GallerySettingsPanel } from './components/gallery-settings-panel';
 import { HoursSettingsPanel } from './components/hours-settings-panel';
-import { ConfirmationSettingsPanel } from './components/confirmation-settings-panel';
 import { CatalogSettingsPanel } from './components/catalog-settings-panel';
 import { PublicationToolbar } from './components/publication-toolbar';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
@@ -372,9 +371,6 @@ export default function OnlineBookingIndex({
                                             settings={settings}
                                         />
                                     )}
-                                    {activeTab === 'confirmation' && (
-                                        <ConfirmationSettingsPanel />
-                                    )}
                                 </div>
                                 <aside className="min-w-0 space-y-5 xl:self-start">
                                     <PublicPreview
@@ -502,8 +498,7 @@ export default function OnlineBookingIndex({
                             />
                             <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-end">
                                 <p className="mr-auto text-xs text-muted-foreground">
-                                    As alterações serão aplicadas à unidade
-                                    atual.
+                                    O link público só muda quando você publicar.
                                 </p>
                                 <Button
                                     type="submit"
@@ -512,7 +507,7 @@ export default function OnlineBookingIndex({
                                 >
                                     {processing
                                         ? 'Salvando…'
-                                        : 'Salvar configurações'}
+                                        : 'Salvar rascunho'}
                                 </Button>
                             </div>
                         </>

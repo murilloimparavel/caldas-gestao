@@ -7,6 +7,7 @@ use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\AppointmentItem;
 use App\Models\Customer;
+use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
 use App\Models\Professional;
@@ -39,12 +40,16 @@ final class CreatePublicAppointment
             $data['service_ids'] ?? [$data['service_id'] ?? null],
             'is_string',
         )));
-        $publishedServiceIds = $this->publishedCatalogIds($tenant, $unit, 'service_ids');
+        $publication = $this->activePublication($tenant, $unit);
+        $publicationContent = is_array($publication?->content) ? $publication->content : null;
+        $publishedServiceIds = is_array($publicationContent)
+            ? array_values(array_filter($publicationContent['service_ids'] ?? [], 'is_string'))
+            : null;
         $services = Service::query()
             ->whereBelongsTo($tenant)
             ->whereBelongsTo($unit)
             ->where('status', 'active')
-            ->where('online_booking_enabled', true)
+            ->when($publishedServiceIds === null, fn ($query) => $query->where('online_booking_enabled', true))
             ->whereIn('id', $serviceIds)
             ->when($publishedServiceIds !== null, fn ($query) => $query->whereIn('id', $publishedServiceIds))
             ->with('category')
@@ -58,8 +63,8 @@ final class CreatePublicAppointment
             ->whereBelongsTo($tenant)
             ->whereBelongsTo($unit)
             ->where('status', 'active')
-            ->where('online_booking_enabled', true)
-            ->when(($ids = $this->publishedCatalogIds($tenant, $unit, 'professional_ids')) !== null, fn ($query) => $query->whereIn('id', $ids))
+            ->when($publishedServiceIds === null, fn ($query) => $query->where('online_booking_enabled', true))
+            ->when(is_array($publicationContent), fn ($query) => $query->whereIn('id', array_values(array_filter($publicationContent['professional_ids'] ?? [], 'is_string'))))
             ->with(['services' => fn ($query) => $query->select('services.id')->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())])
             ->firstOrFail();
 
@@ -73,16 +78,28 @@ final class CreatePublicAppointment
         $now = CarbonImmutable::now($timezone);
 
         $setting = $unit->onlineBookingSetting;
-        $minimumNoticeMinutes = $setting instanceof OnlineBookingSetting ? $setting->minimum_notice_minutes : 0;
+        $bookingPolicy = is_array($publicationContent['booking_policy'] ?? null) ? $publicationContent['booking_policy'] : [];
+        $minimumNoticeMinutes = (int) ($bookingPolicy['minimum_notice_minutes'] ?? ($setting instanceof OnlineBookingSetting ? $setting->minimum_notice_minutes : 0));
         if ($startsAt->isBefore($now->addMinutes((int) $minimumNoticeMinutes)) || $startsAt->isAfter($now->addDays(31))) {
             throw ValidationException::withMessages(['starts_at' => 'The selected time is no longer available.']);
         }
-        $hours = $setting instanceof OnlineBookingSetting ? $setting->getAttribute('public_hours') : null;
-        if (is_array($hours)) {
-            $window = $hours[(string) $startsAt->dayOfWeek] ?? $hours[$startsAt->dayOfWeek] ?? null;
-            if (! is_array($window) || ($window['enabled'] ?? true) === false || $startsAt->format('H:i') < ($window['starts_at'] ?? '') || $startsAt->addMinutes((int) $services->sum('duration_minutes'))->format('H:i') > ($window['ends_at'] ?? '')) {
-                throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
-            }
+        $hours = array_key_exists('public_hours', $publicationContent ?? [])
+            ? (array) $publicationContent['public_hours']
+            : (array) ($setting instanceof OnlineBookingSetting ? ($setting->getAttribute('public_hours') ?? []) : []);
+        $window = $hours[(string) $startsAt->dayOfWeek] ?? $hours[$startsAt->dayOfWeek] ?? null;
+        if (! is_array($window) || ($window['enabled'] ?? true) === false || ! isset($window['starts_at'], $window['ends_at'])) {
+            throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
+        }
+        $windowStart = CarbonImmutable::parse($startsAt->toDateString().' '.$window['starts_at'], $timezone);
+        $windowEnd = CarbonImmutable::parse($startsAt->toDateString().' '.$window['ends_at'], $timezone);
+        $offsetFromWindowStart = $startsAt->getTimestamp() - $windowStart->getTimestamp();
+        if (
+            $offsetFromWindowStart < 0
+            || $offsetFromWindowStart % 900 !== 0
+            || $startsAt->format('s.u') !== '00.000000'
+            || $startsAt->addMinutes((int) $services->sum('duration_minutes'))->gt($windowEnd)
+        ) {
+            throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
         }
         $duration = (int) $services->sum('duration_minutes');
         $endsAt = $startsAt->addMinutes($duration);
@@ -200,24 +217,17 @@ final class CreatePublicAppointment
         return (string) preg_replace('/\D+/', '', $phone);
     }
 
-    /** @return list<string>|null */
-    private function publishedCatalogIds(Tenant $tenant, Unit $unit, string $key): ?array
+    private function activePublication(Tenant $tenant, Unit $unit): ?OnlineBookingPublication
     {
         if (! config('online_booking.use_publication_resolver', true)) {
             return null;
         }
 
-        $publication = OnlineBookingSite::query()
+        return OnlineBookingSite::query()
             ->where('tenant_id', $tenant->getKey())
             ->where('unit_id', $unit->getKey())
             ->with('activePublication')
             ->first()
             ?->activePublication;
-
-        if ($publication === null || ! is_array($publication->content)) {
-            return null;
-        }
-
-        return array_values(array_filter($publication->content[$key] ?? [], 'is_string'));
     }
 }

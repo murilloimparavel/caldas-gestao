@@ -2,6 +2,7 @@ import { GalleryHorizontalEnd, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SectionCard } from './booking-form-primitives';
+import { bookingTokens } from './design-tokens';
 
 type GalleryItem = {
     id: string;
@@ -34,7 +35,7 @@ export function GallerySettingsPanel({
                 {galleryItems.map((image, index) => (
                     <div
                         key={image.id}
-                        className="relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
+                        className={`relative aspect-square overflow-hidden ${bookingTokens.radius.control} border border-border bg-muted`}
                     >
                         {image.url ? (
                             <img

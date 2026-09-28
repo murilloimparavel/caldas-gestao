@@ -1,6 +1,7 @@
 import { Palette } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Field, SectionCard } from './booking-form-primitives';
+import { bookingTokens, bookingUi } from './design-tokens';
 import type { PublicSettings } from '../types';
 
 export function OperationalSettingsPanel({
@@ -14,9 +15,9 @@ export function OperationalSettingsPanel({
             title="Experiência do canal"
             description="Defina como o público encontrará sua unidade."
         >
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className={bookingTokens.layout.formGrid}>
                 <Field
-                    label="Cor de destaque"
+                    label="Cor do botão fixo"
                     name="brand_color"
                     defaultValue={
                         settings.brand_color ??
@@ -25,7 +26,7 @@ export function OperationalSettingsPanel({
                     }
                     placeholder="#5b6cff"
                 />
-                <div className="space-y-2">
+                <div className={bookingTokens.space.controlGroup}>
                     <Label htmlFor="booking_flow">Ordem do agendamento</Label>
                     <select
                         id="booking_flow"
@@ -35,7 +36,7 @@ export function OperationalSettingsPanel({
                             settings.flow ??
                             'service_first'
                         }
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                        className={bookingUi.select}
                     >
                         <option value="service_first">Serviço primeiro</option>
                         <option value="professional_first">

@@ -25,8 +25,8 @@ it('saves, publishes, unpublishes, and restores an online booking site', functio
         'schema_version' => 1,
         'theme' => ['brand_color' => '#2563eb'],
         'sections' => [['key' => 'hero', 'enabled' => true]],
-        'service_ids' => [],
-        'professional_ids' => [],
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
     ];
 
     $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, $content, 0);
@@ -61,8 +61,8 @@ it('exposes the draft and publication lifecycle through the authorized routes', 
         'schema_version' => 1,
         'theme' => [],
         'sections' => [],
-        'service_ids' => [],
-        'professional_ids' => [],
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
     ];
 
     $draft = $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
@@ -98,8 +98,8 @@ it('redirects Inertia publication actions back to the editor with feedback', fun
         'content' => [
             'theme' => [],
             'sections' => [],
-            'service_ids' => [],
-            'professional_ids' => [],
+            'service_ids' => [$service->getKey()],
+            'professional_ids' => [$professional->getKey()],
         ],
     ])->assertOk()->json('draft');
 
@@ -166,6 +166,8 @@ it('snapshots normalized appearance when publishing a draft', function () {
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
         'appearance' => ['headline' => 'Versão publicada'],
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
     ], 0);
     $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
 
@@ -198,7 +200,7 @@ it('renders a signed preview of an immutable publication', function () {
     $service->update(['online_booking_enabled' => true]);
     $professional->update(['online_booking_enabled' => true]);
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
-    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [], 'professional_ids' => []], 0);
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [$service->getKey()], 'professional_ids' => [$professional->getKey()]], 0);
     $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
 
     $this->actingAs($owner)->get(URL::signedRoute('online_booking.publication_preview', ['publication' => $publication->getKey()]))

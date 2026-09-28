@@ -1,5 +1,6 @@
 import { Scissors, UsersRound } from 'lucide-react';
 import { SectionCard, SelectionCard } from './booking-form-primitives';
+import { bookingTokens } from './design-tokens';
 import type { BookingItem } from '../types';
 
 export function CatalogSettingsPanel({
@@ -10,13 +11,16 @@ export function CatalogSettingsPanel({
     professionals: BookingItem[];
 }) {
     return (
-        <div className="space-y-5">
+        <div className={bookingTokens.space.page}>
             <SectionCard
                 icon={Scissors}
                 title="Serviços publicados"
                 description="Escolha as ofertas que aparecerão no canal."
             >
-                <div className="grid gap-2" aria-label="Serviços disponíveis">
+                <div
+                    className={`grid ${bookingTokens.space.compactRow}`}
+                    aria-label="Serviços disponíveis"
+                >
                     {services.length > 0 ? (
                         services.map((item) => (
                             <SelectionCard
@@ -38,7 +42,7 @@ export function CatalogSettingsPanel({
                 description="Selecione quem pode receber solicitações online."
             >
                 <div
-                    className="grid gap-2"
+                    className={`grid ${bookingTokens.space.compactRow}`}
                     aria-label="Profissionais disponíveis"
                 >
                     {professionals.length > 0 ? (

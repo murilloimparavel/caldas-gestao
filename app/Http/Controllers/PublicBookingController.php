@@ -15,6 +15,7 @@ use App\Models\OnlineBookingSite;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
+use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Support\CalendarAvailability;
 use App\Support\CalendarConflictException;
@@ -50,7 +51,10 @@ final class PublicBookingController extends Controller
             ->with('activePublication')
             ->first();
         $publication = is_array($preview) || ! config('online_booking.use_publication_resolver', true) ? null : $site?->activePublication;
-        $publicSlug = $publication instanceof OnlineBookingPublication ? ($publication->public_slug ?? $unit->slug) : $unit->slug;
+        if ($publication instanceof OnlineBookingPublication) {
+            $this->assertPublicationDomainMatchesRequest($tenant, $publication);
+        }
+        $publicSlug = $publication->public_slug ?? $site->public_slug ?? $setting->public_slug ?? $unit->slug;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
         $templateKey = $publication->template_key ?? $site->template_key ?? 'essential';
         $appearance = OnlineBookingAppearance::normalize(
@@ -173,12 +177,44 @@ final class PublicBookingController extends Controller
 
     public function showBySlug(string $publicSlug): Response|JsonResponse
     {
-        $site = OnlineBookingSite::query()->where('public_slug', $publicSlug)->with(['tenant', 'unit'])->first();
+        $requestDomain = request()->attributes->get('tenant_domain');
+        $usePublicationResolver = (bool) config('online_booking.use_publication_resolver', true);
+
+        if ($usePublicationResolver) {
+            $publishedSites = OnlineBookingSite::query()
+                ->whereHas('activePublication', function ($query) use ($publicSlug, $requestDomain): void {
+                    $query->where('public_slug', $publicSlug);
+                    if ($requestDomain instanceof TenantDomain) {
+                        $query->where('public_domain_id', $requestDomain->getKey());
+                    }
+                })
+                ->with(['tenant', 'unit', 'activePublication'])
+                ->limit(2)
+                ->get();
+
+            abort_if($publishedSites->count() > 1, 404);
+            $publishedSite = $publishedSites->first();
+            if ($publishedSite instanceof OnlineBookingSite) {
+                return $this->show($publishedSite->tenant, $publishedSite->unit);
+            }
+        }
+
+        $site = OnlineBookingSite::query()->where('public_slug', $publicSlug)->with(['tenant', 'unit', 'activePublication'])->first();
         if ($site instanceof OnlineBookingSite) {
+            abort_if($usePublicationResolver && $site->activePublication !== null, 404);
+
             return $this->show($site->tenant, $site->unit);
         }
 
         $setting = OnlineBookingSetting::query()->where('public_slug', $publicSlug)->with(['tenant', 'unit'])->firstOrFail();
+        if ($usePublicationResolver) {
+            $hasActivePublication = OnlineBookingSite::query()
+                ->where('tenant_id', $setting->tenant_id)
+                ->where('unit_id', $setting->unit_id)
+                ->whereNotNull('active_publication_id')
+                ->exists();
+            abort_if($hasActivePublication, 404);
+        }
 
         return $this->show($setting->tenant, $setting->unit);
     }
@@ -202,19 +238,30 @@ final class PublicBookingController extends Controller
         $from = CarbonImmutable::parse($date->toDateString().' '.($data['from'] ?? '00:00'), $timezone);
         $to = CarbonImmutable::parse($date->toDateString().' '.($data['to'] ?? '23:59'), $timezone);
         $setting = $unit->onlineBookingSetting;
-        $minimumStart = CarbonImmutable::now($timezone)->addMinutes((int) ($setting instanceof OnlineBookingSetting ? ($setting->minimum_notice_minutes ?? 0) : 0));
+        $publishedContent = is_array($publication?->content) ? $publication->content : [];
+        $policy = is_array($publishedContent['booking_policy'] ?? null) ? $publishedContent['booking_policy'] : [];
+        $minimumNoticeMinutes = (int) ($policy['minimum_notice_minutes'] ?? ($setting instanceof OnlineBookingSetting ? ($setting->minimum_notice_minutes ?? 0) : 0));
+        $publicHours = array_key_exists('public_hours', $publishedContent)
+            ? (array) $publishedContent['public_hours']
+            : (array) ($setting instanceof OnlineBookingSetting ? ($setting->public_hours ?? []) : []);
+        $minimumStart = CarbonImmutable::now($timezone)->addMinutes($minimumNoticeMinutes);
         if ($from->lt($minimumStart)) {
             $from = $minimumStart->second(0);
         }
-        $publicWindow = $this->publicWindow($setting instanceof OnlineBookingSetting ? (array) ($setting->public_hours ?? []) : [], $date->dayOfWeek);
+        $publicWindow = $this->publicWindow($publicHours, $date->dayOfWeek);
         if ($publicWindow === null) {
             return response()->json(['date' => $date->toDateString(), 'timezone' => $timezone, 'slots' => []]);
         }
-        $from = $from->max(CarbonImmutable::parse($date->toDateString().' '.$publicWindow['starts_at'], $timezone));
-        $to = $to->min(CarbonImmutable::parse($date->toDateString().' '.$publicWindow['ends_at'], $timezone));
+        $windowStart = CarbonImmutable::parse($date->toDateString().' '.$publicWindow['starts_at'], $timezone);
+        $windowEnd = CarbonImmutable::parse($date->toDateString().' '.$publicWindow['ends_at'], $timezone);
+        $from = $from->max($windowStart)->max($minimumStart);
+        $to = $to->min($windowEnd);
+        $secondsFromWindowStart = max(0, $from->getTimestamp() - $windowStart->getTimestamp());
+        $gridSteps = intdiv($secondsFromWindowStart + 899, 900);
+        $cursor = $windowStart->addMinutes($gridSteps * 15);
         $slots = [];
 
-        for ($cursor = $from; $cursor->addMinutes($duration)->lte($to); $cursor = $cursor->addMinutes(15)) {
+        for (; $cursor->addMinutes($duration)->lte($to); $cursor = $cursor->addMinutes(15)) {
             try {
                 $this->availability->assertAvailable(
                     (string) $tenant->getKey(),
@@ -346,15 +393,16 @@ final class PublicBookingController extends Controller
     {
         $serviceIds = array_values(array_filter($content['service_ids'] ?? [], 'is_string'));
         $professionalIds = array_values(array_filter($content['professional_ids'] ?? [], 'is_string'));
+        $usesSelectedCatalog = $publication !== null || $preview;
         /** @var list<array<string, mixed>> $services */
         $services = Service::query()
             ->whereBelongsTo($tenant)
             ->whereBelongsTo($unit)
             ->where('status', 'active')
-            ->where('online_booking_enabled', true)
-            ->when($publication !== null || $preview, fn ($query) => $query->whereIn('services.id', $serviceIds))
-            ->whereHas('professionals', fn ($query) => $query->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true))
-            ->with(['category:id,name', 'professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name', 'professionals.avatar_path')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->orderBy('professionals.name')])
+            ->when(! $usesSelectedCatalog, fn ($query) => $query->where('online_booking_enabled', true))
+            ->when($usesSelectedCatalog, fn ($query) => $query->whereIn('services.id', $serviceIds))
+            ->whereHas('professionals', fn ($query) => $query->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->when($usesSelectedCatalog, fn ($query) => $query->whereIn('professionals.id', $professionalIds))->when(! $usesSelectedCatalog, fn ($query) => $query->where('professionals.online_booking_enabled', true)))
+            ->with(['category:id,name', 'professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name', 'professionals.avatar_path')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->when($usesSelectedCatalog, fn ($query) => $query->whereIn('professionals.id', $professionalIds))->when(! $usesSelectedCatalog, fn ($query) => $query->where('professionals.online_booking_enabled', true))->orderBy('professionals.name')])
             ->orderBy('name')
             ->get(['id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'image_path'])
             ->map(fn (Service $service): array => [
@@ -368,9 +416,10 @@ final class PublicBookingController extends Controller
             ])->values()->all();
         /** @var list<array<string, mixed>> $professionals */
         $professionals = Professional::query()
-            ->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)
-            ->when($publication !== null || $preview, fn ($query) => $query->whereIn('professionals.id', $professionalIds))
-            ->whereHas('services', fn ($query) => $query->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())->where('services.status', 'active')->where('services.online_booking_enabled', true))
+            ->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')
+            ->when($usesSelectedCatalog, fn ($query) => $query->whereIn('professionals.id', $professionalIds))
+            ->when(! $usesSelectedCatalog, fn ($query) => $query->where('online_booking_enabled', true))
+            ->whereHas('services', fn ($query) => $query->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())->where('services.status', 'active')->when($usesSelectedCatalog, fn ($query) => $query->whereIn('services.id', $serviceIds))->when(! $usesSelectedCatalog, fn ($query) => $query->where('services.online_booking_enabled', true)))
             ->orderBy('name')->get(['id', 'name', 'avatar_path'])
             ->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'title' => $professional->name, 'badge' => null, 'description' => null, 'next_available_at' => null, 'avatar_url' => $professional->avatar_url])->values()->all();
 
@@ -390,7 +439,7 @@ final class PublicBookingController extends Controller
             ->whereBelongsTo($unit)
             ->whereIn('id', $ids)
             ->where('status', 'active')
-            ->where('online_booking_enabled', true)
+            ->when($publishedIds === null, fn ($query) => $query->where('online_booking_enabled', true))
             ->when($publishedIds !== null, fn ($query) => $query->whereIn('id', $publishedIds))
             ->get();
     }
@@ -404,7 +453,7 @@ final class PublicBookingController extends Controller
             ->whereBelongsTo($tenant)
             ->whereBelongsTo($unit)
             ->where('status', 'active')
-            ->where('online_booking_enabled', true)
+            ->when($ids === null, fn ($query) => $query->where('online_booking_enabled', true))
             ->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))
             ->with(['services' => fn ($query) => $query->select('services.id')->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())])
             ->firstOrFail();
@@ -427,6 +476,23 @@ final class PublicBookingController extends Controller
     private function assertPublicBookingEnabled(Tenant $tenant, Unit $unit): void
     {
         if ($tenant->status->value !== 'active' || $unit->tenant_id !== $tenant->getKey() || $unit->status->value !== 'active' || ! $unit->online_booking_enabled) {
+            throw new NotFoundHttpException;
+        }
+    }
+
+    private function assertPublicationDomainMatchesRequest(Tenant $tenant, OnlineBookingPublication $publication): void
+    {
+        $requestDomain = request()->attributes->get('tenant_domain');
+        if (! $requestDomain instanceof TenantDomain) {
+            return;
+        }
+
+        if (
+            $requestDomain->tenant_id !== $tenant->getKey()
+            || $requestDomain->kind->value !== 'public'
+            || $requestDomain->status->value !== 'active'
+            || $publication->public_domain_id !== $requestDomain->getKey()
+        ) {
             throw new NotFoundHttpException;
         }
     }
