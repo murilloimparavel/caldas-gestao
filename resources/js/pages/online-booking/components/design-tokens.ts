@@ -2,7 +2,8 @@
 export const bookingUi = {
     shell: 'bg-[#f6f5f2]',
     hero: 'relative overflow-hidden rounded-[2rem] bg-[#111112] text-white shadow-2xl shadow-slate-900/10',
-    section: 'overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm',
+    section:
+        'overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm',
     sectionHeader: 'border-b border-slate-200/80 bg-slate-50/80',
     icon: 'flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700',
     field: 'rounded-xl border-slate-200 bg-white shadow-none focus-visible:border-amber-400 focus-visible:ring-amber-300/30',
