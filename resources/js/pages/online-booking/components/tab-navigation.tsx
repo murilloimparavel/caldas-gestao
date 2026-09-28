@@ -22,6 +22,16 @@ export const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
     { key: 'confirmation', label: 'Confirmação', icon: BellRing },
 ];
 
+const tabGroups: {
+    label: string;
+    keys: TabKey[];
+}[] = [
+    { label: 'Aparência', keys: ['details', 'settings', 'gallery'] },
+    { label: 'Agendamento', keys: ['services', 'hours', 'confirmation'] },
+    { label: 'Link público', keys: ['link'] },
+    { label: 'Publicação', keys: [] },
+];
+
 export function TabNavigation({
     activeTab,
     onChange,
@@ -31,24 +41,46 @@ export function TabNavigation({
 }) {
     return (
         <div className={`overflow-x-auto ${bookingUi.nav}`}>
-            <div
-                aria-label="Configuração do agendamento online"
-                className="flex min-w-max gap-1 lg:grid lg:grid-cols-7"
-                role="tablist"
-            >
-                {tabs.map(({ key, label, icon: Icon }) => (
-                    <button
-                        key={key}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === key}
-                        onClick={() => onChange(key)}
-                        className={`relative flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold transition-all ${activeTab === key ? bookingUi.navActive : bookingUi.navIdle}`}
-                    >
-                        <Icon aria-hidden="true" className="size-4" />
-                        {label}
-                    </button>
-                ))}
+            <div aria-label="Configuração do agendamento online" role="tablist">
+                <div className="grid min-w-[42rem] gap-2 lg:grid-cols-4">
+                    {tabGroups.map((group) => {
+                        const groupTabs = tabs.filter((tab) =>
+                            group.keys.includes(tab.key),
+                        );
+
+                        return (
+                            <div key={group.label} className="space-y-1">
+                                <p className="px-2 text-[10px] font-bold tracking-[0.16em] text-slate-500 uppercase">
+                                    {group.label}
+                                </p>
+                                <div className="flex gap-1">
+                                    {groupTabs.map(
+                                        ({ key, label, icon: Icon }) => (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={
+                                                    activeTab === key
+                                                }
+                                                onClick={() => onChange(key)}
+                                                className={`relative flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-2 py-3 text-xs font-semibold transition-all ${activeTab === key ? bookingUi.navActive : bookingUi.navIdle}`}
+                                            >
+                                                <Icon
+                                                    aria-hidden="true"
+                                                    className="size-4 shrink-0"
+                                                />
+                                                <span className="truncate">
+                                                    {label}
+                                                </span>
+                                            </button>
+                                        ),
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
