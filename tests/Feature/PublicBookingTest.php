@@ -163,7 +163,9 @@ it('uses legacy hours and notice when a publication omits those snapshot fields'
 
     $this->getJson(route('public_booking.show', [$tenant, $unit]))
         ->assertSuccessful()
-        ->assertJsonPath('unit.public_hours', $legacyHours)
+        ->assertJsonPath('unit.public_hours.'.$date->dayOfWeek.'.enabled', true)
+        ->assertJsonPath('unit.public_hours.'.$date->dayOfWeek.'.starts_at', '11:00')
+        ->assertJsonPath('unit.public_hours.'.$date->dayOfWeek.'.ends_at', '12:00')
         ->assertJsonPath('unit.minimum_notice_minutes', 8 * 24 * 60);
     $blockedByFallbackNotice = $this->getJson(route('public_booking.availability', [
         $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(),
