@@ -58,4 +58,10 @@ class Tenant extends Model
     {
         return $this->hasMany(Role::class);
     }
+
+    /** @return HasMany<TenantSubscription, $this> */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(TenantSubscription::class);
+    }
 }
