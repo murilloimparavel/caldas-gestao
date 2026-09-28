@@ -1,4 +1,4 @@
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
@@ -50,6 +50,7 @@ import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
 import { bookingUi } from './components/design-tokens';
 import { BookingHero } from './components/booking-hero';
+import { PublicationToolbar } from './components/publication-toolbar';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
@@ -130,92 +131,18 @@ export default function OnlineBookingIndex({
                     settings={settings}
                     readiness={readiness}
                 />
-                <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                    <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <Globe2 aria-hidden="true" className="size-4" />
-                        </span>
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-semibold text-foreground">
-                                    Página pública
-                                </p>
-                                <Badge
-                                    variant={
-                                        publication?.status === 'published' &&
-                                        !hasPendingChanges
-                                            ? 'default'
-                                            : 'secondary'
-                                    }
-                                >
-                                    {publicationLabel}
-                                </Badge>
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                {publication?.status === 'published' &&
-                                !hasPendingChanges
-                                    ? 'Seus clientes estão vendo a última versão publicada.'
-                                    : 'Suas alterações ficam no rascunho até você publicar.'}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-                        {publicationError ? (
-                            <p
-                                role="alert"
-                                className="text-sm text-destructive sm:mr-2 sm:self-center"
-                            >
-                                {publicationError}
-                            </p>
-                        ) : null}
-                        <Button asChild type="button" variant="ghost">
-                            <Link
-                                href={onlineBooking.campaign_links.index.url()}
-                            >
-                                <Share2 aria-hidden="true" />
-                                Links de divulgação
-                            </Link>
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() =>
-                                publicUrl &&
-                                window.open(
-                                    signedPreviewUrl ?? publicUrl,
-                                    '_blank',
-                                    'noopener,noreferrer',
-                                )
-                            }
-                            disabled={!publicUrl}
-                        >
-                            <ExternalLink aria-hidden="true" />
-                            Visualizar página
-                        </Button>
-                        {publication?.status === 'published' ? (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={unpublishSite}
-                                disabled={publicationProcessing}
-                            >
-                                Retirar do ar
-                            </Button>
-                        ) : (
-                            <Button
-                                type="button"
-                                onClick={publishDraft}
-                                disabled={
-                                    !draft ||
-                                    !readiness.publishable ||
-                                    publicationProcessing
-                                }
-                            >
-                                Publicar página
-                            </Button>
-                        )}
-                    </div>
-                </div>
+                <PublicationToolbar
+                    status={publication?.status}
+                    publicationLabel={publicationLabel}
+                    hasPendingChanges={hasPendingChanges}
+                    publicationError={publicationError}
+                    publicUrl={publicUrl}
+                    previewUrl={signedPreviewUrl}
+                    processing={publicationProcessing}
+                    onPublish={publishDraft}
+                    onUnpublish={unpublishSite}
+                    canPublish={Boolean(draft && readiness.publishable)}
+                />
                 {hasPendingChanges && draftDiff?.length ? (
                     <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
                         <div className="flex items-start gap-3">
