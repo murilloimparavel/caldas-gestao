@@ -39,7 +39,6 @@ import {
     Field,
     ReadinessRow,
     SectionCard,
-    SelectionCard,
 } from './components/booking-form-primitives';
 import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
