@@ -6,7 +6,6 @@ import {
     CheckCircle2,
     ClipboardCheck,
     ExternalLink,
-    GalleryHorizontalEnd,
     History,
     ImagePlus,
     Scissors,
@@ -40,6 +39,7 @@ import { BookingHero } from './components/booking-hero';
 import { IdentitySettingsPanel } from './components/identity-settings-panel';
 import { OperationalSettingsPanel } from './components/operational-settings-panel';
 import { PublicLinkSettingsPanel } from './components/public-link-settings-panel';
+import { GallerySettingsPanel } from './components/gallery-settings-panel';
 import { CatalogSettingsPanel } from './components/catalog-settings-panel';
 import { PublicationToolbar } from './components/publication-toolbar';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
@@ -503,6 +503,14 @@ export default function OnlineBookingIndex({
                                         </SectionCard> */
                                     )}
                                     {activeTab === 'gallery' && (
+                                        <GallerySettingsPanel
+                                            galleryItems={galleryItems}
+                                            onUpload={uploadGalleryImage}
+                                            onUpdateAlt={updateGalleryAlt}
+                                            onDelete={deleteGalleryImage}
+                                            onMove={moveGalleryImage}
+                                        />
+                                        /*
                                         <SectionCard
                                             icon={GalleryHorizontalEnd}
                                             title="Galeria de fotos"
@@ -643,7 +651,7 @@ export default function OnlineBookingIndex({
                                                     />
                                                 </label>
                                             </div>
-                                        </SectionCard>
+                                        </SectionCard> */
                                     )}
                                     {activeTab === 'services' && (
                                         <CatalogSettingsPanel
