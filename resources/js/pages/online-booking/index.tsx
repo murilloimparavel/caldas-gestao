@@ -1,23 +1,13 @@
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
-    BellRing,
-    CalendarDays,
-    Check,
     CheckCircle2,
     ClipboardCheck,
-    Copy,
     ExternalLink,
-    GalleryHorizontalEnd,
     History,
-    Globe2,
     ImagePlus,
-    Link2,
-    Palette,
     Scissors,
-    Share2,
     UserRound,
-    UsersRound,
     RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -31,23 +21,23 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
-import tenantDomains from '@/routes/tenant-domains';
 import type { SharedPageProps } from '@/types';
 import { AppearanceEditor } from './components/appearance-editor';
-import { CoverEditor } from './components/cover-editor';
-import {
-    Field,
-    ReadinessRow,
-    SectionCard,
-    SelectionCard,
-} from './components/booking-form-primitives';
+import { ReadinessRow } from './components/booking-form-primitives';
 import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
+import { bookingUi } from './components/design-tokens';
+import { BookingHero } from './components/booking-hero';
+import { IdentitySettingsPanel } from './components/identity-settings-panel';
+import { OperationalSettingsPanel } from './components/operational-settings-panel';
+import { PublicLinkSettingsPanel } from './components/public-link-settings-panel';
+import { GallerySettingsPanel } from './components/gallery-settings-panel';
+import { HoursSettingsPanel } from './components/hours-settings-panel';
+import { ConfirmationSettingsPanel } from './components/confirmation-settings-panel';
+import { CatalogSettingsPanel } from './components/catalog-settings-panel';
+import { PublicationToolbar } from './components/publication-toolbar';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
@@ -121,122 +111,25 @@ export default function OnlineBookingIndex({
     return (
         <>
             <Head title="Agendamento online" />
-            <PageCanvas className="bg-[#f6f5f2]">
-                <div className="relative overflow-hidden rounded-[2rem] bg-[#111112] px-5 py-7 text-white shadow-2xl shadow-slate-900/10 sm:px-8 sm:py-9">
-                    <div className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-amber-300/10 blur-3xl" />
-                    <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-                        <div>
-                            <div className="mb-4 flex items-center gap-3 text-[11px] font-bold tracking-[0.28em] text-amber-200 uppercase">
-                                <span className="size-2 rounded-full bg-amber-300" />
-                                Canal público
-                            </div>
-                            <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">
-                                Seu agendamento, do seu jeito.
-                            </h1>
-                            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
-                                Configure o link que seus clientes vão usar para
-                                escolher serviços, profissionais e horários de
-                                {` ${unit.name}`}.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="border-0 bg-amber-300 text-slate-950">
-                                {readiness.publishable
-                                    ? 'Pronto para publicar'
-                                    : 'Em preparação'}
-                            </Badge>
-                            <Badge className="border border-white/15 bg-white/10 text-white">
-                                /{settings.public_slug ?? unit.slug}
-                            </Badge>
-                        </div>
-                    </div>
-                </div>
-                <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                    <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <Globe2 aria-hidden="true" className="size-4" />
-                        </span>
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-semibold text-foreground">
-                                    Página pública
-                                </p>
-                                <Badge
-                                    variant={
-                                        publication?.status === 'published' &&
-                                        !hasPendingChanges
-                                            ? 'default'
-                                            : 'secondary'
-                                    }
-                                >
-                                    {publicationLabel}
-                                </Badge>
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                {publication?.status === 'published' &&
-                                !hasPendingChanges
-                                    ? 'Seus clientes estão vendo a última versão publicada.'
-                                    : 'Suas alterações ficam no rascunho até você publicar.'}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-                        {publicationError ? (
-                            <p
-                                role="alert"
-                                className="text-sm text-destructive sm:mr-2 sm:self-center"
-                            >
-                                {publicationError}
-                            </p>
-                        ) : null}
-                        <Button asChild type="button" variant="ghost">
-                            <Link
-                                href={onlineBooking.campaign_links.index.url()}
-                            >
-                                <Share2 aria-hidden="true" />
-                                Links de divulgação
-                            </Link>
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() =>
-                                publicUrl &&
-                                window.open(
-                                    signedPreviewUrl ?? publicUrl,
-                                    '_blank',
-                                    'noopener,noreferrer',
-                                )
-                            }
-                            disabled={!publicUrl}
-                        >
-                            <ExternalLink aria-hidden="true" />
-                            Visualizar página
-                        </Button>
-                        {publication?.status === 'published' ? (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={unpublishSite}
-                                disabled={publicationProcessing}
-                            >
-                                Retirar do ar
-                            </Button>
-                        ) : (
-                            <Button
-                                type="button"
-                                onClick={publishDraft}
-                                disabled={
-                                    !draft ||
-                                    !readiness.publishable ||
-                                    publicationProcessing
-                                }
-                            >
-                                Publicar página
-                            </Button>
-                        )}
-                    </div>
-                </div>
+            <PageCanvas className={bookingUi.shell}>
+                <BookingHero
+                    unitName={unit.name}
+                    unitSlug={unit.slug}
+                    settings={settings}
+                    readiness={readiness}
+                />
+                <PublicationToolbar
+                    status={publication?.status}
+                    publicationLabel={publicationLabel}
+                    hasPendingChanges={hasPendingChanges}
+                    publicationError={publicationError}
+                    publicUrl={publicUrl}
+                    previewUrl={signedPreviewUrl}
+                    processing={publicationProcessing}
+                    onPublish={publishDraft}
+                    onUnpublish={unpublishSite}
+                    canPublish={Boolean(draft && readiness.publishable)}
+                />
                 {hasPendingChanges && draftDiff?.length ? (
                     <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
                         <div className="flex items-start gap-3">
@@ -431,181 +324,34 @@ export default function OnlineBookingIndex({
                             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] xl:items-start">
                                 <div className="space-y-5">
                                     {activeTab === 'details' && (
-                                        <SectionCard
-                                            icon={Globe2}
-                                            title="Identidade pública"
-                                            description="Essas informações aparecem no perfil do seu negócio."
-                                        >
-                                            <div className="grid gap-5 sm:grid-cols-2">
-                                                <div className="space-y-2 sm:col-span-2">
-                                                    <Label htmlFor="template_key">
-                                                        Template da página
-                                                        pública
-                                                    </Label>
-                                                    <select
-                                                        id="template_key"
-                                                        name="template_key"
-                                                        defaultValue={
-                                                            rootTemplateKey ??
-                                                            settings.template_key ??
-                                                            'essential'
-                                                        }
-                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                                                    >
-                                                        <option value="essential">
-                                                            Essencial — claro e
-                                                            direto
-                                                        </option>
-                                                        <option value="atelier-barber">
-                                                            Atelier Barber —
-                                                            dark premium
-                                                        </option>
-                                                    </select>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        O template altera a
-                                                        apresentação pública sem
-                                                        mudar serviços,
-                                                        disponibilidade ou
-                                                        regras de agendamento.
-                                                    </p>
-                                                </div>
-                                                <Field
-                                                    label="Nome da unidade"
-                                                    name="unit_name"
-                                                    defaultValue={unit.name}
-                                                    readOnly
-                                                />
-                                                <Field
-                                                    label="WhatsApp"
-                                                    name="whatsapp_phone"
-                                                    defaultValue={
-                                                        settings.whatsapp
-                                                    }
-                                                    placeholder="(00) 00000-0000"
-                                                />
-                                                <Field
-                                                    label="Telefone"
-                                                    name="phone"
-                                                    defaultValue={
-                                                        settings.phone
-                                                    }
-                                                />
-                                                <Field
-                                                    label="Instagram"
-                                                    name="instagram_url"
-                                                    defaultValue={
-                                                        settings.instagram
-                                                    }
-                                                    placeholder="instagram.com/seunegocio"
-                                                />
-                                                <Field
-                                                    label="Facebook"
-                                                    name="facebook_url"
-                                                    defaultValue={
-                                                        settings.facebook
-                                                    }
-                                                />
-                                                <Field
-                                                    label="Site"
-                                                    name="website_url"
-                                                    defaultValue={
-                                                        settings.website
-                                                    }
-                                                    placeholder="https://seusite.com.br"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="description">
-                                                    Descrição
-                                                </Label>
-                                                <Textarea
-                                                    id="description"
-                                                    name="description"
-                                                    defaultValue={
-                                                        settings.description ??
-                                                        ''
-                                                    }
-                                                    placeholder="Conte um pouco sobre seu negócio e propósito."
-                                                    rows={4}
-                                                />
-                                            </div>
-                                            <CoverEditor
-                                                url={coverUrl}
-                                                uploadUrl={
-                                                    resolvedCoverUploadUrl
-                                                }
-                                                deleteUrl={
-                                                    resolvedCoverDeleteUrl
-                                                }
-                                                onUploaded={() =>
-                                                    router.reload({
-                                                        only: [
-                                                            'settings',
-                                                            'gallery',
-                                                            'publicUrl',
-                                                            'canonicalUrl',
-                                                        ],
-                                                    })
-                                                }
-                                            />
-                                        </SectionCard>
+                                        <IdentitySettingsPanel
+                                            unit={unit}
+                                            settings={settings}
+                                            templateKey={rootTemplateKey}
+                                            coverUrl={coverUrl}
+                                            coverUploadUrl={
+                                                resolvedCoverUploadUrl
+                                            }
+                                            coverDeleteUrl={
+                                                resolvedCoverDeleteUrl
+                                            }
+                                        />
                                     )}
                                     {activeTab === 'settings' && (
-                                        <SectionCard
-                                            icon={Palette}
-                                            title="Experiência do canal"
-                                            description="Defina como o público encontrará sua unidade."
-                                        >
-                                            <div className="grid gap-5 sm:grid-cols-2">
-                                                <Field
-                                                    label="Cor de destaque"
-                                                    name="brand_color"
-                                                    defaultValue={
-                                                        settings.brand_color ??
-                                                        settings.accent_color ??
-                                                        '#5b6cff'
-                                                    }
-                                                    placeholder="#5b6cff"
-                                                />
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="booking_flow">
-                                                        Ordem do agendamento
-                                                    </Label>
-                                                    <select
-                                                        id="booking_flow"
-                                                        name="booking_flow"
-                                                        defaultValue={
-                                                            settings.booking_flow ??
-                                                            settings.flow ??
-                                                            'service_first'
-                                                        }
-                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                                                    >
-                                                        <option value="service_first">
-                                                            Serviço primeiro
-                                                        </option>
-                                                        <option value="professional_first">
-                                                            Profissional
-                                                            primeiro
-                                                        </option>
-                                                    </select>
-                                                </div>
-                                                <Field
-                                                    label="Antecedência mínima (minutos)"
-                                                    name="minimum_notice_minutes"
-                                                    type="number"
-                                                    defaultValue={settings.minimum_notice_minutes?.toString()}
-                                                    placeholder="30"
-                                                />
-                                            </div>
-                                        </SectionCard>
+                                        <OperationalSettingsPanel
+                                            settings={settings}
+                                        />
                                     )}
                                     {activeTab === 'link' && (
-                                        <SectionCard
-                                            icon={Link2}
-                                            title="Link público"
-                                            description="Compartilhe este endereço em redes sociais e mensagens."
-                                        >
+                                        <PublicLinkSettingsPanel
+                                            settings={settings}
+                                            unitSlug={unit.slug}
+                                            publicDomains={publicDomains}
+                                            publicUrl={publicUrl}
+                                            copied={copied}
+                                            onCopy={copyPublicUrl}
+                                        />
+                                        /*
                                             <Field
                                                 label="Slug público"
                                                 name="public_slug"
@@ -750,9 +496,17 @@ export default function OnlineBookingIndex({
                                                     </p>
                                                 </div>
                                             </div>
-                                        </SectionCard>
+                                        </SectionCard> */
                                     )}
                                     {activeTab === 'gallery' && (
+                                        <GallerySettingsPanel
+                                            galleryItems={galleryItems}
+                                            onUpload={uploadGalleryImage}
+                                            onUpdateAlt={updateGalleryAlt}
+                                            onDelete={deleteGalleryImage}
+                                            onMove={moveGalleryImage}
+                                        />
+                                        /*
                                         <SectionCard
                                             icon={GalleryHorizontalEnd}
                                             title="Galeria de fotos"
@@ -893,74 +647,19 @@ export default function OnlineBookingIndex({
                                                     />
                                                 </label>
                                             </div>
-                                        </SectionCard>
+                                        </SectionCard> */
                                     )}
                                     {activeTab === 'services' && (
-                                        <div className="space-y-5">
-                                            <SectionCard
-                                                icon={Scissors}
-                                                title="Serviços publicados"
-                                                description="Escolha as ofertas que aparecerão no canal."
-                                            >
-                                                <div
-                                                    className="grid gap-2"
-                                                    aria-label="Serviços disponíveis"
-                                                >
-                                                    {services.length > 0 ? (
-                                                        services.map((item) => (
-                                                            <SelectionCard
-                                                                key={item.id}
-                                                                item={item}
-                                                                group="service"
-                                                            />
-                                                        ))
-                                                    ) : (
-                                                        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                                                            Cadastre um serviço
-                                                            ativo para começar.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </SectionCard>
-                                            <SectionCard
-                                                icon={UsersRound}
-                                                title="Profissionais publicados"
-                                                description="Selecione quem pode receber solicitações online."
-                                            >
-                                                <div
-                                                    className="grid gap-2"
-                                                    aria-label="Profissionais disponíveis"
-                                                >
-                                                    {professionals.length >
-                                                    0 ? (
-                                                        professionals.map(
-                                                            (item) => (
-                                                                <SelectionCard
-                                                                    key={
-                                                                        item.id
-                                                                    }
-                                                                    item={item}
-                                                                    group="professional"
-                                                                />
-                                                            ),
-                                                        )
-                                                    ) : (
-                                                        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                                                            Cadastre um
-                                                            profissional ativo
-                                                            para começar.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </SectionCard>
-                                        </div>
+                                        <CatalogSettingsPanel
+                                            services={services}
+                                            professionals={professionals}
+                                        />
                                     )}
                                     {activeTab === 'hours' && (
-                                        <SectionCard
-                                            icon={CalendarDays}
-                                            title="Horário de atendimento"
-                                            description="A disponibilidade pública respeita a agenda e os bloqueios da equipe."
-                                        >
+                                        <HoursSettingsPanel
+                                            settings={settings}
+                                        />
+                                        /*
                                             <div className="space-y-2">
                                                 {[
                                                     'Segunda-feira',
@@ -1036,44 +735,10 @@ export default function OnlineBookingIndex({
                                                     </div>
                                                 ))}
                                             </div>
-                                        </SectionCard>
+                                        </SectionCard> */
                                     )}
                                     {activeTab === 'confirmation' && (
-                                        <SectionCard
-                                            icon={BellRing}
-                                            title="Confirmação via WhatsApp"
-                                            description="O pedido reserva o horário e abre uma conversa para confirmação manual."
-                                        >
-                                            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                                                <div className="flex gap-3">
-                                                    <AlertCircle className="mt-0.5 size-5 shrink-0 text-primary" />
-                                                    <div className="space-y-1">
-                                                        <p className="text-sm font-semibold">
-                                                            Sem pagamento online
-                                                        </p>
-                                                        <p className="text-xs leading-5 text-muted-foreground">
-                                                            Após o agendamento,
-                                                            o cliente será
-                                                            encaminhado ao
-                                                            WhatsApp do
-                                                            profissional. Se ele
-                                                            não tiver número,
-                                                            usamos o WhatsApp da
-                                                            unidade.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <p className="rounded-xl border border-border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
-                                                O fluxo atual registra o pedido
-                                                como agendamento e abre o
-                                                WhatsApp do profissional. Esta
-                                                tela é apenas informativa; não
-                                                há pagamento, cancelamento ou
-                                                configuração adicional nesta
-                                                etapa.
-                                            </p>
-                                        </SectionCard>
+                                        <ConfirmationSettingsPanel />
                                     )}
                                 </div>
                                 <aside className="min-w-0 space-y-5 xl:self-start">

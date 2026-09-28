@@ -22,6 +22,7 @@ use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -51,7 +52,7 @@ final class PublicBookingController extends Controller
         $publication = is_array($preview) || ! config('online_booking.use_publication_resolver', true) ? null : $site?->activePublication;
         $publicSlug = $publication instanceof OnlineBookingPublication ? ($publication->public_slug ?? $unit->slug) : $unit->slug;
         $content = is_array($preview) ? $preview : (is_array($publication?->content) ? $publication->content : []);
-        $templateKey = $publication?->template_key ?? $site?->template_key ?? 'essential';
+        $templateKey = $publication->template_key ?? $site->template_key ?? 'essential';
         $appearance = OnlineBookingAppearance::normalize(
             is_array($content['appearance'] ?? null) ? $content['appearance'] : null,
             $templateKey,
@@ -187,12 +188,14 @@ final class PublicBookingController extends Controller
         $this->assertPublicBookingEnabled($tenant, $unit);
         $data = $request->validated();
         $publication = $this->activePublicPublication($tenant, $unit);
-        $service = $this->publicService($tenant, $unit, $data['service_id'], $publication);
+        $serviceIds = array_values(array_unique(array_filter($data['service_ids'] ?? [$data['service_id'] ?? null], 'is_string')));
+        $services = $this->publicServices($tenant, $unit, $serviceIds, $publication);
         $professional = $this->publicProfessional($tenant, $unit, $data['professional_id'], $publication);
 
-        if (! $professional->services()->whereKey($service->getKey())->exists()) {
+        if ($services->count() !== count($serviceIds) || $services->pluck('id')->diff($professional->services->pluck('id'))->isNotEmpty()) {
             throw new NotFoundHttpException;
         }
+        $duration = (int) $services->sum('duration_minutes');
 
         $timezone = (string) ($unit->timezone ?? $tenant->timezone ?? config('app.timezone'));
         $date = CarbonImmutable::createFromFormat('!Y-m-d', $data['date'], $timezone);
@@ -211,18 +214,18 @@ final class PublicBookingController extends Controller
         $to = $to->min(CarbonImmutable::parse($date->toDateString().' '.$publicWindow['ends_at'], $timezone));
         $slots = [];
 
-        for ($cursor = $from; $cursor->addMinutes((int) $service->duration_minutes)->lte($to); $cursor = $cursor->addMinutes(15)) {
+        for ($cursor = $from; $cursor->addMinutes($duration)->lte($to); $cursor = $cursor->addMinutes(15)) {
             try {
                 $this->availability->assertAvailable(
                     (string) $tenant->getKey(),
                     (string) $unit->getKey(),
                     (string) $professional->getKey(),
                     $cursor,
-                    $cursor->addMinutes((int) $service->duration_minutes),
+                    $cursor->addMinutes($duration),
                 );
                 $slots[] = [
                     'starts_at' => $cursor->toIso8601String(),
-                    'ends_at' => $cursor->addMinutes((int) $service->duration_minutes)->toIso8601String(),
+                    'ends_at' => $cursor->addMinutes($duration)->toIso8601String(),
                 ];
             } catch (CalendarConflictException) {
                 continue;
@@ -351,15 +354,17 @@ final class PublicBookingController extends Controller
             ->where('online_booking_enabled', true)
             ->when($publication !== null || $preview, fn ($query) => $query->whereIn('services.id', $serviceIds))
             ->whereHas('professionals', fn ($query) => $query->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true))
-            ->with(['professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name', 'professionals.avatar_path')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->orderBy('professionals.name')])
+            ->with(['category:id,name', 'professionals' => fn ($query) => $query->select('professionals.id', 'professionals.name', 'professionals.avatar_path')->where('professionals.tenant_id', $tenant->getKey())->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->orderBy('professionals.name')])
             ->orderBy('name')
-            ->get(['id', 'name', 'description', 'duration_minutes', 'price_cents', 'image_path'])
+            ->get(['id', 'category_id', 'name', 'description', 'duration_minutes', 'price_cents', 'image_path'])
             ->map(fn (Service $service): array => [
                 'id' => $service->getKey(), 'name' => $service->name, 'description' => $service->description,
+                'category_id' => $service->category_id,
+                'category_name' => $service->category?->name,
                 'duration_minutes' => $service->duration_minutes, 'price_cents' => $service->price_cents,
                 'image_url' => $service->image_url,
                 'thumbnail_url' => $service->thumbnail_url,
-                'professionals' => $service->professionals->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all(),
+                'professionals' => $service->professionals->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'title' => $professional->name, 'badge' => null, 'description' => null, 'next_available_at' => null, 'avatar_url' => $professional->avatar_url])->values()->all(),
             ])->values()->all();
         /** @var list<array<string, mixed>> $professionals */
         $professionals = Professional::query()
@@ -367,23 +372,42 @@ final class PublicBookingController extends Controller
             ->when($publication !== null || $preview, fn ($query) => $query->whereIn('professionals.id', $professionalIds))
             ->whereHas('services', fn ($query) => $query->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())->where('services.status', 'active')->where('services.online_booking_enabled', true))
             ->orderBy('name')->get(['id', 'name', 'avatar_path'])
-            ->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'avatar_url' => $professional->avatar_url])->values()->all();
+            ->map(fn (Professional $professional): array => ['id' => $professional->getKey(), 'name' => $professional->name, 'title' => $professional->name, 'badge' => null, 'description' => null, 'next_available_at' => null, 'avatar_url' => $professional->avatar_url])->values()->all();
 
         return compact('services', 'professionals');
     }
 
-    private function publicService(Tenant $tenant, Unit $unit, string $id, ?OnlineBookingPublication $publication = null): Service
+    /**
+     * @param  list<string>  $ids
+     * @return Collection<int, Service>
+     */
+    private function publicServices(Tenant $tenant, Unit $unit, array $ids, ?OnlineBookingPublication $publication = null): Collection
     {
-        $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
+        $publishedIds = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
 
-        return Service::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
+        return Service::query()
+            ->whereBelongsTo($tenant)
+            ->whereBelongsTo($unit)
+            ->whereIn('id', $ids)
+            ->where('status', 'active')
+            ->where('online_booking_enabled', true)
+            ->when($publishedIds !== null, fn ($query) => $query->whereIn('id', $publishedIds))
+            ->get();
     }
 
     private function publicProfessional(Tenant $tenant, Unit $unit, string $id, ?OnlineBookingPublication $publication = null): Professional
     {
         $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['professional_ids'] ?? [], 'is_string')) : null;
 
-        return Professional::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
+        return Professional::query()
+            ->whereKey($id)
+            ->whereBelongsTo($tenant)
+            ->whereBelongsTo($unit)
+            ->where('status', 'active')
+            ->where('online_booking_enabled', true)
+            ->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))
+            ->with(['services' => fn ($query) => $query->select('services.id')->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())])
+            ->firstOrFail();
     }
 
     private function activePublicPublication(Tenant $tenant, Unit $unit): ?OnlineBookingPublication

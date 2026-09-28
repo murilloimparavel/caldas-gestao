@@ -118,6 +118,8 @@ it('excludes slots occupied by existing appointments of the professional', funct
         'starts_at' => $date->setTime(15, 0),
         'ends_at' => $date->setTime(15, 30),
         'status' => 'cancelled',
+        'cancelled_at' => $date->setTime(14, 0),
+        'cancel_reason' => 'Cliente solicitou reagendamento',
     ]);
 
     $response = $this->getJson(route('public_booking.availability', [

@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { BookingItem } from '../types';
+import { bookingUi } from './design-tokens';
 
 export function SelectionCard({
     item,
@@ -26,7 +27,7 @@ export function SelectionCard({
     return (
         <label
             htmlFor={id}
-            className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${active ? 'border-border bg-background hover:border-primary/50 has-checked:border-primary/70 has-checked:bg-primary/5' : 'cursor-not-allowed border-border/60 bg-muted/30 opacity-65'}`}
+            className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${active ? 'border-slate-200 bg-white hover:border-amber-400 has-checked:border-amber-400 has-checked:bg-amber-50' : 'cursor-not-allowed border-slate-200/60 bg-slate-100/50 opacity-65'}`}
         >
             <input
                 id={id}
@@ -102,7 +103,7 @@ export function Field({
                 placeholder={placeholder}
                 readOnly={readOnly}
                 aria-readonly={readOnly}
-                className={readOnly ? 'bg-muted/30' : undefined}
+                className={`${bookingUi.field} ${readOnly ? 'bg-slate-100/60' : ''}`}
             />
         </div>
     );
@@ -120,10 +121,10 @@ export function SectionCard({
     children: ReactNode;
 }) {
     return (
-        <Card className="overflow-hidden">
-            <CardHeader className="border-b border-border/60 bg-muted/20">
+        <Card className={bookingUi.section}>
+            <CardHeader className={bookingUi.sectionHeader}>
                 <CardTitle className="flex items-center gap-2 text-base">
-                    <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <span className={bookingUi.icon}>
                         <Icon aria-hidden="true" className="size-4" />
                     </span>
                     {title}

@@ -4,6 +4,7 @@ use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\AppointmentStatusHistory;
 use App\Models\AvailabilityRule;
+use App\Models\Category;
 use App\Models\OnlineBookingCampaignLink;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
@@ -51,6 +52,19 @@ it('publishes only opted-in catalog data and isolates tenant units', function ()
         ->and(OnlineBookingVisit::query()->firstOrFail()->visitor_hash)->toHaveLength(64);
     expect($response->json('services.0.professionals.0.id'))->toBe($professional->getKey())
         ->and($response->json('unit'))->not->toHaveKey('email');
+});
+
+it('exposes service categories and professional presentation metadata', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $category = Category::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Cortes']);
+    $service->update(['category_id' => $category->getKey()]);
+
+    $response = $this->getJson(route('public_booking.show', [$tenant, $unit]))->assertSuccessful();
+
+    expect($response->json('services.0.category_id'))->toBe($category->getKey())
+        ->and($response->json('services.0.category_name'))->toBe('Cortes')
+        ->and($response->json('services.0.professionals.0.title'))->toBe($professional->name)
+        ->and($response->json('services.0.professionals.0'))->toHaveKeys(['badge', 'description', 'next_available_at']);
 });
 
 it('serves the selected catalog from the active publication snapshot', function () {
@@ -251,6 +265,28 @@ it('returns availability without blocked or conflicting slots', function () {
     expect($starts->filter(fn (string $start): bool => Str::contains($start, '10:'))->all())->toBeEmpty();
 });
 
+it('returns availability using the combined duration for multiple services', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'online_booking_enabled' => true,
+        'duration_minutes' => 30,
+    ]);
+    $professional->services()->attach($secondService, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'public_hours' => [$date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00']],
+    ]);
+
+    $response = $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_ids' => [$service->getKey(), $secondService->getKey()], 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(), 'from' => '09:00', 'to' => '10:30']));
+
+    $response->assertSuccessful();
+    expect($response->json('slots.0.ends_at'))->toBe($date->setTime(9, 0)->addMinutes($service->duration_minutes + $secondService->duration_minutes)->toIso8601String());
+});
+
 it('creates and replays a public appointment idempotently with a phone-scoped customer', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
     $payload = ['service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Public Customer', 'phone' => '+55 (11) 99999-1234'];
@@ -263,6 +299,33 @@ it('creates and replays a public appointment idempotently with a phone-scoped cu
     expect(Appointment::query()->count())->toBe(1)
         ->and(Appointment::query()->firstOrFail()->source)->toBe('online')
         ->and(Appointment::query()->firstOrFail()->customer->phone)->toBe('5511999991234');
+});
+
+it('creates one appointment with multiple compatible services', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'online_booking_enabled' => true,
+        'duration_minutes' => 30,
+        'price_cents' => 4500,
+    ]);
+    $professional->services()->attach($secondService, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+
+    $response = $this->withHeader('X-Idempotency-Key', 'multi-service')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_ids' => [$service->getKey(), $secondService->getKey()],
+            'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(),
+            'name' => 'Multi Service',
+            'phone' => '+55 11 96666-0000',
+        ])
+        ->assertCreated();
+
+    $appointment = Appointment::query()->sole();
+    expect($response->json('appointment.status'))->toBe('scheduled')
+        ->and($appointment->items()->count())->toBe(2)
+        ->and((int) abs($appointment->ends_at->diffInMinutes($appointment->starts_at)))->toBe($service->duration_minutes + $secondService->duration_minutes);
 });
 
 it('attributes a public appointment to the matching campaign link', function () {
