@@ -205,6 +205,48 @@ it('keeps the published slug and domain live until the edited link is republishe
     $this->getJson($firstLiveUrl)->assertNotFound();
 });
 
+it('serves default publications on the management host but scopes custom domains to their public host', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $managementDomain = TenantDomain::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'hostname' => 'gestao.example.test',
+        'kind' => TenantDomainKind::Management,
+        'status' => TenantDomainStatus::Active,
+    ]);
+    $publicDomain = TenantDomain::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'hostname' => 'agenda.example.test',
+        'kind' => TenantDomainKind::Public,
+        'status' => TenantDomainStatus::Active,
+    ]);
+    $payload = [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_slug' => 'default-booking-link',
+        'lock_version' => $unit->lock_version,
+    ];
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertRedirect();
+    $site = OnlineBookingSite::query()->where('tenant_id', $tenant->getKey())->where('unit_id', $unit->getKey())->firstOrFail();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
+
+    $this->getJson('https://'.$managementDomain->hostname.'/book/default-booking-link')->assertSuccessful();
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        ...$payload,
+        'public_slug' => 'custom-booking-link',
+        'public_domain_id' => $publicDomain->getKey(),
+        'lock_version' => $unit->fresh()->lock_version,
+    ])->assertRedirect();
+    $site->refresh();
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
+
+    $this->getJson('https://'.$managementDomain->hostname.'/book/custom-booking-link')->assertNotFound();
+    $this->getJson('https://'.$publicDomain->hostname.'/book/custom-booking-link')->assertSuccessful();
+});
+
 it('redirects stale Inertia saves with a recoverable message', function () {
     [$owner, , $unit, $service, $professional] = onlineBookingWorkspace();
     $payload = [
