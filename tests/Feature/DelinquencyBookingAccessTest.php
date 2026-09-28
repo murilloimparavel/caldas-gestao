@@ -158,6 +158,7 @@ it('returns only an aggregate online booking count in the billing payload', func
         'unit_id' => $unit->getKey(),
         'source' => 'online',
         'status' => 'cancelled',
+        'cancelled_at' => now(),
     ]);
     Appointment::factory()->create([
         'tenant_id' => $tenant->getKey(),
