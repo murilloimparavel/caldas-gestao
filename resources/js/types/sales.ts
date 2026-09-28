@@ -48,6 +48,7 @@ export type SaleItem = {
     service_id: string | null;
     product_id: string | null;
     professional_id: string | null;
+    seller_professional_id: string | null;
     name_snapshot: string;
     unit_price_cents: number;
     quantity: number;
@@ -56,6 +57,7 @@ export type SaleItem = {
     service?: { id: string; name: string; duration_minutes?: number } | null;
     product?: { id: string; name: string } | null;
     professional?: { id: string; name: string } | null;
+    seller_professional?: { id: string; name: string } | null;
 };
 
 export type SaleStatusHistory = {

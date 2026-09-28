@@ -34,11 +34,15 @@ final class AccrueCommissionsForSale extends OperationalAction
         $sale->loadMissing(['items.service:id,category_id', 'items.product:id,category_id']);
 
         foreach ($sale->items as $item) {
-            if ($item->professional_id === null) {
+            $commissionProfessionalId = $item->item_type === 'product'
+                ? ($item->seller_professional_id ?? $item->professional_id)
+                : $item->professional_id;
+
+            if ($commissionProfessionalId === null) {
                 continue;
             }
 
-            $matchedRule = $this->findBestMatchingRule($activeRules, $item);
+            $matchedRule = $this->findBestMatchingRule($activeRules, $item, $commissionProfessionalId);
 
             if ($matchedRule === null) {
                 continue;
@@ -55,7 +59,7 @@ final class AccrueCommissionsForSale extends OperationalAction
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $tenantId,
                 'unit_id' => $unitId,
-                'professional_id' => $item->professional_id,
+                'professional_id' => $commissionProfessionalId,
                 'sale_id' => $sale->getKey(),
                 'sale_item_id' => $item->getKey(),
                 'item_name_snapshot' => $item->name_snapshot,
@@ -89,13 +93,13 @@ final class AccrueCommissionsForSale extends OperationalAction
     /**
      * @param  Collection<int, CommissionRule>  $rules
      */
-    private function findBestMatchingRule(Collection $rules, SaleItem $item): ?CommissionRule
+    private function findBestMatchingRule(Collection $rules, SaleItem $item, string $professionalId): ?CommissionRule
     {
         $bestRule = null;
         $highestScore = -1;
 
         foreach ($rules as $rule) {
-            $score = $this->calculateRuleMatchScore($rule, $item);
+            $score = $this->calculateRuleMatchScore($rule, $item, $professionalId);
 
             if ($score !== null && $score > $highestScore) {
                 $highestScore = $score;
@@ -106,9 +110,9 @@ final class AccrueCommissionsForSale extends OperationalAction
         return $bestRule;
     }
 
-    private function calculateRuleMatchScore(CommissionRule $rule, SaleItem $item): ?int
+    private function calculateRuleMatchScore(CommissionRule $rule, SaleItem $item, string $professionalId): ?int
     {
-        $professionalMatches = ($rule->professional_id === null || $rule->professional_id === $item->professional_id);
+        $professionalMatches = ($rule->professional_id === null || $rule->professional_id === $professionalId);
 
         if (! $professionalMatches) {
             return null;

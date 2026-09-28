@@ -406,6 +406,11 @@ it('adds service, product and custom items with immutable snapshots and computes
         'unit_id' => $unit->getKey(),
         'status' => 'active',
     ]);
+    $seller = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'active',
+    ]);
 
     // 1. Add Service Item
     $this->actingAs($owner)->post(route('sales.items.store', $sale), [
@@ -437,6 +442,7 @@ it('adds service, product and custom items with immutable snapshots and computes
     $this->actingAs($owner)->post(route('sales.items.store', $sale), [
         'item_type' => 'product',
         'product_id' => $product->getKey(),
+        'seller_professional_id' => $seller->getKey(),
         'quantity' => 2,
         'discount_cents' => 500, // (4500 * 2) - 500 = 8500
         'lock_version' => 2,
@@ -463,6 +469,11 @@ it('adds service, product and custom items with immutable snapshots and computes
         ->and($sale->final_amount_cents)->toBe(15000)
         ->and($sale->lock_version)->toBe(4)
         ->and($sale->items()->count())->toBe(3);
+
+    $productItem = SaleItem::query()->where('sale_id', $sale->getKey())->where('item_type', 'product')->firstOrFail();
+    expect($productItem->professional_id)->toBeNull()
+        ->and($productItem->seller_professional_id)->toBe($seller->getKey())
+        ->and($productItem->sellerProfessional->is($seller))->toBeTrue();
 });
 
 it('rejects item types incompatible with category type', function () {

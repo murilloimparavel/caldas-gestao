@@ -184,8 +184,10 @@ final class PublicBookingController extends Controller
             $publishedSites = OnlineBookingSite::query()
                 ->whereHas('activePublication', function ($query) use ($publicSlug, $requestDomain): void {
                     $query->where('public_slug', $publicSlug);
-                    if ($requestDomain instanceof TenantDomain) {
+                    if ($requestDomain instanceof TenantDomain && $requestDomain->kind->value === 'public') {
                         $query->where('public_domain_id', $requestDomain->getKey());
+                    } else {
+                        $query->whereNull('public_domain_id');
                     }
                 })
                 ->with(['tenant', 'unit', 'activePublication'])
@@ -483,13 +485,16 @@ final class PublicBookingController extends Controller
     private function assertPublicationDomainMatchesRequest(Tenant $tenant, OnlineBookingPublication $publication): void
     {
         $requestDomain = request()->attributes->get('tenant_domain');
-        if (! $requestDomain instanceof TenantDomain) {
+        if (! $requestDomain instanceof TenantDomain || $requestDomain->kind->value !== 'public') {
+            if ($publication->public_domain_id !== null) {
+                throw new NotFoundHttpException;
+            }
+
             return;
         }
 
         if (
             $requestDomain->tenant_id !== $tenant->getKey()
-            || $requestDomain->kind->value !== 'public'
             || $requestDomain->status->value !== 'active'
             || $publication->public_domain_id !== $requestDomain->getKey()
         ) {

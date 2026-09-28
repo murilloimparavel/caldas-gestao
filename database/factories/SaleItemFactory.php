@@ -31,6 +31,7 @@ class SaleItemFactory extends Factory
             ])->getKey(),
             'product_id' => null,
             'professional_id' => null,
+            'seller_professional_id' => null,
             'name_snapshot' => 'Corte de Cabelo',
             'unit_price_cents' => 5000,
             'quantity' => 1,

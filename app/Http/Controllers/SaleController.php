@@ -119,6 +119,7 @@ final class SaleController extends Controller
             'items.service',
             'items.product',
             'items.professional',
+            'items.sellerProfessional',
             'customer',
             'category',
             'appointmentLink.appointment',

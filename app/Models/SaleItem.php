@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $service_id
  * @property string|null $product_id
  * @property string|null $professional_id
+ * @property string|null $seller_professional_id
  * @property string $name_snapshot
  * @property int $unit_price_cents
  * @property int $quantity
@@ -37,6 +38,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'service_id',
     'product_id',
     'professional_id',
+    'seller_professional_id',
     'name_snapshot',
     'unit_price_cents',
     'quantity',
@@ -100,6 +102,12 @@ class SaleItem extends Model
     public function professional(): BelongsTo
     {
         return $this->belongsTo(Professional::class);
+    }
+
+    /** @return BelongsTo<Professional, $this> */
+    public function sellerProfessional(): BelongsTo
+    {
+        return $this->belongsTo(Professional::class, 'seller_professional_id');
     }
 
     /** @return HasMany<PackageUsage, $this> */
