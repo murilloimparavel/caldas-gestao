@@ -60,9 +60,11 @@ final class CreatePublicAppointment
             ->where('status', 'active')
             ->where('online_booking_enabled', true)
             ->when(($ids = $this->publishedCatalogIds($tenant, $unit, 'professional_ids')) !== null, fn ($query) => $query->whereIn('id', $ids))
+            ->with(['services' => fn ($query) => $query->select('services.id')->where('services.tenant_id', $tenant->getKey())->where('services.unit_id', $unit->getKey())])
             ->firstOrFail();
 
-        if ($services->contains(fn (Service $candidate): bool => ! $professional->services()->whereKey($candidate->getKey())->exists())) {
+        $professionalServiceIds = $professional->services->pluck('id');
+        if ($services->contains(fn (Service $candidate): bool => ! $professionalServiceIds->contains($candidate->getKey()))) {
             abort(404);
         }
 

@@ -265,6 +265,28 @@ it('returns availability without blocked or conflicting slots', function () {
     expect($starts->filter(fn (string $start): bool => Str::contains($start, '10:'))->all())->toBeEmpty();
 });
 
+it('returns availability using the combined duration for multiple services', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'online_booking_enabled' => true,
+        'duration_minutes' => 30,
+    ]);
+    $professional->services()->attach($secondService, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'public_hours' => [$date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00']],
+    ]);
+
+    $response = $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_ids' => [$service->getKey(), $secondService->getKey()], 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(), 'from' => '09:00', 'to' => '10:30']));
+
+    $response->assertSuccessful();
+    expect($response->json('slots.0.ends_at'))->toBe($date->setTime(9, 0)->addMinutes($service->duration_minutes + $secondService->duration_minutes)->toIso8601String());
+});
+
 it('creates and replays a public appointment idempotently with a phone-scoped customer', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
     $payload = ['service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Public Customer', 'phone' => '+55 (11) 99999-1234'];

@@ -16,7 +16,9 @@ final class PublicBookingAvailabilityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'service_id' => ['required', 'uuid'],
+            'service_id' => ['nullable', 'uuid', 'required_without:service_ids'],
+            'service_ids' => ['nullable', 'array', 'min:1', 'max:8', 'required_without:service_id'],
+            'service_ids.*' => ['required', 'uuid', 'distinct'],
             'professional_id' => ['required', 'uuid'],
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'before:'.now()->addDays(31)->toDateString()],
             'from' => ['sometimes', 'date_format:H:i'],

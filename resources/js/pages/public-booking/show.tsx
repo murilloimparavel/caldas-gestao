@@ -12,22 +12,28 @@ import {
     ShieldCheck,
     UserRound,
     Globe2,
-    Zap,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useInitials } from '@/hooks/use-initials';
-import { availability } from '@/routes/public_booking';
 import { store } from '@/routes/public_booking/appointments';
+import { useBookingAvailability } from './hooks/use-booking-availability';
 import {
     AtelierProgress,
     AtelierSelectionSummary,
     AtelierSectionHeading,
 } from '@/pages/public-booking/components/atelier-booking-ui';
+import {
+    AtelierBookingPolicy,
+    AtelierFirstAvailableCard,
+    AtelierProfessionalCard,
+    AtelierScheduleSlots,
+    AtelierServiceSummaryCard,
+} from '@/pages/public-booking/components/atelier-step-panels';
 
 type Address = {
     street?: string;
@@ -117,18 +123,6 @@ type Props = {
     unit: Unit;
     services: Service[];
     professionals?: Professional[];
-};
-type AvailabilityQuery = {
-    service_id: string;
-    professional_id: string;
-    date: string;
-    from?: string;
-    to?: string;
-};
-type AvailabilityResponse = {
-    date: string;
-    timezone: string;
-    slots: { starts_at: string; ends_at: string }[];
 };
 type AppointmentData = {
     service_id: string;
@@ -347,10 +341,20 @@ export default function PublicBooking({
     const businessStatus = currentBusinessStatus(unit);
     const coverUrl =
         unit.cover_image_url ?? unit.cover_url ?? unit.gallery?.[0]?.url;
-    const availabilityRequest = useHttp<
-        AvailabilityQuery,
-        AvailabilityResponse
-    >({ service_id: '', professional_id: '', date: '' });
+    const availabilityRequest = useBookingAvailability({
+        args,
+        serviceId,
+        serviceIds: selectedServiceIds,
+        professionalId,
+        date,
+        onError: () => {
+            setSlot('');
+            setBookingError(
+                'Não foi possível carregar os horários. Escolha outra data ou tente novamente.',
+            );
+            setBookingErrorKind('slot');
+        },
+    });
     const appointmentRequest = useHttp<AppointmentData, AppointmentResponse>({
         service_id: '',
         professional_id: '',
@@ -360,35 +364,6 @@ export default function PublicBooking({
         email: '',
         notes: '',
     });
-    useEffect(() => {
-        if (!serviceId || !professionalId || !date) {
-            return;
-        }
-
-        availabilityRequest.setData({
-            service_id: serviceId,
-            professional_id: professionalId,
-            date,
-        });
-        void availabilityRequest.get(
-            availability.url(args, {
-                query: {
-                    service_id: serviceId,
-                    professional_id: professionalId,
-                    date,
-                },
-            }),
-            {
-                onError: () => {
-                    setSlot('');
-                    setBookingError(
-                        'Não foi possível carregar os horários. Escolha outra data ou tente novamente.',
-                    );
-                    setBookingErrorKind('slot');
-                },
-            },
-        ); // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [date, professionalId, serviceId]);
     const chooseService = (id: string): void => {
         if (!id) {
             setSelectedServiceIds([]);
@@ -1543,36 +1518,6 @@ function AtelierBarberView({
               .format(new Date(`${date}T12:00:00`))
               .replace('.', '')
         : 'Escolha uma data';
-    const slotGroups = [
-        {
-            label: 'MANHÃ',
-            slots: slots.filter(
-                (item) =>
-                    Number(
-                        time(item.starts_at, availabilityTimezone).slice(0, 2),
-                    ) < 12,
-            ),
-        },
-        {
-            label: 'TARDE',
-            slots: slots.filter((item) => {
-                const hour = Number(
-                    time(item.starts_at, availabilityTimezone).slice(0, 2),
-                );
-
-                return hour >= 12 && hour < 18;
-            }),
-        },
-        {
-            label: 'NOITE',
-            slots: slots.filter(
-                (item) =>
-                    Number(
-                        time(item.starts_at, availabilityTimezone).slice(0, 2),
-                    ) >= 18,
-            ),
-        },
-    ].filter((group) => group.slots.length > 0);
     const dateChoices = Array.from({ length: 5 }, (_, index) => {
         const option = new Date();
         option.setDate(option.getDate() + index);
@@ -1873,67 +1818,27 @@ function AtelierBarberView({
                                     Escolha um profissional ou encontre o
                                     primeiro disponível.
                                 </p>
-                                <div className="mt-5 flex items-center justify-between rounded-xl border border-[#39362f] bg-[#151513] p-4">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#332b17] text-[#d4af37]">
-                                            <Star className="size-4" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="truncate font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
-                                                {selectedServiceLabel ||
-                                                    'Serviço selecionado'}
-                                            </p>
-                                            <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.12em] text-[#918b80] uppercase">
-                                                {selectedServices.length || 1}{' '}
-                                                serviço
-                                                {selectedServices.length > 1
-                                                    ? 's'
-                                                    : ''}{' '}
-                                                ·{' '}
-                                                {selectedTotalMinutes ||
-                                                    selectedService?.duration_minutes ||
-                                                    0}{' '}
-                                                min
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="shrink-0 font-['Space_Grotesk'] text-sm font-semibold text-[#d4af37]">
-                                        {money(
-                                            selectedTotalCents ||
-                                                selectedService?.price_cents ||
-                                                0,
-                                        )}
-                                    </span>
+                                <div className="mt-5">
+                                    <AtelierServiceSummaryCard
+                                        services={selectedServices}
+                                        professional={selectedProfessional}
+                                    />
                                 </div>
-                                <button
-                                    type="button"
+                                <AtelierFirstAvailableCard
                                     disabled={
                                         !serviceId ||
                                         serviceProfessionals.length === 0
                                     }
-                                    onClick={() =>
+                                    selected={
+                                        professionalId ===
+                                        serviceProfessionals[0]?.id
+                                    }
+                                    onSelect={() =>
                                         onProfessionalChange(
                                             serviceProfessionals[0]?.id ?? '',
                                         )
                                     }
-                                    className={`mt-3 flex w-full items-center gap-3 rounded-xl border p-4 text-left transition ${professionalId === serviceProfessionals[0]?.id ? 'border-[#d4af37] bg-[#282317]' : 'border-[#4d4330] bg-[#171612] hover:border-[#d4af37]/70'}`}
-                                >
-                                    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-[#d4af37]/70 text-[#d4af37]">
-                                        <Zap className="size-5" />
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block font-['DM_Sans'] text-base font-semibold text-[#f4efe6]">
-                                            Primeiro disponível
-                                        </span>
-                                        <span className="mt-1 block font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
-                                            Encontre o melhor horário disponível
-                                            entre os profissionais.
-                                        </span>
-                                    </span>
-                                    <span
-                                        className={`size-6 shrink-0 rounded-full border ${professionalId === serviceProfessionals[0]?.id ? 'border-[#d4af37] bg-[#d4af37]' : 'border-[#706752]'}`}
-                                    />
-                                </button>
+                                />
                                 <div className="mt-8 flex items-end justify-between gap-4">
                                     <AtelierSectionHeading eyebrow="Profissionais para seus serviços">
                                         Todos realizam o atendimento
@@ -1941,40 +1846,16 @@ function AtelierBarberView({
                                 </div>
                                 <div className="mt-3 grid gap-3">
                                     {serviceProfessionals.map((person) => (
-                                        <button
-                                            type="button"
+                                        <AtelierProfessionalCard
                                             key={person.id}
-                                            disabled={!serviceId}
-                                            onClick={() =>
-                                                onProfessionalChange(person.id)
-                                            }
-                                            aria-pressed={
+                                            professional={person}
+                                            selected={
                                                 professionalId === person.id
                                             }
-                                            className={`flex min-h-[106px] items-center gap-3 rounded-xl border p-4 text-left transition ${professionalId === person.id ? 'border-[#d4af37] bg-[#201d16]' : 'border-[#39362f] bg-[#151513] hover:border-[#8b7635]'}`}
-                                        >
-                                            <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#5b4d2b] bg-[#302c22] font-['DM_Sans'] text-xs font-semibold text-[#d4af37]">
-                                                {person.avatar_url ? (
-                                                    <img
-                                                        src={person.avatar_url}
-                                                        alt=""
-                                                        className="size-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <UserRound className="size-4" />
-                                                )}
-                                            </span>
-                                            <span className="min-w-0 flex-1 font-['DM_Sans'] text-sm font-medium text-[#eee7dc]">
-                                                {person.name}
-                                                <span className="mt-1 block font-['DM_Sans'] text-xs text-[#a9a39a]">
-                                                    Atendimento presencial ·
-                                                    Próximo horário disponível
-                                                </span>
-                                            </span>
-                                            {professionalId === person.id ? (
-                                                <CheckCircle2 className="size-4 shrink-0 text-[#d4af37]" />
-                                            ) : null}
-                                        </button>
+                                            onSelect={() =>
+                                                onProfessionalChange(person.id)
+                                            }
+                                        />
                                     ))}
                                 </div>
                                 <p className="mt-7 flex items-start gap-2 font-['DM_Sans'] text-xs leading-5 text-[#777168]">
@@ -2075,103 +1956,18 @@ function AtelierBarberView({
                                         </button>
                                     </div>
                                 ) : null}
-                                <div className="mt-7 flex items-end justify-between gap-4">
-                                    <h2 className="font-['Bodoni_Moda'] text-xl text-[#f8f2e8] italic">
-                                        Outros horários
-                                    </h2>
-                                    <span className="font-['DM_Sans'] text-xs text-[#918b80]">
-                                        Fuso horário: Brasília
-                                    </span>
-                                </div>
-                                <div className="mt-3 grid grid-cols-5 gap-2 overflow-x-auto pb-1">
-                                    {dateChoices.map((choice) => {
-                                        const option = new Date(
-                                            `${choice}T12:00:00`,
-                                        );
-                                        const active = choice === date;
-
-                                        return (
-                                            <button
-                                                type="button"
-                                                key={choice}
-                                                onClick={() =>
-                                                    onDateChange(choice)
-                                                }
-                                                disabled={!professionalId}
-                                                className={`min-w-[62px] rounded-lg border px-2 py-2 text-center transition ${active ? 'border-[#d4af37] bg-[#272117]' : 'border-[#39362f] bg-[#171616] hover:border-[#8b7635]'}`}
-                                            >
-                                                <span className="block font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.12em] text-[#d4af37] uppercase">
-                                                    {option
-                                                        .toLocaleDateString(
-                                                            'pt-BR',
-                                                            {
-                                                                weekday:
-                                                                    'short',
-                                                            },
-                                                        )
-                                                        .replace('.', '')}
-                                                </span>
-                                                <span className="mt-1 block font-['Bodoni_Moda'] text-lg text-[#f4efe6]">
-                                                    {option.getDate()}
-                                                </span>
-                                                <span className="block font-['DM_Sans'] text-[9px] text-[#918b80] uppercase">
-                                                    {option
-                                                        .toLocaleDateString(
-                                                            'pt-BR',
-                                                            { month: 'short' },
-                                                        )
-                                                        .replace('.', '')}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <label className="mt-4 flex h-11 items-center gap-2 rounded-lg border border-[#39362f] bg-[#0f0f0d] px-3 focus-within:border-[#d4af37]">
-                                    <CalendarDays className="size-4 text-[#d4af37]" />
-                                    <span className="sr-only">
-                                        Escolher outra data
-                                    </span>
-                                    <input
-                                        type="date"
-                                        value={date}
-                                        min={today()}
-                                        max={limit()}
-                                        disabled={!professionalId}
-                                        onChange={(event) =>
-                                            onDateChange(event.target.value)
-                                        }
-                                        className="w-full bg-transparent font-['DM_Sans'] text-sm text-[#f4efe6] [color-scheme:dark] outline-none"
-                                    />
-                                </label>
-                                {slotGroups.map((group) => (
-                                    <div key={group.label} className="mt-6">
-                                        <div className="flex items-center gap-3 border-b border-[#2b2925] pb-2">
-                                            <span className="font-['Space_Grotesk'] text-xs font-semibold tracking-[0.16em] text-[#d4af37] uppercase">
-                                                {group.label}
-                                            </span>
-                                            <span className="h-px flex-1 bg-[#2b2925]" />
-                                        </div>
-                                        <div className="mt-3 grid grid-cols-3 gap-2">
-                                            {group.slots.map((item) => (
-                                                <button
-                                                    type="button"
-                                                    key={item.starts_at}
-                                                    onClick={() =>
-                                                        onSlotChange(
-                                                            item.starts_at,
-                                                        )
-                                                    }
-                                                    className={`min-h-12 rounded-lg border px-2 font-['Space_Grotesk'] text-xs font-semibold transition ${slot === item.starts_at ? 'border-[#d4af37] bg-[#2a261e] text-[#d4af37]' : 'border-[#2b2925] bg-[#171616] text-[#f4efe6] hover:border-[#8b7635]'}`}
-                                                >
-                                                    {time(
-                                                        item.starts_at,
-                                                        availabilityTimezone,
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                <AtelierScheduleSlots
+                                    date={date}
+                                    dateChoices={dateChoices}
+                                    professionalId={professionalId}
+                                    slots={slots}
+                                    selectedSlot={slot}
+                                    timezone={availabilityTimezone}
+                                    onDateChange={onDateChange}
+                                    onSlotChange={onSlotChange}
+                                    today={today()}
+                                    limit={limit()}
+                                />
                                 {professionalId && date && !slots.length ? (
                                     <p className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]">
                                         Nenhum horário disponível para esta
@@ -2341,22 +2137,7 @@ function AtelierBarberView({
                                         Para envio do lembrete e comprovante via
                                         WhatsApp.
                                     </p>
-                                    <div className="flex items-start gap-3 rounded-xl border border-[#39362f] bg-[#171616] p-4">
-                                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#8b7635] text-[#d4af37]">
-                                            <Clock3 className="size-4" />
-                                        </span>
-                                        <div>
-                                            <p className="font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
-                                                Flexibilidade & transparência
-                                            </p>
-                                            <p className="mt-1 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
-                                                Cancelamento ou reagendamento
-                                                sem custo até 2 horas antes do
-                                                horário. O valor é pago
-                                                diretamente no local.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <AtelierBookingPolicy />
                                     <label
                                         className="sr-only"
                                         htmlFor="atelier-notes"

@@ -22,6 +22,7 @@ use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -187,12 +188,14 @@ final class PublicBookingController extends Controller
         $this->assertPublicBookingEnabled($tenant, $unit);
         $data = $request->validated();
         $publication = $this->activePublicPublication($tenant, $unit);
-        $service = $this->publicService($tenant, $unit, $data['service_id'], $publication);
+        $serviceIds = array_values(array_unique(array_filter($data['service_ids'] ?? [$data['service_id'] ?? null], 'is_string')));
+        $services = $this->publicServices($tenant, $unit, $serviceIds, $publication);
         $professional = $this->publicProfessional($tenant, $unit, $data['professional_id'], $publication);
 
-        if (! $professional->services()->whereKey($service->getKey())->exists()) {
+        if ($services->count() !== count($serviceIds) || $services->contains(fn (Service $service): bool => ! $professional->services()->whereKey($service->getKey())->exists())) {
             throw new NotFoundHttpException;
         }
+        $duration = (int) $services->sum('duration_minutes');
 
         $timezone = (string) ($unit->timezone ?? $tenant->timezone ?? config('app.timezone'));
         $date = CarbonImmutable::createFromFormat('!Y-m-d', $data['date'], $timezone);
@@ -211,18 +214,18 @@ final class PublicBookingController extends Controller
         $to = $to->min(CarbonImmutable::parse($date->toDateString().' '.$publicWindow['ends_at'], $timezone));
         $slots = [];
 
-        for ($cursor = $from; $cursor->addMinutes((int) $service->duration_minutes)->lte($to); $cursor = $cursor->addMinutes(15)) {
+        for ($cursor = $from; $cursor->addMinutes($duration)->lte($to); $cursor = $cursor->addMinutes(15)) {
             try {
                 $this->availability->assertAvailable(
                     (string) $tenant->getKey(),
                     (string) $unit->getKey(),
                     (string) $professional->getKey(),
                     $cursor,
-                    $cursor->addMinutes((int) $service->duration_minutes),
+                    $cursor->addMinutes($duration),
                 );
                 $slots[] = [
                     'starts_at' => $cursor->toIso8601String(),
-                    'ends_at' => $cursor->addMinutes((int) $service->duration_minutes)->toIso8601String(),
+                    'ends_at' => $cursor->addMinutes($duration)->toIso8601String(),
                 ];
             } catch (CalendarConflictException) {
                 continue;
@@ -379,6 +382,21 @@ final class PublicBookingController extends Controller
         $ids = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
 
         return Service::query()->whereKey($id)->whereBelongsTo($tenant)->whereBelongsTo($unit)->where('status', 'active')->where('online_booking_enabled', true)->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))->firstOrFail();
+    }
+
+    /** @param list<string> $ids */
+    private function publicServices(Tenant $tenant, Unit $unit, array $ids, ?OnlineBookingPublication $publication = null): Collection
+    {
+        $publishedIds = is_array($publication?->content) ? array_values(array_filter($publication->content['service_ids'] ?? [], 'is_string')) : null;
+
+        return Service::query()
+            ->whereBelongsTo($tenant)
+            ->whereBelongsTo($unit)
+            ->whereIn('id', $ids)
+            ->where('status', 'active')
+            ->where('online_booking_enabled', true)
+            ->when($publishedIds !== null, fn ($query) => $query->whereIn('id', $publishedIds))
+            ->get();
     }
 
     private function publicProfessional(Tenant $tenant, Unit $unit, string $id, ?OnlineBookingPublication $publication = null): Professional
