@@ -16,6 +16,7 @@ it('persists public configuration and resolves the canonical slug', function () 
         'public_slug' => 'roma-club',
         'description' => 'Barbearia moderna',
         'whatsapp_phone' => '5511999999999',
+        'facebook_url' => 'https://www.facebook.com/roma-club',
         'brand_color' => '#112233',
         'booking_flow' => 'professional_first',
         'minimum_notice_minutes' => 30,
@@ -26,5 +27,9 @@ it('persists public configuration and resolves the canonical slug', function () 
     $this->getJson(route('public_booking.slug', ['public_slug' => 'roma-club']))
         ->assertSuccessful()
         ->assertJsonPath('unit.description', 'Barbearia moderna')
+        ->assertJsonPath(
+            'unit.contacts.facebook_url',
+            'https://www.facebook.com/roma-club',
+        )
         ->assertJsonPath('unit.brand_color', '#112233');
 });
