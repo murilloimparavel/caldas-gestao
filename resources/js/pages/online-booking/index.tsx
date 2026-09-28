@@ -49,6 +49,7 @@ import {
 import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
 import { bookingUi } from './components/design-tokens';
+import { BookingHero } from './components/booking-hero';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
@@ -123,35 +124,12 @@ export default function OnlineBookingIndex({
         <>
             <Head title="Agendamento online" />
             <PageCanvas className={bookingUi.shell}>
-                <div className={`${bookingUi.hero} px-5 py-7 sm:px-8 sm:py-9`}>
-                    <div className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-amber-300/10 blur-3xl" />
-                    <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-                        <div>
-                            <div className="mb-4 flex items-center gap-3 text-[11px] font-bold tracking-[0.28em] text-amber-200 uppercase">
-                                <span className="size-2 rounded-full bg-amber-300" />
-                                Canal público
-                            </div>
-                            <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">
-                                Seu agendamento, do seu jeito.
-                            </h1>
-                            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
-                                Configure o link que seus clientes vão usar para
-                                escolher serviços, profissionais e horários de
-                                {` ${unit.name}`}.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="border-0 bg-amber-300 text-slate-950">
-                                {readiness.publishable
-                                    ? 'Pronto para publicar'
-                                    : 'Em preparação'}
-                            </Badge>
-                            <Badge className="border border-white/15 bg-white/10 text-white">
-                                /{settings.public_slug ?? unit.slug}
-                            </Badge>
-                        </div>
-                    </div>
-                </div>
+                <BookingHero
+                    unitName={unit.name}
+                    unitSlug={unit.slug}
+                    settings={settings}
+                    readiness={readiness}
+                />
                 <div className="mb-5 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                     <div className="flex items-start gap-3">
                         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
