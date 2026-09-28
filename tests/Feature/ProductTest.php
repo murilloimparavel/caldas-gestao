@@ -107,6 +107,89 @@ it('creates, updates, searches and inactivates physical products', function () {
         ->and(AuditEvent::query()->where('action', 'product.deactivated')->where('resource_id', $product->getKey())->exists())->toBeTrue();
 });
 
+it('summarizes current inventory value by category for the active unit', function () {
+    [$owner, $tenant, $unit] = productTestWorkspace();
+    $clothing = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Roupas',
+        'type' => 'product',
+    ]);
+    $perfume = Category::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Perfumes',
+        'type' => 'product',
+    ]);
+
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $clothing->getKey(),
+        'current_stock' => 2,
+        'cost_price_cents' => 100,
+        'sale_price_cents' => 250,
+    ]);
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $clothing->getKey(),
+        'current_stock' => 3,
+        'cost_price_cents' => 300,
+        'sale_price_cents' => 500,
+        'is_active' => false,
+    ]);
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'category_id' => $perfume->getKey(),
+        'current_stock' => 4,
+        'cost_price_cents' => 250,
+        'sale_price_cents' => 600,
+    ]);
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'current_stock' => 1,
+        'cost_price_cents' => 1000,
+        'sale_price_cents' => 2000,
+    ]);
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'current_stock' => 0,
+        'cost_price_cents' => 9999,
+        'sale_price_cents' => 9999,
+    ]);
+    $otherUnit = Unit::factory()->create(['tenant_id' => $tenant->getKey()]);
+    Product::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $otherUnit->getKey(),
+        'current_stock' => 100,
+        'cost_price_cents' => 9999,
+        'sale_price_cents' => 9999,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('products.index', ['search' => 'does-not-match', 'status' => 'active']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/index')
+            ->missing('inventorySummary.total_units')
+            ->where('inventorySummary.total_cost_cents', 3100)
+            ->where('inventorySummary.total_sale_cents', 6400)
+            ->has('inventorySummary.categories', 3)
+            ->missing('inventorySummary.categories.0.units')
+            ->where('inventorySummary.categories.0.name', 'Perfumes')
+            ->where('inventorySummary.categories.0.cost_value_cents', 1000)
+            ->where('inventorySummary.categories.0.sale_value_cents', 2400)
+            ->where('inventorySummary.categories.1.name', 'Roupas')
+            ->where('inventorySummary.categories.1.cost_value_cents', 1100)
+            ->where('inventorySummary.categories.1.sale_value_cents', 2000)
+            ->where('inventorySummary.categories.2.name', 'Sem categoria')
+            ->where('inventorySummary.categories.2.cost_value_cents', 1000)
+            ->where('inventorySummary.categories.2.sale_value_cents', 2000));
+});
+
 it('rejects categories from another unit during product creation', function () {
     [$owner, $tenant, $unit] = productTestWorkspace();
     $secondUnit = Unit::factory()->create(['tenant_id' => $tenant->getKey()]);

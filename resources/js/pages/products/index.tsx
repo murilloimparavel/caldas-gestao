@@ -2,10 +2,12 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     Boxes,
+    CircleDollarSign,
     FolderTree,
     Package,
     Plus,
     SlidersHorizontal,
+    TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
@@ -68,9 +70,21 @@ type Product = {
     unit_of_measure: string;
 };
 
+type InventorySummary = {
+    categories: {
+        cost_value_cents: number;
+        id: string | null;
+        name: string;
+        sale_value_cents: number;
+    }[];
+    total_cost_cents: number;
+    total_sale_cents: number;
+};
+
 type Props = {
     categoryOptions: CategoryOption[];
     filters: ResourceFilters & { category_id?: string };
+    inventorySummary: InventorySummary;
     products: Paginated<Product>;
 };
 
@@ -127,6 +141,7 @@ export default function ProductsIndex({
     products: paginator,
     filters,
     categoryOptions: initialCategoryOptions = [],
+    inventorySummary,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const { view, setView } = useResourceView('caldas-gestao:products-view');
@@ -488,6 +503,100 @@ export default function ProductsIndex({
                 >
                     <ResourceViewToggle value={view} onChange={setView} />
                 </SearchToolbar>
+
+                <section
+                    aria-labelledby="inventory-summary-title"
+                    className="surface-panel overflow-hidden"
+                >
+                    <div className="flex flex-col gap-4 p-4 sm:p-5">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                            <div>
+                                <h2
+                                    id="inventory-summary-title"
+                                    className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                                >
+                                    <Boxes className="size-4 text-primary" />
+                                    Valor do estoque atual
+                                </h2>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Considera todo o estoque da unidade, mesmo
+                                    produtos inativos com saldo.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <CircleDollarSign className="size-3.5" />
+                                    Valor investido (custo)
+                                </div>
+                                <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+                                    {formatMoney(
+                                        inventorySummary.total_cost_cents,
+                                    )}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <TrendingUp className="size-3.5" />
+                                    Valor potencial de venda
+                                </div>
+                                <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+                                    {formatMoney(
+                                        inventorySummary.total_sale_cents,
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+
+                        {inventorySummary.categories.length > 0 ? (
+                            <div className="overflow-x-auto rounded-lg border border-border/70">
+                                <table className="w-full min-w-[520px] text-sm">
+                                    <thead className="bg-muted/30 text-xs text-muted-foreground">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left font-medium">
+                                                Categoria
+                                            </th>
+                                            <th className="px-3 py-2 text-right font-medium">
+                                                Custo
+                                            </th>
+                                            <th className="px-3 py-2 text-right font-medium">
+                                                Venda potencial
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/70">
+                                        {inventorySummary.categories.map(
+                                            (category) => (
+                                                <tr
+                                                    key={
+                                                        category.id ??
+                                                        'uncategorized'
+                                                    }
+                                                >
+                                                    <td className="px-3 py-2 font-medium text-foreground">
+                                                        {category.name}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right text-muted-foreground">
+                                                        {formatMoney(
+                                                            category.cost_value_cents,
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right text-muted-foreground">
+                                                        {formatMoney(
+                                                            category.sale_value_cents,
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : null}
+                    </div>
+                </section>
 
                 {paginator.data.length === 0 ? (
                     <EmptyState
