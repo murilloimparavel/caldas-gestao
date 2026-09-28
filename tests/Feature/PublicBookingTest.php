@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\OnlineBooking\PublishOnlineBookingSite;
+use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Jobs\SyncGoogleCalendarAppointment;
 use App\Models\Appointment;
 use App\Models\AppointmentStatusHistory;
@@ -17,6 +19,7 @@ use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -29,13 +32,25 @@ function publicBookingWorkspace(): array
     $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'online_booking_enabled' => true]);
     $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'online_booking_enabled' => true]);
     $professional->services()->attach($service, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
-    $date = CarbonImmutable::now($unit->timezone)->addDays(7)->startOfDay();
+    $timezone = $unit->timezone ?? $tenant->timezone ?? config('app.timezone');
+    $date = CarbonImmutable::now($timezone)->addDays(7)->startOfDay();
     AvailabilityRule::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'professional_id' => $professional->getKey(),
-        'weekday' => $date->dayOfWeek, 'starts_at' => '09:00:00', 'ends_at' => '18:00:00', 'timezone' => $unit->timezone,
+        'weekday' => $date->dayOfWeek, 'starts_at' => '09:00:00', 'ends_at' => '18:00:00', 'timezone' => $timezone,
     ]);
 
     return [$tenant, $unit, $service, $professional, $date];
+}
+
+function configurePublicBookingHours(Tenant $tenant, Unit $unit, CarbonImmutable $date): void
+{
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'minimum_notice_minutes' => 0,
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00']],
+    ]);
 }
 
 it('publishes only opted-in catalog data and isolates tenant units', function () {
@@ -123,6 +138,55 @@ it('serves the selected catalog from the active publication snapshot', function 
         ->and($response->json('unit.sections.services'))->toBeTrue()
         ->and($response->json('unit.appearance.brand_name'))->toBe('Atelier Público')
         ->and($response->json('settings.appearance.headline'))->toBe('Reserve agora');
+});
+
+it('uses legacy hours and notice when a publication omits those snapshot fields', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $legacyHours = [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '11:00', 'ends_at' => '12:00']];
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'minimum_notice_minutes' => 8 * 24 * 60,
+        'public_hours' => $legacyHours,
+    ]);
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => $unit->slug, 'status' => 'published',
+    ]);
+    $publication = OnlineBookingPublication::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(),
+        'version' => 1, 'source_revision' => 1, 'content_hash' => hash('sha256', 'legacy-fields-fallback'),
+        'template_key' => 'essential', 'public_slug' => $unit->slug, 'published_at' => now(), 'published_by' => User::factory()->create()->getKey(),
+        'content' => ['service_ids' => [$service->getKey()], 'professional_ids' => [$professional->getKey()]],
+    ]);
+    $site->update(['active_publication_id' => $publication->getKey()]);
+
+    $this->getJson(route('public_booking.show', [$tenant, $unit]))
+        ->assertSuccessful()
+        ->assertJsonPath('unit.public_hours.'.$date->dayOfWeek.'.enabled', true)
+        ->assertJsonPath('unit.public_hours.'.$date->dayOfWeek.'.starts_at', '11:00')
+        ->assertJsonPath('unit.public_hours.'.$date->dayOfWeek.'.ends_at', '12:00')
+        ->assertJsonPath('unit.minimum_notice_minutes', 8 * 24 * 60);
+    $blockedByFallbackNotice = $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(),
+    ]))->assertSuccessful();
+    $nextWeek = $date->addDays(7);
+    $fallbackSlots = $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $nextWeek->toDateString(),
+    ]))->assertSuccessful();
+    expect($blockedByFallbackNotice->json('slots'))->toBeEmpty()
+        ->and(Str::contains($fallbackSlots->json('slots.0.starts_at'), 'T11:'))->toBeTrue();
+    $this->withHeader('X-Idempotency-Key', 'snapshot-legacy-hours-fallback')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+            'starts_at' => $fallbackSlots->json('slots.0.starts_at'), 'name' => 'Legacy Fallback', 'phone' => '+55 11 95555-0000',
+        ])
+        ->assertCreated();
+
+    $publication->update(['content' => [...$publication->content, 'public_hours' => []]]);
+    $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $nextWeek->toDateString(),
+    ]))->assertSuccessful()->assertJsonPath('slots', []);
 });
 
 it('can roll back public reads to the legacy settings resolver', function () {
@@ -220,9 +284,82 @@ it('enforces the active publication catalog for availability and creation', func
     expect(Appointment::query()->count())->toBe(0);
 });
 
+it('keeps catalog and availability on the active snapshot until the next publication', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $timezone = $unit->timezone ?? $tenant->timezone ?? config('app.timezone');
+    $date = CarbonImmutable::now($timezone)->addDays(7)->startOfDay();
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'professional_id' => $professional->getKey(),
+        'weekday' => $date->dayOfWeek, 'starts_at' => '09:00:00', 'ends_at' => '18:00:00', 'timezone' => $timezone,
+    ]);
+    $setting = OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'minimum_notice_minutes' => 0,
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '12:00']],
+    ]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '12:00']],
+        'booking_policy' => ['minimum_notice_minutes' => 0],
+    ], 0);
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    $newService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'online_booking_enabled' => false,
+    ]);
+    $professional->services()->attach($newService, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service->update(['online_booking_enabled' => false]);
+    $professional->update(['online_booking_enabled' => false]);
+    $setting->update([
+        'minimum_notice_minutes' => 8 * 24 * 60,
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '11:00', 'ends_at' => '12:00']],
+    ]);
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'service_ids' => [$newService->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '11:00', 'ends_at' => '12:00']],
+        'booking_policy' => ['minimum_notice_minutes' => 8 * 24 * 60],
+    ], $draft->revision);
+
+    $this->getJson(route('public_booking.show', [$tenant, $unit]))
+        ->assertSuccessful()
+        ->assertJsonPath('services.0.id', $service->getKey());
+    $beforeRepublish = $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(),
+    ]))->assertSuccessful();
+    expect($beforeRepublish->json('slots.0.starts_at'))->toContain('T09:');
+    $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $newService->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(),
+    ]))->assertNotFound();
+
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    $this->getJson(route('public_booking.show', [$tenant, $unit]))
+        ->assertSuccessful()
+        ->assertJsonPath('services.0.id', $newService->getKey());
+    $blockedByNotice = $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $newService->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(),
+    ]))->assertSuccessful();
+    $nextWeek = $date->addDays(7);
+    $updatedWindow = $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $newService->getKey(), 'professional_id' => $professional->getKey(), 'date' => $nextWeek->toDateString(),
+    ]))->assertSuccessful();
+
+    expect($blockedByNotice->json('slots'))->toBeEmpty()
+        ->and($updatedWindow->json('slots.0.starts_at'))->toContain('T11:');
+});
+
 it('persists optional customer and appointment data and records operational side effects', function () {
     Queue::fake();
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
 
     $this->withHeader('X-Idempotency-Key', 'optional-data')
         ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
@@ -287,8 +424,52 @@ it('returns availability using the combined duration for multiple services', fun
     expect($response->json('slots.0.ends_at'))->toBe($date->setTime(9, 0)->addMinutes($service->duration_minutes + $secondService->duration_minutes)->toIso8601String());
 });
 
+it('keeps availability request filters on the public 15-minute grid and rejects off-grid posts', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => $unit->slug,
+        'minimum_notice_minutes' => 0,
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '12:00']],
+    ]);
+
+    $slots = $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+        'date' => $date->toDateString(), 'from' => '09:07', 'to' => '12:00',
+    ]))->assertSuccessful();
+    expect(Str::contains($slots->json('slots.0.starts_at'), 'T09:15:'))->toBeTrue();
+
+    $this->withHeader('X-Idempotency-Key', 'off-grid-public-time')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 7)->toIso8601String(), 'name' => 'Off Grid', 'phone' => '+55 11 98888-0000',
+        ])
+        ->assertUnprocessable();
+    $this->withHeader('X-Idempotency-Key', 'off-grid-offered-time')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+            'starts_at' => $slots->json('slots.0.starts_at'), 'name' => 'On Grid', 'phone' => '+55 11 97777-0000',
+        ])
+        ->assertCreated();
+});
+
+it('fails closed when no legacy or published public hours are configured', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $this->getJson(route('public_booking.availability', [
+        $tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString(),
+    ]))->assertSuccessful()->assertJsonPath('slots', []);
+
+    $this->withHeader('X-Idempotency-Key', 'missing-public-hours')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'No Hours', 'phone' => '+55 11 98888-1111',
+        ])
+        ->assertUnprocessable();
+    expect(Appointment::query()->count())->toBe(0);
+});
+
 it('creates and replays a public appointment idempotently with a phone-scoped customer', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
     $payload = ['service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Public Customer', 'phone' => '+55 (11) 99999-1234'];
 
     $first = $this->withHeader('X-Idempotency-Key', 'public-booking-1')->postJson(route('public_booking.appointments.store', [$tenant, $unit]), $payload);
@@ -303,6 +484,7 @@ it('creates and replays a public appointment idempotently with a phone-scoped cu
 
 it('creates one appointment with multiple compatible services', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
     $secondService = Service::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -330,6 +512,7 @@ it('creates one appointment with multiple compatible services', function () {
 
 it('attributes a public appointment to the matching campaign link', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
     $site = OnlineBookingSite::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'public_slug' => $unit->slug]);
     $campaign = OnlineBookingCampaignLink::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(), 'created_by' => User::factory()->create()->getKey(),
@@ -359,6 +542,7 @@ it('rejects public appointments outside the unit timezone booking window', funct
 
 it('reuses a customer by normalized phone across separate public bookings', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
     $payload = fn (string $startsAt, string $phone): array => [
         'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
         'starts_at' => $startsAt, 'name' => 'Returning Customer', 'phone' => $phone,

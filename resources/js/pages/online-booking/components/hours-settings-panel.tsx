@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { SectionCard } from './booking-form-primitives';
+import { bookingTokens } from './design-tokens';
 import type { PublicSettings } from '../types';
 
 const weekDays = [
@@ -20,14 +21,14 @@ export function HoursSettingsPanel({ settings }: { settings: PublicSettings }) {
             title="Horário de atendimento"
             description="A disponibilidade pública respeita a agenda e os bloqueios da equipe."
         >
-            <div className="space-y-2">
+            <div className={bookingTokens.space.controlGroup}>
                 {weekDays.map((day, index) => {
                     const hours = settings.public_hours?.[String(index)];
 
                     return (
                         <div
                             key={day}
-                            className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl border border-border p-3"
+                            className={`grid grid-cols-[1fr_auto_auto] items-center gap-3 ${bookingTokens.radius.control} border border-border ${bookingTokens.space.control}`}
                         >
                             <label className="flex items-center gap-2 text-sm font-medium">
                                 <input

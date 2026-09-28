@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\OnlineBooking\PublishOnlineBookingSite;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Enums\TenantDomainKind;
 use App\Enums\TenantDomainStatus;
@@ -10,6 +11,7 @@ use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
+use Inertia\Testing\AssertableInertia as Assert;
 
 it('requires authentication and exposes scoped readiness to the owner', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
@@ -133,6 +135,74 @@ it('uses an active public tenant domain for the booking link', function () {
     $this->actingAs($owner)->getJson(route('online_booking.index'))
         ->assertJsonPath('settings.public_domain_id', $domain->getKey())
         ->assertJsonPath('publicUrl', 'https://romawear.com.br/book/'.$unit->slug);
+});
+
+it('keeps the published slug and domain live until the edited link is republished', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $firstDomain = TenantDomain::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'hostname' => 'published-a.example.com',
+        'kind' => TenantDomainKind::Public,
+        'status' => TenantDomainStatus::Active,
+    ]);
+    $secondDomain = TenantDomain::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'hostname' => 'published-b.example.com',
+        'kind' => TenantDomainKind::Public,
+        'status' => TenantDomainStatus::Active,
+    ]);
+    $settingsPayload = [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_slug' => 'published-old-link',
+        'public_domain_id' => $firstDomain->getKey(),
+        'lock_version' => $unit->lock_version,
+    ];
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), $settingsPayload)->assertRedirect();
+    $site = OnlineBookingSite::query()->where('tenant_id', $tenant->getKey())->where('unit_id', $unit->getKey())->firstOrFail();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
+
+    $firstLiveUrl = 'https://'.$firstDomain->hostname.'/book/published-old-link';
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertSuccessful()
+        ->assertJsonPath('publicUrl', $firstLiveUrl)
+        ->assertJsonPath('canonicalUrl', $firstLiveUrl);
+    $this->getJson($firstLiveUrl)->assertSuccessful();
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        ...$settingsPayload,
+        'public_slug' => 'draft-new-link',
+        'public_domain_id' => $secondDomain->getKey(),
+        'lock_version' => $unit->fresh()->lock_version,
+    ])->assertRedirect();
+
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertSuccessful()
+        ->assertJsonPath('settings.public_slug', 'draft-new-link')
+        ->assertJsonPath('publicUrl', $firstLiveUrl)
+        ->assertJsonPath('canonicalUrl', $firstLiveUrl);
+    $this->getJson($firstLiveUrl)->assertSuccessful();
+    $this->getJson('https://'.$secondDomain->hostname.'/book/published-old-link')->assertNotFound();
+    $this->getJson('https://'.$secondDomain->hostname.'/book/draft-new-link')->assertNotFound();
+    $previewUrl = $this->getJson(route('online_booking.index'))->json('previewUrl');
+    $this->get($previewUrl)
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('public-booking/show')
+            ->where('unit.canonical_url', url('/book/draft-new-link')));
+
+    $site->refresh();
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft_revision);
+    $secondLiveUrl = 'https://'.$secondDomain->hostname.'/book/draft-new-link';
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertSuccessful()
+        ->assertJsonPath('publicUrl', $secondLiveUrl)
+        ->assertJsonPath('canonicalUrl', $secondLiveUrl);
+    $this->getJson($secondLiveUrl)->assertSuccessful();
+    $this->getJson($firstLiveUrl)->assertNotFound();
 });
 
 it('redirects stale Inertia saves with a recoverable message', function () {

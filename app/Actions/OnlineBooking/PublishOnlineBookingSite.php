@@ -31,7 +31,7 @@ final class PublishOnlineBookingSite extends OperationalAction
             }
 
             $active = $site->activePublication()->lockForUpdate()->first();
-            $this->assertReady($context, $unit, $site);
+            $this->assertReady($context, $unit, $site, $draft->content);
             if ($active !== null && $active->source_revision === $draft->revision && $active->content_hash === $draft->content_hash) {
                 return $active;
             }
@@ -49,11 +49,34 @@ final class PublishOnlineBookingSite extends OperationalAction
         });
     }
 
-    private function assertReady(TenantContext $context, Unit $unit, OnlineBookingSite $site): void
+    /** @param array<string, mixed>|null $content */
+    private function assertReady(TenantContext $context, Unit $unit, OnlineBookingSite $site, ?array $content): void
     {
-        $hasService = Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->exists();
-        $hasProfessional = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->exists();
-        $hasPair = Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->where('online_booking_enabled', true)->whereHas('services', fn ($query) => $query->where('services.online_booking_enabled', true)->where('services.status', 'active'))->exists();
+        $serviceIds = array_values(array_filter($content['service_ids'] ?? [], 'is_string'));
+        $professionalIds = array_values(array_filter($content['professional_ids'] ?? [], 'is_string'));
+        $hasService = $serviceIds !== [] && Service::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->where('status', 'active')
+            ->whereIn('id', $serviceIds)
+            ->exists();
+        $hasProfessional = $professionalIds !== [] && Professional::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->where('status', 'active')
+            ->whereIn('id', $professionalIds)
+            ->exists();
+        $hasPair = $hasService && $hasProfessional && Professional::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->where('status', 'active')
+            ->whereIn('id', $professionalIds)
+            ->whereHas('services', fn ($query) => $query
+                ->where('services.tenant_id', $context->tenant->getKey())
+                ->where('services.unit_id', $unit->getKey())
+                ->where('services.status', 'active')
+                ->whereIn('services.id', $serviceIds))
+            ->exists();
 
         $domainReady = $site->public_domain_id === null || TenantDomain::query()
             ->whereKey($site->public_domain_id)

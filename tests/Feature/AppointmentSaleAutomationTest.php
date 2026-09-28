@@ -14,6 +14,7 @@ use App\Models\CashShift;
 use App\Models\ClosingSession;
 use App\Models\Customer;
 use App\Models\MembershipUnit;
+use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Sale;
 use App\Models\SaleCategory;
@@ -261,6 +262,12 @@ it('creates one automatic sale with its link and item for an online appointment'
         ->where('unit_id', $workspace['unit']->getKey())
         ->where('professional_id', $workspace['professional']->getKey())
         ->update(['weekday' => $date->dayOfWeek, 'timezone' => $workspace['unit']->timezone]);
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $workspace['tenant']->getKey(),
+        'unit_id' => $workspace['unit']->getKey(),
+        'public_slug' => $workspace['unit']->slug,
+        'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00']],
+    ]);
 
     $appointment = app(CreatePublicAppointment::class)->handle($workspace['tenant'], $workspace['unit'], [
         'service_id' => $workspace['service']->getKey(),

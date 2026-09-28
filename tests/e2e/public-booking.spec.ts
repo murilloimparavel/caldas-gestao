@@ -1,11 +1,22 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /** The local seed provisions this path; CI may override it with a published slug. */
 const publicBookingPath =
     process.env.PLAYWRIGHT_PUBLIC_BOOKING_PATH ?? '/book/teste/matriz';
 
+async function expectNoHorizontalPageOverflow(page: Page): Promise<void> {
+    await expect
+        .poll(() =>
+            page.evaluate(
+                () => document.documentElement.scrollWidth <= window.innerWidth,
+            ),
+        )
+        .toBe(true);
+}
+
 test.describe('Public Booking E2E Flow', () => {
-    test('loads the public booking page and exposes the public navigation', async ({
+    test('loads the public booking page without horizontal overflow', async ({
         page,
     }) => {
         const response = await page.goto(publicBookingPath);
@@ -17,24 +28,14 @@ test.describe('Public Booking E2E Flow', () => {
             );
         }
 
-        expect(response?.status()).toBe(200);
         await expect(page).toHaveTitle(/Agendar/);
         await expect(
-            page.getByRole('heading', { name: 'Matriz' }),
+            page.getByRole('heading', { level: 1 }).first(),
         ).toBeVisible();
-        await expect(
-            page.getByRole('navigation', { name: 'Navegação pública' }),
-        ).toBeVisible();
-        await expect(page.getByRole('tab', { name: 'Serviços' })).toBeVisible();
-        await expect(
-            page.getByRole('tab', { name: 'Profissionais' }),
-        ).toBeVisible();
-        await expect(
-            page.getByRole('tab', { name: 'Avaliações' }),
-        ).toBeVisible();
+        await expectNoHorizontalPageOverflow(page);
     });
 
-    test('supports browsing the catalog and selecting a service and professional', async ({
+    test('supports service, professional, and schedule selection without submitting', async ({
         page,
     }) => {
         const response = await page.goto(publicBookingPath);
@@ -46,36 +47,94 @@ test.describe('Public Booking E2E Flow', () => {
             );
         }
 
-        expect(response?.status()).toBe(200);
-        await page.getByRole('tab', { name: 'Serviços' }).click();
+        const servicesTab = page.getByRole('tab', {
+            name: 'Serviços',
+            exact: true,
+        });
 
-        const serviceButtons = page.locator('button[aria-pressed]');
-
-        if ((await serviceButtons.count()) === 0) {
-            await expect(
-                page.getByText('Nenhum serviço encontrado.'),
-            ).toBeVisible();
-
-            return;
+        if (await servicesTab.count()) {
+            await servicesTab.click();
         }
 
+        const serviceButtons = page.getByRole('button', {
+            name: /\b\d+\s*min\b/i,
+        });
         const serviceButton = serviceButtons.first();
+        const atelierProgress = page.getByText(/Etapa 1 de 4/);
+        const isAtelier = (await atelierProgress.count()) > 0;
+
+        await expect(serviceButton).toBeVisible();
         await serviceButton.click();
         await expect(serviceButton).toHaveAttribute('aria-pressed', 'true');
 
-        const professionalButtons = page.locator('button[aria-pressed]');
-        await expect(professionalButtons.nth(1)).toBeVisible();
-        await professionalButtons.nth(1).click();
-        await expect(professionalButtons.nth(1)).toHaveAttribute(
+        if (isAtelier) {
+            const secondServiceButton = serviceButtons.nth(1);
+            await expect(secondServiceButton).toBeVisible();
+            await secondServiceButton.click();
+            await expect(secondServiceButton).toHaveAttribute(
+                'aria-pressed',
+                'true',
+            );
+
+            await expect(
+                page.getByText(/2 serviços selecionados/i),
+            ).toBeVisible();
+            await expect(page.getByText(/·\s*\d+\s*min/)).toBeVisible();
+        }
+
+        const chooseProfessionalButton = page.getByRole('button', {
+            name: /Escolher profissional/i,
+        });
+
+        if (await chooseProfessionalButton.count()) {
+            await chooseProfessionalButton.click();
+        }
+
+        const professionalHeading = page
+            .getByRole('heading', {
+                name: /Com quem você prefere|Escolha o profissional/i,
+            })
+            .first();
+        await expect(professionalHeading).toBeVisible();
+
+        const professionalButton = professionalHeading
+            .locator('xpath=..')
+            .locator('button[aria-pressed]')
+            .first();
+        await expect(professionalButton).toBeVisible();
+        await professionalButton.click();
+        await expect(professionalButton).toHaveAttribute(
             'aria-pressed',
             'true',
         );
 
-        const dateInput = page.locator('input#date');
+        const chooseScheduleButton = page.getByRole('button', {
+            name: /Escolher horário/i,
+        });
+
+        if (await chooseScheduleButton.count()) {
+            await chooseScheduleButton.first().click();
+        }
+
+        await expect(
+            page.getByRole('heading', {
+                name: /Encontre o melhor|Data e horário/i,
+            }),
+        ).toBeVisible();
+
+        const dateInput = page
+            .getByLabel(/^(Data|Escolher outra data)$/i)
+            .first();
         await expect(dateInput).toBeEnabled();
-        await dateInput.fill(
-            new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-        );
-        await expect(page.getByText('Data e horário')).toBeVisible();
+        const appointmentDate = new Date();
+        appointmentDate.setDate(appointmentDate.getDate() + 2);
+        const appointmentDateValue = appointmentDate.toISOString().slice(0, 10);
+
+        await dateInput.fill(appointmentDateValue);
+        await expect(dateInput).toHaveValue(appointmentDateValue);
+        await expectNoHorizontalPageOverflow(page);
+        await expect(
+            page.getByRole('heading', { name: 'Até breve.' }),
+        ).toHaveCount(0);
     });
 });

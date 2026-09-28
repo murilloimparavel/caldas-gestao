@@ -7,6 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { bookingTokens } from './design-tokens';
 import type { BookingItem, OnlineBookingProps, PublicSettings } from '../types';
 
 export function PublicPreview({
@@ -35,7 +36,9 @@ export function PublicPreview({
                 <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <CardTitle className="text-base">
+                            <CardTitle
+                                className={bookingTokens.type.sectionTitle}
+                            >
                                 Prévia pública
                             </CardTitle>
                             <CardDescription className="mt-1">
@@ -43,7 +46,7 @@ export function PublicPreview({
                             </CardDescription>
                         </div>
                         <div
-                            className="flex items-center gap-1 rounded-lg border border-border/70 p-1"
+                            className={`flex items-center gap-1 ${bookingTokens.radius.icon} border border-border/70 p-1`}
                             role="group"
                             aria-label="Tamanho da prévia"
                         >
@@ -82,7 +85,7 @@ export function PublicPreview({
             <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <CardTitle className="text-base">
+                        <CardTitle className={bookingTokens.type.sectionTitle}>
                             Prévia pública
                         </CardTitle>
                         <CardDescription className="mt-1">
@@ -90,7 +93,7 @@ export function PublicPreview({
                         </CardDescription>
                     </div>
                     <div
-                        className="flex items-center gap-1 rounded-lg border border-border/70 p-1"
+                        className={`flex items-center gap-1 ${bookingTokens.radius.icon} border border-border/70 p-1`}
                         role="group"
                         aria-label="Tamanho da prévia"
                     >
@@ -172,7 +175,9 @@ export function PublicPreview({
                                             'Escolha um serviço e reserve seu horário.'}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-border/70 p-3">
+                                <div
+                                    className={`${bookingTokens.radius.control} border border-border/70 ${bookingTokens.space.control}`}
+                                >
                                     <p className="text-3xs font-bold">
                                         Contato
                                     </p>
@@ -192,7 +197,7 @@ export function PublicPreview({
                                             .map((service) => (
                                                 <div
                                                     key={service.id}
-                                                    className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-2.5 py-2"
+                                                    className={`flex items-center justify-between gap-2 ${bookingTokens.radius.icon} border border-border/70 px-2.5 py-2`}
                                                 >
                                                     <span className="truncate text-3xs font-medium">
                                                         {service.name}
@@ -225,7 +230,9 @@ export function PublicPreview({
                             </div>
                         </div>
                         <div className="border-t border-border/70 bg-background p-3">
-                            <div className="rounded-xl bg-primary px-4 py-2.5 text-center text-xs font-semibold text-primary-foreground shadow-sm">
+                            <div
+                                className={`${bookingTokens.radius.control} bg-primary px-4 py-2.5 text-center ${bookingTokens.type.caption} font-semibold text-primary-foreground ${bookingTokens.shadow.section}`}
+                            >
                                 Agendar agora
                             </div>
                         </div>

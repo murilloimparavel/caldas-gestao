@@ -1,5 +1,4 @@
 import {
-    BellRing,
     Clock3,
     GalleryHorizontalEnd,
     Globe2,
@@ -19,7 +18,6 @@ export const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
     { key: 'gallery', label: 'Galeria', icon: GalleryHorizontalEnd },
     { key: 'services', label: 'Serviços', icon: Scissors },
     { key: 'hours', label: 'Horários', icon: Clock3 },
-    { key: 'confirmation', label: 'Confirmação', icon: BellRing },
 ];
 
 const tabGroups: {
@@ -27,7 +25,7 @@ const tabGroups: {
     keys: TabKey[];
 }[] = [
     { label: 'Aparência', keys: ['details', 'settings', 'gallery'] },
-    { label: 'Agendamento', keys: ['services', 'hours', 'confirmation'] },
+    { label: 'Agendamento', keys: ['services', 'hours'] },
     { label: 'Link público', keys: ['link'] },
 ];
 

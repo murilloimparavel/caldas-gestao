@@ -1,11 +1,4 @@
-import {
-    Check,
-    ExternalLink,
-    Link2,
-    Share2,
-    BellRing,
-    Copy,
-} from 'lucide-react';
+import { Check, ExternalLink, Link2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import tenantDomains from '@/routes/tenant-domains';
@@ -115,41 +108,6 @@ export function PublicLinkSettingsPanel({
                     </Button>
                 )}
             </div>
-            <div className="grid gap-2 pt-2 sm:grid-cols-3">
-                <LinkTip
-                    icon={Share2}
-                    title="Geral"
-                    description="Link para compartilhar"
-                />
-                <LinkTip
-                    icon={BellRing}
-                    title="WhatsApp"
-                    description="Enviar aos clientes"
-                />
-                <LinkTip
-                    icon={ExternalLink}
-                    title="Redes sociais"
-                    description="Adicionar à bio"
-                />
-            </div>
         </SectionCard>
-    );
-}
-
-function LinkTip({
-    icon: Icon,
-    title,
-    description,
-}: {
-    icon: typeof Share2;
-    title: string;
-    description: string;
-}) {
-    return (
-        <div className="rounded-lg border border-border p-3">
-            <Icon className="mb-2 size-4 text-primary" />
-            <p className="text-xs font-semibold">{title}</p>
-            <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
     );
 }

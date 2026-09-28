@@ -3,6 +3,7 @@ import { Globe2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CoverEditor } from './cover-editor';
+import { bookingTokens, bookingUi } from './design-tokens';
 import { Field, SectionCard } from './booking-form-primitives';
 import type { PublicSettings } from '../types';
 
@@ -27,7 +28,7 @@ export function IdentitySettingsPanel({
             title="Identidade pública"
             description="Essas informações aparecem no perfil do seu negócio."
         >
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className={bookingTokens.layout.formGrid}>
                 <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="template_key">
                         Template da página pública
@@ -38,7 +39,7 @@ export function IdentitySettingsPanel({
                         defaultValue={
                             templateKey ?? settings.template_key ?? 'essential'
                         }
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                        className={bookingUi.select}
                     >
                         <option value="essential">
                             Essencial — claro e direto
@@ -47,7 +48,9 @@ export function IdentitySettingsPanel({
                             Atelier Barber — dark premium
                         </option>
                     </select>
-                    <p className="text-xs text-muted-foreground">
+                    <p
+                        className={`${bookingTokens.type.caption} text-muted-foreground`}
+                    >
                         O template altera a apresentação pública sem mudar
                         serviços, disponibilidade ou regras de agendamento.
                     </p>
@@ -87,7 +90,7 @@ export function IdentitySettingsPanel({
                     placeholder="https://seusite.com.br"
                 />
             </div>
-            <div className="space-y-2">
+            <div className={bookingTokens.space.controlGroup}>
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea
                     id="description"

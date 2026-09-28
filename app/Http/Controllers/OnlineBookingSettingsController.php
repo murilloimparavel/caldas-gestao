@@ -65,7 +65,11 @@ final class OnlineBookingSettingsController extends Controller
             ->where('status', TenantDomainStatus::Active->value)
             ->orderBy('hostname')
             ->get(['id', 'hostname', 'kind', 'status']);
-        $publicSlug = $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug;
+        $activePublication = $site->activePublication;
+        $publicSlug = $activePublication->public_slug ?? ($setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug);
+        $publicUrl = $activePublication instanceof OnlineBookingPublication
+            ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug, $activePublication)
+            : ($readiness['publishable'] ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug) : null);
         $draftContent = is_array($site->draft?->content) ? $site->draft->content : [];
         $publishedContent = is_array($site->activePublication?->content) ? $site->activePublication->content : [];
         $diffLabels = [
@@ -83,9 +87,11 @@ final class OnlineBookingSettingsController extends Controller
             'cover' => $setting?->cover_image_url,
             'logo' => $setting?->logo_image_url,
             'tenant' => ['slug' => $context->tenant->slug],
-            'publicUrl' => $readiness['publishable'] ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug) : null,
+            'publicUrl' => $publicUrl,
             'previewUrl' => $site->draft ? URL::temporarySignedRoute('online_booking.preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), [$context->tenant, $context->unit]) : null,
-            'canonicalUrl' => $readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $publicSlug]) : null,
+            'canonicalUrl' => $activePublication instanceof OnlineBookingPublication
+                ? $publicUrl
+                : ($readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $publicSlug]) : null),
             'publicDomains' => $publicDomains,
             'services' => $services,
             'professionals' => $professionals,
@@ -147,11 +153,22 @@ final class OnlineBookingSettingsController extends Controller
         return response()->json(['draft' => $draft, 'status' => 'draft_restored']);
     }
 
-    private function publicBookingUrl(string $tenantId, Unit $unit, ?OnlineBookingSetting $setting, string $publicSlug): string
+    private function publicBookingUrl(string $tenantId, Unit $unit, ?OnlineBookingSetting $setting, string $publicSlug, ?OnlineBookingPublication $publication = null): string
     {
-        $domain = $setting?->publicDomain;
+        $domain = $publication instanceof OnlineBookingPublication
+            ? TenantDomain::query()
+                ->whereKey($publication->public_domain_id)
+                ->where('tenant_id', $tenantId)
+                ->where('kind', TenantDomainKind::Public->value)
+                ->where('status', TenantDomainStatus::Active->value)
+                ->first()
+            : $setting?->publicDomain;
         if ($domain instanceof TenantDomain && $domain->tenant_id === $tenantId && $domain->kind === TenantDomainKind::Public && $domain->status === TenantDomainStatus::Active) {
             return 'https://'.$domain->hostname.'/book/'.rawurlencode($publicSlug);
+        }
+
+        if ($publication instanceof OnlineBookingPublication) {
+            return route('public_booking.slug', ['public_slug' => $publicSlug]);
         }
 
         return route('public_booking.show', [$unit->tenant, $unit]);

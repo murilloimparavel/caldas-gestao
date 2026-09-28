@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import onlineBooking from '@/routes/online_booking';
 import { LogoEditor } from './logo-editor';
+import { bookingTokens } from './design-tokens';
 import type {
     BookingAppearance,
     OnlineBookingProps,
@@ -109,7 +110,7 @@ export function AppearanceEditor({
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-base">
+                <CardTitle className={bookingTokens.type.sectionTitle}>
                     Identidade e conteúdo
                 </CardTitle>
                 <CardDescription>
@@ -117,7 +118,7 @@ export function AppearanceEditor({
                     alterações ficam no rascunho até publicar.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className={bookingTokens.space.page}>
                 <LogoEditor
                     url={logoUrl}
                     onUploaded={() =>
@@ -125,7 +126,7 @@ export function AppearanceEditor({
                     }
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
+                    <div className={bookingTokens.space.controlGroup}>
                         <Label htmlFor="appearance-brand-name">
                             Nome público
                         </Label>
@@ -139,7 +140,7 @@ export function AppearanceEditor({
                             maxLength={120}
                         />
                     </div>
-                    <div className="space-y-2">
+                    <div className={bookingTokens.space.controlGroup}>
                         <Label htmlFor="appearance-cta-label">
                             Texto do botão
                         </Label>
@@ -152,7 +153,9 @@ export function AppearanceEditor({
                             maxLength={80}
                         />
                     </div>
-                    <div className="space-y-2 sm:col-span-2">
+                    <div
+                        className={`${bookingTokens.space.controlGroup} sm:col-span-2`}
+                    >
                         <Label htmlFor="appearance-headline">
                             Título principal
                         </Label>
@@ -165,7 +168,9 @@ export function AppearanceEditor({
                             maxLength={160}
                         />
                     </div>
-                    <div className="space-y-2 sm:col-span-2">
+                    <div
+                        className={`${bookingTokens.space.controlGroup} sm:col-span-2`}
+                    >
                         <Label htmlFor="appearance-subheadline">
                             Subtítulo
                         </Label>
@@ -186,7 +191,10 @@ export function AppearanceEditor({
                             ['background_color', 'Cor de fundo'],
                         ] as const
                     ).map(([key, label]) => (
-                        <div key={key} className="space-y-2">
+                        <div
+                            key={key}
+                            className={bookingTokens.space.controlGroup}
+                        >
                             <Label htmlFor={`appearance-${key}`}>{label}</Label>
                             <div className="flex items-center gap-3 rounded-md border border-input px-3 py-2">
                                 <input

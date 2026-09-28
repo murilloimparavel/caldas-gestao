@@ -55,13 +55,7 @@ export type PublicSettings = {
 };
 
 export type TabKey =
-    | 'details'
-    | 'settings'
-    | 'link'
-    | 'gallery'
-    | 'services'
-    | 'hours'
-    | 'confirmation';
+    'details' | 'settings' | 'link' | 'gallery' | 'services' | 'hours';
 
 export type OnlineBookingProps = {
     template_key?: 'essential' | 'atelier-barber' | string | null;
