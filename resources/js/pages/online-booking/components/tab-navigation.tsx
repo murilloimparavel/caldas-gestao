@@ -29,7 +29,6 @@ const tabGroups: {
     { label: 'Aparência', keys: ['details', 'settings', 'gallery'] },
     { label: 'Agendamento', keys: ['services', 'hours', 'confirmation'] },
     { label: 'Link público', keys: ['link'] },
-    { label: 'Publicação', keys: [] },
 ];
 
 export function TabNavigation({
