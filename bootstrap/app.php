@@ -4,6 +4,7 @@ use App\Http\Middleware\EnforceSaaSAccess;
 use App\Http\Middleware\EnsureFirstLoginComplete;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Http\Middleware\ResolveTenantDomain;
 use Illuminate\Console\Scheduling\Schedule;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.domain' => ResolveTenantDomain::class,
             'saas.access' => EnforceSaaSAccess::class,
             'first.login.complete' => EnsureFirstLoginComplete::class,
+            'super.admin' => EnsureSuperAdmin::class,
         ]);
 
         $middleware->web(append: [
