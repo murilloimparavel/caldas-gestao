@@ -37,3 +37,17 @@ it('updates a tenant subscription and status', function () {
     expect($tenant->fresh()->status->value)->toBe('suspended');
     expect(TenantSubscription::query()->where('tenant_id', $tenant->id)->value('status'))->toBe('active');
 });
+
+it('forbids non-super administrators from mutating platform resources', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->create();
+    $plan = PlatformPlan::factory()->create();
+
+    $this->actingAs($user)->patch(route('admin.tenants.subscription.update', $tenant), [
+        'plan_id' => $plan->getKey(), 'status' => 'active',
+    ])->assertForbidden();
+
+    $this->actingAs($user)->post(route('admin.tenants.users.store', $tenant), [
+        'name' => 'Blocked', 'email' => 'blocked@example.test', 'role' => 'staff',
+    ])->assertForbidden();
+});

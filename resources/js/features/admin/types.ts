@@ -1,4 +1,19 @@
-export type AdminStatus = 'active' | 'trial' | 'grace' | 'past_due' | 'suspended' | 'expired' | 'cancelled' | 'closed';
+import admin from '@/routes/admin';
+import adminMemberships from '@/routes/admin/tenants/memberships';
+import adminPlans from '@/routes/admin/plans';
+import adminSubscription from '@/routes/admin/tenants/subscription';
+import adminTenants from '@/routes/admin/tenants';
+import adminUsers from '@/routes/admin/tenants/users';
+
+export type AdminStatus =
+    | 'active'
+    | 'trial'
+    | 'grace'
+    | 'past_due'
+    | 'suspended'
+    | 'expired'
+    | 'cancelled'
+    | 'closed';
 
 export type AdminClient = {
     id: string;
@@ -29,12 +44,74 @@ export type AdminAlert = {
     href?: string;
 };
 
+export type AdminPlan = {
+    id: string;
+    key?: string;
+    name: string;
+    description?: string | null;
+    priceCents: number;
+    price_cents?: number;
+    billingCycle?: 'monthly' | 'quarterly' | 'yearly' | string;
+    billing_cycle?: 'monthly' | 'quarterly' | 'yearly' | string;
+    trialDays?: number | null;
+    trial_days?: number | null;
+    isActive?: boolean;
+    is_active?: boolean;
+    limits?: Record<string, number | string | null>;
+    features?: string[];
+    subscribers?: number;
+};
+
+export type AdminUser = {
+    id: string;
+    name: string;
+    email: string;
+    status: string;
+    role?: string | null;
+    invitedAt?: string | null;
+    lastLoginAt?: string | null;
+};
+
+export type AdminAuditEvent = {
+    id: string;
+    action: string;
+    description?: string | null;
+    actor?: string | null;
+    createdAt: string;
+    metadata?: Record<string, unknown>;
+};
+
 export const adminRoutes = {
-    dashboard: '/admin',
-    clients: '/admin/tenants',
-    client: (id: string | number) => `/admin/tenants/${id}`,
-    createClient: '/admin/tenants/create',
-    plans: '/admin/plans',
+    dashboard: admin.dashboard.url(),
+    audit: admin.audit.url(),
+    clients: admin.tenants.url(),
+    client: (id: string | number) => adminTenants.show.url(id),
+    clientSuspend: (id: string | number) => adminTenants.suspend.url(id),
+    clientActivate: (id: string | number) => adminTenants.activate.url(id),
+    createClient: adminTenants.create.url(),
+    plans: adminPlans.index.url(),
+    plan: (id: string | number) => adminPlans.update.url(id),
+    planDeactivate: (id: string | number) => adminPlans.deactivate.url(id),
+    clientSubscription: (id: string | number) =>
+        adminSubscription.update.url(id),
+    clientUsers: (id: string | number) => adminUsers.store.url(id),
+    clientUserInvite: (id: string | number) => adminUsers.store.url(id),
+    clientUserAccess: (
+        tenantId: string | number,
+        membershipId: string | number,
+    ) =>
+        adminUsers.sendAccess.url({
+            tenant: tenantId,
+            membership: membershipId,
+        }),
+    clientMembershipRevoke: (
+        tenantId: string | number,
+        membershipId: string | number,
+    ) =>
+        adminMemberships.revoke.url({
+            tenant: tenantId,
+            membership: membershipId,
+        }),
 };
 
 export const statusLabels: Record<AdminStatus, string> = {
@@ -60,5 +137,7 @@ export function formatAdminDate(value?: string | null): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime())
         ? value
-        : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(date);
+        : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(
+              date,
+          );
 }

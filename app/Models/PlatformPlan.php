@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['key', 'name', 'price_cents', 'billing_cycle', 'trial_days', 'features', 'limits', 'lastlink_product_id', 'lastlink_offer_id', 'is_active'])]
+#[Fillable(['key', 'name', 'description', 'price_cents', 'billing_cycle', 'trial_days', 'features', 'limits', 'lastlink_product_id', 'lastlink_offer_id', 'is_active'])]
 class PlatformPlan extends Model
 {
     /** @use HasFactory<PlatformPlanFactory> */
