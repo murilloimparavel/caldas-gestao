@@ -526,6 +526,46 @@ it('attributes a public appointment to the matching campaign link', function () 
     expect(Appointment::query()->firstOrFail()->online_booking_campaign_link_id)->toBe($campaign->getKey());
 });
 
+it('keeps the landing campaign attribution through the booking flow', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+    ]);
+    $campaign = OnlineBookingCampaignLink::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'created_by' => User::factory()->create()->getKey(),
+        'utm_source' => 'whatsapp',
+        'utm_medium' => 'direct',
+        'utm_campaign' => 'agenda-outubro',
+        'utm_content' => 'status',
+    ]);
+    $landingUrl = route('public_booking.show', [$tenant, $unit]).'?'.http_build_query([
+        'utm_source' => 'whatsapp',
+        'utm_medium' => 'direct',
+        'utm_campaign' => 'agenda-outubro',
+        'utm_content' => 'status',
+    ]);
+
+    $this->getJson($landingUrl)->assertSuccessful();
+
+    $this->withHeader('X-Idempotency-Key', 'campaign-session-booking')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(),
+            'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(),
+            'name' => 'Campaign Session Customer',
+            'phone' => '+55 11 96666-1234',
+        ])
+        ->assertCreated();
+
+    expect(Appointment::query()->firstOrFail()->online_booking_campaign_link_id)->toBe($campaign->getKey());
+});
+
 it('rejects public appointments outside the unit timezone booking window', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
     $past = CarbonImmutable::now($unit->timezone)->subMinutes(5)->toIso8601String();

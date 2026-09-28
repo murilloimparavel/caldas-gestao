@@ -305,15 +305,10 @@ test('claims disjoint outbox and inbox batches through real stores in independen
     $inboxResults = [finishGovernanceProcess($inboxFirst), finishGovernanceProcess($inboxSecond)];
     $claimedOutbox = array_merge(...array_map(static fn (array $result): array => claimedGovernanceEvents($result['stdout']), $outboxResults));
     $claimedInbox = array_merge(...array_map(static fn (array $result): array => claimedGovernanceEvents($result['stdout']), $inboxResults));
-    sort($outboxIds);
-    sort($inboxIds);
-    sort($claimedOutbox);
-    sort($claimedInbox);
-
     expect(collect($outboxResults)->every(static fn (array $result): bool => $result['exit_code'] === 0))->toBeTrue()
         ->and(collect($inboxResults)->every(static fn (array $result): bool => $result['exit_code'] === 0))->toBeTrue()
-        ->and($claimedOutbox)->toBe($outboxIds)
-        ->and($claimedInbox)->toBe($inboxIds)
+        ->and($claimedOutbox)->toEqualCanonicalizing($outboxIds)
+        ->and($claimedInbox)->toEqualCanonicalizing($inboxIds)
         ->and(array_unique($claimedOutbox))->toHaveCount(4)
         ->and(array_unique($claimedInbox))->toHaveCount(4)
         ->and(OutboxEvent::query()->whereIn('event_id', $outboxIds)->where('status', OutboxStatus::Publishing)->count())->toBe(4)

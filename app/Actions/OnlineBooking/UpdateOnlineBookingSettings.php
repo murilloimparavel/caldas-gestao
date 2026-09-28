@@ -9,6 +9,8 @@ use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +18,14 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class UpdateOnlineBookingSettings extends OperationalAction
 {
+    public function __construct(
+        private readonly ManageOnlineBookingHandle $handles,
+        AuthorizationService $authorization,
+        IdentityEventRecorder $events,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, array $data): Unit
     {
@@ -52,6 +62,12 @@ final class UpdateOnlineBookingSettings extends OperationalAction
             if ($services->count() !== count($serviceIds) || $professionals->count() !== count($professionalIds)) {
                 throw new AuthorizationException('Os itens selecionados não pertencem à unidade ativa.');
             }
+
+            $this->handles->reserveForDraft(
+                $context->tenant->getKey(),
+                $lockedUnit->getKey(),
+                $data['public_slug'],
+            );
 
             $allActiveServices = Service::query()
                 ->where('tenant_id', $context->tenant->getKey())

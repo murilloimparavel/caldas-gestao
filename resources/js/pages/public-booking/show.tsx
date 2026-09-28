@@ -296,6 +296,30 @@ const routeArgs = (
         ? [parts[index + 1], parts[index + 2]]
         : [unit.tenant_slug, unit.slug];
 };
+const bookingAttributionQuery = (): Record<string, string> => {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const keys = [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_term',
+        'utm_content',
+    ];
+
+    return keys.reduce<Record<string, string>>((query, key) => {
+        const value = params.get(key);
+
+        if (value) {
+            query[key] = value;
+        }
+
+        return query;
+    }, {});
+};
 
 export default function PublicBooking({
     unit,
@@ -415,8 +439,19 @@ export default function PublicBooking({
             return;
         }
 
+        const bookingData = {
+            ...appointmentRequest.data,
+            service_id: serviceId,
+            service_ids: selectedServiceIds,
+            professional_id: professionalId,
+            starts_at: slot,
+        };
+
         appointmentRequest.transform((data) => {
-            const payload: Record<string, unknown> = { ...data };
+            const payload: Record<string, unknown> = {
+                ...data,
+                ...bookingData,
+            };
 
             if (!data.email?.trim()) {
                 delete payload.email;
@@ -429,56 +464,53 @@ export default function PublicBooking({
             return payload;
         });
 
-        appointmentRequest.setData((current) => ({
-            ...current,
-            service_id: serviceId,
-            service_ids: selectedServiceIds,
-            professional_id: professionalId,
-            starts_at: slot,
-        }));
-        await appointmentRequest.post(store.url(args), {
-            headers: {
-                'X-Idempotency-Key':
-                    typeof crypto.randomUUID === 'function'
-                        ? crypto.randomUUID()
-                        : `${Date.now()}-${Math.random()}`,
-            },
-            onSuccess: (response) => {
-                setBookingError(null);
-                setBookingErrorKind(null);
-                setWhatsappUrl(response.whatsapp_url ?? null);
-                setSubmitted(true);
-            },
-            onError: (errors) => {
-                const catalogError =
-                    errorText(errors.service_id) ||
-                    errorText(errors.professional_id);
-                const slotError = errorText(errors.starts_at);
+        appointmentRequest.setData(bookingData);
+        await appointmentRequest.post(
+            store.url(args, { query: bookingAttributionQuery() }),
+            {
+                headers: {
+                    'X-Idempotency-Key':
+                        typeof crypto.randomUUID === 'function'
+                            ? crypto.randomUUID()
+                            : `${Date.now()}-${Math.random()}`,
+                },
+                onSuccess: (response) => {
+                    setBookingError(null);
+                    setBookingErrorKind(null);
+                    setWhatsappUrl(response.whatsapp_url ?? null);
+                    setSubmitted(true);
+                },
+                onError: (errors) => {
+                    const catalogError =
+                        errorText(errors.service_id) ||
+                        errorText(errors.professional_id);
+                    const slotError = errorText(errors.starts_at);
 
-                if (catalogError) {
-                    setBookingError(
-                        catalogError ||
-                            'Este serviço ou profissional não está mais disponível para agendamento.',
-                    );
-                    setBookingErrorKind('catalog');
-                } else if (slotError) {
-                    setBookingError(
-                        slotError ||
-                            'Esse horário acabou de ficar indisponível. Escolha outro horário.',
-                    );
-                    setBookingErrorKind('slot');
-                    setSlot('');
-                } else {
-                    setBookingError(
-                        errorText(
-                            (errors as Record<string, unknown>).message,
-                        ) ||
-                            'Não foi possível concluir o agendamento. Revise os dados e tente novamente.',
-                    );
-                    setBookingErrorKind('generic');
-                }
+                    if (catalogError) {
+                        setBookingError(
+                            catalogError ||
+                                'Este serviço ou profissional não está mais disponível para agendamento.',
+                        );
+                        setBookingErrorKind('catalog');
+                    } else if (slotError) {
+                        setBookingError(
+                            slotError ||
+                                'Esse horário acabou de ficar indisponível. Escolha outro horário.',
+                        );
+                        setBookingErrorKind('slot');
+                        setSlot('');
+                    } else {
+                        setBookingError(
+                            errorText(
+                                (errors as Record<string, unknown>).message,
+                            ) ||
+                                'Não foi possível concluir o agendamento. Revise os dados e tente novamente.',
+                        );
+                        setBookingErrorKind('generic');
+                    }
+                },
             },
-        });
+        );
     };
     const recoverBookingError = (): void => {
         setBookingError(null);
