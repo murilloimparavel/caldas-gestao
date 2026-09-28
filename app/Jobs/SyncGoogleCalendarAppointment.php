@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Appointment;
 use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarEvent;
+use App\Models\TenantSubscription;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,6 +44,18 @@ final class SyncGoogleCalendarAppointment implements ShouldQueue
         $appointment = Appointment::query()->with('customer')->find($this->appointmentId);
 
         if ($appointment === null) {
+            return;
+        }
+
+        $subscription = TenantSubscription::query()
+            ->where('tenant_id', $appointment->tenant_id)
+            ->latest()
+            ->first();
+
+        // Tenants without a subscription are still treated as eligible here:
+        // the existing billing service provisions their trial lazily. A known
+        // delinquent subscription must never reach the Google API.
+        if ($subscription !== null && ! $subscription->grantsAccess()) {
             return;
         }
 

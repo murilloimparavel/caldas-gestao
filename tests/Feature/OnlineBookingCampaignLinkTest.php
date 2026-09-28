@@ -55,5 +55,5 @@ it('generates campaign links on the active custom public domain', function () {
     ]);
 
     $response->assertCreated();
-    expect($response->json('campaign_link.url'))->toStartWith('https://agenda.example.com/book/');
+    expect($response->json('campaign_link.url'))->toStartWith('https://agenda.example.com/?');
 });

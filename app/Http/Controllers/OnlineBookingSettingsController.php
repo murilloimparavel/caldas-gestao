@@ -19,6 +19,7 @@ use App\Http\Requests\Settings\OnlineBookingLogoStoreRequest;
 use App\Http\Requests\Settings\OnlineBookingPublishRequest;
 use App\Http\Requests\Settings\OnlineBookingSettingsRequest;
 use App\Models\OnlineBookingGalleryImage;
+use App\Models\OnlineBookingHandle;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
@@ -69,7 +70,7 @@ final class OnlineBookingSettingsController extends Controller
         $publicSlug = $activePublication->public_slug ?? ($setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $context->unit->slug) : $context->unit->slug);
         $publicUrl = $activePublication instanceof OnlineBookingPublication
             ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug, $activePublication)
-            : ($readiness['publishable'] ? $this->publicBookingUrl($context->tenant->getKey(), $context->unit, $setting, $publicSlug) : null);
+            : null;
         $draftContent = is_array($site->draft?->content) ? $site->draft->content : [];
         $publishedContent = is_array($site->activePublication?->content) ? $site->activePublication->content : [];
         $diffLabels = [
@@ -89,9 +90,7 @@ final class OnlineBookingSettingsController extends Controller
             'tenant' => ['slug' => $context->tenant->slug],
             'publicUrl' => $publicUrl,
             'previewUrl' => $site->draft ? URL::temporarySignedRoute('online_booking.preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), [$context->tenant, $context->unit]) : null,
-            'canonicalUrl' => $activePublication instanceof OnlineBookingPublication
-                ? $publicUrl
-                : ($readiness['publishable'] ? route('public_booking.slug', ['public_slug' => $publicSlug]) : null),
+            'canonicalUrl' => $activePublication instanceof OnlineBookingPublication ? $publicUrl : null,
             'publicDomains' => $publicDomains,
             'services' => $services,
             'professionals' => $professionals,
@@ -155,23 +154,36 @@ final class OnlineBookingSettingsController extends Controller
 
     private function publicBookingUrl(string $tenantId, Unit $unit, ?OnlineBookingSetting $setting, string $publicSlug, ?OnlineBookingPublication $publication = null): string
     {
-        $domain = $publication instanceof OnlineBookingPublication
-            ? TenantDomain::query()
-                ->whereKey($publication->public_domain_id)
-                ->where('tenant_id', $tenantId)
-                ->where('kind', TenantDomainKind::Public->value)
-                ->where('status', TenantDomainStatus::Active->value)
-                ->first()
-            : $setting?->publicDomain;
+        $publicDomainId = $publication instanceof OnlineBookingPublication
+            ? $publication->public_domain_id
+            : $setting?->public_domain_id;
+        $domain = $publicDomainId === null ? null : TenantDomain::query()
+            ->whereKey($publicDomainId)
+            ->where('tenant_id', $tenantId)
+            ->where('kind', TenantDomainKind::Public->value)
+            ->where('status', TenantDomainStatus::Active->value)
+            ->first();
         if ($domain instanceof TenantDomain && $domain->tenant_id === $tenantId && $domain->kind === TenantDomainKind::Public && $domain->status === TenantDomainStatus::Active) {
-            return 'https://'.$domain->hostname.'/book/'.rawurlencode($publicSlug);
+            return 'https://'.$domain->hostname.'/';
         }
 
-        if ($publication instanceof OnlineBookingPublication) {
-            return route('public_booking.slug', ['public_slug' => $publicSlug]);
-        }
+        $handle = $this->currentHandle($tenantId, $unit->getKey()) ?? $publicSlug;
 
-        return route('public_booking.show', [$unit->tenant, $unit]);
+        return $this->sharedBookingUrl($handle);
+    }
+
+    private function currentHandle(string $tenantId, string $unitId): ?string
+    {
+        return OnlineBookingHandle::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('status', 'current')
+            ->value('handle');
+    }
+
+    private function sharedBookingUrl(string $handle): string
+    {
+        return rtrim((string) request()->getScheme().'://'.config('domains.shared_booking_host'), '/').'/'.rawurlencode($handle);
     }
 
     public function storeCover(OnlineBookingCoverStoreRequest $request, TenantContext $context): JsonResponse

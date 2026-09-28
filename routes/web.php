@@ -33,7 +33,9 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
+use App\Http\Middleware\EnsureSharedBookingHost;
 use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
+use App\Models\OnlineBookingSite;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -54,16 +56,50 @@ Route::get('/billing', BillingController::class)
 Route::get('/', function () {
     $domain = request()->attributes->get('tenant_domain');
 
+    if (request()->attributes->get('public_booking_shared_host') === true) {
+        abort(404);
+    }
+
     if ($domain?->kind?->value === 'public') {
-        if (request()->getHost() === 'romawear.com.br') {
-            $unit = $domain->tenant->units()
+        $publishedSites = OnlineBookingSite::query()
+            ->where('tenant_id', $domain->tenant_id)
+            ->whereNotNull('active_publication_id')
+            ->whereHas('activePublication', fn ($query) => $query->where('public_domain_id', $domain->getKey()))
+            ->whereHas('unit', function ($query): void {
+                $query->where('status', 'active')->where('online_booking_enabled', true);
+            })
+            ->with('unit')
+            ->limit(2)
+            ->get();
+
+        if ($publishedSites->count() > 1) {
+            abort(404, 'Defina uma unidade para este domínio de agendamento.');
+        }
+
+        if ($publishedSites->count() === 1) {
+            return app(PublicBookingController::class)->show($domain->tenant, $publishedSites->firstOrFail()->unit);
+        }
+
+        $hasConfiguredPublicDomain = OnlineBookingSite::query()
+            ->where('tenant_id', $domain->tenant_id)
+            ->whereNotNull('active_publication_id')
+            ->whereHas('activePublication', fn ($query) => $query->whereNotNull('public_domain_id'))
+            ->exists();
+
+        if (! $hasConfiguredPublicDomain) {
+            $units = $domain->tenant->units()
                 ->where('status', 'active')
                 ->where('online_booking_enabled', true)
                 ->orderBy('name')
-                ->first();
+                ->limit(2)
+                ->get();
 
-            if ($unit !== null) {
-                return app(PublicBookingController::class)->show($domain->tenant, $unit);
+            if ($units->count() === 1) {
+                return app(PublicBookingController::class)->show($domain->tenant, $units->firstOrFail());
+            }
+
+            if ($units->count() > 1) {
+                abort(404, 'Defina uma unidade para este domínio de agendamento.');
             }
         }
 
@@ -267,3 +303,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+Route::get('/{public_slug}', [PublicBookingController::class, 'showBySlug'])
+    ->where('public_slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+    ->middleware([EnsureSharedBookingHost::class, 'throttle:public-booking'])
+    ->name('public_booking.shared_slug');
