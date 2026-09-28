@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tenant_id', 'platform_plan_id', 'provider', 'external_subscription_id', 'external_product_id', 'status', 'starts_at', 'ends_at', 'next_billing_at', 'grace_ends_at', 'last_payment_at', 'metadata'])]
+#[Fillable(['tenant_id', 'platform_plan_id', 'provider', 'external_subscription_id', 'external_product_id', 'status', 'billing_cycle', 'starts_at', 'ends_at', 'next_billing_at', 'grace_ends_at', 'last_payment_at', 'metadata'])]
 /** @property CarbonImmutable|string|null $ends_at */
 /** @property CarbonImmutable|string|null $grace_ends_at */
 class TenantSubscription extends Model

@@ -15,7 +15,10 @@ export function AdminStatusBadge({ status }: { status: AdminStatus }) {
                       : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
             )}
         >
-            <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+            <span
+                className="size-1.5 rounded-full bg-current"
+                aria-hidden="true"
+            />
             {statusLabels[status]}
         </Badge>
     );

@@ -20,8 +20,9 @@ final class CreatePlatformTenant
             $owner = User::query()->create([
                 'name' => $data['owner_name'], 'email' => $data['owner_email'],
                 'password' => $data['owner_password'], 'must_change_password' => true,
-                'temporary_password_expires_at' => now()->addDays(3), 'email_verified_at' => now(),
+                'temporary_password_expires_at' => now()->addDays(3),
             ]);
+            $owner->forceFill(['email_verified_at' => now()])->save();
             $tenant = $this->onboard->handle($owner, ['name' => $data['name'], 'slug' => $data['slug'] ?? $data['name']], ['name' => $data['name']]);
             if (! empty($data['plan_id'])) {
                 $plan = PlatformPlan::query()->findOrFail($data['plan_id']);
@@ -31,6 +32,7 @@ final class CreatePlatformTenant
                     ->first();
                 $attributes = [
                     'tenant_id' => $tenant->getKey(), 'platform_plan_id' => $plan->getKey(), 'status' => 'trial',
+                    'billing_cycle' => $plan->billing_cycle,
                     'starts_at' => now(), 'ends_at' => $plan->trial_days > 0 ? now()->addDays($plan->trial_days) : null,
                     'metadata' => ['created_by' => 'admin_panel'],
                 ];
@@ -40,6 +42,7 @@ final class CreatePlatformTenant
                     $subscription->update($attributes);
                 }
             }
+
             return $tenant->fresh(['memberships.user', 'units']);
         }, 5);
     }
