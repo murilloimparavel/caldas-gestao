@@ -55,7 +55,23 @@ export type PublicSettings = {
 };
 
 export type TabKey =
-    'details' | 'settings' | 'link' | 'gallery' | 'services' | 'hours';
+    | 'details'
+    | 'settings'
+    | 'link'
+    | 'gallery'
+    | 'services'
+    | 'hours'
+    | 'publication';
+
+export type PublicationHistoryItem = {
+    id: string;
+    version: number;
+    source_revision: number;
+    published_at?: string | null;
+    superseded_at?: string | null;
+    published_by?: { name?: string | null } | null;
+    preview_url?: string | null;
+};
 
 export type OnlineBookingProps = {
     template_key?: 'essential' | 'atelier-barber' | string | null;
@@ -98,15 +114,7 @@ export type OnlineBookingProps = {
         published_at?: string | null;
         template_key: string;
     } | null;
-    publicationHistory?: {
-        id: string;
-        version: number;
-        source_revision: number;
-        published_at?: string | null;
-        superseded_at?: string | null;
-        published_by?: { name?: string | null } | null;
-        preview_url?: string | null;
-    }[];
+    publicationHistory?: PublicationHistoryItem[];
     draftDiff?: string[];
     settings?: PublicSettings | null;
     cover?: string | null;

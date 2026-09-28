@@ -568,3 +568,57 @@ it('applies public hours and minimum notice to availability', function () {
     expect($response->json('slots'))->each->toHaveKey('starts_at');
     expect(collect($response->json('slots'))->every(fn (array $slot): bool => str_contains($slot['starts_at'], '11:')))->toBeTrue();
 });
+
+it('uses Carbon weekday keys for public hours with Monday enabled and Sunday disabled', function () {
+    [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
+    $timezone = $unit->timezone ?? $tenant->timezone ?? config('app.timezone');
+    $monday = CarbonImmutable::now($timezone)->addWeek()->startOfWeek()->startOfDay();
+    $sunday = $monday->addDays(6);
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $professional->getKey(),
+        'weekday' => 1,
+        'starts_at' => '09:00:00',
+        'ends_at' => '12:00:00',
+        'timezone' => $timezone,
+    ]);
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $professional->getKey(),
+        'weekday' => 0,
+        'starts_at' => '09:00:00',
+        'ends_at' => '12:00:00',
+        'timezone' => $timezone,
+    ]);
+    OnlineBookingSetting::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+        'minimum_notice_minutes' => 0,
+        'public_hours' => [
+            '0' => ['enabled' => false, 'starts_at' => '09:00', 'ends_at' => '12:00'],
+            '1' => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '12:00'],
+        ],
+    ]);
+
+    $mondayAvailability = $this->getJson(route('public_booking.availability', [
+        $tenant,
+        $unit,
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'date' => $monday->toDateString(),
+    ]))->assertSuccessful();
+    $sundayAvailability = $this->getJson(route('public_booking.availability', [
+        $tenant,
+        $unit,
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'date' => $sunday->toDateString(),
+    ]))->assertSuccessful();
+
+    expect($mondayAvailability->json('slots'))->not->toBeEmpty()
+        ->and($sundayAvailability->json('slots'))->toBeEmpty();
+});

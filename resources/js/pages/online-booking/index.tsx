@@ -2,17 +2,12 @@ import { Form, Head, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     CheckCircle2,
-    ClipboardCheck,
-    ExternalLink,
-    History,
     ImagePlus,
     Scissors,
     UserRound,
-    RotateCcw,
 } from 'lucide-react';
 import { useState } from 'react';
 import { FormErrorSummary, PageCanvas } from '@/components/operational';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -25,7 +20,6 @@ import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
 import type { SharedPageProps } from '@/types';
 import { AppearanceEditor } from './components/appearance-editor';
-import { ReadinessRow } from './components/booking-form-primitives';
 import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
 import { bookingUi } from './components/design-tokens';
@@ -37,6 +31,7 @@ import { GallerySettingsPanel } from './components/gallery-settings-panel';
 import { HoursSettingsPanel } from './components/hours-settings-panel';
 import { CatalogSettingsPanel } from './components/catalog-settings-panel';
 import { PublicationToolbar } from './components/publication-toolbar';
+import { PublicationSettingsPanel } from './components/publication-settings-panel';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
 import type { OnlineBookingProps, TabKey } from './types';
 
@@ -129,120 +124,6 @@ export default function OnlineBookingIndex({
                     onUnpublish={unpublishSite}
                     canPublish={Boolean(draft && readiness.publishable)}
                 />
-                {hasPendingChanges && draftDiff?.length ? (
-                    <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
-                        <div className="flex items-start gap-3">
-                            <AlertCircle
-                                className="mt-0.5 size-4 shrink-0"
-                                aria-hidden="true"
-                            />
-                            <div>
-                                <p className="text-sm font-semibold">
-                                    Alterações aguardando publicação
-                                </p>
-                                <p className="mt-1 text-xs opacity-80">
-                                    A versão pública continua intacta até você
-                                    publicar.
-                                </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {draftDiff.map((label: string) => (
-                                        <Badge
-                                            key={label}
-                                            variant="outline"
-                                            className="border-current/30"
-                                        >
-                                            {label}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ) : null}
-                {publicationHistory.length > 0 ? (
-                    <Card className="mb-5">
-                        <CardHeader className="border-b border-border/60 bg-muted/20">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <History
-                                    aria-hidden="true"
-                                    className="size-4 text-primary"
-                                />
-                                Histórico de publicações
-                            </CardTitle>
-                            <CardDescription>
-                                Cada versão é imutável. Restaurar cria um novo
-                                rascunho sem alterar o histórico.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="divide-y divide-border/60 p-0">
-                            {publicationHistory.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                                            v{item.version}
-                                        </span>
-                                        <div>
-                                            <p className="text-sm font-medium">
-                                                Publicada em{' '}
-                                                {item.published_at
-                                                    ? new Date(
-                                                          item.published_at,
-                                                      ).toLocaleString('pt-BR')
-                                                    : 'data indisponível'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Revisão {item.source_revision}
-                                                {item.published_by?.name
-                                                    ? ` · ${item.published_by.name}`
-                                                    : ''}
-                                                {item.superseded_at
-                                                    ? ' · substituída'
-                                                    : ' · ativa'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <a
-                                                href={item.preview_url ?? '#'}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                <ExternalLink aria-hidden="true" />
-                                                Visualizar
-                                            </a>
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() =>
-                                                router.post(
-                                                    onlineBooking.publications.restore.url(
-                                                        item.id,
-                                                    ),
-                                                    {},
-                                                    { preserveScroll: true },
-                                                )
-                                            }
-                                        >
-                                            <RotateCcw aria-hidden="true" />
-                                            Restaurar como rascunho
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-                ) : null}
                 {draft ? (
                     <div className="mb-5 space-y-5">
                         <AppearanceEditor
@@ -321,66 +202,13 @@ export default function OnlineBookingIndex({
                                 onChange={setActiveTab}
                             />
                             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] xl:items-start">
-                                <div className="space-y-5">
-                                    {activeTab === 'details' && (
-                                        <IdentitySettingsPanel
-                                            unit={unit}
-                                            settings={settings}
-                                            templateKey={rootTemplateKey}
-                                            coverUrl={coverUrl}
-                                            coverUploadUrl={
-                                                resolvedCoverUploadUrl
-                                            }
-                                            coverDeleteUrl={
-                                                resolvedCoverDeleteUrl
-                                            }
-                                        />
-                                    )}
-                                    {activeTab === 'settings' && (
-                                        <OperationalSettingsPanel
-                                            settings={settings}
-                                        />
-                                    )}
-                                    {activeTab === 'link' && (
-                                        <PublicLinkSettingsPanel
-                                            settings={settings}
-                                            unitSlug={unit.slug}
-                                            publicDomains={publicDomains}
-                                            publicUrl={publicUrl}
-                                            copied={copied}
-                                            onCopy={copyPublicUrl}
-                                        />
-                                    )}
-                                    {activeTab === 'gallery' && (
-                                        <GallerySettingsPanel
-                                            galleryItems={galleryItems}
-                                            onUpload={uploadGalleryImage}
-                                            onUpdateAlt={updateGalleryAlt}
-                                            onDelete={deleteGalleryImage}
-                                            onMove={moveGalleryImage}
-                                        />
-                                    )}
-                                    {activeTab === 'services' && (
-                                        <CatalogSettingsPanel
-                                            services={services}
-                                            professionals={professionals}
-                                        />
-                                    )}
-                                    {activeTab === 'hours' && (
-                                        <HoursSettingsPanel
-                                            settings={settings}
-                                        />
-                                    )}
-                                </div>
-                                <aside className="min-w-0 space-y-5 xl:self-start">
-                                    <PublicPreview
-                                        unit={unit}
-                                        settings={settings}
-                                        gallery={galleryItems}
-                                        services={services}
-                                        previewUrl={signedPreviewUrl}
-                                    />
-                                    <Card>
+                                <div
+                                    id="online-booking-tabpanel"
+                                    role="region"
+                                    aria-labelledby={`booking-tab-${activeTab}`}
+                                    className="min-w-0 space-y-5"
+                                >
+                                    <Card hidden={activeTab !== 'settings'}>
                                         <CardContent className="pt-5">
                                             <label className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 p-3">
                                                 <input
@@ -406,49 +234,87 @@ export default function OnlineBookingIndex({
                                             </label>
                                         </CardContent>
                                     </Card>
-                                    <Card className="overflow-hidden">
-                                        <CardHeader className="bg-muted/40">
-                                            <CardTitle className="flex items-center gap-2 text-base">
-                                                <ClipboardCheck
-                                                    aria-hidden="true"
-                                                    className="size-4 text-primary"
-                                                />
-                                                Checklist de publicação
-                                            </CardTitle>
-                                            <CardDescription>
-                                                Resolva os itens abaixo para
-                                                liberar o link público.
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="pt-5">
-                                            <ul className="space-y-3">
-                                                <ReadinessRow
-                                                    label="Unidade habilitada"
-                                                    ready={
-                                                        readiness.unit_enabled
-                                                    }
-                                                />
-                                                <ReadinessRow
-                                                    label={`Serviço ativo selecionado (${activeServices.length})`}
-                                                    ready={
-                                                        readiness.has_active_service
-                                                    }
-                                                />
-                                                <ReadinessRow
-                                                    label={`Profissional ativo selecionado (${activeProfessionals.length})`}
-                                                    ready={
-                                                        readiness.has_active_professional
-                                                    }
-                                                />
-                                                <ReadinessRow
-                                                    label="Existe serviço e profissional compatíveis"
-                                                    ready={
-                                                        readiness.has_service_professional_pair
-                                                    }
-                                                />
-                                            </ul>
-                                        </CardContent>
-                                    </Card>
+                                    <div hidden={activeTab !== 'details'}>
+                                        <IdentitySettingsPanel
+                                            unit={unit}
+                                            settings={settings}
+                                            templateKey={rootTemplateKey}
+                                            coverUrl={coverUrl}
+                                            coverUploadUrl={
+                                                resolvedCoverUploadUrl
+                                            }
+                                            coverDeleteUrl={
+                                                resolvedCoverDeleteUrl
+                                            }
+                                        />
+                                    </div>
+                                    <div hidden={activeTab !== 'settings'}>
+                                        <OperationalSettingsPanel
+                                            settings={settings}
+                                        />
+                                    </div>
+                                    <div hidden={activeTab !== 'link'}>
+                                        <PublicLinkSettingsPanel
+                                            settings={settings}
+                                            unitSlug={unit.slug}
+                                            publicDomains={publicDomains}
+                                            publicUrl={publicUrl}
+                                            copied={copied}
+                                            onCopy={copyPublicUrl}
+                                        />
+                                    </div>
+                                    {activeTab === 'gallery' && (
+                                        <GallerySettingsPanel
+                                            galleryItems={galleryItems}
+                                            onUpload={uploadGalleryImage}
+                                            onUpdateAlt={updateGalleryAlt}
+                                            onDelete={deleteGalleryImage}
+                                            onMove={moveGalleryImage}
+                                        />
+                                    )}
+                                    <div hidden={activeTab !== 'services'}>
+                                        <CatalogSettingsPanel
+                                            services={services}
+                                            professionals={professionals}
+                                        />
+                                    </div>
+                                    <div hidden={activeTab !== 'hours'}>
+                                        <HoursSettingsPanel
+                                            settings={settings}
+                                        />
+                                    </div>
+                                    {activeTab === 'publication' && (
+                                        <PublicationSettingsPanel
+                                            readiness={readiness}
+                                            activeServicesCount={
+                                                activeServices.length
+                                            }
+                                            activeProfessionalsCount={
+                                                activeProfessionals.length
+                                            }
+                                            hasPendingChanges={
+                                                hasPendingChanges
+                                            }
+                                            draftDiff={draftDiff ?? []}
+                                            publicationHistory={
+                                                publicationHistory
+                                            }
+                                            onRestore={(publicationId) =>
+                                                router.post(
+                                                    onlineBooking.publications.restore.url(
+                                                        publicationId,
+                                                    ),
+                                                    {},
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                        />
+                                    )}
+                                </div>
+                                <aside className="min-w-0 space-y-5 xl:self-start">
+                                    <PublicPreview
+                                        previewUrl={signedPreviewUrl}
+                                    />
                                     <Card>
                                         <CardHeader>
                                             <CardTitle className="text-base">
