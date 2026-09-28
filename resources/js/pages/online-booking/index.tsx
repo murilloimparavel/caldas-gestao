@@ -2,7 +2,6 @@ import { Form, Head, router, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     BellRing,
-    CalendarDays,
     CheckCircle2,
     ClipboardCheck,
     ExternalLink,
@@ -23,7 +22,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
 import type { SharedPageProps } from '@/types';
@@ -40,6 +38,7 @@ import { IdentitySettingsPanel } from './components/identity-settings-panel';
 import { OperationalSettingsPanel } from './components/operational-settings-panel';
 import { PublicLinkSettingsPanel } from './components/public-link-settings-panel';
 import { GallerySettingsPanel } from './components/gallery-settings-panel';
+import { HoursSettingsPanel } from './components/hours-settings-panel';
 import { CatalogSettingsPanel } from './components/catalog-settings-panel';
 import { PublicationToolbar } from './components/publication-toolbar';
 import { useOnlineBookingActions } from './hooks/use-online-booking-actions';
@@ -660,11 +659,10 @@ export default function OnlineBookingIndex({
                                         />
                                     )}
                                     {activeTab === 'hours' && (
-                                        <SectionCard
-                                            icon={CalendarDays}
-                                            title="Horário de atendimento"
-                                            description="A disponibilidade pública respeita a agenda e os bloqueios da equipe."
-                                        >
+                                        <HoursSettingsPanel
+                                            settings={settings}
+                                        />
+                                        /*
                                             <div className="space-y-2">
                                                 {[
                                                     'Segunda-feira',
@@ -740,7 +738,7 @@ export default function OnlineBookingIndex({
                                                     </div>
                                                 ))}
                                             </div>
-                                        </SectionCard>
+                                        </SectionCard> */
                                     )}
                                     {activeTab === 'confirmation' && (
                                         <SectionCard
