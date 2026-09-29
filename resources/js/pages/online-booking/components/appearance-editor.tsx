@@ -144,7 +144,10 @@ export function AppearanceEditor({
         <Card>
             {templateKey === 'atelier-barber' ? (
                 <Head>
-                    <link rel="preconnect" href="https://fonts.googleapis.com" />
+                    <link
+                        rel="preconnect"
+                        href="https://fonts.googleapis.com"
+                    />
                     <link
                         rel="preconnect"
                         href="https://fonts.gstatic.com"
@@ -245,13 +248,14 @@ export function AppearanceEditor({
                             Estilo de fonte
                         </legend>
                         <p className="text-sm text-muted-foreground">
-                            Escolha uma combinação para títulos, textos e botões.
-                            A prévia usa esta escolha; ela só vai ao ar quando
-                            você publicar.
+                            Escolha uma combinação para títulos, textos e
+                            botões. A prévia usa esta escolha; ela só vai ao ar
+                            quando você publicar.
                         </p>
                         <div className="grid gap-3 md:grid-cols-3">
                             {fontStyles.map((style) => {
-                                const selected = appearance.font_style === style.id;
+                                const selected =
+                                    appearance.font_style === style.id;
 
                                 return (
                                     <button
@@ -268,7 +272,9 @@ export function AppearanceEditor({
                                         </span>
                                         <span
                                             className="mt-3 block truncate text-lg text-foreground"
-                                            style={{ fontFamily: style.sampleFont }}
+                                            style={{
+                                                fontFamily: style.sampleFont,
+                                            }}
                                         >
                                             {style.sample}
                                         </span>
