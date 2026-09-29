@@ -35,6 +35,7 @@ import {
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CustomerPicker } from '@/components/customer-picker';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Dialog,
@@ -62,6 +63,7 @@ import type {
 type Option = {
     id: string;
     name: string;
+    phone?: string | null;
 };
 
 type Props = {
@@ -166,6 +168,7 @@ export default function FinancialTransactionsIndex({
     const [editingObligation, setEditingObligation] =
         useState<FinancialObligation | null>(null);
     const [editAmount, setEditAmount] = useState('');
+    const [editCustomerId, setEditCustomerId] = useState('');
 
     const [settlingObligation, setSettlingObligation] =
         useState<FinancialObligation | null>(null);
@@ -219,6 +222,7 @@ export default function FinancialTransactionsIndex({
     const openEdit = (item: FinancialObligation) => {
         setEditingObligation(item);
         setEditAmount((item.amount_cents / 100).toFixed(2));
+        setEditCustomerId(item.customer_id ?? '');
     };
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -548,12 +552,23 @@ export default function FinancialTransactionsIndex({
                                                         </div>
                                                     ) : (
                                                         <div>
-                                                            <FormField
+                                                            <CustomerPicker
                                                                 label="Cliente"
                                                                 name="customer_id"
+                                                                id="customer_id"
+                                                                value={
+                                                                    selectedCustomerId
+                                                                }
+                                                                options={
+                                                                    customersList
+                                                                }
+                                                                onChange={
+                                                                    setSelectedCustomerId
+                                                                }
                                                                 error={
                                                                     errors.customer_id
                                                                 }
+                                                                helper="Opcional — pesquise por nome ou telefone"
                                                                 action={
                                                                     <button
                                                                         type="button"
@@ -568,50 +583,7 @@ export default function FinancialTransactionsIndex({
                                                                         Cliente
                                                                     </button>
                                                                 }
-                                                            >
-                                                                <select
-                                                                    id="customer_id"
-                                                                    name="customer_id"
-                                                                    value={
-                                                                        selectedCustomerId
-                                                                    }
-                                                                    onChange={(
-                                                                        e,
-                                                                    ) =>
-                                                                        setSelectedCustomerId(
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                                >
-                                                                    <option value="">
-                                                                        Selecione
-                                                                        o
-                                                                        cliente
-                                                                        (opcional)
-                                                                    </option>
-                                                                    {customersList.map(
-                                                                        (
-                                                                            cus,
-                                                                        ) => (
-                                                                            <option
-                                                                                key={
-                                                                                    cus.id
-                                                                                }
-                                                                                value={
-                                                                                    cus.id
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    cus.name
-                                                                                }
-                                                                            </option>
-                                                                        ),
-                                                                    )}
-                                                                </select>
-                                                            </FormField>
+                                                            />
                                                         </div>
                                                     )}
 
@@ -1431,45 +1403,20 @@ export default function FinancialTransactionsIndex({
                                                 </div>
                                             ) : (
                                                 <div>
-                                                    <FormField
+                                                    <CustomerPicker
                                                         label="Cliente"
                                                         name="customer_id"
+                                                        id="edit_customer_id"
+                                                        value={editCustomerId}
+                                                        options={customersList}
+                                                        onChange={
+                                                            setEditCustomerId
+                                                        }
                                                         error={
                                                             errors.customer_id
                                                         }
-                                                    >
-                                                        <select
-                                                            id="edit_customer_id"
-                                                            name="customer_id"
-                                                            defaultValue={
-                                                                editingObligation.customer_id ||
-                                                                ''
-                                                            }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                        >
-                                                            <option value="">
-                                                                Selecione o
-                                                                cliente
-                                                                (opcional)
-                                                            </option>
-                                                            {customersList.map(
-                                                                (cus) => (
-                                                                    <option
-                                                                        key={
-                                                                            cus.id
-                                                                        }
-                                                                        value={
-                                                                            cus.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            cus.name
-                                                                        }
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </select>
-                                                    </FormField>
+                                                        helper="Opcional — pesquise por nome ou telefone"
+                                                    />
                                                 </div>
                                             )}
 

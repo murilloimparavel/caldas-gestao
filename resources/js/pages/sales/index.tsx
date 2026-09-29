@@ -26,6 +26,7 @@ import {
 import type { Paginated, ResourceFilters } from '@/components/operational';
 import { QuickCreateCustomerModal } from '@/components/operational/quick-create-dialogs';
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
+import { CustomerPicker } from '@/components/customer-picker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -153,6 +154,8 @@ export default function SalesIndex({
     );
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedAnonymous, setSelectedAnonymous] = useState(false);
+    const [notesOpen, setNotesOpen] = useState(false);
     const { view, setView } = useResourceView('caldas-gestao:sales:view');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('sale.manage');
@@ -176,10 +179,18 @@ export default function SalesIndex({
             newCust,
         ]);
         setSelectedCustomer(created.id);
+        setSelectedAnonymous(false);
     };
 
     const selectedCategoryObj = categories.find(
         (c) => c.id === selectedCategory,
+    );
+    const customerRequired =
+        selectedCategoryObj?.uniqueness_scope === 'customer';
+    const referenceRequired =
+        selectedCategoryObj?.uniqueness_scope === 'reference';
+    const selectedCustomerObj = customerList.find(
+        (customer) => customer.id === selectedCustomer,
     );
 
     const toggleSelect = (id: string) => {
@@ -284,7 +295,7 @@ export default function SalesIndex({
                                                 <FormErrorSummary
                                                     errors={errors}
                                                 />
-                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                <div className="grid gap-4">
                                                     <div className="sm:col-span-2">
                                                         <FormField
                                                             label="Categoria de comanda"
@@ -292,6 +303,7 @@ export default function SalesIndex({
                                                             error={
                                                                 errors.sale_category_id
                                                             }
+                                                            required
                                                         >
                                                             <select
                                                                 id="sale_category_id"
@@ -300,12 +312,35 @@ export default function SalesIndex({
                                                                 value={
                                                                     selectedCategory
                                                                 }
-                                                                onChange={(e) =>
+                                                                onChange={(
+                                                                    e,
+                                                                ) => {
+                                                                    const nextCategory =
+                                                                        categories.find(
+                                                                            (
+                                                                                category,
+                                                                            ) =>
+                                                                                category.id ===
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                        );
+
                                                                     setSelectedCategory(
                                                                         e.target
                                                                             .value,
-                                                                    )
-                                                                }
+                                                                    );
+
+                                                                    if (
+                                                                        nextCategory?.uniqueness_scope ===
+                                                                            'customer' &&
+                                                                        selectedAnonymous
+                                                                    ) {
+                                                                        setSelectedAnonymous(
+                                                                            false,
+                                                                        );
+                                                                    }
+                                                                }}
                                                                 className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                                             >
                                                                 <option value="">
@@ -359,100 +394,126 @@ export default function SalesIndex({
                                                         ) : null}
                                                     </div>
 
-                                                    <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Cliente (opcional)"
-                                                            name="customer_id"
-                                                            error={
-                                                                errors.customer_id
-                                                            }
-                                                            description={
-                                                                <button
+                                                    <CustomerPicker
+                                                        label="Cliente"
+                                                        name="customer_id"
+                                                        id="customer_id"
+                                                        value={selectedCustomer}
+                                                        options={customerList}
+                                                        required={
+                                                            customerRequired
+                                                        }
+                                                        error={
+                                                            errors.customer_id
+                                                        }
+                                                        helper={
+                                                            customerRequired
+                                                                ? 'Obrigatório nesta categoria'
+                                                                : 'Opcional'
+                                                        }
+                                                        allowAnonymous={
+                                                            !customerRequired
+                                                        }
+                                                        anonymousSelected={
+                                                            selectedAnonymous
+                                                        }
+                                                        onAnonymousChange={
+                                                            setSelectedAnonymous
+                                                        }
+                                                        onChange={(
+                                                            customerId,
+                                                        ) => {
+                                                            setSelectedCustomer(
+                                                                customerId,
+                                                            );
+                                                            setSelectedAnonymous(
+                                                                false,
+                                                            );
+                                                        }}
+                                                        action={
+                                                            selectedCustomerObj ||
+                                                            selectedAnonymous ? (
+                                                                <span className="text-xs font-medium text-muted-foreground">
+                                                                    Clique no
+                                                                    cliente para
+                                                                    trocar
+                                                                </span>
+                                                            ) : (
+                                                                <Button
                                                                     type="button"
+                                                                    variant="outline"
+                                                                    className="h-8"
                                                                     onClick={() =>
                                                                         setQuickCustomerOpen(
                                                                             true,
                                                                         )
                                                                     }
-                                                                    className="font-medium text-primary hover:underline"
                                                                 >
-                                                                    + Novo
-                                                                    Cliente
-                                                                </button>
-                                                            }
-                                                        >
-                                                            <select
-                                                                id="customer_id"
-                                                                name="customer_id"
-                                                                value={
-                                                                    selectedCustomer
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setSelectedCustomer(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-                                                            >
-                                                                <option value="">
-                                                                    Cliente
-                                                                    avulso / Não
-                                                                    identificado
-                                                                </option>
-                                                                {customerList.map(
-                                                                    (cust) => (
-                                                                        <option
-                                                                            key={
-                                                                                cust.id
-                                                                            }
-                                                                            value={
-                                                                                cust.id
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                cust.name
-                                                                            }
-                                                                            {cust.phone
-                                                                                ? ` (${cust.phone})`
-                                                                                : ''}
-                                                                        </option>
-                                                                    ),
-                                                                )}
-                                                            </select>
-                                                        </FormField>
-                                                    </div>
-
-                                                    <div className="sm:col-span-2">
+                                                                    <Plus aria-hidden="true" />{' '}
+                                                                    Novo cliente
+                                                                </Button>
+                                                            )
+                                                        }
+                                                    />
+                                                    <div>
                                                         <FormField
-                                                            label="Identificador / Mesa / Referência (opcional)"
+                                                            label="Referência / mesa"
                                                             name="reference_label"
                                                             error={
                                                                 errors.reference_label
+                                                            }
+                                                            required={
+                                                                referenceRequired
+                                                            }
+                                                            description={
+                                                                referenceRequired
+                                                                    ? 'Obrigatória nesta categoria'
+                                                                    : 'Opcional — mesa, balcão ou número do pedido'
                                                             }
                                                         >
                                                             <Input
                                                                 id="reference_label"
                                                                 name="reference_label"
-                                                                placeholder="Ex.: Mesa 04, Cartão 12, Balcão, Pedido 33"
+                                                                required={
+                                                                    referenceRequired
+                                                                }
+                                                                placeholder="Ex.: Mesa 04, Balcão, Pedido 33"
                                                             />
                                                         </FormField>
                                                     </div>
 
-                                                    <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Observações da comanda"
-                                                            name="notes"
-                                                            error={errors.notes}
-                                                        >
-                                                            <textarea
-                                                                id="notes"
+                                                    <div>
+                                                        {!notesOpen ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setNotesOpen(
+                                                                        true,
+                                                                    )
+                                                                }
+                                                                className="text-sm font-medium text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                                            >
+                                                                + Adicionar
+                                                                observação
+                                                            </button>
+                                                        ) : (
+                                                            <FormField
+                                                                label="Observações da comanda (opcional)"
                                                                 name="notes"
-                                                                rows={2}
-                                                                className="min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                                                placeholder="Informações adicionais para este atendimento..."
-                                                            />
-                                                        </FormField>
+                                                                error={
+                                                                    errors.notes
+                                                                }
+                                                            >
+                                                                <textarea
+                                                                    id="notes"
+                                                                    name="notes"
+                                                                    rows={2}
+                                                                    autoFocus
+                                                                    className="min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                                    placeholder="Informações adicionais para este atendimento..."
+                                                                />
+                                                            </FormField>
+                                                        )}
                                                     </div>
                                                 </div>
 

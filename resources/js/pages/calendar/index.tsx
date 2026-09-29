@@ -56,6 +56,7 @@ import {
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CustomerPicker } from '@/components/customer-picker';
 import {
     Dialog,
     DialogContent,
@@ -767,10 +768,17 @@ function AppointmentForm({
 
                             <div className="grid min-w-0 gap-5 md:grid-cols-2">
                                 <div className="min-w-0 md:col-span-2">
-                                    <FormField
+                                    <CustomerPicker
                                         label="Cliente"
                                         name="customer_id"
+                                        id="customer_id"
+                                        value={selectedCustomer}
+                                        options={customerList}
+                                        onChange={setSelectedCustomer}
+                                        required
+                                        disabled={isCancelled || isCompleted}
                                         error={errors.customer_id}
+                                        helper="Pesquise por nome ou telefone"
                                         action={
                                             !isCancelled && !isCompleted ? (
                                                 <button
@@ -786,35 +794,7 @@ function AppointmentForm({
                                                 </button>
                                             ) : undefined
                                         }
-                                    >
-                                        <select
-                                            id="customer_id"
-                                            name="customer_id"
-                                            value={selectedCustomer}
-                                            onChange={(e) =>
-                                                setSelectedCustomer(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            disabled={
-                                                isCancelled || isCompleted
-                                            }
-                                            required
-                                            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                        >
-                                            <option value="">
-                                                Selecione um cliente
-                                            </option>
-                                            {customerList.map((customer) => (
-                                                <option
-                                                    key={customer.id}
-                                                    value={customer.id}
-                                                >
-                                                    {customer.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </FormField>
+                                    />
                                 </div>
                                 <FormField
                                     label="Serviço"
