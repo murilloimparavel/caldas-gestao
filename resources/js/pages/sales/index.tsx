@@ -19,6 +19,7 @@ import {
     FormErrorSummary,
     FormField,
     formatMoney,
+    parseBrazilianCurrency,
     PageCanvas,
     Pagination,
     ResourceHeader,
@@ -157,6 +158,7 @@ export default function SalesIndex({
     const [createOpen, setCreateOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
+    const [cashReceived, setCashReceived] = useState('');
     const [createKey] = useState(() => createIdempotencyKey('sale-open'));
     const [closeKey, setCloseKey] = useState(() =>
         createIdempotencyKey('closing-session'),
@@ -712,6 +714,15 @@ export default function SalesIndex({
                                 setCloseOpen(false);
                                 setSelectedIds([]);
                             }}
+                            onSubmit={(event) => {
+                                if (
+                                    paymentMethod === 'cash' &&
+                                    parseBrazilianCurrency(cashReceived) <
+                                        selectedTotal
+                                ) {
+                                    event.preventDefault();
+                                }
+                            }}
                             className="space-y-4"
                         >
                             {({ errors, processing }) => (
@@ -781,33 +792,106 @@ export default function SalesIndex({
                                     </div>
 
                                     <FormField
-                                        label="Método de pagamento"
+                                        label="Como foi pago?"
                                         name="payment_method"
                                         error={errors.payment_method}
+                                        required
                                     >
-                                        <select
-                                            id="payment_method"
-                                            name="payment_method"
-                                            required
-                                            value={paymentMethod}
-                                            onChange={(event) =>
-                                                setPaymentMethod(
-                                                    event.target
-                                                        .value as PaymentMethod,
-                                                )
-                                            }
-                                            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                        <div
+                                            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                                            role="radiogroup"
+                                            aria-label="Forma de pagamento"
                                         >
                                             {paymentMethods.map((method) => (
-                                                <option
+                                                <label
                                                     key={method.value}
-                                                    value={method.value}
+                                                    className={`cursor-pointer rounded-xl border p-3 text-center text-xs font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/60 ${paymentMethod === method.value ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' : 'border-border bg-muted/20 text-muted-foreground hover:border-primary/50'}`}
                                                 >
+                                                    <input
+                                                        type="radio"
+                                                        name="payment_method"
+                                                        value={method.value}
+                                                        checked={
+                                                            paymentMethod ===
+                                                            method.value
+                                                        }
+                                                        onChange={() =>
+                                                            setPaymentMethod(
+                                                                method.value,
+                                                            )
+                                                        }
+                                                        className="sr-only"
+                                                    />
                                                     {method.label}
-                                                </option>
+                                                </label>
                                             ))}
-                                        </select>
+                                        </div>
                                     </FormField>
+
+                                    {paymentMethod === 'cash' ? (
+                                        <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                                            <FormField
+                                                label="Valor recebido em dinheiro"
+                                                name="cash_received_cents"
+                                                error={
+                                                    errors.cash_received_cents
+                                                }
+                                                required
+                                            >
+                                                <Input
+                                                    id="cash_received"
+                                                    inputMode="decimal"
+                                                    placeholder="0,00"
+                                                    value={cashReceived}
+                                                    onChange={(event) =>
+                                                        setCashReceived(
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    autoFocus
+                                                    required
+                                                    aria-describedby="cash-change"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="cash_received_cents"
+                                                    value={parseBrazilianCurrency(
+                                                        cashReceived,
+                                                    )}
+                                                />
+                                            </FormField>
+                                            <div
+                                                id="cash-change"
+                                                className="flex items-center justify-between border-t border-emerald-500/20 pt-3 text-sm"
+                                            >
+                                                <span className="text-muted-foreground">
+                                                    Troco
+                                                </span>
+                                                <span
+                                                    aria-live="polite"
+                                                    className={`font-display text-xl font-bold ${parseBrazilianCurrency(cashReceived) >= selectedTotal ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
+                                                >
+                                                    {formatMoney(
+                                                        Math.max(
+                                                            0,
+                                                            parseBrazilianCurrency(
+                                                                cashReceived,
+                                                            ) - selectedTotal,
+                                                        ),
+                                                    )}
+                                                </span>
+                                            </div>
+                                            {parseBrazilianCurrency(
+                                                cashReceived,
+                                            ) < selectedTotal ? (
+                                                <p className="text-xs text-destructive">
+                                                    Informe pelo menos{' '}
+                                                    {formatMoney(selectedTotal)}{' '}
+                                                    para concluir.
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
 
                                     <FormField
                                         label="Observações do fechamento (opcional)"

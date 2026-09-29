@@ -78,6 +78,10 @@ export default function ClosingSessionShow({ session }: Props) {
         payload?.totals?.final_total_cents ?? session.final_total_cents;
     const salesList = payload?.sales ?? session.sales ?? [];
     const paymentMethod = payload?.payment_method ?? session.payment_method;
+    const cashReceivedCents =
+        payload?.cash_received_cents ?? session.cash_received_cents;
+    const cashChangeCents =
+        payload?.cash_change_cents ?? session.cash_change_cents;
 
     return (
         <>
@@ -153,6 +157,28 @@ export default function ClosingSessionShow({ session }: Props) {
                                         {unitName}
                                     </p>
                                 </div>
+                                {paymentMethod === 'cash' &&
+                                cashReceivedCents != null ? (
+                                    <div>
+                                        <span className="text-2xs font-bold tracking-wider text-muted-foreground uppercase">
+                                            Dinheiro recebido / Troco
+                                        </span>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            {formatMoney(cashReceivedCents)}{' '}
+                                            <span className="font-normal text-muted-foreground">
+                                                /{' '}
+                                                {formatMoney(
+                                                    cashChangeCents ??
+                                                        Math.max(
+                                                            0,
+                                                            cashReceivedCents -
+                                                                finalTotalCents,
+                                                        ),
+                                                )}
+                                            </span>
+                                        </p>
+                                    </div>
+                                ) : null}
                                 <div className="text-left sm:text-right">
                                     <span className="font-mono text-sm font-bold text-foreground">
                                         {receiptNumber}
@@ -388,6 +414,23 @@ export default function ClosingSessionShow({ session }: Props) {
                                         {formatPaymentMethod(paymentMethod)}
                                     </span>
                                 </div>
+                                {paymentMethod === 'cash' &&
+                                cashReceivedCents != null ? (
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                        <span>Recebido / Troco</span>
+                                        <span className="font-semibold text-foreground">
+                                            {formatMoney(cashReceivedCents)} /{' '}
+                                            {formatMoney(
+                                                cashChangeCents ??
+                                                    Math.max(
+                                                        0,
+                                                        cashReceivedCents -
+                                                            finalTotalCents,
+                                                    ),
+                                            )}
+                                        </span>
+                                    </div>
+                                ) : null}
                             </div>
 
                             {/* Internal Disclaimer */}
@@ -501,6 +544,27 @@ export default function ClosingSessionShow({ session }: Props) {
                         <span>Pagamento:</span>
                         <span>{formatPaymentMethod(paymentMethod)}</span>
                     </div>
+                    {paymentMethod === 'cash' && cashReceivedCents != null ? (
+                        <>
+                            <div className="flex justify-between text-2xs">
+                                <span>Recebido:</span>
+                                <span>{formatMoney(cashReceivedCents)}</span>
+                            </div>
+                            <div className="flex justify-between text-2xs">
+                                <span>Troco:</span>
+                                <span>
+                                    {formatMoney(
+                                        cashChangeCents ??
+                                            Math.max(
+                                                0,
+                                                cashReceivedCents -
+                                                    finalTotalCents,
+                                            ),
+                                    )}
+                                </span>
+                            </div>
+                        </>
+                    ) : null}
                 </div>
 
                 <div className="border-t border-dashed border-black pt-2 text-center text-[9px]">

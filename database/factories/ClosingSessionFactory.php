@@ -22,6 +22,8 @@ class ClosingSessionFactory extends Factory
             'closing_subject' => 'customer:'.(string) Str::uuid7(),
             'currency' => 'BRL',
             'payment_method' => null,
+            'cash_received_cents' => null,
+            'cash_change_cents' => null,
             'expected_total_cents' => 10000,
             'final_total_cents' => 10000,
             'status' => 'draft',

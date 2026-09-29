@@ -40,6 +40,7 @@ final class FinalizeClosingSession extends OperationalAction
      *     sale_ids: list<string>,
      *     expected_total_cents?: int|null,
      *     payment_method: string,
+     *     cash_received_cents?: int|null,
      *     notes?: string|null,
      *     lock_versions?: array<string, int>|null
      * }  $data
@@ -143,6 +144,19 @@ final class FinalizeClosingSession extends OperationalAction
                 ]);
             }
 
+            $cashReceivedCents = $data['payment_method'] === 'cash'
+                ? (int) ($data['cash_received_cents'] ?? 0)
+                : null;
+            $cashChangeCents = $cashReceivedCents !== null
+                ? $cashReceivedCents - $calculatedFinalTotalCents
+                : null;
+
+            if ($cashReceivedCents !== null && $cashChangeCents < 0) {
+                throw ValidationException::withMessages([
+                    'cash_received_cents' => 'O valor recebido em dinheiro não pode ser menor que o total da comanda.',
+                ]);
+            }
+
             $datePrefix = now()->format('Ymd');
             $receiptNumber = 'REC-'.$datePrefix.'-'.strtoupper(Str::random(6));
 
@@ -173,6 +187,8 @@ final class FinalizeClosingSession extends OperationalAction
                 ] : null,
                 'currency' => 'BRL',
                 'payment_method' => $data['payment_method'] ?? null,
+                'cash_received_cents' => $cashReceivedCents,
+                'cash_change_cents' => $cashChangeCents,
                 'totals' => [
                     'total_gross_cents' => $totalGrossCents,
                     'total_discount_cents' => $totalDiscountCents,
@@ -208,6 +224,8 @@ final class FinalizeClosingSession extends OperationalAction
                 'closing_subject' => $closingSubject,
                 'currency' => 'BRL',
                 'payment_method' => $data['payment_method'] ?? null,
+                'cash_received_cents' => $cashReceivedCents,
+                'cash_change_cents' => $cashChangeCents,
                 'expected_total_cents' => $calculatedFinalTotalCents,
                 'final_total_cents' => $calculatedFinalTotalCents,
                 'status' => 'completed',

@@ -171,6 +171,109 @@ it('accepts permuta as a closing session payment method', function () {
         ->and($session->receipt_payload['payment_method'])->toBe('permuta');
 });
 
+it('rejects cash closing when the received amount is lower than the total', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'cash',
+        'cash_received_cents' => 3999,
+    ]);
+
+    $response->assertSessionHasErrors('cash_received_cents');
+    expect(ClosingSession::query()->where('tenant_id', $tenant->getKey())->exists())->toBeFalse();
+    expect($sale->fresh()->status)->toBe('open');
+});
+
+it('records exact cash payment with no change', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'cash',
+        'cash_received_cents' => 4000,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->cash_received_cents)->toBe(4000)
+        ->and($session->cash_change_cents)->toBe(0)
+        ->and($session->receipt_payload['cash_received_cents'])->toBe(4000)
+        ->and($session->receipt_payload['cash_change_cents'])->toBe(0);
+});
+
+it('records excess cash and calculates the change', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'cash',
+        'cash_received_cents' => 5000,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->cash_received_cents)->toBe(5000)
+        ->and($session->cash_change_cents)->toBe(1000)
+        ->and($session->receipt_payload['cash_received_cents'])->toBe(5000)
+        ->and($session->receipt_payload['cash_change_cents'])->toBe(1000);
+});
+
+it('keeps cash fields null for noncash closing methods', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'pix',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->cash_received_cents)->toBeNull()
+        ->and($session->cash_change_cents)->toBeNull()
+        ->and($session->receipt_payload['cash_received_cents'])->toBeNull()
+        ->and($session->receipt_payload['cash_change_cents'])->toBeNull();
+});
+
 it('consolidates multiple sales for the same customer into a single closing session', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
 

@@ -154,6 +154,8 @@ export type ReceiptPayload = {
         sales_count: number;
     };
     payment_method?: PaymentMethod | null;
+    cash_received_cents?: number | null;
+    cash_change_cents?: number | null;
     sales: Array<{
         id: string;
         category_name: string;
@@ -184,6 +186,8 @@ export type ClosingSession = {
     expected_total_cents: number;
     final_total_cents: number;
     payment_method?: PaymentMethod | null;
+    cash_received_cents?: number | null;
+    cash_change_cents?: number | null;
     status: ClosingSessionStatus;
     receipt_number: string | null;
     receipt_payload: ReceiptPayload | null;

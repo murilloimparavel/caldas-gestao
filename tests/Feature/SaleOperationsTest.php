@@ -720,6 +720,41 @@ it('transitions sale status through lifecycle and records history', function () 
         ->and($histories[2]->to_status)->toBe('cancelled');
 });
 
+it('rejects reusing a transition idempotency key for a different status payload', function () {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'lock_version' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->withHeader('X-Idempotency-Key', 'sale-transition-reused-key')
+        ->post(route('sales.transition', $sale), [
+            'status' => 'ready_to_bill',
+            'lock_version' => 1,
+        ])
+        ->assertRedirect(route('sales.show', $sale));
+
+    $this->flushHeaders();
+
+    $this->actingAs($owner)
+        ->withHeader('X-Idempotency-Key', 'sale-transition-reused-key')
+        ->post(route('sales.transition', $sale), [
+            'status' => 'open',
+            'reason' => 'Reabertura de comanda para inclusão de itens',
+            'lock_version' => 2,
+        ])
+        ->assertStatus(409);
+
+    $sale->refresh();
+
+    expect($sale->status)->toBe('ready_to_bill')
+        ->and($sale->lock_version)->toBe(2);
+});
+
 it('replays an idempotent sale creation mutation with X-Idempotency-Key', function () {
     [$owner, $tenant, $unit] = saleTestWorkspace();
 
