@@ -85,6 +85,35 @@ it('releases an expired legacy handle for a new tenant', function () {
         ->and($newHandle->status)->toBe(OnlineBookingHandleStatus::Reserved);
 });
 
+it('canonicalizes handles consistently before reserving them', function () {
+    [, $tenant, $unit] = onlineBookingWorkspace();
+
+    $handle = app(ManageOnlineBookingHandle::class)->reserveForDraft(
+        $tenant->getKey(),
+        $unit->getKey(),
+        '  Mixed Legacy Handle  ',
+    );
+
+    expect($handle->handle)->toBe('mixed-legacy-handle');
+});
+
+it('canonicalizes human-entered handles before validation and persistence', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_slug' => '  Mixed Human Handle  ',
+        'lock_version' => $unit->lock_version,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect(OnlineBookingSetting::query()->where('unit_id', $unit->getKey())->value('public_slug'))
+        ->toBe('mixed-human-handle')
+        ->and(OnlineBookingHandle::query()->where('unit_id', $unit->getKey())->value('handle'))
+        ->toBe('mixed-human-handle');
+});
+
 it('allows an expired foreign handle through settings validation and atomically reclaims it', function () {
     [, $formerTenant, $formerUnit] = onlineBookingWorkspace();
     $handles = app(ManageOnlineBookingHandle::class);
@@ -151,7 +180,7 @@ it('backfills the active publication handle instead of an unpublished draft hand
     OnlineBookingSetting::query()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $legacyUnit->getKey(),
-        'public_slug' => 'legacy-live-handle',
+        'public_slug' => 'Legacy Live Handle',
     ]);
 
     $migration = require base_path('database/migrations/2026_09_28_120001_backfill_online_booking_handles.php');
@@ -168,4 +197,38 @@ it('backfills the active publication handle instead of an unpublished draft hand
         'legacy-live-handle',
         'published-booking-handle',
     ]);
+});
+
+it('detects canonical backfill collisions before writing any handles', function () {
+    [, $tenant, $unit] = onlineBookingWorkspace();
+    $otherUnit = Unit::factory()->create(['tenant_id' => $tenant->getKey()]);
+
+    OnlineBookingSite::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => 'Legacy Collision',
+        'template_key' => 'essential',
+    ]);
+    OnlineBookingSite::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $otherUnit->getKey(),
+        'public_slug' => 'legacy-collision',
+        'template_key' => 'essential',
+    ]);
+
+    $migration = require base_path('database/migrations/2026_09_28_120001_backfill_online_booking_handles.php');
+
+    expect(fn () => $migration->up())
+        ->toThrow(RuntimeException::class, 'multiple units')
+        ->and(OnlineBookingHandle::query()->count())->toBe(0);
+});
+
+it('does not delete handles when the irreversible backfill is rolled back', function () {
+    [, $tenant, $unit] = onlineBookingWorkspace();
+    $handle = app(ManageOnlineBookingHandle::class)->reserveForDraft($tenant->getKey(), $unit->getKey(), 'post-deploy-handle');
+    $migration = require base_path('database/migrations/2026_09_28_120001_backfill_online_booking_handles.php');
+
+    $migration->down();
+
+    expect(OnlineBookingHandle::query()->whereKey($handle->getKey())->exists())->toBeTrue();
 });

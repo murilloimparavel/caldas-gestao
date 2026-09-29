@@ -42,7 +42,7 @@ it('allows an authorized owner to upload, replace, publish, and remove the booki
     $newPath = $setting->cover_image_path;
     expect($newPath)->not->toBe($oldPath)
         ->and($secondResponse->json('cover'))->toBe(Storage::disk('public')->url($newPath));
-    Storage::disk('public')->assertMissing($oldPath);
+    Storage::disk('public')->assertExists($oldPath);
     Storage::disk('public')->assertExists($newPath);
 
     $this->getJson(route('public_booking.show', [$tenant, $unit]))
@@ -54,7 +54,7 @@ it('allows an authorized owner to upload, replace, publish, and remove the booki
         ->assertJsonPath('cover', null);
 
     expect($setting->fresh()->cover_image_path)->toBeNull();
-    Storage::disk('public')->assertMissing($newPath);
+    Storage::disk('public')->assertExists($newPath);
 });
 
 it('validates cover uploads and authorizes them against the active unit', function (): void {

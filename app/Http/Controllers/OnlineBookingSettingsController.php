@@ -195,12 +195,7 @@ final class OnlineBookingSettingsController extends Controller
         $image = $request->file('image');
         $path = 'online-booking/'.$context->unit->getKey().'/cover/'.Str::random(40).'.webp';
         app(UploadedImageOptimizer::class)->storeWebp($image, Storage::disk((string) config('filesystems.media_disk')), $path);
-        $oldPath = $setting->cover_image_path;
         $setting->forceFill(['cover_image_path' => $path])->save();
-
-        if ($oldPath !== null) {
-            Storage::disk(config('filesystems.media_disk'))->delete($oldPath);
-        }
 
         return response()->json(['cover' => $setting->fresh()->cover_image_url]);
     }
@@ -214,7 +209,6 @@ final class OnlineBookingSettingsController extends Controller
             return response()->json(['cover' => null]);
         }
 
-        Storage::disk(config('filesystems.media_disk'))->delete($setting->cover_image_path);
         $setting->forceFill(['cover_image_path' => null])->save();
 
         return response()->json(['cover' => null]);
@@ -229,12 +223,7 @@ final class OnlineBookingSettingsController extends Controller
         $disk = Storage::disk((string) config('filesystems.media_disk'));
         $path = 'online-booking/'.$context->unit->getKey().'/logo/'.Str::random(40).'.webp';
         app(UploadedImageOptimizer::class)->storeWebp($request->file('image'), $disk, $path);
-        $oldPath = $setting->logo_image_path;
         $setting->forceFill(['logo_image_path' => $path])->save();
-
-        if ($oldPath !== null) {
-            $disk->delete($oldPath);
-        }
 
         return response()->json(['logo' => $setting->fresh()->logo_image_url]);
     }
@@ -248,7 +237,6 @@ final class OnlineBookingSettingsController extends Controller
             return response()->json(['logo' => null]);
         }
 
-        Storage::disk((string) config('filesystems.media_disk'))->delete($setting->logo_image_path);
         $setting->forceFill(['logo_image_path' => null])->save();
 
         return response()->json(['logo' => null]);
@@ -314,10 +302,6 @@ final class OnlineBookingSettingsController extends Controller
     {
         Gate::authorize('update', $context->unit);
         $gallery = $this->galleryImage($context, $image);
-        Storage::disk(config('filesystems.media_disk'))->delete($gallery->path);
-        if ($gallery->thumbnail_path !== null) {
-            Storage::disk(config('filesystems.media_disk'))->delete($gallery->thumbnail_path);
-        }
         $gallery->delete();
 
         return response()->json(['deleted' => true]);

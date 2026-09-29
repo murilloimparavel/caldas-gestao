@@ -11,16 +11,25 @@ use App\Support\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class OnlineBookingSettingsRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $publicSlug = $this->input('public_slug');
+
+        if (is_string($publicSlug)) {
+            $publicSlug = Str::slug($publicSlug);
+        } elseif ($publicSlug === null || $publicSlug === '') {
+            $publicSlug = $this->attributes->get(TenantContext::class)?->unit?->slug;
+        }
+
         $this->merge([
             'service_ids' => is_array($this->input('service_ids')) ? $this->input('service_ids') : [],
             'professional_ids' => is_array($this->input('professional_ids')) ? $this->input('professional_ids') : [],
-            'public_slug' => $this->input('public_slug') ?: ($this->attributes->get(TenantContext::class)?->unit?->slug),
+            'public_slug' => $publicSlug,
             'template_key' => $this->input('template_key') ?: 'essential',
         ]);
     }

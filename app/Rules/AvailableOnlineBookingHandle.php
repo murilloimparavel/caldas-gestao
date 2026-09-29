@@ -14,9 +14,9 @@ final class AvailableOnlineBookingHandle implements ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $handle = Str::lower(trim((string) $value));
+        $handle = is_string($value) ? Str::slug(trim($value)) : '';
         $reservedHandles = collect((array) config('online_booking.reserved_handles', []))
-            ->map(fn (mixed $reserved): string => Str::lower((string) $reserved));
+            ->map(fn (mixed $reserved): string => Str::slug((string) $reserved));
 
         if ($reservedHandles->contains($handle)) {
             $fail('Este identificador é reservado pelo sistema.');

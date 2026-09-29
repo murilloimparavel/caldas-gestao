@@ -4,6 +4,8 @@ namespace App\Actions\OnlineBooking;
 
 use App\Enums\OnlineBookingHandleStatus;
 use App\Models\OnlineBookingHandle;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -11,7 +13,7 @@ final class ManageOnlineBookingHandle
 {
     public function reserveForDraft(string $tenantId, string $unitId, string $handle): OnlineBookingHandle
     {
-        $handle = Str::lower(trim($handle));
+        $handle = self::normalizeHandle($handle);
         $this->purgeExpiredHandle($handle);
 
         $this->releaseDraftReservations($tenantId, $unitId, $handle);
@@ -21,31 +23,23 @@ final class ManageOnlineBookingHandle
             ->lockForUpdate()
             ->first();
 
-        if ($existing instanceof OnlineBookingHandle) {
-            if ($existing->unit_id !== $unitId || $existing->tenant_id !== $tenantId) {
-                throw new ConflictHttpException('Este identificador público já está sendo usado por outra barbearia.');
-            }
+        $existing ??= $this->createHandle($tenantId, $unitId, $handle, OnlineBookingHandleStatus::Reserved);
 
-            if ($existing->status === OnlineBookingHandleStatus::Redirect) {
-                throw new ConflictHttpException('Este identificador foi usado recentemente e ainda está reservado para redirecionamento.');
-            }
-
-            return $existing;
+        if ($existing->unit_id !== $unitId || $existing->tenant_id !== $tenantId) {
+            throw new ConflictHttpException('Este identificador público já está sendo usado por outra barbearia.');
         }
 
-        return OnlineBookingHandle::query()->create([
-            'id' => (string) Str::uuid7(),
-            'tenant_id' => $tenantId,
-            'unit_id' => $unitId,
-            'handle' => $handle,
-            'status' => OnlineBookingHandleStatus::Reserved,
-        ]);
+        if ($existing->status === OnlineBookingHandleStatus::Redirect) {
+            throw new ConflictHttpException('Este identificador foi usado recentemente e ainda está reservado para redirecionamento.');
+        }
+
+        return $existing;
     }
 
     public function activateForPublication(string $tenantId, string $unitId, ?string $previousHandle, string $handle): OnlineBookingHandle
     {
-        $previousHandle = $previousHandle !== null ? Str::lower(trim($previousHandle)) : null;
-        $handle = Str::lower(trim($handle));
+        $previousHandle = $previousHandle !== null ? self::normalizeHandle($previousHandle) : null;
+        $handle = self::normalizeHandle($handle);
         $this->purgeExpiredHandle($handle);
 
         $desired = OnlineBookingHandle::query()
@@ -53,7 +47,9 @@ final class ManageOnlineBookingHandle
             ->lockForUpdate()
             ->first();
 
-        if ($desired instanceof OnlineBookingHandle && ($desired->tenant_id !== $tenantId || $desired->unit_id !== $unitId)) {
+        $desired ??= $this->createHandle($tenantId, $unitId, $handle, OnlineBookingHandleStatus::Current);
+
+        if ($desired->tenant_id !== $tenantId || $desired->unit_id !== $unitId) {
             throw new ConflictHttpException('Este identificador público já está sendo usado por outra barbearia.');
         }
 
@@ -78,13 +74,12 @@ final class ManageOnlineBookingHandle
                 throw new ConflictHttpException('O identificador da publicação anterior pertence a outra barbearia.');
             }
 
-            $previous ??= OnlineBookingHandle::query()->create([
-                'id' => (string) Str::uuid7(),
-                'tenant_id' => $tenantId,
-                'unit_id' => $unitId,
-                'handle' => $previousHandle,
-                'status' => OnlineBookingHandleStatus::Current,
-            ]);
+            $previous ??= $this->createHandle($tenantId, $unitId, $previousHandle, OnlineBookingHandleStatus::Current);
+
+            if ($previous->tenant_id !== $tenantId || $previous->unit_id !== $unitId) {
+                throw new ConflictHttpException('O identificador da publicação anterior pertence a outra barbearia.');
+            }
+
             $currentHandles->push($previous);
         }
 
@@ -96,14 +91,6 @@ final class ManageOnlineBookingHandle
                 ])->save();
             }
         }
-
-        $desired ??= OnlineBookingHandle::query()->create([
-            'id' => (string) Str::uuid7(),
-            'tenant_id' => $tenantId,
-            'unit_id' => $unitId,
-            'handle' => $handle,
-            'status' => OnlineBookingHandleStatus::Current,
-        ]);
 
         $desired->forceFill([
             'status' => OnlineBookingHandleStatus::Current,
@@ -118,6 +105,46 @@ final class ManageOnlineBookingHandle
             ->delete();
 
         return $desired->fresh();
+    }
+
+    private static function normalizeHandle(string $handle): string
+    {
+        return Str::slug(trim($handle));
+    }
+
+    private function createHandle(string $tenantId, string $unitId, string $handle, OnlineBookingHandleStatus $status): OnlineBookingHandle
+    {
+        try {
+            return DB::transaction(fn (): OnlineBookingHandle => OnlineBookingHandle::query()->create([
+                'id' => (string) Str::uuid7(),
+                'tenant_id' => $tenantId,
+                'unit_id' => $unitId,
+                'handle' => $handle,
+                'status' => $status,
+            ]));
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
+
+            $existing = OnlineBookingHandle::query()
+                ->where('handle', $handle)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $existing instanceof OnlineBookingHandle) {
+                throw $exception;
+            }
+
+            return $existing;
+        }
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        $sqlState = (string) ($exception->errorInfo[0] ?? $exception->getCode());
+
+        return in_array($sqlState, ['23000', '23505'], true);
     }
 
     private function purgeExpiredHandle(string $handle): void

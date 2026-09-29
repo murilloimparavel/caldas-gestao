@@ -9,6 +9,7 @@ use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarEvent;
 use App\Models\GoogleCalendarOAuthState;
 use App\Models\TenantDomain;
+use App\Models\TenantSubscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -66,6 +67,30 @@ test('creates and then updates a Google Calendar event idempotently', function (
     Http::assertSentCount(2);
     Http::assertSent(fn ($request): bool => $request->method() === 'POST');
     Http::assertSent(fn ($request): bool => $request->method() === 'PATCH');
+});
+
+test('does not sync an appointment when subscription expires before queued job runs', function (): void {
+    config()->set('services.google_calendar.calendar_url', 'https://calendar.test/v3');
+
+    $appointment = Appointment::factory()->create();
+    TenantSubscription::factory()->create([
+        'tenant_id' => $appointment->tenant_id,
+        'status' => 'past_due',
+        'ends_at' => now()->subDay(),
+    ]);
+    GoogleCalendarConnection::factory()->create([
+        'tenant_id' => $appointment->tenant_id,
+        'unit_id' => $appointment->unit_id,
+        'access_token' => 'token',
+        'token_expires_at' => now()->addHour(),
+    ]);
+
+    Http::fake();
+
+    (new SyncGoogleCalendarAppointment((string) $appointment->getKey()))->handle();
+
+    expect(GoogleCalendarEvent::query()->count())->toBe(0);
+    Http::assertNothingSent();
 });
 
 test('deletes a remote event when an appointment is cancelled', function (): void {

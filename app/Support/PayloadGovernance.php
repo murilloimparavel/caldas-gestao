@@ -66,6 +66,7 @@ final class PayloadGovernance
     /** @var list<string> */
     private const RESPONSE_KEYS = [
         'resource_id', 'resource_type', 'status', 'response_code', 'next_cursor',
+        'confirmation_status', 'confirmation_message',
     ];
 
     /** @var list<string> */

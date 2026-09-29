@@ -23,6 +23,7 @@ use App\Support\CalendarAvailability;
 use App\Support\CalendarConflictException;
 use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
+use App\Support\PublicBookingConfirmation;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -48,6 +49,7 @@ final class PublicBookingController extends Controller
     public function __construct(
         private readonly CalendarAvailability $availability,
         private readonly IdempotencyService $idempotency,
+        private readonly PublicBookingConfirmation $confirmation,
     ) {}
 
     public function show(Tenant $tenant, Unit $unit): Response|JsonResponse
@@ -111,7 +113,12 @@ final class PublicBookingController extends Controller
         $gallery = ($publication !== null || is_array($preview)) && is_array($content['gallery'] ?? null)
             ? collect($content['gallery'])->map(fn (array $image): array => ['url' => MediaUrl::for((string) ($image['path'] ?? '')), 'thumbnail_url' => MediaUrl::for($image['thumbnail_path'] ?? ($image['path'] ?? null)), 'alt_text' => $image['alt_text'] ?? null])->values()->all()
             : $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => MediaUrl::for($image->path), 'thumbnail_url' => MediaUrl::for($image->thumbnail_path ?? $image->path), 'alt_text' => $image->alt_text])->values()->all();
-        $coverImagePath = $identity['cover_image_path'] ?? $setting?->cover_image_path;
+        $coverImagePath = array_key_exists('cover_image_path', $identity)
+            ? $identity['cover_image_path']
+            : $setting?->cover_image_path;
+        $logoImagePath = array_key_exists('logo_image_path', $identity)
+            ? $identity['logo_image_path']
+            : $setting?->logo_image_path;
         $payload = [
             'unit' => [
                 'tenant_slug' => $tenant->slug,
@@ -123,8 +130,8 @@ final class PublicBookingController extends Controller
                 'seo' => is_array($content['seo'] ?? null) ? $content['seo'] : ['title' => $unit->name, 'description' => $description],
                 'canonical_url' => $this->canonicalBookingUrl($tenant, $unit, $publication, $publicSlug),
                 'is_preview' => is_array($preview),
-                'cover_image_url' => $coverImagePath === null ? null : MediaUrl::for((string) $coverImagePath),
-                'logo_image_url' => $setting?->logo_image_url,
+                'cover_image_url' => is_string($coverImagePath) ? MediaUrl::for($coverImagePath) : null,
+                'logo_image_url' => is_string($logoImagePath) ? MediaUrl::for($logoImagePath) : null,
                 'brand_color' => $brandColor,
                 'template_key' => $templateKey,
                 'appearance' => $appearance,
@@ -495,27 +502,56 @@ final class PublicBookingController extends Controller
             null,
             $key,
             [...$data, 'unit_id' => $unit->getKey()],
-            fn (): array => [
-                'resource_id' => $create->handle($tenant, $unit, $data)->getKey(),
-                'resource_type' => 'appointment',
-                'status' => 'scheduled',
-            ],
+            function () use ($create, $tenant, $unit, $data): array {
+                $appointment = $create->handle($tenant, $unit, $data);
+                $confirmation = $this->confirmation->forTenant($tenant);
+
+                return [
+                    'resource_id' => $appointment->getKey(),
+                    'resource_type' => 'appointment',
+                    'status' => 'scheduled',
+                    'confirmation_status' => $confirmation['status'],
+                    'confirmation_message' => $confirmation['message'],
+                ];
+            },
         );
         $appointmentId = $result->key->resource_id ?? ($result->value['resource_id'] ?? null);
+        $confirmationStatus = is_array($result->value) && is_string($result->value['confirmation_status'] ?? null)
+            ? $result->value['confirmation_status']
+            : 'confirmed';
+        $confirmationMessage = is_array($result->value) && is_string($result->value['confirmation_message'] ?? null)
+            ? $result->value['confirmation_message']
+            : 'Seu horário foi confirmado.';
 
         return response()->json([
             'appointment' => ['id' => $appointmentId, 'status' => 'scheduled'],
+            'confirmation' => ['status' => $confirmationStatus, 'message' => $confirmationMessage],
             'replayed' => $result->replayed,
-            'whatsapp_url' => $this->whatsappUrl($appointmentId, $unit),
+            'whatsapp_url' => $this->whatsappUrl($appointmentId, $unit, $confirmationStatus, $confirmationMessage),
         ], $result->replayed ? 200 : 201);
     }
 
-    private function whatsappUrl(string $appointmentId, Unit $unit): ?string
+    private function whatsappUrl(string $appointmentId, Unit $unit, string $confirmationStatus, string $confirmationMessage): ?string
     {
         $appointment = Appointment::query()->with(['professional', 'items'])->find($appointmentId);
         $phone = $this->normalizePhone($appointment?->professional?->phone ?: $unit->onlineBookingSetting?->whatsapp_phone);
 
-        return $phone === '' ? null : 'https://wa.me/'.$phone.'?text='.rawurlencode('Olá! Solicitei um agendamento para '.$appointment->items->first()?->service_name_snapshot.'.');
+        if ($phone === '' || $appointment === null) {
+            return null;
+        }
+
+        $services = $appointment->items->map(fn ($item): string => '- '.$item->service_name_snapshot)->implode("\n");
+        $duration = $appointment->items->sum('duration_minutes');
+        $price = number_format($appointment->items->sum('price_cents') / 100, 2, ',', '.');
+        $message = implode("\n", [
+            'Olá! Solicitei um agendamento para:',
+            $services,
+            'Duração total: '.$duration.' min.',
+            'Valor estimado: R$ '.$price.'.',
+            $confirmationStatus === 'pending_confirmation' ? $confirmationMessage : 'Seu horário foi confirmado.',
+        ]);
+
+        return 'https://wa.me/'.$phone.'?text='.rawurlencode($message);
     }
 
     private function normalizePhone(?string $phone): string

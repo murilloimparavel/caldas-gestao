@@ -37,11 +37,13 @@ export function AppearanceEditor({
     draft,
     settings,
     unitName,
+    templateKey,
     logoUrl,
 }: {
     draft: NonNullable<OnlineBookingProps['draft']>;
     settings: PublicSettings;
     unitName: string;
+    templateKey: string;
     logoUrl?: string | null;
 }) {
     const initial = {
@@ -99,7 +101,9 @@ export function AppearanceEditor({
         try {
             await draftRequest.patch(onlineBooking.draft.update.url());
             setSaved(true);
-            router.reload({ only: ['draft', 'publication', 'draftDiff'] });
+            router.reload({
+                only: ['draft', 'publication', 'draftDiff', 'previewUrl'],
+            });
         } catch {
             setError('Não foi possível salvar a aparência. Tente novamente.');
         } finally {
@@ -125,65 +129,73 @@ export function AppearanceEditor({
                         router.reload({ only: ['settings', 'unit'] })
                     }
                 />
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <div className={bookingTokens.space.controlGroup}>
-                        <Label htmlFor="appearance-brand-name">
-                            Nome público
-                        </Label>
-                        <Input
-                            id="appearance-brand-name"
-                            value={appearance.brand_name}
-                            onChange={(event) =>
-                                update('brand_name', event.target.value)
-                            }
-                            placeholder={unitName}
-                            maxLength={120}
-                        />
+                {templateKey === 'atelier-barber' ? (
+                    <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                        A paleta de referência do Atelier Barber é fixa neste
+                        template. Para personalizar as cores, selecione o
+                        template Essencial.
+                    </p>
+                ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className={bookingTokens.space.controlGroup}>
+                            <Label htmlFor="appearance-brand-name">
+                                Nome público
+                            </Label>
+                            <Input
+                                id="appearance-brand-name"
+                                value={appearance.brand_name}
+                                onChange={(event) =>
+                                    update('brand_name', event.target.value)
+                                }
+                                placeholder={unitName}
+                                maxLength={120}
+                            />
+                        </div>
+                        <div className={bookingTokens.space.controlGroup}>
+                            <Label htmlFor="appearance-cta-label">
+                                Texto do botão
+                            </Label>
+                            <Input
+                                id="appearance-cta-label"
+                                value={appearance.cta_label}
+                                onChange={(event) =>
+                                    update('cta_label', event.target.value)
+                                }
+                                maxLength={80}
+                            />
+                        </div>
+                        <div
+                            className={`${bookingTokens.space.controlGroup} sm:col-span-2`}
+                        >
+                            <Label htmlFor="appearance-headline">
+                                Título principal
+                            </Label>
+                            <Input
+                                id="appearance-headline"
+                                value={appearance.headline}
+                                onChange={(event) =>
+                                    update('headline', event.target.value)
+                                }
+                                maxLength={160}
+                            />
+                        </div>
+                        <div
+                            className={`${bookingTokens.space.controlGroup} sm:col-span-2`}
+                        >
+                            <Label htmlFor="appearance-subheadline">
+                                Subtítulo
+                            </Label>
+                            <Input
+                                id="appearance-subheadline"
+                                value={appearance.subheadline}
+                                onChange={(event) =>
+                                    update('subheadline', event.target.value)
+                                }
+                                maxLength={240}
+                            />
+                        </div>
                     </div>
-                    <div className={bookingTokens.space.controlGroup}>
-                        <Label htmlFor="appearance-cta-label">
-                            Texto do botão
-                        </Label>
-                        <Input
-                            id="appearance-cta-label"
-                            value={appearance.cta_label}
-                            onChange={(event) =>
-                                update('cta_label', event.target.value)
-                            }
-                            maxLength={80}
-                        />
-                    </div>
-                    <div
-                        className={`${bookingTokens.space.controlGroup} sm:col-span-2`}
-                    >
-                        <Label htmlFor="appearance-headline">
-                            Título principal
-                        </Label>
-                        <Input
-                            id="appearance-headline"
-                            value={appearance.headline}
-                            onChange={(event) =>
-                                update('headline', event.target.value)
-                            }
-                            maxLength={160}
-                        />
-                    </div>
-                    <div
-                        className={`${bookingTokens.space.controlGroup} sm:col-span-2`}
-                    >
-                        <Label htmlFor="appearance-subheadline">
-                            Subtítulo
-                        </Label>
-                        <Input
-                            id="appearance-subheadline"
-                            value={appearance.subheadline}
-                            onChange={(event) =>
-                                update('subheadline', event.target.value)
-                            }
-                            maxLength={240}
-                        />
-                    </div>
-                </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                     {(
                         [

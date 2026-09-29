@@ -70,7 +70,7 @@ it('keeps public booking available while the tenant subscription is delinquent',
 
 it('allows a delinquent tenant to create a public booking', function (): void {
     [, $tenant, $unit] = delinquencyBookingWorkspace();
-    delinquencySubscription($tenant);
+    $subscription = delinquencySubscription($tenant);
     $service = Service::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -111,7 +111,25 @@ it('allows a delinquent tenant to create a public booking', function (): void {
             'phone' => '+55 11 98888-0000',
         ]);
 
-    $response->assertCreated()->assertJsonPath('appointment.status', 'scheduled');
+    $response->assertCreated()
+        ->assertJsonPath('appointment.status', 'scheduled')
+        ->assertJsonPath('confirmation.status', 'pending_confirmation')
+        ->assertJsonPath('confirmation.message', 'Seu pedido de agendamento foi recebido. A barbearia ainda precisa confirmar o horário; aguarde nosso retorno.');
+
+    $subscription->update(['status' => 'active', 'ends_at' => now()->addDay()]);
+    $replay = $this->withHeader('X-Idempotency-Key', 'delinquent-public-booking')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(),
+            'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(),
+            'name' => 'Public Customer',
+            'phone' => '+55 11 98888-0000',
+        ]);
+
+    $replay->assertSuccessful()
+        ->assertJsonPath('replayed', true)
+        ->assertJsonPath('confirmation.status', 'pending_confirmation')
+        ->assertJsonPath('confirmation.message', 'Seu pedido de agendamento foi recebido. A barbearia ainda precisa confirmar o horário; aguarde nosso retorno.');
     expect(Appointment::query()->sole()->source)->toBe('online');
     Queue::assertPushed(SyncGoogleCalendarAppointment::class);
 });

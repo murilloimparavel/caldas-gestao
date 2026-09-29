@@ -14,7 +14,7 @@ import {
     UserRound,
     Globe2,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useInitials } from '@/hooks/use-initials';
 import { store } from '@/routes/public_booking/appointments';
 import { useBookingAvailability } from './hooks/use-booking-availability';
+import {
+    addBookingCalendarDays,
+    bookingDateInTimezone,
+    useFirstAvailableProfessional,
+} from './hooks/use-first-available-professional';
 import {
     AtelierProgress,
     AtelierSelectionSummary,
@@ -139,6 +144,10 @@ type AppointmentResponse = {
     appointment: { id: string; status: string };
     replayed: boolean;
     whatsapp_url?: string | null;
+    confirmation?: {
+        status: 'confirmed' | 'pending_confirmation';
+        message: string;
+    };
 };
 type Tab = 'details' | 'services' | 'professionals' | 'reviews';
 
@@ -162,13 +171,9 @@ const formatDateTimeSlot = (iso: string, timezone: string): string => {
 
     return `${formattedDate} às ${time(iso, timezone)}`;
 };
-const today = (): string => new Date().toISOString().slice(0, 10);
-const limit = (): string => {
-    const date = new Date();
-    date.setDate(date.getDate() + 31);
-
-    return date.toISOString().slice(0, 10);
-};
+const today = (timezone: string): string => bookingDateInTimezone(timezone);
+const limit = (timezone: string): string =>
+    addBookingCalendarDays(bookingDateInTimezone(timezone), 31);
 const addressLabel = (address: Address | null): string | null =>
     address
         ? [
@@ -179,10 +184,54 @@ const addressLabel = (address: Address | null): string | null =>
               .filter(Boolean)
               .join(' — ')
         : null;
+const eligibleForServices = (
+    selectedServices: Service[],
+    allProfessionals: Professional[],
+): Professional[] => {
+    if (selectedServices.length === 0) {
+        return allProfessionals;
+    }
+
+    const candidates =
+        allProfessionals.length > 0
+            ? allProfessionals
+            : (selectedServices[0]?.professionals ?? []);
+
+    return candidates.filter((professional) =>
+        selectedServices.every((service) =>
+            service.professionals.some(
+                (serviceProfessional) =>
+                    serviceProfessional.id === professional.id,
+            ),
+        ),
+    );
+};
+const createIdempotencyKey = (): string =>
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
 const safeColor = (
     value: string | null | undefined,
     fallback: string,
 ): string => (value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback);
+const contrastingForeground = (hexColor: string): string => {
+    const linearChannel = (start: number): number => {
+        const channel =
+            Number.parseInt(hexColor.slice(start, start + 2), 16) / 255;
+
+        return channel <= 0.04045
+            ? channel / 12.92
+            : ((channel + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance =
+        0.2126 * linearChannel(1) +
+        0.7152 * linearChannel(3) +
+        0.0722 * linearChannel(5);
+    const blackContrast = (luminance + 0.05) / 0.05;
+    const whiteContrast = 1.05 / (luminance + 0.05);
+
+    return blackContrast >= whiteContrast ? '#000000' : '#ffffff';
+};
 const errorText = (value: unknown): string | null => {
     if (Array.isArray(value)) {
         return value.length > 0 ? String(value[0]) : null;
@@ -204,17 +253,23 @@ const resolveAppearance = (unit: Unit): ResolvedBookingAppearance => ({
         unit.appearance?.subheadline?.trim() ||
         unit.settings?.appearance?.subheadline?.trim() ||
         'Escolha um serviço para começar seu agendamento.',
-    primary_color: safeColor(
-        unit.appearance?.primary_color ??
-            unit.settings?.appearance?.primary_color ??
-            unit.brand_color,
-        unit.template_key === 'atelier-barber' ? '#d4af37' : '#2563eb',
-    ),
-    background_color: safeColor(
-        unit.appearance?.background_color ??
-            unit.settings?.appearance?.background_color,
-        unit.template_key === 'atelier-barber' ? '#0d0d0c' : '#f7f5f0',
-    ),
+    primary_color:
+        unit.template_key === 'atelier-barber'
+            ? '#d4af37'
+            : safeColor(
+                  unit.appearance?.primary_color ??
+                      unit.settings?.appearance?.primary_color ??
+                      unit.brand_color,
+                  '#2563eb',
+              ),
+    background_color:
+        unit.template_key === 'atelier-barber'
+            ? '#0d0d0c'
+            : safeColor(
+                  unit.appearance?.background_color ??
+                      unit.settings?.appearance?.background_color,
+                  '#f7f5f0',
+              ),
     cta_label:
         unit.appearance?.cta_label?.trim() ||
         unit.settings?.appearance?.cta_label?.trim() ||
@@ -225,6 +280,9 @@ const appearanceStyle = (
 ): React.CSSProperties =>
     ({
         '--booking-primary': appearance.primary_color,
+        '--booking-primary-foreground': contrastingForeground(
+            appearance.primary_color,
+        ),
         '--booking-background': appearance.background_color,
     }) as React.CSSProperties;
 const dayNames = [
@@ -331,13 +389,20 @@ export default function PublicBooking({
     const [serviceId, setServiceId] = useState('');
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
     const [professionalId, setProfessionalId] = useState('');
+    const [professionalMode, setProfessionalMode] = useState<
+        'manual' | 'first_available'
+    >('manual');
+    const [firstAvailabilityAttempt, setFirstAvailabilityAttempt] = useState(0);
     const [date, setDate] = useState('');
     const [slot, setSlot] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [bookingConfirmation, setBookingConfirmation] = useState<
+        AppointmentResponse['confirmation'] | null
+    >(null);
     const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
     const [bookingError, setBookingError] = useState<string | null>(null);
     const [bookingErrorKind, setBookingErrorKind] = useState<
-        'catalog' | 'slot' | 'generic' | null
+        'catalog' | 'slot' | 'generic' | 'service_limit' | null
     >(null);
     const [query, setQuery] = useState('');
     const [serviceCategory, setServiceCategory] = useState('Todos');
@@ -351,9 +416,49 @@ export default function PublicBooking({
         () => services.find((item) => item.id === serviceId) ?? null,
         [serviceId, services],
     );
-    const selectedProfessional = selectedService?.professionals.find(
+    const selectedServices = useMemo(
+        () => services.filter((item) => selectedServiceIds.includes(item.id)),
+        [selectedServiceIds, services],
+    );
+    const selectedTotalCents = selectedServices.reduce(
+        (total, service) => total + service.price_cents,
+        0,
+    );
+    const selectedTotalMinutes = selectedServices.reduce(
+        (total, service) => total + service.duration_minutes,
+        0,
+    );
+    const eligibleProfessionals = useMemo(
+        () => eligibleForServices(selectedServices, professionals),
+        [professionals, selectedServices],
+    );
+    const selectedProfessional = eligibleProfessionals.find(
         (item) => item.id === professionalId,
     );
+    const handleFirstAvailableFound = useCallback(
+        (result: { professionalId: string; date: string; slot: string }) => {
+            setProfessionalId(result.professionalId);
+            setDate(result.date);
+            setSlot('');
+        },
+        [],
+    );
+    const firstAvailableSearch = useFirstAvailableProfessional({
+        enabled: professionalMode === 'first_available',
+        args,
+        serviceIds: selectedServiceIds,
+        professionals: eligibleProfessionals,
+        timezone: unit.timezone,
+        refreshKey: firstAvailabilityAttempt,
+        onFound: handleFirstAvailableFound,
+    });
+    const handleAvailabilityError = useCallback(() => {
+        setSlot('');
+        setBookingError(
+            'Não foi possível carregar os horários. Escolha outra data ou tente novamente.',
+        );
+        setBookingErrorKind('slot');
+    }, []);
     const visibleServices = services.filter(
         (item) =>
             item.name.toLowerCase().includes(query.toLowerCase()) &&
@@ -373,14 +478,12 @@ export default function PublicBooking({
         serviceIds: selectedServiceIds,
         professionalId,
         date,
-        onError: () => {
-            setSlot('');
-            setBookingError(
-                'Não foi possível carregar os horários. Escolha outra data ou tente novamente.',
-            );
-            setBookingErrorKind('slot');
-        },
+        onError: handleAvailabilityError,
     });
+    const idempotencyKeyRef = useRef<{
+        signature: string;
+        key: string;
+    } | null>(null);
     const appointmentRequest = useHttp<AppointmentData, AppointmentResponse>({
         service_id: '',
         service_ids: [],
@@ -396,6 +499,7 @@ export default function PublicBooking({
             setSelectedServiceIds([]);
             setServiceId('');
             setProfessionalId('');
+            setProfessionalMode('manual');
             setDate('');
             setSlot('');
             setBookingError(null);
@@ -409,14 +513,40 @@ export default function PublicBooking({
             ? selectedServiceIds.filter((selectedId) => selectedId !== id)
             : [...selectedServiceIds, id];
 
+        if (nextIds.length > 8) {
+            setBookingError(
+                'Você pode selecionar no máximo 8 serviços por agendamento.',
+            );
+            setBookingErrorKind('service_limit');
+
+            return;
+        }
+
+        const nextServices = services.filter((service) =>
+            nextIds.includes(service.id),
+        );
+        const nextProfessionals = eligibleForServices(
+            nextServices,
+            professionals,
+        );
+
         setSelectedServiceIds(nextIds);
         setServiceId(nextIds[0] ?? '');
 
-        if (bookingFlow === 'service_first') {
+        if (nextIds.length === 0) {
             setProfessionalId('');
+            setProfessionalMode('manual');
+            setDate('');
+        } else {
+            setProfessionalId((current) =>
+                nextProfessionals.some(
+                    (professional) => professional.id === current,
+                )
+                    ? current
+                    : '',
+            );
         }
 
-        setDate('');
         setSlot('');
         setBookingError(null);
         setBookingErrorKind(null);
@@ -424,8 +554,22 @@ export default function PublicBooking({
         setSubmitted(false);
     };
     const chooseProfessional = (id: string): void => {
+        setProfessionalMode('manual');
         setProfessionalId(id);
-        setDate('');
+        setSlot('');
+        setBookingError(null);
+        setBookingErrorKind(null);
+    };
+    const chooseFirstAvailable = (): void => {
+        setProfessionalMode('first_available');
+        setFirstAvailabilityAttempt((attempt) => attempt + 1);
+        setProfessionalId('');
+        setSlot('');
+        setBookingError(null);
+        setBookingErrorKind(null);
+    };
+    const chooseDate = (value: string): void => {
+        setDate(value);
         setSlot('');
         setBookingError(null);
         setBookingErrorKind(null);
@@ -446,6 +590,22 @@ export default function PublicBooking({
             professional_id: professionalId,
             starts_at: slot,
         };
+        const signature = JSON.stringify({
+            route: args,
+            service_ids: selectedServiceIds,
+            professional_id: professionalId,
+            starts_at: slot,
+            name: bookingData.name,
+            phone: bookingData.phone,
+            email: bookingData.email ?? '',
+            notes: bookingData.notes ?? '',
+        });
+
+        const idempotencyKey =
+            idempotencyKeyRef.current?.signature === signature
+                ? idempotencyKeyRef.current.key
+                : createIdempotencyKey();
+        idempotencyKeyRef.current = { signature, key: idempotencyKey };
 
         appointmentRequest.transform((data) => {
             const payload: Record<string, unknown> = {
@@ -453,11 +613,11 @@ export default function PublicBooking({
                 ...bookingData,
             };
 
-            if (!data.email?.trim()) {
+            if (!bookingData.email?.trim()) {
                 delete payload.email;
             }
 
-            if (!data.notes?.trim()) {
+            if (!bookingData.notes?.trim()) {
                 delete payload.notes;
             }
 
@@ -469,15 +629,18 @@ export default function PublicBooking({
             store.url(args, { query: bookingAttributionQuery() }),
             {
                 headers: {
-                    'X-Idempotency-Key':
-                        typeof crypto.randomUUID === 'function'
-                            ? crypto.randomUUID()
-                            : `${Date.now()}-${Math.random()}`,
+                    'X-Idempotency-Key': idempotencyKey,
                 },
                 onSuccess: (response) => {
                     setBookingError(null);
                     setBookingErrorKind(null);
                     setWhatsappUrl(response.whatsapp_url ?? null);
+                    setBookingConfirmation(
+                        response.confirmation ?? {
+                            status: 'confirmed',
+                            message: 'Seu horário foi confirmado.',
+                        },
+                    );
                     setSubmitted(true);
                 },
                 onError: (errors) => {
@@ -518,8 +681,10 @@ export default function PublicBooking({
         setSlot('');
 
         if (bookingErrorKind === 'catalog') {
+            setSelectedServiceIds([]);
             setServiceId('');
             setProfessionalId('');
+            setProfessionalMode('manual');
             setDate('');
         }
     };
@@ -547,14 +712,18 @@ export default function PublicBooking({
         `Olá! Acabei de agendar um horário em *${unit.name}*:`,
         '',
         `👤 *Cliente:* ${appointmentRequest.data.name || 'Cliente'}`,
-        `✂️ *Serviço:* ${selectedService?.name || 'Serviço'}`,
+        `✂️ *Serviços:* ${selectedServices.map((service) => service.name).join(' + ') || selectedService?.name || 'Serviço'}`,
+        `⏱️ *Duração total:* ${selectedTotalMinutes || selectedService?.duration_minutes || 0} min`,
+        `💰 *Valor total:* ${money(selectedTotalCents || selectedService?.price_cents || 0)}`,
         selectedProfessional
             ? `💈 *Profissional:* ${selectedProfessional.name}`
             : null,
         formattedSlotDate ? `📅 *Data:* ${formattedSlotDate}` : null,
         formattedSlotTime ? `⏰ *Horário:* ${formattedSlotTime}` : null,
         '',
-        'Gostaria de confirmar o agendamento!',
+        bookingConfirmation?.status === 'pending_confirmation'
+            ? bookingConfirmation.message
+            : 'Gostaria de confirmar o agendamento!',
     ]
         .filter((line): line is string => line !== null)
         .join('\n');
@@ -572,13 +741,17 @@ export default function PublicBooking({
                 appearance={appearance}
                 logoUrl={unit.logo_image_url ?? unit.settings?.logo_image_url}
                 services={services}
-                professionals={professionals}
+                professionals={eligibleProfessionals}
                 selectedService={selectedService}
                 selectedServiceIds={selectedServiceIds}
                 serviceCategory={serviceCategory}
                 selectedProfessional={selectedProfessional}
+                bookingConfirmation={bookingConfirmation}
                 serviceId={serviceId}
                 professionalId={professionalId}
+                professionalMode={professionalMode}
+                firstAvailableStatus={firstAvailableSearch.status}
+                availabilityProcessing={availabilityRequest.processing}
                 date={date}
                 slot={slot}
                 query={query}
@@ -592,6 +765,7 @@ export default function PublicBooking({
                 customerNotes={appointmentRequest.data.notes ?? ''}
                 processing={appointmentRequest.processing}
                 submitted={submitted}
+                bookingConfirmation={bookingConfirmation}
                 bookingError={bookingError}
                 bookingErrorKind={bookingErrorKind}
                 finalWhatsappUrl={finalWhatsappUrl}
@@ -599,7 +773,8 @@ export default function PublicBooking({
                 onCategoryChange={setServiceCategory}
                 onServiceChange={chooseService}
                 onProfessionalChange={chooseProfessional}
-                onDateChange={setDate}
+                onFirstAvailableChange={chooseFirstAvailable}
+                onDateChange={chooseDate}
                 onSlotChange={setSlot}
                 onCustomerChange={(field, value) =>
                     appointmentRequest.setData(field, value)
@@ -647,24 +822,48 @@ export default function PublicBooking({
           : 'Finalizar agendamento →';
 
     if (submitted) {
+        const isPendingConfirmation =
+            bookingConfirmation?.status === 'pending_confirmation';
+
         return (
             <PublicShell
                 appearance={appearance}
                 logoUrl={unit.logo_image_url ?? unit.settings?.logo_image_url}
             >
-                <Head title={`Agendamento confirmado · ${unit.name}`} />
+                <Head
+                    title={`${isPendingConfirmation ? 'Pedido recebido' : 'Agendamento confirmado'} · ${unit.name}`}
+                />
                 <section className="mx-auto max-w-xl rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-sm dark:border-emerald-900 dark:bg-slate-900">
-                    <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
+                    {isPendingConfirmation ? (
+                        <Clock3 className="mx-auto size-12 text-amber-500" />
+                    ) : (
+                        <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
+                    )}
                     <p className="mt-4 text-sm font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300">
-                        Pedido recebido
+                        {isPendingConfirmation
+                            ? 'Aguardando confirmação'
+                            : 'Agendamento confirmado'}
                     </p>
                     <h1 className="mt-3 font-display text-3xl font-semibold text-slate-950 dark:text-white">
-                        Seu horário está reservado.
+                        {isPendingConfirmation
+                            ? 'Recebemos seu pedido.'
+                            : 'Seu horário está reservado.'}
                     </h1>
                     <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {selectedService?.name} com {selectedProfessional?.name}
-                        , às {time(slot, unit.timezone)}. Aguarde a confirmação
-                        do profissional.
+                        {selectedServices
+                            .map((service) => service.name)
+                            .join(' + ') ||
+                            selectedService?.name ||
+                            'Serviço'}
+                        {selectedProfessional
+                            ? ` com ${selectedProfessional.name}`
+                            : ''}
+                        {slot
+                            ? ` · ${formatDateTimeSlot(slot, unit.timezone)}`
+                            : ''}
+                        <br />
+                        {bookingConfirmation?.message ||
+                            'Aguarde a confirmação do profissional.'}
                     </p>
                     {finalWhatsappUrl ? (
                         <Button
@@ -1136,10 +1335,10 @@ export default function PublicBooking({
                                                 onClick={() =>
                                                     chooseService(service.id)
                                                 }
-                                                aria-pressed={
-                                                    serviceId === service.id
-                                                }
-                                                className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${serviceId === service.id ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950' : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900'}`}
+                                                aria-pressed={selectedServiceIds.includes(
+                                                    service.id,
+                                                )}
+                                                className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${selectedServiceIds.includes(service.id) ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950' : 'border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900'}`}
                                             >
                                                 {(service.thumbnail_url ||
                                                     service.image_url) && (
@@ -1187,6 +1386,27 @@ export default function PublicBooking({
                                         </p>
                                     )}
                                 </div>
+                                {selectedServices.length > 0 ? (
+                                    <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
+                                        <div className="min-w-0">
+                                            <p className="truncate font-semibold">
+                                                {selectedServices
+                                                    .map(
+                                                        (service) =>
+                                                            service.name,
+                                                    )
+                                                    .join(' + ')}
+                                            </p>
+                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                                {selectedTotalMinutes} min no
+                                                total
+                                            </p>
+                                        </div>
+                                        <p className="shrink-0 font-semibold">
+                                            {money(selectedTotalCents)}
+                                        </p>
+                                    </div>
+                                ) : null}
                             </InfoCard>
                             <InfoCard
                                 className={
@@ -1207,11 +1427,7 @@ export default function PublicBooking({
                                     </p>
                                 ) : (
                                     <div className="grid gap-3 sm:grid-cols-2">
-                                        {(bookingFlow === 'professional_first'
-                                            ? professionals
-                                            : (selectedService?.professionals ??
-                                              [])
-                                        ).map((person) => (
+                                        {eligibleProfessionals.map((person) => (
                                             <button
                                                 type="button"
                                                 key={person.id}
@@ -1257,8 +1473,8 @@ export default function PublicBooking({
                                 <Input
                                     id="date"
                                     type="date"
-                                    min={today()}
-                                    max={limit()}
+                                    min={today(unit.timezone)}
+                                    max={limit(unit.timezone)}
                                     value={date}
                                     onChange={(event) => {
                                         setDate(event.target.value);
@@ -1442,7 +1658,8 @@ export default function PublicBooking({
                         onClick={handleBottomBarAction}
                         className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                         style={{
-                            backgroundColor: unit.brand_color ?? '#111827',
+                            backgroundColor: appearance.primary_color,
+                            color: 'var(--booking-primary-foreground)',
                         }}
                     >
                         {appearance.cta_label || ctaLabel}
@@ -1463,8 +1680,12 @@ type AtelierBarberViewProps = {
     selectedServiceIds: string[];
     serviceCategory: string;
     selectedProfessional?: Professional;
+    bookingConfirmation: AppointmentResponse['confirmation'] | null;
     serviceId: string;
     professionalId: string;
+    professionalMode: 'manual' | 'first_available';
+    firstAvailableStatus: 'idle' | 'loading' | 'found' | 'empty' | 'error';
+    availabilityProcessing: boolean;
     date: string;
     slot: string;
     query: string;
@@ -1476,13 +1697,15 @@ type AtelierBarberViewProps = {
     customerNotes: string;
     processing: boolean;
     submitted: boolean;
+    bookingConfirmation: AppointmentResponse['confirmation'] | null;
     bookingError: string | null;
-    bookingErrorKind: 'catalog' | 'slot' | 'generic' | null;
+    bookingErrorKind: 'catalog' | 'slot' | 'generic' | 'service_limit' | null;
     finalWhatsappUrl: string | null;
     onQueryChange: (value: string) => void;
     onCategoryChange: (value: string) => void;
     onServiceChange: (id: string) => void;
     onProfessionalChange: (id: string) => void;
+    onFirstAvailableChange: () => void;
     onDateChange: (value: string) => void;
     onSlotChange: (value: string) => void;
     onCustomerChange: (
@@ -1503,8 +1726,12 @@ function AtelierBarberView({
     selectedServiceIds,
     serviceCategory,
     selectedProfessional,
+    bookingConfirmation,
     serviceId,
     professionalId,
+    professionalMode,
+    firstAvailableStatus,
+    availabilityProcessing,
     date,
     slot,
     query,
@@ -1516,6 +1743,7 @@ function AtelierBarberView({
     customerNotes,
     processing,
     submitted,
+    bookingConfirmation,
     bookingError,
     bookingErrorKind,
     finalWhatsappUrl,
@@ -1523,6 +1751,7 @@ function AtelierBarberView({
     onCategoryChange,
     onServiceChange,
     onProfessionalChange,
+    onFirstAvailableChange,
     onDateChange,
     onSlotChange,
     onCustomerChange,
@@ -1530,9 +1759,9 @@ function AtelierBarberView({
     onSubmit,
 }: AtelierBarberViewProps) {
     const [activeStep, setActiveStep] = useState(submitted ? 4 : 1);
-    const serviceProfessionals = selectedService?.professionals.length
-        ? selectedService.professionals
-        : professionals;
+    const isPendingConfirmation =
+        bookingConfirmation?.status === 'pending_confirmation';
+    const serviceProfessionals = professionals;
     const serviceCategories = useMemo(() => {
         const seen = new Set<string>();
 
@@ -1588,28 +1817,25 @@ function AtelierBarberView({
         ? new Intl.DateTimeFormat('pt-BR', {
               day: '2-digit',
               month: 'short',
-              timeZone: availabilityTimezone,
+              timeZone: 'UTC',
           })
-              .format(new Date(`${date}T12:00:00`))
+              .format(new Date(`${date}T12:00:00Z`))
               .replace('.', '')
         : 'Escolha uma data';
-    const dateChoices = Array.from({ length: 5 }, (_, index) => {
-        const option = new Date();
-        option.setDate(option.getDate() + index);
-
-        return option.toISOString().slice(0, 10);
-    });
+    const dateChoices = Array.from({ length: 7 }, (_, index) =>
+        addBookingCalendarDays(
+            bookingDateInTimezone(availabilityTimezone),
+            index,
+        ),
+    );
     const stepLabels = ['Serviços', 'Profissional', 'Horário', 'Confirmar'];
 
     const goBack = (): void => {
         if (activeStep === 2) {
-            onServiceChange('');
             setActiveStep(1);
         } else if (activeStep === 3) {
-            onProfessionalChange('');
             setActiveStep(2);
         } else if (activeStep === 4) {
-            onSlotChange('');
             setActiveStep(3);
         }
     };
@@ -1624,16 +1850,17 @@ function AtelierBarberView({
         }
     };
 
-    const selectedSummary = selectedService ? (
-        <div className="flex items-center justify-between gap-3 border-t border-[#373229] pt-4 font-['DM_Sans'] text-xs text-[#a9a39a]">
-            <span className="min-w-0 truncate">
-                {selectedService.name} · {selectedService.duration_minutes} min
-            </span>
-            <span className="shrink-0 font-['Space_Grotesk'] font-semibold text-[#d4af37]">
-                {money(selectedService.price_cents)}
-            </span>
-        </div>
-    ) : null;
+    const selectedSummary =
+        selectedServices.length > 0 ? (
+            <div className="flex items-center justify-between gap-3 border-t border-[#373229] pt-4 font-['DM_Sans'] text-xs text-[#a9a39a]">
+                <span className="min-w-0 truncate">
+                    {selectedServiceLabel} · {selectedTotalMinutes} min
+                </span>
+                <span className="shrink-0 font-['Space_Grotesk'] font-semibold text-[#d4af37]">
+                    {money(selectedTotalCents)}
+                </span>
+            </div>
+        ) : null;
 
     const stepCta =
         activeStep === 1
@@ -1717,23 +1944,33 @@ function AtelierBarberView({
                         >
                             {bookingErrorKind === 'catalog'
                                 ? 'Escolher outro serviço'
-                                : 'Escolher outro horário'}
+                                : bookingErrorKind === 'service_limit'
+                                  ? 'Continuar escolhendo serviços'
+                                  : 'Escolher outro horário'}
                         </button>
                     </div>
                 ) : null}
                 {submitted ? (
                     <section className="rounded-xl border border-[#d4af37]/30 bg-[#1a181c] p-7 text-center shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-10">
                         <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
-                            <CheckCircle2 className="size-8 text-[#d4af37]" />
+                            {isPendingConfirmation ? (
+                                <Clock3 className="size-8 text-[#d4af37]" />
+                            ) : (
+                                <CheckCircle2 className="size-8 text-[#d4af37]" />
+                            )}
                         </div>
                         <p className="mt-6 font-['Manrope'] text-[10px] font-semibold tracking-[0.24em] text-[#d4af37] uppercase">
-                            Agendamento confirmado
+                            {isPendingConfirmation
+                                ? 'Aguardando confirmação'
+                                : 'Agendamento confirmado'}
                         </p>
                         <h2 className="mt-3 font-['Bodoni_Moda'] text-4xl text-[#f8f2e8]">
-                            Até breve.
+                            {isPendingConfirmation
+                                ? 'Pedido recebido.'
+                                : 'Até breve.'}
                         </h2>
                         <p className="mx-auto mt-3 max-w-sm font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
-                            {selectedService?.name}{' '}
+                            {selectedServiceLabel || selectedService?.name}{' '}
                             {selectedProfessional
                                 ? `com ${selectedProfessional.name}`
                                 : ''}
@@ -1741,7 +1978,9 @@ function AtelierBarberView({
                             {slot
                                 ? formatDateTimeSlot(slot, unit.timezone)
                                 : ''}
-                            .
+                            <br />
+                            {bookingConfirmation?.message ||
+                                'Seu horário foi confirmado.'}
                         </p>
                         {finalWhatsappUrl ? (
                             <a
@@ -1900,37 +2139,87 @@ function AtelierBarberView({
                                 <AtelierFirstAvailableCard
                                     disabled={
                                         !serviceId ||
-                                        serviceProfessionals.length === 0
+                                        serviceProfessionals.length === 0 ||
+                                        firstAvailableStatus === 'loading'
                                     }
+                                    loading={firstAvailableStatus === 'loading'}
                                     selected={
-                                        professionalId ===
-                                        serviceProfessionals[0]?.id
+                                        professionalMode === 'first_available'
                                     }
-                                    onSelect={() =>
-                                        onProfessionalChange(
-                                            serviceProfessionals[0]?.id ?? '',
-                                        )
-                                    }
+                                    onSelect={onFirstAvailableChange}
                                 />
+                                {firstAvailableStatus === 'found' &&
+                                professionalMode === 'first_available' ? (
+                                    <p
+                                        role="status"
+                                        className="mt-3 font-['DM_Sans'] text-xs text-[#d4af37]"
+                                    >
+                                        Primeiro horário encontrado para{' '}
+                                        {selectedProfessional?.name} em{' '}
+                                        {selectedDateLabel}.
+                                    </p>
+                                ) : null}
+                                {firstAvailableStatus === 'empty' ? (
+                                    <p
+                                        role="status"
+                                        className="mt-3 rounded-lg border border-[#39362f] bg-[#171612] p-3 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]"
+                                    >
+                                        Nenhum profissional tem horário
+                                        disponível nos próximos 7 dias. Escolha
+                                        um profissional e consulte outras datas.
+                                    </p>
+                                ) : null}
+                                {firstAvailableStatus === 'error' ? (
+                                    <div
+                                        role="alert"
+                                        className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#8b6530] bg-[#2b2114] p-3 font-['DM_Sans'] text-xs leading-5 text-[#f3dca4]"
+                                    >
+                                        <span>
+                                            Não foi possível consultar os
+                                            horários. Tente novamente.
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={onFirstAvailableChange}
+                                            className="shrink-0 font-semibold underline underline-offset-2"
+                                        >
+                                            Tentar novamente
+                                        </button>
+                                    </div>
+                                ) : null}
                                 <div className="mt-8 flex items-end justify-between gap-4">
                                     <AtelierSectionHeading eyebrow="Profissionais para seus serviços">
-                                        Todos realizam o atendimento
+                                        {serviceProfessionals.length}{' '}
+                                        profissional
+                                        {serviceProfessionals.length === 1
+                                            ? ''
+                                            : 'is'}
                                     </AtelierSectionHeading>
                                 </div>
-                                <div className="mt-3 grid gap-3">
-                                    {serviceProfessionals.map((person) => (
-                                        <AtelierProfessionalCard
-                                            key={person.id}
-                                            professional={person}
-                                            selected={
-                                                professionalId === person.id
-                                            }
-                                            onSelect={() =>
-                                                onProfessionalChange(person.id)
-                                            }
-                                        />
-                                    ))}
-                                </div>
+                                {serviceProfessionals.length > 0 ? (
+                                    <div className="mt-3 grid gap-3">
+                                        {serviceProfessionals.map((person) => (
+                                            <AtelierProfessionalCard
+                                                key={person.id}
+                                                professional={person}
+                                                selected={
+                                                    professionalId === person.id
+                                                }
+                                                onSelect={() =>
+                                                    onProfessionalChange(
+                                                        person.id,
+                                                    )
+                                                }
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="mt-3 rounded-lg border border-[#39362f] bg-[#171612] p-3 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
+                                        Nenhum profissional atende todos os
+                                        serviços selecionados. Volte e ajuste
+                                        sua seleção.
+                                    </p>
+                                )}
                                 <p className="mt-7 flex items-start gap-2 font-['DM_Sans'] text-xs leading-5 text-[#777168]">
                                     <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#d4af37]" />
                                     Padrão de excelência garantido em todas as
@@ -2038,10 +2327,21 @@ function AtelierBarberView({
                                     timezone={availabilityTimezone}
                                     onDateChange={onDateChange}
                                     onSlotChange={onSlotChange}
-                                    today={today()}
-                                    limit={limit()}
+                                    today={today(unit.timezone)}
+                                    limit={limit(unit.timezone)}
                                 />
-                                {professionalId && date && !slots.length ? (
+                                {availabilityProcessing ? (
+                                    <p
+                                        role="status"
+                                        className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]"
+                                    >
+                                        Buscando horários disponíveis…
+                                    </p>
+                                ) : null}
+                                {professionalId &&
+                                date &&
+                                !availabilityProcessing &&
+                                !slots.length ? (
                                     <p className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]">
                                         Nenhum horário disponível para esta
                                         data.
@@ -2103,9 +2403,7 @@ function AtelierBarberView({
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    onServiceChange('')
-                                                }
+                                                onClick={() => setActiveStep(1)}
                                                 className="shrink-0 font-['Space_Grotesk'] text-xs font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
                                             >
                                                 Alterar

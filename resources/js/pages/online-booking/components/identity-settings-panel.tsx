@@ -8,14 +8,12 @@ import { Field, SectionCard } from './booking-form-primitives';
 import type { PublicSettings } from '../types';
 
 export function IdentitySettingsPanel({
-    unit,
     settings,
     templateKey,
     coverUrl,
     coverUploadUrl,
     coverDeleteUrl,
 }: {
-    unit: { name: string };
     settings: PublicSettings;
     templateKey?: string | null;
     coverUrl?: string | null;
@@ -56,12 +54,6 @@ export function IdentitySettingsPanel({
                     </p>
                 </div>
                 <Field
-                    label="Nome da unidade"
-                    name="unit_name"
-                    defaultValue={unit.name}
-                    readOnly
-                />
-                <Field
                     label="WhatsApp"
                     name="whatsapp_phone"
                     defaultValue={settings.whatsapp}
@@ -98,6 +90,7 @@ export function IdentitySettingsPanel({
                     defaultValue={settings.description ?? ''}
                     placeholder="Conte um pouco sobre seu negócio e propósito."
                     rows={4}
+                    className={bookingUi.field}
                 />
             </div>
             <CoverEditor
