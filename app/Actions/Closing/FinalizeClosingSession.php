@@ -39,7 +39,7 @@ final class FinalizeClosingSession extends OperationalAction
      * @param  array{
      *     sale_ids: list<string>,
      *     expected_total_cents?: int|null,
-     *     payment_method: string,
+     *     payment_method?: string|null,
      *     cash_received_cents?: int|null,
      *     notes?: string|null,
      *     lock_versions?: array<string, int>|null
@@ -144,7 +144,7 @@ final class FinalizeClosingSession extends OperationalAction
                 ]);
             }
 
-            $cashReceivedCents = $data['payment_method'] === 'cash'
+            $cashReceivedCents = ($data['payment_method'] ?? null) === 'cash'
                 ? (int) ($data['cash_received_cents'] ?? 0)
                 : null;
             $cashChangeCents = $cashReceivedCents !== null
@@ -186,7 +186,7 @@ final class FinalizeClosingSession extends OperationalAction
                     'email' => $firstSale->customer->email,
                 ] : null,
                 'currency' => 'BRL',
-                'payment_method' => $data['payment_method'],
+                'payment_method' => $data['payment_method'] ?? null,
                 'cash_received_cents' => $cashReceivedCents,
                 'cash_change_cents' => $cashChangeCents,
                 'totals' => [
@@ -223,7 +223,7 @@ final class FinalizeClosingSession extends OperationalAction
                 'unit_id' => $unitId,
                 'closing_subject' => $closingSubject,
                 'currency' => 'BRL',
-                'payment_method' => $data['payment_method'],
+                'payment_method' => $data['payment_method'] ?? null,
                 'cash_received_cents' => $cashReceivedCents,
                 'cash_change_cents' => $cashChangeCents,
                 'expected_total_cents' => $calculatedFinalTotalCents,
