@@ -18,6 +18,7 @@ use App\Support\AuditEventWriter;
 use App\Support\CalendarAvailability;
 use App\Support\IdentityEventRecorder;
 use App\Support\OutboxEventStore;
+use App\Support\PublicBookingConfirmation;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
@@ -31,6 +32,7 @@ final class CreatePublicAppointment
         private readonly CalendarAvailability $availability,
         private readonly CreateAppointmentSale $createAppointmentSale = new CreateAppointmentSale,
         private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly PublicBookingConfirmation $confirmation = new PublicBookingConfirmation,
     ) {}
 
     /** @param array{service_id?: string|null, service_ids?: list<string>, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null, online_booking_campaign_link_id?: string|null} $data */
@@ -205,7 +207,9 @@ final class CreatePublicAppointment
                     'occurred_at' => now(),
                 ]);
                 $this->events->recordForTenant(null, $tenant, 'appointment.created', $appointment, ['status' => $appointment->status], $unit->getKey());
-                SyncGoogleCalendarAppointment::dispatch((string) $appointment->getKey())->afterCommit();
+                if ($this->confirmation->allowsCalendarSync($tenant)) {
+                    SyncGoogleCalendarAppointment::dispatch((string) $appointment->getKey())->afterCommit();
+                }
 
                 return $appointment->fresh('items');
             }, 5);

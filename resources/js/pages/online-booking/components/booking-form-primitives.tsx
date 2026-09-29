@@ -129,7 +129,9 @@ export function SectionCard({
                     </span>
                     {title}
                 </CardTitle>
-                <CardDescription>{description}</CardDescription>
+                <CardDescription className={bookingTokens.color.subtleText}>
+                    {description}
+                </CardDescription>
             </CardHeader>
             <CardContent className={bookingUi.sectionContent}>
                 {children}

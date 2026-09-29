@@ -31,6 +31,12 @@ export function GallerySettingsPanel({
             title="Galeria de fotos"
             description="Mostre o ambiente e a experiência da sua unidade."
         >
+            <p className="text-xs leading-5 text-muted-foreground">
+                Alterações na galeria são salvas imediatamente. Salve o rascunho
+                para atualizar a prévia e publique para atualizar o link
+                público. Imagens excluídas são removidas imediatamente e podem
+                deixar de aparecer no link antes da publicação.
+            </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {galleryItems.map((image, index) => (
                     <div

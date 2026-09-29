@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Actions\OnlineBooking\OnlineBookingAppearance;
 use App\Actions\PublicBooking\CreatePublicAppointment;
+use App\Enums\OnlineBookingHandleStatus;
 use App\Http\Requests\PublicBookingAppointmentRequest;
 use App\Http\Requests\PublicBookingAvailabilityRequest;
 use App\Jobs\RecordOnlineBookingVisit;
 use App\Models\Appointment;
 use App\Models\OnlineBookingCampaignLink;
+use App\Models\OnlineBookingHandle;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
@@ -21,10 +23,12 @@ use App\Support\CalendarAvailability;
 use App\Support\CalendarConflictException;
 use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
+use App\Support\PublicBookingConfirmation;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -33,9 +37,19 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class PublicBookingController extends Controller
 {
+    /** @var list<string> */
+    private const UTM_KEYS = [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_term',
+        'utm_content',
+    ];
+
     public function __construct(
         private readonly CalendarAvailability $availability,
         private readonly IdempotencyService $idempotency,
+        private readonly PublicBookingConfirmation $confirmation,
     ) {}
 
     public function show(Tenant $tenant, Unit $unit): Response|JsonResponse
@@ -69,7 +83,8 @@ final class PublicBookingController extends Controller
             ->all();
         $sections += array_fill_keys(['hero', 'services', 'professionals', 'gallery', 'hours', 'contact'], true);
         if (! is_array($preview)) {
-            $campaign = $this->campaignFromRequest($tenant, $unit);
+            $attribution = $this->campaignAttribution($tenant, $unit);
+            $campaign = $this->campaignFromAttribution($tenant, $unit, $attribution);
             RecordOnlineBookingVisit::dispatch([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $tenant->getKey(),
@@ -79,11 +94,11 @@ final class PublicBookingController extends Controller
                 'visitor_hash' => hash('sha256', request()->session()->getId().'|'.request()->userAgent()),
                 'landing_path' => request()->path(),
                 'referer_host' => parse_url((string) request()->header('referer'), PHP_URL_HOST),
-                'utm_source' => $this->utm('utm_source'),
-                'utm_medium' => $this->utm('utm_medium'),
-                'utm_campaign' => $this->utm('utm_campaign'),
-                'utm_term' => $this->utm('utm_term'),
-                'utm_content' => $this->utm('utm_content'),
+                'utm_source' => $attribution['utm_source'],
+                'utm_medium' => $attribution['utm_medium'],
+                'utm_campaign' => $attribution['utm_campaign'],
+                'utm_term' => $attribution['utm_term'],
+                'utm_content' => $attribution['utm_content'],
                 'consent' => false,
                 'occurred_at' => now(),
             ]);
@@ -98,7 +113,12 @@ final class PublicBookingController extends Controller
         $gallery = ($publication !== null || is_array($preview)) && is_array($content['gallery'] ?? null)
             ? collect($content['gallery'])->map(fn (array $image): array => ['url' => MediaUrl::for((string) ($image['path'] ?? '')), 'thumbnail_url' => MediaUrl::for($image['thumbnail_path'] ?? ($image['path'] ?? null)), 'alt_text' => $image['alt_text'] ?? null])->values()->all()
             : $unit->onlineBookingGalleryImages->map(fn ($image): array => ['url' => MediaUrl::for($image->path), 'thumbnail_url' => MediaUrl::for($image->thumbnail_path ?? $image->path), 'alt_text' => $image->alt_text])->values()->all();
-        $coverImagePath = $identity['cover_image_path'] ?? $setting?->cover_image_path;
+        $coverImagePath = array_key_exists('cover_image_path', $identity)
+            ? $identity['cover_image_path']
+            : $setting?->cover_image_path;
+        $logoImagePath = array_key_exists('logo_image_path', $identity)
+            ? $identity['logo_image_path']
+            : $setting?->logo_image_path;
         $payload = [
             'unit' => [
                 'tenant_slug' => $tenant->slug,
@@ -108,10 +128,10 @@ final class PublicBookingController extends Controller
                 'address' => $this->safeAddress($unit->address),
                 'description' => $description,
                 'seo' => is_array($content['seo'] ?? null) ? $content['seo'] : ['title' => $unit->name, 'description' => $description],
-                'canonical_url' => url('/book/'.rawurlencode($publicSlug)),
+                'canonical_url' => $this->canonicalBookingUrl($tenant, $unit, $publication, $publicSlug),
                 'is_preview' => is_array($preview),
-                'cover_image_url' => $coverImagePath === null ? null : MediaUrl::for((string) $coverImagePath),
-                'logo_image_url' => $setting?->logo_image_url,
+                'cover_image_url' => is_string($coverImagePath) ? MediaUrl::for($coverImagePath) : null,
+                'logo_image_url' => is_string($logoImagePath) ? MediaUrl::for($logoImagePath) : null,
                 'brand_color' => $brandColor,
                 'template_key' => $templateKey,
                 'appearance' => $appearance,
@@ -175,8 +195,47 @@ final class PublicBookingController extends Controller
         return $this->show($context->tenant, $context->unit);
     }
 
-    public function showBySlug(string $publicSlug): Response|JsonResponse
+    public function showBySlug(string $publicSlug): Response|JsonResponse|RedirectResponse
     {
+        $handle = OnlineBookingHandle::query()
+            ->where('handle', $publicSlug)
+            ->with(['tenant', 'unit'])
+            ->first();
+
+        if ($handle instanceof OnlineBookingHandle) {
+            if ($handle->status === OnlineBookingHandleStatus::Current) {
+                $this->assertHandleHostAllowed($handle);
+
+                $destination = $this->currentHandleDestination($handle);
+                if ($this->handleRequestNeedsCanonicalRedirect($destination)) {
+                    return $this->temporaryRedirect($this->preserveRedirectAttribution($destination));
+                }
+
+                return $this->show($handle->tenant, $handle->unit);
+            }
+
+            if ($handle->status === OnlineBookingHandleStatus::Redirect && $handle->isRedirectActive()) {
+                $this->assertRedirectHostAllowed($handle);
+
+                return $this->temporaryRedirect($this->preserveRedirectAttribution($this->currentHandleDestination($handle)));
+            }
+
+            $requestDomain = request()->attributes->get('tenant_domain');
+            $isLegacyReservedHandleRequest = $handle->status === OnlineBookingHandleStatus::Reserved
+                && request()->attributes->get('public_booking_shared_host') !== true
+                && (! $requestDomain instanceof TenantDomain || $requestDomain->kind->value !== 'public');
+
+            if (! $isLegacyReservedHandleRequest) {
+                throw new NotFoundHttpException;
+            }
+
+            abort_if(OnlineBookingSite::query()
+                ->where('tenant_id', $handle->tenant_id)
+                ->where('unit_id', $handle->unit_id)
+                ->whereNotNull('unpublished_at')
+                ->exists(), 404);
+        }
+
         $requestDomain = request()->attributes->get('tenant_domain');
         $usePublicationResolver = (bool) config('online_booking.use_publication_resolver', true);
 
@@ -219,6 +278,144 @@ final class PublicBookingController extends Controller
         }
 
         return $this->show($setting->tenant, $setting->unit);
+    }
+
+    private function assertHandleHostAllowed(OnlineBookingHandle $handle): void
+    {
+        $requestDomain = request()->attributes->get('tenant_domain');
+        $site = OnlineBookingSite::query()
+            ->where('tenant_id', $handle->tenant_id)
+            ->where('unit_id', $handle->unit_id)
+            ->with(['activePublication', 'publicDomain'])
+            ->first();
+        $setting = OnlineBookingSetting::query()
+            ->where('tenant_id', $handle->tenant_id)
+            ->where('unit_id', $handle->unit_id)
+            ->first();
+        $publicDomainId = $site?->activePublication->public_domain_id
+            ?? $site->public_domain_id
+            ?? $setting?->public_domain_id;
+
+        if ($requestDomain instanceof TenantDomain && $requestDomain->kind->value === 'public') {
+            abort_unless($publicDomainId === $requestDomain->getKey(), 404);
+
+            return;
+        }
+
+        if (request()->attributes->get('public_booking_shared_host') === true) {
+            return;
+        }
+
+        abort_unless($publicDomainId === null, 404);
+    }
+
+    private function currentHandleDestination(OnlineBookingHandle $redirectedHandle): string
+    {
+        $currentHandle = OnlineBookingHandle::query()
+            ->where('tenant_id', $redirectedHandle->tenant_id)
+            ->where('unit_id', $redirectedHandle->unit_id)
+            ->where('status', OnlineBookingHandleStatus::Current->value)
+            ->first();
+
+        abort_unless($currentHandle instanceof OnlineBookingHandle, 404);
+
+        $site = OnlineBookingSite::query()
+            ->where('tenant_id', $redirectedHandle->tenant_id)
+            ->where('unit_id', $redirectedHandle->unit_id)
+            ->with(['activePublication', 'publicDomain'])
+            ->first();
+        $setting = OnlineBookingSetting::query()
+            ->where('tenant_id', $redirectedHandle->tenant_id)
+            ->where('unit_id', $redirectedHandle->unit_id)
+            ->first();
+        $publicDomainId = $site?->activePublication->public_domain_id
+            ?? $site->public_domain_id
+            ?? $setting?->public_domain_id;
+
+        if ($publicDomainId !== null) {
+            $domain = TenantDomain::query()
+                ->whereKey($publicDomainId)
+                ->where('tenant_id', $redirectedHandle->tenant_id)
+                ->where('kind', 'public')
+                ->where('status', 'active')
+                ->first();
+
+            abort_unless($domain instanceof TenantDomain, 404);
+
+            return $this->absoluteHostUrl($domain->hostname);
+        }
+
+        return $this->absoluteHostUrl((string) config('domains.shared_booking_host')).$currentHandle->handle;
+    }
+
+    private function assertRedirectHostAllowed(OnlineBookingHandle $redirectedHandle): void
+    {
+        $requestDomain = request()->attributes->get('tenant_domain');
+
+        if (! $requestDomain instanceof TenantDomain || $requestDomain->kind->value !== 'public') {
+            return;
+        }
+
+        abort_unless($requestDomain->tenant_id === $redirectedHandle->tenant_id, 404);
+    }
+
+    private function absoluteHostUrl(string $hostname): string
+    {
+        return rtrim((string) request()->getScheme().'://'.$hostname, '/').'/';
+    }
+
+    private function handleRequestNeedsCanonicalRedirect(string $destination): bool
+    {
+        $destinationUrl = parse_url($destination);
+        $requestPath = trim(request()->path(), '/');
+        $destinationPath = trim((string) ($destinationUrl['path'] ?? ''), '/');
+
+        return strtolower((string) request()->getHost()) !== strtolower((string) ($destinationUrl['host'] ?? ''))
+            || $requestPath !== $destinationPath;
+    }
+
+    private function temporaryRedirect(string $destination): RedirectResponse
+    {
+        return redirect()
+            ->to($destination, 302)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    private function preserveRedirectAttribution(string $destination): string
+    {
+        $query = [];
+        foreach (self::UTM_KEYS as $key) {
+            $value = $this->utmFromValue(request()->query($key));
+            if ($value !== null) {
+                $query[$key] = $value;
+            }
+        }
+
+        return $query === [] ? $destination : $destination.'?'.http_build_query($query);
+    }
+
+    private function canonicalBookingUrl(Tenant $tenant, Unit $unit, ?OnlineBookingPublication $publication, string $publicSlug): string
+    {
+        if ($publication instanceof OnlineBookingPublication && $publication->public_domain_id !== null) {
+            $domain = TenantDomain::query()
+                ->whereKey($publication->public_domain_id)
+                ->where('tenant_id', $tenant->getKey())
+                ->where('kind', 'public')
+                ->where('status', 'active')
+                ->first();
+
+            if ($domain instanceof TenantDomain) {
+                return 'https://'.$domain->hostname.'/';
+            }
+        }
+
+        $handle = OnlineBookingHandle::query()
+            ->where('tenant_id', $tenant->getKey())
+            ->where('unit_id', $unit->getKey())
+            ->where('status', OnlineBookingHandleStatus::Current->value)
+            ->value('handle');
+
+        return $this->absoluteHostUrl((string) config('domains.shared_booking_host')).rawurlencode((string) ($handle ?? $publicSlug));
     }
 
     public function availability(PublicBookingAvailabilityRequest $request, Tenant $tenant, Unit $unit): JsonResponse
@@ -294,43 +491,67 @@ final class PublicBookingController extends Controller
         }
 
         $data = $request->validated();
-        $campaign = OnlineBookingCampaignLink::query()
-            ->where('tenant_id', $tenant->getKey())
-            ->where('unit_id', $unit->getKey())
-            ->where('is_active', true)
-            ->where('utm_source', $request->query('utm_source'))
-            ->where('utm_medium', $request->query('utm_medium'))
-            ->where('utm_campaign', $request->query('utm_campaign'))
-            ->when($request->query('utm_term') !== null, fn ($query) => $query->where('utm_term', $request->query('utm_term')))
-            ->when($request->query('utm_content') !== null, fn ($query) => $query->where('utm_content', $request->query('utm_content')))
-            ->first();
+        $campaign = $this->campaignFromAttribution(
+            $tenant,
+            $unit,
+            $this->campaignAttribution($tenant, $unit),
+        );
         $data['online_booking_campaign_link_id'] = $campaign?->getKey();
         $result = $this->idempotency->execute(
             $tenant,
             null,
             $key,
             [...$data, 'unit_id' => $unit->getKey()],
-            fn (): array => [
-                'resource_id' => $create->handle($tenant, $unit, $data)->getKey(),
-                'resource_type' => 'appointment',
-                'status' => 'scheduled',
-            ],
+            function () use ($create, $tenant, $unit, $data): array {
+                $appointment = $create->handle($tenant, $unit, $data);
+                $confirmation = $this->confirmation->forTenant($tenant);
+
+                return [
+                    'resource_id' => $appointment->getKey(),
+                    'resource_type' => 'appointment',
+                    'status' => 'scheduled',
+                    'confirmation_status' => $confirmation['status'],
+                    'confirmation_message' => $confirmation['message'],
+                ];
+            },
         );
         $appointmentId = $result->key->resource_id ?? ($result->value['resource_id'] ?? null);
+        $confirmationStatus = is_array($result->value) && is_string($result->value['confirmation_status'] ?? null)
+            ? $result->value['confirmation_status']
+            : 'confirmed';
+        $confirmationMessage = is_array($result->value) && is_string($result->value['confirmation_message'] ?? null)
+            ? $result->value['confirmation_message']
+            : 'Seu horário foi confirmado.';
 
         return response()->json([
             'appointment' => ['id' => $appointmentId, 'status' => 'scheduled'],
+            'confirmation' => ['status' => $confirmationStatus, 'message' => $confirmationMessage],
             'replayed' => $result->replayed,
-            'whatsapp_url' => $this->whatsappUrl($appointmentId, $unit),
+            'whatsapp_url' => $this->whatsappUrl($appointmentId, $unit, $confirmationStatus, $confirmationMessage),
         ], $result->replayed ? 200 : 201);
     }
 
-    private function whatsappUrl(string $appointmentId, Unit $unit): ?string
+    private function whatsappUrl(string $appointmentId, Unit $unit, string $confirmationStatus, string $confirmationMessage): ?string
     {
         $appointment = Appointment::query()->with(['professional', 'items'])->find($appointmentId);
         $phone = $this->normalizePhone($appointment?->professional?->phone ?: $unit->onlineBookingSetting?->whatsapp_phone);
 
-        return $phone === '' ? null : 'https://wa.me/'.$phone.'?text='.rawurlencode('Olá! Solicitei um agendamento para '.$appointment->items->first()?->service_name_snapshot.'.');
+        if ($phone === '' || $appointment === null) {
+            return null;
+        }
+
+        $services = $appointment->items->map(fn ($item): string => '- '.$item->service_name_snapshot)->implode("\n");
+        $duration = $appointment->items->sum('duration_minutes');
+        $price = number_format($appointment->items->sum('price_cents') / 100, 2, ',', '.');
+        $message = implode("\n", [
+            'Olá! Solicitei um agendamento para:',
+            $services,
+            'Duração total: '.$duration.' min.',
+            'Valor estimado: R$ '.$price.'.',
+            $confirmationStatus === 'pending_confirmation' ? $confirmationMessage : 'Seu horário foi confirmado.',
+        ]);
+
+        return 'https://wa.me/'.$phone.'?text='.rawurlencode($message);
     }
 
     private function normalizePhone(?string $phone): string
@@ -338,19 +559,39 @@ final class PublicBookingController extends Controller
         return (string) preg_replace('/\D+/', '', (string) $phone);
     }
 
-    private function utm(string $key): ?string
+    /**
+     * @return array{utm_source: ?string, utm_medium: ?string, utm_campaign: ?string, utm_term: ?string, utm_content: ?string}
+     */
+    private function campaignAttribution(Tenant $tenant, Unit $unit): array
     {
-        $value = request()->query($key);
+        $queryValues = array_fill_keys(self::UTM_KEYS, null);
+        foreach (self::UTM_KEYS as $key) {
+            $queryValues[$key] = $this->utmFromValue(request()->query($key));
+        }
 
-        return is_string($value) && preg_match('/^[a-zA-Z0-9_-]{1,150}$/', $value) === 1 ? $value : null;
+        if ($this->hasRequiredCampaignAttribution($queryValues)) {
+            request()->session()->put($this->campaignSessionKey($tenant, $unit), $queryValues);
+
+            return $queryValues;
+        }
+
+        $stored = request()->session()->get($this->campaignSessionKey($tenant, $unit), []);
+        if (! is_array($stored)) {
+            $stored = [];
+        }
+
+        return array_replace(
+            array_fill_keys(self::UTM_KEYS, null),
+            array_intersect_key($stored, array_flip(self::UTM_KEYS)),
+        );
     }
 
-    private function campaignFromRequest(Tenant $tenant, Unit $unit): ?OnlineBookingCampaignLink
+    /**
+     * @param  array{utm_source: ?string, utm_medium: ?string, utm_campaign: ?string, utm_term: ?string, utm_content: ?string}  $attribution
+     */
+    private function campaignFromAttribution(Tenant $tenant, Unit $unit, array $attribution): ?OnlineBookingCampaignLink
     {
-        $source = $this->utm('utm_source');
-        $medium = $this->utm('utm_medium');
-        $campaign = $this->utm('utm_campaign');
-        if ($source === null || $medium === null || $campaign === null) {
+        if (! $this->hasRequiredCampaignAttribution($attribution)) {
             return null;
         }
 
@@ -358,16 +599,40 @@ final class PublicBookingController extends Controller
             ->where('tenant_id', $tenant->getKey())
             ->where('unit_id', $unit->getKey())
             ->where('is_active', true)
-            ->where('utm_source', $source)
-            ->where('utm_medium', $medium)
-            ->where('utm_campaign', $campaign)
-            ->where(function ($query): void {
-                $query->whereNull('utm_term')->orWhere('utm_term', $this->utm('utm_term'));
+            ->where('utm_source', $attribution['utm_source'])
+            ->where('utm_medium', $attribution['utm_medium'])
+            ->where('utm_campaign', $attribution['utm_campaign'])
+            ->where(function ($query) use ($attribution): void {
+                $query->whereNull('utm_term')->orWhere('utm_term', $attribution['utm_term']);
             })
-            ->where(function ($query): void {
-                $query->whereNull('utm_content')->orWhere('utm_content', $this->utm('utm_content'));
+            ->where(function ($query) use ($attribution): void {
+                $query->whereNull('utm_content')->orWhere('utm_content', $attribution['utm_content']);
             })
             ->first();
+    }
+
+    /**
+     * @param  array{utm_source: ?string, utm_medium: ?string, utm_campaign: ?string, utm_term: ?string, utm_content: ?string}  $attribution
+     */
+    private function hasRequiredCampaignAttribution(array $attribution): bool
+    {
+        return $attribution['utm_source'] !== null
+            && $attribution['utm_medium'] !== null
+            && $attribution['utm_campaign'] !== null;
+    }
+
+    private function campaignSessionKey(Tenant $tenant, Unit $unit): string
+    {
+        return sprintf('online_booking.utm.%s.%s', $tenant->getKey(), $unit->getKey());
+    }
+
+    private function utmFromValue(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        return preg_match('/^[a-zA-Z0-9_-]{1,150}$/', $value) === 1 ? $value : null;
     }
 
     /**

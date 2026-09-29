@@ -90,6 +90,10 @@ export function LogoEditor({ url, onUploaded }: LogoEditorProps) {
                         O logo aparece no cabeçalho do agendamento público. Se
                         não for informado, usamos o nome da unidade.
                     </p>
+                    <p className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">
+                        Alterações no logo são salvas imediatamente e podem
+                        aparecer no link público sem publicar o rascunho.
+                    </p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 has-disabled:pointer-events-none has-disabled:opacity-50">

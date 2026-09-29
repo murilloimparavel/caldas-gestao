@@ -13,9 +13,16 @@ it('allows an authorized owner to manage the public gallery', function () {
     ]);
     $response->assertCreated()->assertJsonPath('gallery.alt_text', 'Fachada');
     $imageId = $response->json('gallery.id');
+    $imagePath = $response->json('gallery.path');
+    $thumbnailPath = $response->json('gallery.thumbnail_path');
+    Storage::disk('public')->assertExists($imagePath);
+    Storage::disk('public')->assertExists($thumbnailPath);
 
     $this->actingAs($owner)->patch(route('online_booking.gallery.update', ['image' => $imageId]), ['alt_text' => 'Entrada'])
         ->assertSuccessful()->assertJsonPath('gallery.alt_text', 'Entrada');
     $this->actingAs($owner)->post(route('online_booking.gallery.reorder'), ['image_ids' => [$imageId]])->assertSuccessful();
     $this->actingAs($owner)->delete(route('online_booking.gallery.destroy', ['image' => $imageId]))->assertSuccessful();
+
+    Storage::disk('public')->assertExists($imagePath);
+    Storage::disk('public')->assertExists($thumbnailPath);
 });

@@ -17,6 +17,7 @@ use App\Models\Professional;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Tenant;
+use App\Models\TenantSubscription;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -475,8 +476,14 @@ it('creates and replays a public appointment idempotently with a phone-scoped cu
     $first = $this->withHeader('X-Idempotency-Key', 'public-booking-1')->postJson(route('public_booking.appointments.store', [$tenant, $unit]), $payload);
     $second = $this->withHeader('X-Idempotency-Key', 'public-booking-1')->postJson(route('public_booking.appointments.store', [$tenant, $unit]), $payload);
 
-    $first->assertCreated()->assertJsonPath('appointment.status', 'scheduled');
-    $second->assertSuccessful()->assertJsonPath('replayed', true);
+    $first->assertCreated()
+        ->assertJsonPath('appointment.status', 'scheduled')
+        ->assertJsonPath('confirmation.status', 'confirmed')
+        ->assertJsonPath('confirmation.message', 'Seu horário foi confirmado.');
+    $second->assertSuccessful()
+        ->assertJsonPath('replayed', true)
+        ->assertJsonPath('confirmation.status', 'confirmed')
+        ->assertJsonPath('confirmation.message', 'Seu horário foi confirmado.');
     expect(Appointment::query()->count())->toBe(1)
         ->and(Appointment::query()->firstOrFail()->source)->toBe('online')
         ->and(Appointment::query()->firstOrFail()->customer->phone)->toBe('5511999991234');
@@ -508,6 +515,81 @@ it('creates one appointment with multiple compatible services', function () {
     expect($response->json('appointment.status'))->toBe('scheduled')
         ->and($appointment->items()->count())->toBe(2)
         ->and((int) abs($appointment->ends_at->diffInMinutes($appointment->starts_at)))->toBe($service->duration_minutes + $secondService->duration_minutes);
+
+    parse_str((string) parse_url($response->json('whatsapp_url'), PHP_URL_QUERY), $whatsappQuery);
+    expect($whatsappQuery['text'])->toContain($service->name)
+        ->toContain($secondService->name)
+        ->toContain('Duração total: '.($service->duration_minutes + $secondService->duration_minutes).' min.')
+        ->toContain('Valor estimado: R$ '.number_format(($service->price_cents + $secondService->price_cents) / 100, 2, ',', '.').'.');
+});
+
+it('rejects a professional who cannot perform every selected service for availability and booking', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'online_booking_enabled' => true,
+    ]);
+
+    $this->getJson(route('public_booking.availability', [
+        $tenant,
+        $unit,
+        'service_ids' => [$service->getKey(), $secondService->getKey()],
+        'professional_id' => $professional->getKey(),
+        'date' => $date->toDateString(),
+    ]))->assertNotFound();
+
+    $this->withHeader('X-Idempotency-Key', 'incompatible-services')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_ids' => [$service->getKey(), $secondService->getKey()],
+            'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(),
+            'name' => 'Incompatible Services',
+            'phone' => '+55 11 96666-1111',
+        ])
+        ->assertNotFound();
+
+    expect(Appointment::query()->count())->toBe(0);
+});
+
+it('returns a pending confirmation to delinquent customers without queuing Google Calendar sync', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
+    $subscription = TenantSubscription::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'status' => 'expired',
+        'ends_at' => now()->subDay(),
+    ]);
+    Queue::fake();
+    $payload = [
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => $date->setTime(9, 0)->toIso8601String(),
+        'name' => 'Pending Confirmation',
+        'phone' => '+55 11 96666-2222',
+    ];
+
+    $first = $this->withHeader('X-Idempotency-Key', 'pending-confirmation')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), $payload);
+
+    $first->assertCreated()
+        ->assertJsonPath('confirmation.status', 'pending_confirmation')
+        ->assertJsonPath('confirmation.message', 'Seu pedido de agendamento foi recebido. A barbearia ainda precisa confirmar o horário; aguarde nosso retorno.');
+    parse_str((string) parse_url($first->json('whatsapp_url'), PHP_URL_QUERY), $whatsappQuery);
+    expect($whatsappQuery['text'])->toContain('ainda precisa confirmar o horário');
+    Queue::assertNotPushed(SyncGoogleCalendarAppointment::class);
+
+    $subscription->update(['status' => 'active', 'ends_at' => now()->addDay()]);
+    $replay = $this->withHeader('X-Idempotency-Key', 'pending-confirmation')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), $payload);
+
+    $replay->assertSuccessful()
+        ->assertJsonPath('replayed', true)
+        ->assertJsonPath('confirmation.status', 'pending_confirmation')
+        ->assertJsonPath('confirmation.message', 'Seu pedido de agendamento foi recebido. A barbearia ainda precisa confirmar o horário; aguarde nosso retorno.');
+    Queue::assertNotPushed(SyncGoogleCalendarAppointment::class);
+    expect(Appointment::query()->count())->toBe(1);
 });
 
 it('attributes a public appointment to the matching campaign link', function () {
@@ -523,6 +605,46 @@ it('attributes a public appointment to the matching campaign link', function () 
     $response = $this->withHeader('X-Idempotency-Key', 'campaign-booking-1')->postJson(route('public_booking.appointments.store', [$tenant, $unit]).'?utm_source=instagram&utm_medium=social&utm_campaign=setembro', $payload);
 
     $response->assertCreated();
+    expect(Appointment::query()->firstOrFail()->online_booking_campaign_link_id)->toBe($campaign->getKey());
+});
+
+it('keeps the landing campaign attribution through the booking flow', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
+    $site = OnlineBookingSite::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'public_slug' => $unit->slug,
+    ]);
+    $campaign = OnlineBookingCampaignLink::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'site_id' => $site->getKey(),
+        'created_by' => User::factory()->create()->getKey(),
+        'utm_source' => 'whatsapp',
+        'utm_medium' => 'direct',
+        'utm_campaign' => 'agenda-outubro',
+        'utm_content' => 'status',
+    ]);
+    $landingUrl = route('public_booking.show', [$tenant, $unit]).'?'.http_build_query([
+        'utm_source' => 'whatsapp',
+        'utm_medium' => 'direct',
+        'utm_campaign' => 'agenda-outubro',
+        'utm_content' => 'status',
+    ]);
+
+    $this->getJson($landingUrl)->assertSuccessful();
+
+    $this->withHeader('X-Idempotency-Key', 'campaign-session-booking')
+        ->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+            'service_id' => $service->getKey(),
+            'professional_id' => $professional->getKey(),
+            'starts_at' => $date->setTime(9, 0)->toIso8601String(),
+            'name' => 'Campaign Session Customer',
+            'phone' => '+55 11 96666-1234',
+        ])
+        ->assertCreated();
+
     expect(Appointment::query()->firstOrFail()->online_booking_campaign_link_id)->toBe($campaign->getKey());
 });
 

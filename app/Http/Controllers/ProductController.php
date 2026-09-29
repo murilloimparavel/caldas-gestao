@@ -69,6 +69,7 @@ final class ProductController extends Controller
             ->selectRaw('SUM(current_stock * cost_price_cents) as cost_value_cents')
             ->selectRaw('SUM(current_stock * sale_price_cents) as sale_value_cents')
             ->groupBy('category_id')
+            ->toBase()
             ->get();
 
         $categoryNames = Category::query()

@@ -4,7 +4,9 @@ use App\Actions\OnlineBooking\PublishOnlineBookingSite;
 use App\Actions\OnlineBooking\RestoreOnlineBookingPublication;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Actions\OnlineBooking\UnpublishOnlineBookingSite;
+use App\Enums\OnlineBookingHandleStatus;
 use App\Enums\OnlineBookingPublicationStatus;
+use App\Models\OnlineBookingHandle;
 use App\Models\OnlineBookingPublication;
 use App\Models\OnlineBookingSite;
 use App\Models\Service;
@@ -42,9 +44,15 @@ it('saves, publishes, unpublishes, and restores an online booking site', functio
     expect($site->status)->toBe(OnlineBookingPublicationStatus::Published)
         ->and($site->active_publication_id)->toBe($publication->getKey());
 
+    $handle = OnlineBookingHandle::query()->where('tenant_id', $tenant->getKey())->where('unit_id', $unit->getKey())->firstOrFail();
+    $this->getJson('http://barber.caldasindica.com/'.$handle->handle)->assertSuccessful();
+
     app(UnpublishOnlineBookingSite::class)->handle($owner, $context);
     expect($site->refresh()->status)->toBe(OnlineBookingPublicationStatus::Unpublished)
-        ->and($site->active_publication_id)->toBeNull();
+        ->and($site->active_publication_id)->toBeNull()
+        ->and($handle->fresh()->status)->toBe(OnlineBookingHandleStatus::Reserved);
+    $this->getJson('http://barber.caldasindica.com/'.$handle->handle)->assertNotFound();
+    $this->get('http://localhost/book/'.$handle->handle)->assertNotFound();
 
     $restored = app(RestoreOnlineBookingPublication::class)->handle($owner, $context, $publication);
     expect($restored->revision)->toBe(2)

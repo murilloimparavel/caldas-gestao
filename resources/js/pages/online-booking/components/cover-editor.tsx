@@ -76,6 +76,13 @@ export function CoverEditor({
                         É a imagem em destaque no topo do canal público. A
                         galeria continua independente e reúne as demais fotos.
                     </p>
+                    <p className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">
+                        O arquivo é salvo imediatamente. Salve o rascunho para
+                        atualizar a prévia e publique para aplicar a nova capa
+                        ao link público. Ao substituir ou remover, a imagem
+                        anterior é apagada e pode deixar de aparecer no link até
+                        a publicação.
+                    </p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 has-disabled:pointer-events-none has-disabled:opacity-50">

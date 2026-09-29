@@ -62,6 +62,7 @@ final class EnsureOnlineBookingSite
         $identity = $setting instanceof OnlineBookingSetting ? [
             'description' => $setting->description,
             'cover_image_path' => $setting->cover_image_path,
+            'logo_image_path' => $setting->logo_image_path,
             'whatsapp_phone' => $setting->whatsapp_phone,
             'phone' => $setting->phone,
             'instagram_url' => $setting->instagram_url,

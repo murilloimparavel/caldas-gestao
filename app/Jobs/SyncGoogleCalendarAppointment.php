@@ -5,6 +5,8 @@ namespace App\Jobs;
 use App\Models\Appointment;
 use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarEvent;
+use App\Models\Tenant;
+use App\Support\PublicBookingConfirmation;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -70,6 +72,11 @@ final class SyncGoogleCalendarAppointment implements ShouldQueue
             $this->deleteRemoteEvent($connection, $event);
             $event->forceFill(['sync_status' => 'deleted', 'operation' => 'delete', 'last_error' => null, 'synced_at' => now()])->save();
 
+            return;
+        }
+
+        $tenant = Tenant::query()->find($appointment->tenant_id);
+        if ($tenant === null || ! app(PublicBookingConfirmation::class)->allowsCalendarSync($tenant)) {
             return;
         }
 

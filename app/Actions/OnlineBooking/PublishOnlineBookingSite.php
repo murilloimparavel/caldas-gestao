@@ -11,6 +11,8 @@ use App\Models\Service;
 use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +20,14 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class PublishOnlineBookingSite extends OperationalAction
 {
+    public function __construct(
+        private readonly ManageOnlineBookingHandle $handles,
+        AuthorizationService $authorization,
+        IdentityEventRecorder $events,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     public function handle(User $actor, TenantContext $context, int $expectedRevision): OnlineBookingPublication
     {
         $unit = $this->unit($actor, $context, 'unit.update');
@@ -36,6 +46,12 @@ final class PublishOnlineBookingSite extends OperationalAction
                 return $active;
             }
             $active?->update(['superseded_at' => now()]);
+            $this->handles->activateForPublication(
+                $context->tenant->getKey(),
+                $unit->getKey(),
+                $active?->public_slug,
+                $site->public_slug,
+            );
             $version = ((int) OnlineBookingPublication::query()->where('site_id', $site->getKey())->max('version')) + 1;
             $publication = OnlineBookingPublication::query()->create([
                 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(),

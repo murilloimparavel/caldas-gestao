@@ -2,6 +2,7 @@ import {
     CalendarDays,
     CheckCircle2,
     Clock3,
+    LoaderCircle,
     Star,
     UserRound,
     Zap,
@@ -71,10 +72,12 @@ export function AtelierServiceSummaryCard({
 
 export function AtelierFirstAvailableCard({
     disabled,
+    loading,
     selected,
     onSelect,
 }: {
     disabled: boolean;
+    loading: boolean;
     selected: boolean;
     onSelect: () => void;
 }): ReactNode {
@@ -90,15 +93,23 @@ export function AtelierFirstAvailableCard({
             </span>
             <span className="min-w-0 flex-1">
                 <span className="block font-['DM_Sans'] text-base font-semibold text-[#f4efe6]">
-                    Primeiro disponível
+                    {loading
+                        ? 'Buscando o primeiro horário'
+                        : 'Primeiro disponível'}
                 </span>
                 <span className="mt-1 block font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
-                    Encontre o melhor horário disponível entre os profissionais.
+                    {loading
+                        ? 'Comparando os horários dos profissionais.'
+                        : 'Encontre o melhor horário disponível entre os profissionais.'}
                 </span>
             </span>
-            <span
-                className={`size-6 shrink-0 rounded-full border ${selected ? 'border-[#d4af37] bg-[#d4af37]' : 'border-[#706752]'}`}
-            />
+            {loading ? (
+                <LoaderCircle className="size-6 shrink-0 animate-spin text-[#d4af37]" />
+            ) : (
+                <span
+                    className={`size-6 shrink-0 rounded-full border ${selected ? 'border-[#d4af37] bg-[#d4af37]' : 'border-[#706752]'}`}
+                />
+            )}
         </button>
     );
 }
@@ -204,12 +215,13 @@ export function AtelierScheduleSlots({
                     Outros horários
                 </h2>
                 <span className="font-['DM_Sans'] text-xs text-[#918b80]">
-                    Fuso horário: Brasília
+                    Horário local da unidade
                 </span>
             </div>
             <div className="mt-3 grid grid-cols-5 gap-2 overflow-x-auto pb-1">
                 {dateChoices.map((choice) => {
-                    const option = new Date(`${choice}T12:00:00`);
+                    const [year, month, day] = choice.split('-').map(Number);
+                    const option = new Date(Date.UTC(year, month - 1, day, 12));
                     const active = choice === date;
 
                     return (
@@ -224,6 +236,7 @@ export function AtelierScheduleSlots({
                                 {option
                                     .toLocaleDateString('pt-BR', {
                                         weekday: 'short',
+                                        timeZone: 'UTC',
                                     })
                                     .replace('.', '')}
                             </span>
@@ -234,6 +247,7 @@ export function AtelierScheduleSlots({
                                 {option
                                     .toLocaleDateString('pt-BR', {
                                         month: 'short',
+                                        timeZone: 'UTC',
                                     })
                                     .replace('.', '')}
                             </span>

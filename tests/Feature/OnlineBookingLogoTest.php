@@ -40,7 +40,7 @@ it('allows an authorized owner to upload, replace, expose, and remove the bookin
     $newPath = $setting->refresh()->logo_image_path;
     expect($newPath)->not->toBe($oldPath)
         ->and($secondResponse->json('logo'))->toBe(Storage::disk('public')->url($newPath));
-    Storage::disk('public')->assertMissing($oldPath);
+    Storage::disk('public')->assertExists($oldPath);
     Storage::disk('public')->assertExists($newPath);
 
     $this->getJson(route('public_booking.show', [$tenant, $unit]))
@@ -52,7 +52,7 @@ it('allows an authorized owner to upload, replace, expose, and remove the bookin
         ->assertJsonPath('logo', null);
 
     expect($setting->fresh()->logo_image_path)->toBeNull();
-    Storage::disk('public')->assertMissing($newPath);
+    Storage::disk('public')->assertExists($newPath);
 });
 
 it('validates logo uploads and isolates them to the active unit', function (): void {

@@ -59,6 +59,8 @@ export default function OnlineBookingIndex({
 }: Props) {
     const { flash } = usePage<SharedPageProps>().props;
     const settings = rootSettings ?? unit.settings ?? {};
+    const effectiveTemplateKey =
+        rootTemplateKey ?? settings.template_key ?? 'essential';
     const [activeTab, setActiveTab] = useState<TabKey>('details');
     const {
         copied,
@@ -124,20 +126,6 @@ export default function OnlineBookingIndex({
                     onUnpublish={unpublishSite}
                     canPublish={Boolean(draft && readiness.publishable)}
                 />
-                {draft ? (
-                    <div className="mb-5 space-y-5">
-                        <AppearanceEditor
-                            draft={draft}
-                            settings={settings}
-                            unitName={unit.name}
-                            logoUrl={
-                                settings.logo_image_url ??
-                                unit.logo_image_url ??
-                                null
-                            }
-                        />
-                    </div>
-                ) : null}
                 <Form
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}
@@ -170,6 +158,15 @@ export default function OnlineBookingIndex({
                                 type="hidden"
                                 name="online_booking_enabled"
                                 value="0"
+                            />
+                            <input
+                                type="hidden"
+                                name="brand_color"
+                                value={
+                                    settings.brand_color ??
+                                    settings.accent_color ??
+                                    '#2563eb'
+                                }
                             />
                             {wasSuccessful && (
                                 <div
@@ -235,22 +232,41 @@ export default function OnlineBookingIndex({
                                         </CardContent>
                                     </Card>
                                     <div hidden={activeTab !== 'details'}>
-                                        <IdentitySettingsPanel
-                                            unit={unit}
-                                            settings={settings}
-                                            templateKey={rootTemplateKey}
-                                            coverUrl={coverUrl}
-                                            coverUploadUrl={
-                                                resolvedCoverUploadUrl
-                                            }
-                                            coverDeleteUrl={
-                                                resolvedCoverDeleteUrl
-                                            }
-                                        />
+                                        <div className="space-y-5">
+                                            {draft ? (
+                                                <AppearanceEditor
+                                                    draft={draft}
+                                                    settings={settings}
+                                                    unitName={unit.name}
+                                                    templateKey={
+                                                        effectiveTemplateKey
+                                                    }
+                                                    logoUrl={
+                                                        settings.logo_image_url ??
+                                                        unit.logo_image_url ??
+                                                        null
+                                                    }
+                                                />
+                                            ) : null}
+                                            <IdentitySettingsPanel
+                                                settings={settings}
+                                                templateKey={
+                                                    effectiveTemplateKey
+                                                }
+                                                coverUrl={coverUrl}
+                                                coverUploadUrl={
+                                                    resolvedCoverUploadUrl
+                                                }
+                                                coverDeleteUrl={
+                                                    resolvedCoverDeleteUrl
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                     <div hidden={activeTab !== 'settings'}>
                                         <OperationalSettingsPanel
                                             settings={settings}
+                                            templateKey={effectiveTemplateKey}
                                         />
                                     </div>
                                     <div hidden={activeTab !== 'link'}>
@@ -313,6 +329,7 @@ export default function OnlineBookingIndex({
                                 </div>
                                 <aside className="min-w-0 space-y-5 xl:self-start">
                                     <PublicPreview
+                                        key={draft?.revision ?? 'empty'}
                                         previewUrl={signedPreviewUrl}
                                     />
                                     <Card>

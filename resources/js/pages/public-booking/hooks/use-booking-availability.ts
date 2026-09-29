@@ -1,5 +1,4 @@
-import { useHttp } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { availability } from '@/routes/public_booking';
 
 export type BookingAvailabilityQuery = {
@@ -32,22 +31,31 @@ export function useBookingAvailability({
     date: string;
     onError: () => void;
 }) {
-    const request = useHttp<
-        BookingAvailabilityQuery,
-        BookingAvailabilityResponse
-    >({
-        service_id: '',
-        service_ids: [],
-        professional_id: '',
-        date: '',
-    });
+    const [state, setState] = useState<{
+        key: string;
+        response: BookingAvailabilityResponse | null;
+        processing: boolean;
+    }>({ key: '', response: null, processing: false });
+    const serviceIdsKey = serviceIds.join('|');
+    const argsKey = args.join('|');
+    const requestKey = [
+        argsKey,
+        serviceId,
+        serviceIdsKey,
+        professionalId,
+        date,
+    ].join('||');
+    const enabled = Boolean(serviceId && professionalId && date);
 
     useEffect(() => {
-        if (!serviceId || !professionalId || !date) {
+        if (!enabled) {
             return;
         }
 
-        const selectedServiceIds = serviceIds.length ? serviceIds : [serviceId];
+        const controller = new AbortController();
+        const selectedServiceIds = serviceIdsKey
+            ? serviceIdsKey.split('|')
+            : [serviceId];
         const query: BookingAvailabilityQuery = {
             service_id: serviceId,
             service_ids: selectedServiceIds,
@@ -55,14 +63,65 @@ export function useBookingAvailability({
             date,
         };
 
-        request.setData(query);
-        void request.get(
-            availability.url(args, {
+        void fetch(
+            availability.url(argsKey.split('|') as [string, string], {
                 query,
             }),
-            { onError },
-        ); // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [date, professionalId, serviceId, serviceIds.join('|')]);
+            {
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                signal: controller.signal,
+            },
+        )
+            .then(async (result) => {
+                if (!result.ok) {
+                    throw new Error(
+                        `Availability request failed (${result.status})`,
+                    );
+                }
 
-    return request;
+                return (await result.json()) as BookingAvailabilityResponse;
+            })
+            .then((availabilityResponse) => {
+                if (!controller.signal.aborted) {
+                    setState({
+                        key: requestKey,
+                        response: availabilityResponse,
+                        processing: false,
+                    });
+                }
+            })
+            .catch(() => {
+                if (!controller.signal.aborted) {
+                    setState({
+                        key: requestKey,
+                        response: null,
+                        processing: false,
+                    });
+                    onError();
+                }
+            });
+
+        return () => {
+            controller.abort();
+        };
+    }, [
+        argsKey,
+        date,
+        enabled,
+        onError,
+        professionalId,
+        requestKey,
+        serviceId,
+        serviceIdsKey,
+    ]);
+
+    const isCurrentRequest = state.key === requestKey;
+
+    return {
+        response: enabled && isCurrentRequest ? state.response : null,
+        processing: enabled && (!isCurrentRequest || state.processing),
+    };
 }

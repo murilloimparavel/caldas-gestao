@@ -2,25 +2,34 @@
 
 namespace App\Http\Requests\Settings;
 
-use App\Models\OnlineBookingSetting;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\TenantDomain;
 use App\Models\Unit;
+use App\Rules\AvailableOnlineBookingHandle;
 use App\Support\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class OnlineBookingSettingsRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $publicSlug = $this->input('public_slug');
+
+        if (is_string($publicSlug) && $publicSlug !== '') {
+            $publicSlug = Str::slug($publicSlug);
+        } else {
+            $publicSlug = $this->attributes->get(TenantContext::class)?->unit?->slug;
+        }
+
         $this->merge([
             'service_ids' => is_array($this->input('service_ids')) ? $this->input('service_ids') : [],
             'professional_ids' => is_array($this->input('professional_ids')) ? $this->input('professional_ids') : [],
-            'public_slug' => $this->input('public_slug') ?: ($this->attributes->get(TenantContext::class)?->unit?->slug),
+            'public_slug' => $publicSlug,
             'template_key' => $this->input('template_key') ?: 'essential',
         ]);
     }
@@ -56,7 +65,7 @@ final class OnlineBookingSettingsRequest extends FormRequest
                 Rule::exists(Professional::class, 'id')->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active'),
             ],
             'lock_version' => ['required', 'integer', 'min:0'],
-            'public_slug' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique(OnlineBookingSetting::class, 'public_slug')->ignore($context?->unit?->onlineBookingSetting?->getKey())],
+            'public_slug' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', new AvailableOnlineBookingHandle($tenantId, $unitId)],
             'public_domain_id' => ['nullable', 'uuid', Rule::exists(TenantDomain::class, 'id')->where('tenant_id', $tenantId)->where('kind', 'public')->where('status', 'active')],
             'description' => ['nullable', 'string', 'max:5000'],
             'whatsapp_phone' => ['nullable', 'string', 'max:40'],
