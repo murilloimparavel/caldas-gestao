@@ -118,6 +118,9 @@ export type SaleMetrics = {
 export type ClosingSessionStatus =
     'draft' | 'ready' | 'processing' | 'completed' | 'cancelled' | 'failed';
 
+export type PaymentMethod =
+    'pix' | 'debit_card' | 'credit_card' | 'cash' | 'permuta';
+
 export type ReceiptPayload = {
     receipt_number: string;
     issued_at: string;
@@ -150,6 +153,7 @@ export type ReceiptPayload = {
         final_total_cents: number;
         sales_count: number;
     };
+    payment_method?: PaymentMethod | null;
     sales: Array<{
         id: string;
         category_name: string;
@@ -179,6 +183,7 @@ export type ClosingSession = {
     currency: string;
     expected_total_cents: number;
     final_total_cents: number;
+    payment_method?: PaymentMethod | null;
     status: ClosingSessionStatus;
     receipt_number: string | null;
     receipt_payload: ReceiptPayload | null;

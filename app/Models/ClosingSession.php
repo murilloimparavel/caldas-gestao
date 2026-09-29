@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string $unit_id
  * @property string $closing_subject
  * @property string $currency
+ * @property string|null $payment_method
  * @property int $expected_total_cents
  * @property int $final_total_cents
  * @property string $status
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'unit_id',
     'closing_subject',
     'currency',
+    'payment_method',
     'expected_total_cents',
     'final_total_cents',
     'status',
@@ -49,6 +51,7 @@ class ClosingSession extends Model
 
     protected $attributes = [
         'currency' => 'BRL',
+        'payment_method' => null,
         'final_total_cents' => 0,
         'status' => 'draft',
         'lock_version' => 1,

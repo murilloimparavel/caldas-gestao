@@ -55,6 +55,7 @@ import type {
     Sale,
     SaleCategoryOption,
     SaleItem,
+    PaymentMethod,
     ServiceOption,
     SharedPageProps,
 } from '@/types';
@@ -66,6 +67,14 @@ type Props = {
     professionals: ProfessionalOption[];
     categories: SaleCategoryOption[];
 };
+
+const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
+    { value: 'pix', label: 'PIX' },
+    { value: 'debit_card', label: 'Cartão de débito' },
+    { value: 'credit_card', label: 'Cartão de crédito' },
+    { value: 'cash', label: 'Dinheiro' },
+    { value: 'permuta', label: 'Permuta' },
+];
 
 function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
@@ -136,6 +145,7 @@ export default function SalesShow({
     const [discountOpen, setDiscountOpen] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
     const [adjustOpen, setAdjustOpen] = useState(false);
 
     // Dynamic lists for quick-created items
@@ -567,6 +577,47 @@ export default function SalesShow({
                                                             </span>
                                                         </div>
                                                     </div>
+
+                                                    <FormField
+                                                        label="Método de pagamento"
+                                                        name="payment_method"
+                                                        error={
+                                                            errors.payment_method
+                                                        }
+                                                    >
+                                                        <select
+                                                            id="payment_method"
+                                                            name="payment_method"
+                                                            required
+                                                            value={
+                                                                paymentMethod
+                                                            }
+                                                            onChange={(event) =>
+                                                                setPaymentMethod(
+                                                                    event.target
+                                                                        .value as PaymentMethod,
+                                                                )
+                                                            }
+                                                            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                                        >
+                                                            {paymentMethods.map(
+                                                                (method) => (
+                                                                    <option
+                                                                        key={
+                                                                            method.value
+                                                                        }
+                                                                        value={
+                                                                            method.value
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            method.label
+                                                                        }
+                                                                    </option>
+                                                                ),
+                                                            )}
+                                                        </select>
+                                                    </FormField>
 
                                                     <FormField
                                                         label="Observações do fechamento (opcional)"

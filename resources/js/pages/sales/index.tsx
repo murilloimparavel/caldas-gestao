@@ -46,6 +46,7 @@ import closingSessions from '@/routes/closing-sessions';
 import sales from '@/routes/sales';
 import type {
     CustomerOption,
+    PaymentMethod,
     Sale,
     SaleCategoryOption,
     SaleMetrics,
@@ -64,6 +65,14 @@ type Props = {
         sale_category_id?: string;
     };
 };
+
+const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
+    { value: 'pix', label: 'PIX' },
+    { value: 'debit_card', label: 'Cartão de débito' },
+    { value: 'credit_card', label: 'Cartão de crédito' },
+    { value: 'cash', label: 'Dinheiro' },
+    { value: 'permuta', label: 'Permuta' },
+];
 
 const statusConfig: Record<
     SaleStatus,
@@ -147,6 +156,7 @@ export default function SalesIndex({
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
     const [createKey] = useState(() => createIdempotencyKey('sale-open'));
     const [closeKey, setCloseKey] = useState(() =>
         createIdempotencyKey('closing-session'),
@@ -769,6 +779,35 @@ export default function SalesIndex({
                                             </span>
                                         </div>
                                     </div>
+
+                                    <FormField
+                                        label="Método de pagamento"
+                                        name="payment_method"
+                                        error={errors.payment_method}
+                                    >
+                                        <select
+                                            id="payment_method"
+                                            name="payment_method"
+                                            required
+                                            value={paymentMethod}
+                                            onChange={(event) =>
+                                                setPaymentMethod(
+                                                    event.target
+                                                        .value as PaymentMethod,
+                                                )
+                                            }
+                                            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                        >
+                                            {paymentMethods.map((method) => (
+                                                <option
+                                                    key={method.value}
+                                                    value={method.value}
+                                                >
+                                                    {method.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </FormField>
 
                                     <FormField
                                         label="Observações do fechamento (opcional)"

@@ -39,6 +39,7 @@ final class FinalizeClosingSession extends OperationalAction
      * @param  array{
      *     sale_ids: list<string>,
      *     expected_total_cents?: int|null,
+     *     payment_method: string,
      *     notes?: string|null,
      *     lock_versions?: array<string, int>|null
      * }  $data
@@ -171,6 +172,7 @@ final class FinalizeClosingSession extends OperationalAction
                     'email' => $firstSale->customer->email,
                 ] : null,
                 'currency' => 'BRL',
+                'payment_method' => $data['payment_method'] ?? null,
                 'totals' => [
                     'total_gross_cents' => $totalGrossCents,
                     'total_discount_cents' => $totalDiscountCents,
@@ -205,6 +207,7 @@ final class FinalizeClosingSession extends OperationalAction
                 'unit_id' => $unitId,
                 'closing_subject' => $closingSubject,
                 'currency' => 'BRL',
+                'payment_method' => $data['payment_method'] ?? null,
                 'expected_total_cents' => $calculatedFinalTotalCents,
                 'final_total_cents' => $calculatedFinalTotalCents,
                 'status' => 'completed',
