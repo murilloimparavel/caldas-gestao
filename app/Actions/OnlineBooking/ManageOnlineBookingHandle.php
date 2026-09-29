@@ -53,7 +53,7 @@ final class ManageOnlineBookingHandle
             throw new ConflictHttpException('Este identificador público já está sendo usado por outra barbearia.');
         }
 
-        if ($desired?->status === OnlineBookingHandleStatus::Redirect) {
+        if ($desired->status === OnlineBookingHandleStatus::Redirect) {
             throw new ConflictHttpException('Este identificador foi usado recentemente e ainda está reservado para redirecionamento.');
         }
 

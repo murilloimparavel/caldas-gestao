@@ -20,9 +20,9 @@ final class OnlineBookingSettingsRequest extends FormRequest
     {
         $publicSlug = $this->input('public_slug');
 
-        if (is_string($publicSlug)) {
+        if (is_string($publicSlug) && $publicSlug !== '') {
             $publicSlug = Str::slug($publicSlug);
-        } elseif ($publicSlug === null || $publicSlug === '') {
+        } else {
             $publicSlug = $this->attributes->get(TenantContext::class)?->unit?->slug;
         }
 
