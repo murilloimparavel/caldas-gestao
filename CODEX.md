@@ -20,7 +20,15 @@
 - Tarefas mecânicas ou isoladas dispensam revisor dedicado: use validação automática e inspeção do agente raiz.
 - Quando o frontend depender do backend, finalize primeiro os contratos e o backend, gere o Wayfinder e só então implemente o frontend.
 
-## Deploy
+## GitHub, revisão e deploy
 
-- Este projeto usa autodeploy: após publicar um commit na branch `main`, o webhook do repositório aciona o deploy automaticamente.
-- Não é necessário acionar um deploy manual no Coolify depois de um `git push` para `main`, salvo quando o usuário pedir explicitamente uma reexecução.
+- Preserve o estado local: antes de mudar de branch ou preparar um commit, confira `git status --short --branch` e não descarte alterações que não pertencem à tarefa.
+- Use uma branch de trabalho com o padrão `codex/<slug>` e commits no padrão Conventional Commits, por exemplo `fix: restore inventory summary`.
+- Fluxo normal: confira `git status --short --branch`; crie `codex/<slug>`; revise o diff staged com `git diff --cached` e `git diff --cached --check`; faça um commit Conventional Commit; publique com `git push -u origin codex/<slug>`; abra o PR com `gh pr create --base main`; e revise-o com `gh pr view`, `gh pr diff` e `gh pr checks`.
+- Antes de abrir ou revisar um PR, confira `gh pr view <numero> --repo murilloimparavel/caldas-gestao`, `gh pr diff <numero> --repo murilloimparavel/caldas-gestao` e `gh pr checks <numero> --repo murilloimparavel/caldas-gestao`.
+- Para release ou hotfix, confirme explicitamente a branch base do PR antes de abrir ou mesclar; não presuma `main` ou `production`. Merge, push para `production` e deploy são ações externas e exigem autorização explícita do usuário. Não presuma o método de merge: confirme o método configurado ou use o método pedido pelo usuário.
+- Após uma publicação, confirme o SHA da branch, o SHA do PR mesclado e o run correspondente em `gh run list`/`gh run view`. Registre também se o build e o deploy terminaram com sucesso.
+
+O build de produção em `.github/workflows/build-ghcr.yml` roda por `push` na branch `production`. O deploy em `.github/workflows/deploy-coolify.yml` roda somente quando o build de produção termina com sucesso e informa `head_branch == 'production'`. Um push em `main` não publica nem implanta produção.
+
+Para rever uma execução, use `gh run view <run-id> --repo murilloimparavel/caldas-gestao` e confira evento, branch, SHA e jobs antes de reexecutar. Reexecuções podem publicar uma imagem ou alterar produção; só faça isso com autorização explícita e depois de confirmar que a execução pertence à branch `production`. O `workflow_dispatch` foi removido da versão desses workflows no default branch; por isso o GitHub não oferece dispatch manual, inclusive para versões antigas escolhidas no seletor de branch. A recuperação normal é corrigir e publicar um commit em `production`, seguindo o fluxo de PR autorizado.
