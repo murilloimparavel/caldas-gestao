@@ -538,6 +538,7 @@ export default function SalesShow({
                                                     parseBrazilianCurrency(
                                                         cashReceived,
                                                     );
+
                                                 if (
                                                     paymentMethod === 'cash' &&
                                                     received <
