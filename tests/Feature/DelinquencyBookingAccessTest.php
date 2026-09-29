@@ -131,7 +131,7 @@ it('allows a delinquent tenant to create a public booking', function (): void {
         ->assertJsonPath('confirmation.status', 'pending_confirmation')
         ->assertJsonPath('confirmation.message', 'Seu pedido de agendamento foi recebido. A barbearia ainda precisa confirmar o horário; aguarde nosso retorno.');
     expect(Appointment::query()->sole()->source)->toBe('online');
-    Queue::assertPushed(SyncGoogleCalendarAppointment::class);
+    Queue::assertNotPushed(SyncGoogleCalendarAppointment::class);
 });
 
 it('returns only an aggregate online booking count in the billing payload', function (): void {

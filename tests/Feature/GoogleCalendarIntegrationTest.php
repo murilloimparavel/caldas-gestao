@@ -75,7 +75,7 @@ test('does not sync an appointment when subscription expires before queued job r
     $appointment = Appointment::factory()->create();
     TenantSubscription::factory()->create([
         'tenant_id' => $appointment->tenant_id,
-        'status' => 'past_due',
+        'status' => 'expired',
         'ends_at' => now()->subDay(),
     ]);
     GoogleCalendarConnection::factory()->create([
