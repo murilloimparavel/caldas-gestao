@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 final class OnlineBookingAppearance
 {
     /**
-     * @return array{brand_name: string, headline: string, subheadline: string, primary_color: string, background_color: string, cta_label: string}
+     * @return array{brand_name: string, headline: string, subheadline: string, primary_color: string, background_color: string, cta_label: string, font_style: string}
      */
     public static function defaults(?string $templateKey = null, ?string $brandName = null): array
     {
@@ -19,6 +19,7 @@ final class OnlineBookingAppearance
                 'primary_color' => '#D4AF37',
                 'background_color' => '#0D0D0C',
                 'cta_label' => 'Continuar',
+                'font_style' => 'editorial',
             ];
         }
 
@@ -29,13 +30,14 @@ final class OnlineBookingAppearance
             'primary_color' => '#2563EB',
             'background_color' => '#F8FAFC',
             'cta_label' => 'Continuar',
+            'font_style' => 'editorial',
         ];
     }
 
     /**
      * @param  array<string, mixed>|null  $appearance
      * @param  array<string, mixed>|null  $base
-     * @return array{brand_name: string, headline: string, subheadline: string, primary_color: string, background_color: string, cta_label: string}
+     * @return array{brand_name: string, headline: string, subheadline: string, primary_color: string, background_color: string, cta_label: string, font_style: string}
      */
     public static function normalize(?array $appearance, ?string $templateKey = null, ?array $base = null, ?string $brandName = null): array
     {
@@ -49,7 +51,15 @@ final class OnlineBookingAppearance
             'primary_color' => self::color($merged['primary_color'] ?? null, $defaults['primary_color']),
             'background_color' => self::color($merged['background_color'] ?? null, $defaults['background_color']),
             'cta_label' => self::text($merged['cta_label'] ?? null, $defaults['cta_label'], 40),
+            'font_style' => self::fontStyle($merged['font_style'] ?? null),
         ];
+    }
+
+    private static function fontStyle(mixed $value): string
+    {
+        return in_array($value, ['editorial', 'montserrat', 'modern'], true)
+            ? $value
+            : 'editorial';
     }
 
     private static function text(mixed $value, string $fallback, int $maxLength): string

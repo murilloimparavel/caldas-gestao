@@ -192,6 +192,43 @@
 }
 
 @layer components {
+    main[data-booking-font] * {
+        font-family: var(--booking-body-font) !important;
+    }
+
+    main[data-booking-font='editorial'] {
+        --booking-display-font: 'Bodoni Moda', Georgia, serif;
+        --booking-body-font: 'DM Sans', 'Manrope', sans-serif;
+        --booking-ui-font: 'Manrope', sans-serif;
+        --booking-label-font: 'Space Grotesk', sans-serif;
+    }
+
+    main[data-booking-font='editorial'] [class*='Bodoni_Moda'] {
+        font-family: var(--booking-display-font) !important;
+    }
+
+    main[data-booking-font='editorial'] [class*='Manrope'] {
+        font-family: var(--booking-ui-font) !important;
+    }
+
+    main[data-booking-font='editorial'] [class*='Space_Grotesk'] {
+        font-family: var(--booking-label-font) !important;
+    }
+
+    main[data-booking-font='montserrat'] {
+        --booking-body-font: 'Montserrat', sans-serif;
+    }
+
+    main[data-booking-font='modern'] {
+        --booking-body-font: 'DM Sans', sans-serif;
+    }
+
+    main[data-booking-font='modern'] [class*='Bodoni_Moda'],
+    main[data-booking-font='modern'] [class*='Manrope'],
+    main[data-booking-font='modern'] [class*='Space_Grotesk'] {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
     .surface-panel {
         @apply rounded-[14px] border border-border bg-card shadow-[0_1px_2px_rgb(23_37_42_/_0.05)];
     }

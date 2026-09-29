@@ -104,7 +104,7 @@ it('serves the selected catalog from the active publication snapshot', function 
         'version' => 1,
         'source_revision' => 1,
         'content_hash' => hash('sha256', 'snapshot'),
-        'template_key' => 'essential',
+        'template_key' => 'atelier-barber',
         'public_slug' => $unit->slug,
         'published_at' => now(),
         'published_by' => User::factory()->create()->getKey(),
@@ -113,6 +113,7 @@ it('serves the selected catalog from the active publication snapshot', function 
             'appearance' => [
                 'brand_name' => 'Atelier Público',
                 'headline' => 'Reserve agora',
+                'font_style' => 'montserrat',
                 'primary_color' => '#D4AF37',
                 'background_color' => '#0D0D0C',
             ],
@@ -138,6 +139,7 @@ it('serves the selected catalog from the active publication snapshot', function 
     expect($response->json('unit.sections.gallery'))->toBeFalse()
         ->and($response->json('unit.sections.services'))->toBeTrue()
         ->and($response->json('unit.appearance.brand_name'))->toBe('Atelier Público')
+        ->and($response->json('unit.appearance.font_style'))->toBe('montserrat')
         ->and($response->json('settings.appearance.headline'))->toBe('Reserve agora');
 });
 

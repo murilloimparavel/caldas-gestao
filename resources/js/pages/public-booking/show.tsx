@@ -56,6 +56,7 @@ type BookingAppearance = {
     primary_color?: string | null;
     background_color?: string | null;
     cta_label?: string | null;
+    font_style?: 'editorial' | 'montserrat' | 'modern' | null;
 };
 type Unit = {
     tenant_slug: string;
@@ -240,6 +241,8 @@ const errorText = (value: unknown): string | null => {
     return typeof value === 'string' && value.trim() !== '' ? value : null;
 };
 type ResolvedBookingAppearance = Record<keyof BookingAppearance, string>;
+const safeFontStyle = (value: string | null | undefined): string =>
+    value === 'montserrat' || value === 'modern' ? value : 'editorial';
 const resolveAppearance = (unit: Unit): ResolvedBookingAppearance => ({
     brand_name:
         unit.appearance?.brand_name?.trim() ||
@@ -274,6 +277,9 @@ const resolveAppearance = (unit: Unit): ResolvedBookingAppearance => ({
         unit.appearance?.cta_label?.trim() ||
         unit.settings?.appearance?.cta_label?.trim() ||
         'Confirmar agendamento',
+    font_style: safeFontStyle(
+        unit.appearance?.font_style ?? unit.settings?.appearance?.font_style,
+    ),
 });
 const appearanceStyle = (
     appearance: ResolvedBookingAppearance,
@@ -1871,6 +1877,7 @@ function AtelierBarberView({
     return (
         <main
             className="mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30 md:max-w-6xl md:bg-[#0e0e0e] md:pb-32"
+            data-booking-font={appearance.font_style}
             style={appearanceStyle(appearance)}
         >
             <Head title={`Agendar · ${unit.name}`}>
@@ -1882,7 +1889,7 @@ function AtelierBarberView({
                 />
                 <link
                     rel="stylesheet"
-                    href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Manrope:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+                    href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
                 />
             </Head>
             <div className="w-full">
