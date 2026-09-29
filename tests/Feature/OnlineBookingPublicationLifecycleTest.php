@@ -162,6 +162,7 @@ it('normalizes appearance defaults and preserves partial appearance updates', fu
         'primary_color' => '#D4AF37',
         'cta_label' => 'Avançar',
         'background_color' => '#F8FAFC',
+        'font_style' => 'editorial',
     ])->and($second->content['appearance']['brand_name'])->toBe($unit->name);
 });
 
@@ -173,7 +174,10 @@ it('snapshots normalized appearance when publishing a draft', function () {
     $professional->services()->syncWithoutDetaching([$service->getKey()]);
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
-        'appearance' => ['headline' => 'Versão publicada'],
+        'appearance' => [
+            'headline' => 'Versão publicada',
+            'font_style' => 'montserrat',
+        ],
         'service_ids' => [$service->getKey()],
         'professional_ids' => [$professional->getKey()],
     ], 0);
@@ -183,7 +187,8 @@ it('snapshots normalized appearance when publishing a draft', function () {
         'appearance' => ['headline' => 'Rascunho posterior'],
     ], $draft->revision);
 
-    expect($publication->fresh()->content['appearance']['headline'])->toBe('Versão publicada');
+    expect($publication->fresh()->content['appearance']['headline'])->toBe('Versão publicada')
+        ->and($publication->fresh()->content['appearance']['font_style'])->toBe('montserrat');
 });
 
 it('renders a signed preview from the draft without requiring publication', function () {
@@ -262,6 +267,11 @@ it('validates appearance fields on draft requests', function () {
         'revision' => 0,
         'content' => ['appearance' => ['primary_color' => 'gold']],
     ])->assertUnprocessable()->assertJsonValidationErrors('content.appearance.primary_color');
+
+    $this->actingAs($owner)->patchJson(route('online_booking.draft.update'), [
+        'revision' => 0,
+        'content' => ['appearance' => ['font_style' => 'Comic Sans']],
+    ])->assertUnprocessable()->assertJsonValidationErrors('content.appearance.font_style');
 });
 
 it('exposes the named editor, publications, and links entry points', function () {

@@ -1,4 +1,4 @@
-import { router, useHttp } from '@inertiajs/react';
+import { Head, router, useHttp } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +26,32 @@ const defaults: Record<keyof BookingAppearance, string> = {
     primary_color: '#d4af37',
     background_color: '#0d0d0c',
     cta_label: 'Confirmar agendamento',
+    font_style: 'editorial',
 };
+
+const fontStyles = [
+    {
+        id: 'editorial',
+        name: 'Editorial',
+        description: 'Elegante, com títulos serifados e textos leves.',
+        sampleFont: "'Bodoni Moda', Georgia, serif",
+        sample: 'Sua melhor versão',
+    },
+    {
+        id: 'montserrat',
+        name: 'Montserrat',
+        description: 'Mais legível e uniforme em todas as etapas.',
+        sampleFont: "'Montserrat', sans-serif",
+        sample: 'Agende com facilidade',
+    },
+    {
+        id: 'modern',
+        name: 'Moderno',
+        description: 'Contemporâneo, com títulos limpos e corpo confortável.',
+        sampleFont: "'Plus Jakarta Sans', sans-serif",
+        sample: 'Um cuidado só seu',
+    },
+] as const;
 
 const valueOrDefault = (
     appearance: BookingAppearance | null | undefined,
@@ -72,6 +97,10 @@ export function AppearanceEditor({
             draft.content?.appearance ?? settings.appearance,
             'cta_label',
         ),
+        font_style: valueOrDefault(
+            draft.content?.appearance ?? settings.appearance,
+            'font_style',
+        ),
     } satisfies Record<keyof BookingAppearance, string>;
     const [appearance, setAppearance] = useState(initial);
     const [saving, setSaving] = useState(false);
@@ -113,6 +142,23 @@ export function AppearanceEditor({
 
     return (
         <Card>
+            {templateKey === 'atelier-barber' ? (
+                <Head>
+                    <link
+                        rel="preconnect"
+                        href="https://fonts.googleapis.com"
+                    />
+                    <link
+                        rel="preconnect"
+                        href="https://fonts.gstatic.com"
+                        crossOrigin="anonymous"
+                    />
+                    <link
+                        rel="stylesheet"
+                        href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+                    />
+                </Head>
+            ) : null}
             <CardHeader>
                 <CardTitle className={bookingTokens.type.sectionTitle}>
                     Identidade e conteúdo
@@ -196,6 +242,51 @@ export function AppearanceEditor({
                         </div>
                     </div>
                 )}
+                {templateKey === 'atelier-barber' ? (
+                    <fieldset className="space-y-3">
+                        <legend className="text-sm font-medium">
+                            Estilo de fonte
+                        </legend>
+                        <p className="text-sm text-muted-foreground">
+                            Escolha uma combinação para títulos, textos e
+                            botões. A prévia usa esta escolha; ela só vai ao ar
+                            quando você publicar.
+                        </p>
+                        <div className="grid gap-3 md:grid-cols-3">
+                            {fontStyles.map((style) => {
+                                const selected =
+                                    appearance.font_style === style.id;
+
+                                return (
+                                    <button
+                                        key={style.id}
+                                        type="button"
+                                        aria-pressed={selected}
+                                        onClick={() =>
+                                            update('font_style', style.id)
+                                        }
+                                        className={`rounded-xl border p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${selected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/50'}`}
+                                    >
+                                        <span className="block text-sm font-semibold">
+                                            {style.name}
+                                        </span>
+                                        <span
+                                            className="mt-3 block truncate text-lg text-foreground"
+                                            style={{
+                                                fontFamily: style.sampleFont,
+                                            }}
+                                        >
+                                            {style.sample}
+                                        </span>
+                                        <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">
+                                            {style.description}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </fieldset>
+                ) : null}
                 <div className="grid gap-4 sm:grid-cols-2">
                     {(
                         [

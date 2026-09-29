@@ -52,6 +52,7 @@ final class OnlineBookingDraftRequest extends FormRequest
             'content.appearance.primary_color' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'content.appearance.background_color' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'content.appearance.cta_label' => ['sometimes', 'string', 'max:40'],
+            'content.appearance.font_style' => ['sometimes', 'string', 'in:editorial,montserrat,modern'],
         ];
     }
 }

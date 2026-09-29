@@ -26,6 +26,7 @@ export type BookingAppearance = {
     primary_color?: string | null;
     background_color?: string | null;
     cta_label?: string | null;
+    font_style?: 'editorial' | 'montserrat' | 'modern' | null;
 };
 
 export type PublicSettings = {
