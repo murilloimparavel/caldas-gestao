@@ -90,6 +90,7 @@ it('finalizes a single sale closing session, generating receipt payload, status 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 4500,
+        'payment_method' => 'pix',
         'notes' => 'Fechamento rápido no caixa',
     ]);
 
@@ -104,11 +105,13 @@ it('finalizes a single sale closing session, generating receipt payload, status 
         ->and($session->closing_subject)->toBe("customer:{$customer->getKey()}")
         ->and($session->expected_total_cents)->toBe(4500)
         ->and($session->final_total_cents)->toBe(4500)
+        ->and($session->payment_method)->toBe('pix')
         ->and($session->closed_by_user_id)->toBe($owner->getKey())
         ->and($session->receipt_number)->not->toBeNull()
         ->and($session->receipt_payload)->toBeArray()
         ->and($session->receipt_payload['closing_subject'])->toBe("customer:{$customer->getKey()}")
         ->and($session->receipt_payload['totals']['final_total_cents'])->toBe(4500)
+        ->and($session->receipt_payload['payment_method'])->toBe('pix')
         ->and($session->receipt_payload['totals']['total_discount_cents'])->toBe(500)
         ->and($session->receipt_payload['customer']['name'])->toBe('Renato Russo')
         ->and($session->receipt_payload['notes'])->toBe('Fechamento rápido no caixa');
@@ -130,6 +133,145 @@ it('finalizes a single sale closing session, generating receipt payload, status 
 
     expect(AuditEvent::query()->where('action', 'closing_session.completed')->where('resource_id', $session->getKey())->exists())->toBeTrue();
     expect(AuditEvent::query()->where('action', 'sale.finalized')->where('resource_id', $sale->getKey())->exists())->toBeTrue();
+});
+
+it('rejects unsupported payment methods when closing a session', function () {
+    [$owner] = closingTestWorkspace();
+
+    $this->actingAs($owner)
+        ->post(route('closing-sessions.store'), [
+            'sale_ids' => [(string) Str::uuid7()],
+            'payment_method' => 'boleto',
+        ])
+        ->assertSessionHasErrors('payment_method');
+});
+
+it('accepts permuta as a closing session payment method', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 1000,
+        'final_amount_cents' => 1000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 1000,
+        'payment_method' => 'permuta',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->payment_method)->toBe('permuta')
+        ->and($session->receipt_payload['payment_method'])->toBe('permuta');
+});
+
+it('rejects cash closing when the received amount is lower than the total', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'cash',
+        'cash_received_cents' => 3999,
+    ]);
+
+    $response->assertSessionHasErrors('cash_received_cents');
+    expect(ClosingSession::query()->where('tenant_id', $tenant->getKey())->exists())->toBeFalse();
+    expect($sale->fresh()->status)->toBe('open');
+});
+
+it('records exact cash payment with no change', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'cash',
+        'cash_received_cents' => 4000,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->cash_received_cents)->toBe(4000)
+        ->and($session->cash_change_cents)->toBe(0)
+        ->and($session->receipt_payload['cash_received_cents'])->toBe(4000)
+        ->and($session->receipt_payload['cash_change_cents'])->toBe(0);
+});
+
+it('records excess cash and calculates the change', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'cash',
+        'cash_received_cents' => 5000,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->cash_received_cents)->toBe(5000)
+        ->and($session->cash_change_cents)->toBe(1000)
+        ->and($session->receipt_payload['cash_received_cents'])->toBe(5000)
+        ->and($session->receipt_payload['cash_change_cents'])->toBe(1000);
+});
+
+it('keeps cash fields null for noncash closing methods', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 4000,
+        'final_amount_cents' => 4000,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 4000,
+        'payment_method' => 'pix',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
+
+    expect($session->cash_received_cents)->toBeNull()
+        ->and($session->cash_change_cents)->toBeNull()
+        ->and($session->receipt_payload['cash_received_cents'])->toBeNull()
+        ->and($session->receipt_payload['cash_change_cents'])->toBeNull();
 });
 
 it('consolidates multiple sales for the same customer into a single closing session', function () {
@@ -184,6 +326,7 @@ it('consolidates multiple sales for the same customer into a single closing sess
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
         'expected_total_cents' => 9000,
+        'payment_method' => 'pix',
     ]);
 
     $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
@@ -235,6 +378,7 @@ it('consolidates multiple customer-less sales with the same reference_label', fu
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
         'expected_total_cents' => 11500,
+        'payment_method' => 'pix',
     ]);
 
     $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
@@ -280,6 +424,7 @@ it('rejects closing session with divergent customers (different closing subjects
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasErrors('closing_subject');
@@ -321,6 +466,7 @@ it('rejects closing session mixing customer sale and reference sale', function (
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$saleWithCustomer->getKey(), $saleWithRefOnly->getKey()],
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasErrors('closing_subject');
@@ -348,6 +494,7 @@ it('rejects closing session if any sale is already finalized or cancelled', func
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$saleFinalized->getKey()],
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasErrors('sale_ids');
@@ -375,6 +522,7 @@ it('rejects closing session if lock_version does not match expected version (con
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
+        'payment_method' => 'pix',
         'lock_versions' => [
             $sale->getKey() => 1, // outdated version
         ],
@@ -412,6 +560,7 @@ it('supports idempotency via X-Idempotency-Key without re-executing or creating 
         ->post(route('closing-sessions.store'), [
             'sale_ids' => [$sale->getKey()],
             'expected_total_cents' => 5000,
+            'payment_method' => 'pix',
         ]);
 
     $session1 = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
@@ -424,6 +573,7 @@ it('supports idempotency via X-Idempotency-Key without re-executing or creating 
         ->post(route('closing-sessions.store'), [
             'sale_ids' => [$sale->getKey()],
             'expected_total_cents' => 5000,
+            'payment_method' => 'pix',
         ]);
 
     $response2->assertRedirect(route('closing-sessions.show', $session1));
@@ -493,6 +643,7 @@ it('closes a single anonymous sale without customer or reference label with sale
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 3000,
+        'payment_method' => 'pix',
     ]);
 
     $session = ClosingSession::query()->where('tenant_id', $tenant->getKey())->firstOrFail();
@@ -534,6 +685,7 @@ it('rejects multiple anonymous sales without customer or reference label', funct
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasErrors('closing_subject');
@@ -563,6 +715,7 @@ it('rejects closing session if expected_total_cents does not match calculated to
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 9999, // Mismatched expected total
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasErrors('expected_total_cents');
@@ -610,6 +763,7 @@ it('rejects closing session if user does not have sale.close or sale.manage perm
     $response = $this->actingAs($restrictedUser)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 5000,
+        'payment_method' => 'pix',
     ]);
 
     $response->assertForbidden();
@@ -638,6 +792,7 @@ it('rejects closing session for sales belonging to a different unit or workspace
     $response = $this->actingAs($ownerA)->post(route('closing-sessions.store'), [
         'sale_ids' => [$saleB->getKey()],
         'expected_total_cents' => 5000,
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasErrors('sale_ids');

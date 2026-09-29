@@ -240,6 +240,7 @@ it('automatically creates sale_outflow inventory movement on FinalizeClosingSess
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 10000,
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasNoErrors();

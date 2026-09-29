@@ -166,6 +166,7 @@ it('finalizes sale order via closing sessions, debits inventory and generates im
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 9000,
+        'payment_method' => 'pix',
         'notes' => 'Pagamento no cartão de débito',
     ]);
 
@@ -315,6 +316,7 @@ it('debits inventory only for product items in mixed sales with services', funct
     $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 7000,
+        'payment_method' => 'pix',
     ])->assertSessionHasNoErrors();
 
     // Inventory updated only for the product

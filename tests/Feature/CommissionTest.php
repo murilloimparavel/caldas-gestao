@@ -149,6 +149,7 @@ it('automatically accrues percentage and fixed commissions upon closing session 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 15000,
+        'payment_method' => 'pix',
     ]);
 
     $response->assertSessionHasNoErrors();
@@ -307,6 +308,7 @@ it('prioritizes specific rule over generic rule during commission accrual', func
     $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 20000,
+        'payment_method' => 'pix',
     ]);
 
     $accrual = CommissionAccrual::query()
