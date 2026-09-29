@@ -746,7 +746,6 @@ export default function PublicBooking({
                 selectedServiceIds={selectedServiceIds}
                 serviceCategory={serviceCategory}
                 selectedProfessional={selectedProfessional}
-                bookingConfirmation={bookingConfirmation}
                 serviceId={serviceId}
                 professionalId={professionalId}
                 professionalMode={professionalMode}
@@ -1680,7 +1679,6 @@ type AtelierBarberViewProps = {
     selectedServiceIds: string[];
     serviceCategory: string;
     selectedProfessional?: Professional;
-    bookingConfirmation: AppointmentResponse['confirmation'] | null;
     serviceId: string;
     professionalId: string;
     professionalMode: 'manual' | 'first_available';
