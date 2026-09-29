@@ -1726,7 +1726,6 @@ function AtelierBarberView({
     selectedServiceIds,
     serviceCategory,
     selectedProfessional,
-    bookingConfirmation,
     serviceId,
     professionalId,
     professionalMode,
