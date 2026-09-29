@@ -186,7 +186,7 @@ final class FinalizeClosingSession extends OperationalAction
                     'email' => $firstSale->customer->email,
                 ] : null,
                 'currency' => 'BRL',
-                'payment_method' => $data['payment_method'] ?? null,
+                'payment_method' => $data['payment_method'],
                 'cash_received_cents' => $cashReceivedCents,
                 'cash_change_cents' => $cashChangeCents,
                 'totals' => [
@@ -223,7 +223,7 @@ final class FinalizeClosingSession extends OperationalAction
                 'unit_id' => $unitId,
                 'closing_subject' => $closingSubject,
                 'currency' => 'BRL',
-                'payment_method' => $data['payment_method'] ?? null,
+                'payment_method' => $data['payment_method'],
                 'cash_received_cents' => $cashReceivedCents,
                 'cash_change_cents' => $cashChangeCents,
                 'expected_total_cents' => $calculatedFinalTotalCents,
