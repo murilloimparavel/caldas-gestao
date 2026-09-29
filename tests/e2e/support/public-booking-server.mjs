@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import process from 'node:process';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const databasePath = process.env.PLAYWRIGHT_E2E_DB_PATH;
@@ -78,6 +79,7 @@ process.on('SIGTERM', shutdown);
 
 server.once('error', (error) => {
     rmSync(temporaryDirectory, { recursive: true, force: true });
+
     throw error;
 });
 

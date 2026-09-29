@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import process from 'node:process';
 
 const publicBookingPath =
     process.env.PLAYWRIGHT_PUBLIC_BOOKING_PATH ?? '/book/e2e-atelier';
@@ -170,9 +171,11 @@ test.describe('Public Booking E2E Flow', () => {
                     Date.parse(first.startsAt) - Date.parse(second.startsAt),
             )[0];
         expect(earliestCandidateSlot).toBeDefined();
+
         if (!earliestCandidateSlot) {
             throw new Error('No candidate availability was returned for the selected date.');
         }
+
         expect(selectedProfessionalName).toBe(
             professionalNames.get(earliestCandidateSlot.professionalId),
         );
