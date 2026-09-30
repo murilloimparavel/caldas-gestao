@@ -13,6 +13,7 @@ use App\Models\PlatformPlan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Support\AuditEventWriter;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -32,8 +33,9 @@ final class AdminController extends Controller
             if ($tenant->status->value === 'suspended') {
                 $attention[] = ['type' => 'suspended_tenant', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'message' => 'Conta suspensa.'];
             }
-            if ($subscription?->status === 'trial' && $subscription->ends_at !== null && $subscription->ends_at->lte(now()->addDays(7))) {
-                $attention[] = ['type' => 'trial_ending', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'dueAt' => $subscription->ends_at->toISOString(), 'message' => 'Período de teste próximo do fim.'];
+            $subscriptionEndsAt = $subscription?->ends_at;
+            if ($subscription?->status === 'trial' && $subscriptionEndsAt !== null && CarbonImmutable::parse($subscriptionEndsAt)->lte(now()->addDays(7))) {
+                $attention[] = ['type' => 'trial_ending', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'dueAt' => CarbonImmutable::parse($subscriptionEndsAt)->toISOString(), 'message' => 'Período de teste próximo do fim.'];
             }
             if (in_array($subscription?->status, ['grace', 'expired'], true)) {
                 $attention[] = ['type' => 'subscription_due', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'message' => 'Assinatura vencida ou em carência.'];
@@ -100,20 +102,27 @@ final class AdminController extends Controller
         $tenant->loadCount(['memberships' => fn ($query) => $query->where('status', 'active')]);
         $subscription = $tenant->subscriptions->sortByDesc('created_at')->first();
         $owner = $tenant->memberships->firstWhere('status.value', 'active')?->user;
+        $subscriptionPlan = $subscription?->plan;
+        $billingCycle = $subscription === null
+            ? $subscriptionPlan?->billing_cycle
+            : $subscription->billing_cycle;
+        $formatDate = static fn (mixed $value): ?string => $value === null
+            ? null
+            : CarbonImmutable::parse((string) $value)->toISOString();
 
         return Inertia::render('platform/clients/show', [
             'client' => [
                 'id' => $tenant->id, 'name' => $tenant->name, 'company' => $tenant->legal_name,
-                'email' => $owner?->email ?? '', 'status' => $subscription?->status ?? $tenant->status->value,
-                'plan' => $subscription?->plan?->name ?? 'Sem plano', 'monthlyValueCents' => $subscription?->plan?->price_cents ?? 0,
+                'email' => $owner->email ?? '', 'status' => $subscription->status ?? $tenant->status->value,
+                'plan' => $subscriptionPlan->name ?? 'Sem plano', 'monthlyValueCents' => $subscriptionPlan->price_cents ?? 0,
                 'members' => $tenant->memberships_count, 'createdAt' => $tenant->created_at?->toISOString(),
-                'renewsAt' => $subscription?->ends_at?->toISOString(),
-                'subscription' => ['planId' => $subscription?->platform_plan_id, 'status' => $subscription?->status, 'billingCycle' => $subscription?->billing_cycle ?? $subscription?->plan?->billing_cycle, 'startedAt' => $subscription?->starts_at?->toISOString(), 'endsAt' => $subscription?->ends_at?->toISOString(), 'renewsAt' => $subscription?->next_billing_at?->toISOString() ?? $subscription?->ends_at?->toISOString(), 'seats' => $tenant->memberships_count, 'paymentMethod' => $subscription?->provider],
+                'renewsAt' => $formatDate($subscription?->ends_at),
+                'subscription' => ['planId' => $subscription?->platform_plan_id, 'status' => $subscription?->status, 'billingCycle' => $billingCycle, 'startedAt' => $formatDate($subscription?->starts_at), 'endsAt' => $formatDate($subscription?->ends_at), 'renewsAt' => $formatDate($subscription?->next_billing_at) ?? $formatDate($subscription?->ends_at), 'seats' => $tenant->memberships_count, 'paymentMethod' => $subscription?->provider],
             ],
             'users' => $tenant->memberships->map(fn ($membership): array => ['id' => $membership->getKey(), 'name' => $membership->user?->name, 'email' => $membership->user?->email, 'status' => $membership->status->value, 'role' => $membership->membershipRoles->first()?->role?->key]),
             'plans' => PlatformPlan::query()->where('is_active', true)->orderBy('price_cents')->get(['id', 'name', 'price_cents', 'billing_cycle', 'trial_days']),
             'subscriptionRecord' => $subscription,
-            'audit' => AuditEvent::query()->with('actor:id,name')->where('tenant_id', $tenant->getKey())->latest('occurred_at')->limit(25)->get()->map(fn (AuditEvent $event): array => ['id' => $event->getKey(), 'action' => $event->action, 'createdAt' => $event->occurred_at?->toISOString(), 'actor' => $event->actor?->name]),
+            'audit' => AuditEvent::query()->with('actor:id,name')->where('tenant_id', $tenant->getKey())->latest('occurred_at')->limit(25)->get()->map(fn (AuditEvent $event): array => ['id' => $event->getKey(), 'action' => $event->action, 'createdAt' => $formatDate($event->occurred_at), 'actor' => $event->actor?->name]),
         ]);
     }
 

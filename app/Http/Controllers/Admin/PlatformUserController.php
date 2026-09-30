@@ -16,7 +16,7 @@ final class PlatformUserController extends Controller
 {
     public function store(PlatformUserRequest $request, Tenant $tenant, ManagePlatformUser $manage): RedirectResponse
     {
-        $membership = $manage->create($request->user(), $tenant, $request->validated());
+        $membership = $manage->create($request->user(), $tenant, $request->platformUserData());
         $status = Password::broker()->sendResetLink(['email' => $membership->user->email]);
         $sent = $status === Password::RESET_LINK_SENT;
         app(AuditEventWriter::class)->record(['actor_user_id' => $request->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.user.invite_sent', 'resource_type' => 'user', 'resource_id' => $membership->user->getKey(), 'metadata' => ['status' => $status]]);

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Rules\UniqueNormalizedEmail;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,6 +16,17 @@ final class PlatformUserRequest extends FormRequest
         return $this->user()?->isSuperAdmin() === true;
     }
 
+    /** @return array{name: string, email: string, role: string} */
+    public function platformUserData(): array
+    {
+        return [
+            'name' => $this->string('name')->toString(),
+            'email' => $this->string('email')->toString(),
+            'role' => $this->string('role')->toString(),
+        ];
+    }
+
+    /** @return array<string, array<int, string|\Stringable|ValidationRule>> */
     public function rules(): array
     {
         return [

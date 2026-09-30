@@ -28,7 +28,7 @@ final class CreatePlatformTenant
             $owner->forceFill(['email_verified_at' => now()])->save();
             $tenant = $this->onboard->handle($owner, ['name' => $data['name'], 'slug' => $data['slug'] ?? $data['name']], ['name' => $data['name']]);
             if (! empty($data['plan_id'])) {
-                $plan = PlatformPlan::query()->findOrFail($data['plan_id']);
+                $plan = PlatformPlan::query()->whereKey((string) $data['plan_id'])->firstOrFail();
                 $subscription = TenantSubscription::query()
                     ->where('tenant_id', $tenant->getKey())
                     ->lockForUpdate()

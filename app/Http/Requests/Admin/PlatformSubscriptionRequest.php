@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,6 +20,7 @@ final class PlatformSubscriptionRequest extends FormRequest
         return $this->user()?->isSuperAdmin() === true;
     }
 
+    /** @return array<string, array<int, string|\Stringable|ValidationRule>> */
     public function rules(): array
     {
         return [
