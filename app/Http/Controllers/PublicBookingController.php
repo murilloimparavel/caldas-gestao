@@ -552,7 +552,7 @@ final class PublicBookingController extends Controller
             return null;
         }
 
-        $startsAt = (new \DateTimeImmutable((string) $appointmentStartsAt))->setTimezone(new \DateTimeZone($timezone));
+        $startsAt = new \DateTimeImmutable((string) $appointmentStartsAt, new \DateTimeZone($timezone));
         $weekdays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
         $weekday = $weekdays[(int) $startsAt->format('w')];
         $dateTime = $weekday.', '.$startsAt->format('d/m/Y \\à\\s H:i');
