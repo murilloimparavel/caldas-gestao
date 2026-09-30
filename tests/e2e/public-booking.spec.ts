@@ -19,6 +19,59 @@ async function expectNoHorizontalPageOverflow(page: Page): Promise<void> {
         .toBe(true);
 }
 
+async function openCustomerDetails(page: Page, path: string): Promise<void> {
+    await page.goto(path);
+    await page.getByRole('button', { name: /Corte clássico/ }).first().click();
+
+    if (path.includes('atelier')) {
+        await page.getByRole('button', { name: 'Escolher profissional' }).click();
+        await expect(
+            page.getByRole('heading', { name: /Com quem você/ }),
+        ).toBeVisible();
+        await page.getByRole('button', { name: /João Costa/ }).click();
+        await page.getByRole('button', { name: 'Escolher horário' }).click();
+        await expect(
+            page.getByRole('heading', { name: /Encontre o melhor/ }),
+        ).toBeVisible();
+    } else {
+        await page.getByRole('button', { name: /João Costa/ }).click();
+    }
+
+    const dateInput = page.locator('input[type="date"]').first();
+    const minimumDate = await dateInput.getAttribute('min');
+
+    expect(minimumDate).toBeTruthy();
+    await dateInput.fill(minimumDate as string);
+
+    if (path.includes('atelier')) {
+        const suggestedTimeButton = page.getByRole('button', {
+            name: /Escolher .* agora/i,
+        });
+
+        await expect(suggestedTimeButton).toBeVisible();
+        await suggestedTimeButton.click();
+    } else {
+        const timeButton = page
+            .locator('button')
+            .filter({ hasText: /^\d{1,2}:\d{2}$/ })
+            .first();
+
+        await expect(timeButton).toBeVisible();
+        await timeButton.click();
+    }
+
+    if (path.includes('atelier')) {
+        await page.getByRole('button', { name: 'Continuar' }).click();
+        await expect(
+            page.locator('[data-booking-field="name"]'),
+        ).toBeVisible();
+    } else {
+        await expect(
+            page.locator('[data-booking-field="name"]'),
+        ).toBeEnabled();
+    }
+}
+
 test.describe('Public Booking E2E Flow', () => {
     for (const path of templatePaths) {
         test(`loads ${path} without horizontal overflow`, async ({ page }) => {
@@ -193,4 +246,56 @@ test.describe('Public Booking E2E Flow', () => {
             page.getByText(expectedTime, { exact: true }).first(),
         ).toBeVisible();
     });
+
+    for (const path of templatePaths) {
+        test(`${path} exposes usable contact fields`, async ({ page }) => {
+            await openCustomerDetails(page, path);
+
+            const name = page.locator('[data-booking-field="name"]');
+            const phone = page.locator('[data-booking-field="phone"]');
+            const email = page.locator('[data-booking-field="email"]');
+            const notes = page.locator('[data-booking-field="notes"]');
+
+            await expect(name).toBeVisible();
+            await expect(phone).toBeVisible();
+            await expect(email).toBeVisible();
+            await expect(notes).toBeVisible();
+            await expect(page.getByLabel(/Nome/)).toBeVisible();
+            await expect(page.getByLabel(/WhatsApp ou telefone/)).toBeVisible();
+            await expect(page.getByLabel(/E-mail/)).toBeVisible();
+            await expect(page.getByLabel(/Observação/)).toBeVisible();
+
+            await expect(name).toHaveAttribute('autocomplete', 'name');
+            await expect(name).toHaveAttribute('maxlength', '160');
+            await expect(phone).toHaveAttribute('type', 'tel');
+            await expect(phone).toHaveAttribute('inputmode', 'tel');
+            await expect(phone).toHaveAttribute('autocomplete', 'tel');
+            await expect(phone).toHaveAttribute('maxlength', '19');
+            await expect(email).toHaveAttribute('type', 'email');
+            await expect(email).toHaveAttribute('autocomplete', 'email');
+            await expect(email).toHaveAttribute('maxlength', '255');
+            await expect(notes).toHaveAttribute('maxlength', '500');
+        });
+
+        test(`${path} formats phone input and reports invalid contact data`, async ({
+            page,
+        }) => {
+            await openCustomerDetails(page, path);
+
+            const name = page.locator('[data-booking-field="name"]');
+            const phone = page.locator('[data-booking-field="phone"]');
+            const phoneError = page.locator('[id$="phone-error"]');
+
+            await name.fill('Cliente Playwright');
+            await phone.fill('11987654321');
+            await expect(phone).toHaveValue('(11) 98765-4321');
+
+            await phone.fill('123');
+            await page.locator('button[type="submit"]').last().click();
+
+            await expect(phone).toHaveAttribute('aria-invalid', 'true');
+            await expect(phoneError).toBeVisible();
+            await expect(phoneError).toContainText(/telefone válido/i);
+        });
+    }
 });

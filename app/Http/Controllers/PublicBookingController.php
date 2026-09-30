@@ -534,7 +534,9 @@ final class PublicBookingController extends Controller
     private function whatsappUrl(string $appointmentId, Unit $unit, string $confirmationStatus, string $confirmationMessage): ?string
     {
         $appointment = Appointment::query()->with(['professional', 'items'])->find($appointmentId);
-        $phone = $this->normalizePhone($appointment?->professional?->phone ?: $unit->onlineBookingSetting?->whatsapp_phone);
+        $professionalPhone = $this->normalizePhone($appointment?->professional?->phone);
+        $unitPhone = $this->normalizePhone($unit->onlineBookingSetting?->whatsapp_phone);
+        $phone = $professionalPhone !== '' ? $professionalPhone : $unitPhone;
 
         if ($phone === '' || $appointment === null) {
             return null;
@@ -543,8 +545,22 @@ final class PublicBookingController extends Controller
         $services = $appointment->items->map(fn ($item): string => '- '.$item->service_name_snapshot)->implode("\n");
         $duration = $appointment->items->sum('duration_minutes');
         $price = number_format($appointment->items->sum('price_cents') / 100, 2, ',', '.');
+        $timezone = (string) ($appointment->timezone ?: $unit->timezone ?: config('app.timezone'));
+        $appointmentStartsAt = $appointment->starts_at;
+
+        if ($appointmentStartsAt === null) {
+            return null;
+        }
+
+        $startsAt = new \DateTimeImmutable((string) $appointmentStartsAt, new \DateTimeZone($timezone));
+        $weekdays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        $weekday = $weekdays[(int) $startsAt->format('w')];
+        $dateTime = $weekday.', '.$startsAt->format('d/m/Y \\à\\s H:i');
         $message = implode("\n", [
-            'Olá! Solicitei um agendamento para:',
+            'Olá! Novo agendamento recebido pelo link online:',
+            'Profissional: '.$appointment->professional->name,
+            'Data e horário: '.$dateTime.' ('.$timezone.')',
+            'Serviços:',
             $services,
             'Duração total: '.$duration.' min.',
             'Valor estimado: R$ '.$price.'.',
@@ -556,7 +572,17 @@ final class PublicBookingController extends Controller
 
     private function normalizePhone(?string $phone): string
     {
-        return (string) preg_replace('/\D+/', '', (string) $phone);
+        if ($phone === null || trim($phone) === '') {
+            return '';
+        }
+
+        $digits = (string) preg_replace('/\D+/', '', $phone);
+
+        if ($digits === '') {
+            return '';
+        }
+
+        return strlen($digits) <= 11 ? '55'.$digits : $digits;
     }
 
     /**

@@ -240,6 +240,46 @@ const errorText = (value: unknown): string | null => {
 
     return typeof value === 'string' && value.trim() !== '' ? value : null;
 };
+type CustomerField = 'name' | 'phone' | 'email' | 'notes';
+type CustomerFieldErrors = Partial<Record<CustomerField, string>>;
+
+const formatBrazilianPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 13);
+    const hasCountryCode = digits.startsWith('55') && digits.length > 11;
+    const countryPrefix = hasCountryCode ? '+55 ' : '';
+    const national = hasCountryCode ? digits.slice(2) : digits;
+
+    if (national.length <= 2) {
+        return `${countryPrefix}${national}`;
+    }
+
+    const areaCode = national.slice(0, 2);
+    const subscriber = national.slice(2);
+    const separator = subscriber.length >= 8 ? '-' : '';
+    const subscriberPrefix =
+        subscriber.length > 8 ? subscriber.slice(0, 5) : subscriber.slice(0, 4);
+    const subscriberSuffix =
+        subscriber.length > 8 ? subscriber.slice(5) : subscriber.slice(4);
+
+    return `${countryPrefix}(${areaCode}) ${subscriberPrefix}${separator}${subscriberSuffix}`.trim();
+};
+
+const hasValidBrazilianPhone = (value: string): boolean => {
+    const digits = value.replace(/\D/g, '');
+    const national =
+        digits.startsWith('55') && digits.length > 11
+            ? digits.slice(2)
+            : digits;
+
+    return /^[1-9][0-9](?:[2-5][0-9]{7}|9[0-9]{8})$/.test(national);
+};
+
+const firstCustomerError = (
+    errors: CustomerFieldErrors,
+): CustomerField | null =>
+    (['name', 'phone', 'email', 'notes'] as CustomerField[]).find((field) =>
+        Boolean(errors[field]),
+    ) ?? null;
 type ResolvedBookingAppearance = Record<keyof BookingAppearance, string>;
 const safeFontStyle = (value: string | null | undefined): string =>
     value === 'montserrat' || value === 'modern' ? value : 'editorial';
@@ -410,6 +450,8 @@ export default function PublicBooking({
     const [bookingErrorKind, setBookingErrorKind] = useState<
         'catalog' | 'slot' | 'generic' | 'service_limit' | null
     >(null);
+    const [customerFieldErrors, setCustomerFieldErrors] =
+        useState<CustomerFieldErrors>({});
     const [query, setQuery] = useState('');
     const [serviceCategory, setServiceCategory] = useState('Todos');
     const getInitials = useInitials();
@@ -500,6 +542,48 @@ export default function PublicBooking({
         email: '',
         notes: '',
     });
+    const serverCustomerFieldErrors: CustomerFieldErrors = {
+        name: errorText(appointmentRequest.errors.name) ?? undefined,
+        phone: errorText(appointmentRequest.errors.phone) ?? undefined,
+        email: errorText(appointmentRequest.errors.email) ?? undefined,
+        notes: errorText(appointmentRequest.errors.notes) ?? undefined,
+    };
+    const allCustomerFieldErrors: CustomerFieldErrors = {
+        ...serverCustomerFieldErrors,
+        ...customerFieldErrors,
+    };
+    const focusCustomerField = (errors: CustomerFieldErrors): void => {
+        const field = firstCustomerError(errors);
+
+        if (!field) {
+            return;
+        }
+
+        window.setTimeout(() => {
+            const element = document.querySelector<HTMLElement>(
+                `[data-booking-field="${field}"]`,
+            );
+
+            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element?.focus();
+        }, 0);
+    };
+    const handleCustomerChange = (
+        field: CustomerField,
+        value: string,
+    ): void => {
+        const nextValue =
+            field === 'phone' ? formatBrazilianPhone(value) : value;
+
+        appointmentRequest.setData(field, nextValue);
+        appointmentRequest.clearErrors(field);
+        setCustomerFieldErrors((current) => ({
+            ...current,
+            [field]: undefined,
+        }));
+        setBookingError(null);
+        setBookingErrorKind(null);
+    };
     const chooseService = (id: string): void => {
         if (!id) {
             setSelectedServiceIds([]);
@@ -596,6 +680,33 @@ export default function PublicBooking({
             professional_id: professionalId,
             starts_at: slot,
         };
+        const clientErrors: CustomerFieldErrors = {};
+
+        if (!bookingData.name.trim()) {
+            clientErrors.name = 'Informe seu nome.';
+        }
+
+        if (!hasValidBrazilianPhone(bookingData.phone)) {
+            clientErrors.phone = 'Informe um telefone válido com DDD.';
+        }
+
+        if (
+            bookingData.email &&
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bookingData.email.trim())
+        ) {
+            clientErrors.email = 'Confira o formato do e-mail.';
+        }
+
+        if (Object.keys(clientErrors).length > 0) {
+            setCustomerFieldErrors(clientErrors);
+            setBookingError('Revise os dados destacados para continuar.');
+            setBookingErrorKind('generic');
+            focusCustomerField(clientErrors);
+
+            return;
+        }
+
+        setCustomerFieldErrors({});
         const signature = JSON.stringify({
             route: args,
             service_ids: selectedServiceIds,
@@ -650,6 +761,15 @@ export default function PublicBooking({
                     setSubmitted(true);
                 },
                 onError: (errors) => {
+                    const nextFieldErrors: CustomerFieldErrors = {
+                        name: errorText(errors.name) ?? undefined,
+                        phone: errorText(errors.phone) ?? undefined,
+                        email: errorText(errors.email) ?? undefined,
+                        notes: errorText(errors.notes) ?? undefined,
+                    };
+
+                    setCustomerFieldErrors(nextFieldErrors);
+                    focusCustomerField(nextFieldErrors);
                     const catalogError =
                         errorText(errors.service_id) ||
                         errorText(errors.professional_id);
@@ -682,16 +802,20 @@ export default function PublicBooking({
         );
     };
     const recoverBookingError = (): void => {
+        const currentErrorKind = bookingErrorKind;
+
         setBookingError(null);
         setBookingErrorKind(null);
-        setSlot('');
 
-        if (bookingErrorKind === 'catalog') {
+        if (currentErrorKind === 'catalog') {
+            setSlot('');
             setSelectedServiceIds([]);
             setServiceId('');
             setProfessionalId('');
             setProfessionalMode('manual');
             setDate('');
+        } else if (currentErrorKind === 'slot') {
+            setSlot('');
         }
     };
     const rawContactPhone = unit.contacts?.whatsapp || unit.contacts?.phone;
@@ -768,6 +892,7 @@ export default function PublicBooking({
                 customerPhone={appointmentRequest.data.phone}
                 customerEmail={appointmentRequest.data.email ?? ''}
                 customerNotes={appointmentRequest.data.notes ?? ''}
+                fieldErrors={allCustomerFieldErrors}
                 processing={appointmentRequest.processing}
                 submitted={submitted}
                 bookingConfirmation={bookingConfirmation}
@@ -781,9 +906,7 @@ export default function PublicBooking({
                 onFirstAvailableChange={chooseFirstAvailable}
                 onDateChange={chooseDate}
                 onSlotChange={setSlot}
-                onCustomerChange={(field, value) =>
-                    appointmentRequest.setData(field, value)
-                }
+                onCustomerChange={handleCustomerChange}
                 onRecoverBookingError={recoverBookingError}
                 onSubmit={submit}
             />
@@ -1310,6 +1433,7 @@ export default function PublicBooking({
                     <form
                         id="public-booking-panel-services"
                         onSubmit={submit}
+                        noValidate
                         className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.75fr)]"
                     >
                         <div className="flex flex-col gap-5">
@@ -1530,32 +1654,78 @@ export default function PublicBooking({
                                         <Label htmlFor="name">Nome</Label>
                                         <Input
                                             id="name"
+                                            data-booking-field="name"
+                                            autoComplete="name"
+                                            maxLength={160}
                                             value={appointmentRequest.data.name}
                                             onChange={(event) =>
-                                                appointmentRequest.setData(
+                                                handleCustomerChange(
                                                     'name',
                                                     event.target.value,
                                                 )
                                             }
                                             required
                                             disabled={!slot}
+                                            aria-invalid={Boolean(
+                                                allCustomerFieldErrors.name,
+                                            )}
+                                            aria-describedby={
+                                                allCustomerFieldErrors.name
+                                                    ? 'name-error'
+                                                    : undefined
+                                            }
+                                        />
+                                        <BookingFieldError
+                                            id="name-error"
+                                            message={
+                                                allCustomerFieldErrors.name
+                                            }
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Telefone</Label>
+                                        <Label htmlFor="phone">
+                                            WhatsApp ou telefone
+                                        </Label>
                                         <Input
                                             id="phone"
+                                            data-booking-field="phone"
+                                            type="tel"
+                                            inputMode="tel"
+                                            autoComplete="tel"
+                                            maxLength={19}
                                             value={
                                                 appointmentRequest.data.phone
                                             }
                                             onChange={(event) =>
-                                                appointmentRequest.setData(
+                                                handleCustomerChange(
                                                     'phone',
                                                     event.target.value,
                                                 )
                                             }
                                             required
                                             disabled={!slot}
+                                            placeholder="(00) 00000-0000"
+                                            aria-invalid={Boolean(
+                                                allCustomerFieldErrors.phone,
+                                            )}
+                                            aria-describedby={
+                                                allCustomerFieldErrors.phone
+                                                    ? 'phone-help phone-error'
+                                                    : 'phone-help'
+                                            }
+                                        />
+                                        <p
+                                            id="phone-help"
+                                            className="text-xs text-muted-foreground"
+                                        >
+                                            Usaremos este número para contato e
+                                            identificação do seu agendamento.
+                                        </p>
+                                        <BookingFieldError
+                                            id="phone-error"
+                                            message={
+                                                allCustomerFieldErrors.phone
+                                            }
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1567,18 +1737,35 @@ export default function PublicBooking({
                                         </Label>
                                         <Input
                                             id="email"
+                                            data-booking-field="email"
                                             type="email"
+                                            autoComplete="email"
+                                            maxLength={255}
                                             value={
                                                 appointmentRequest.data.email ??
                                                 ''
                                             }
                                             onChange={(event) =>
-                                                appointmentRequest.setData(
+                                                handleCustomerChange(
                                                     'email',
                                                     event.target.value,
                                                 )
                                             }
                                             disabled={!slot}
+                                            aria-invalid={Boolean(
+                                                allCustomerFieldErrors.email,
+                                            )}
+                                            aria-describedby={
+                                                allCustomerFieldErrors.email
+                                                    ? 'email-error'
+                                                    : undefined
+                                            }
+                                        />
+                                        <BookingFieldError
+                                            id="email-error"
+                                            message={
+                                                allCustomerFieldErrors.email
+                                            }
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1590,19 +1777,34 @@ export default function PublicBooking({
                                         </Label>
                                         <Textarea
                                             id="notes"
+                                            data-booking-field="notes"
                                             maxLength={500}
                                             value={
                                                 appointmentRequest.data.notes ??
                                                 ''
                                             }
                                             onChange={(event) =>
-                                                appointmentRequest.setData(
+                                                handleCustomerChange(
                                                     'notes',
                                                     event.target.value,
                                                 )
                                             }
                                             disabled={!slot}
                                             placeholder="Alguma informação para o atendimento?"
+                                            aria-invalid={Boolean(
+                                                allCustomerFieldErrors.notes,
+                                            )}
+                                            aria-describedby={
+                                                allCustomerFieldErrors.notes
+                                                    ? 'notes-error'
+                                                    : undefined
+                                            }
+                                        />
+                                        <BookingFieldError
+                                            id="notes-error"
+                                            message={
+                                                allCustomerFieldErrors.notes
+                                            }
                                         />
                                     </div>
                                     <Button
@@ -1614,12 +1816,23 @@ export default function PublicBooking({
                                             !appointmentRequest.data.phone ||
                                             appointmentRequest.processing
                                         }
+                                        aria-busy={
+                                            appointmentRequest.processing
+                                        }
                                     >
                                         <MessageCircle />
                                         {appointmentRequest.processing
                                             ? 'Confirmando…'
                                             : 'Confirmar e chamar no WhatsApp'}
                                     </Button>
+                                    {appointmentRequest.processing ? (
+                                        <p
+                                            role="status"
+                                            className="text-center text-xs text-muted-foreground"
+                                        >
+                                            Confirmando seu agendamento…
+                                        </p>
+                                    ) : null}
                                 </div>
                             </InfoCard>
                         </div>
@@ -1699,6 +1912,7 @@ type AtelierBarberViewProps = {
     customerPhone: string;
     customerEmail: string;
     customerNotes: string;
+    fieldErrors: CustomerFieldErrors;
     processing: boolean;
     submitted: boolean;
     bookingConfirmation: AppointmentResponse['confirmation'] | null;
@@ -1744,6 +1958,7 @@ function AtelierBarberView({
     customerPhone,
     customerEmail,
     customerNotes,
+    fieldErrors,
     processing,
     submitted,
     bookingConfirmation,
@@ -1765,6 +1980,13 @@ function AtelierBarberView({
     const isPendingConfirmation =
         bookingConfirmation?.status === 'pending_confirmation';
     const serviceProfessionals = professionals;
+    const handleRecoverBookingError = (): void => {
+        onRecoverBookingError();
+
+        if (bookingErrorKind === 'slot') {
+            setActiveStep(3);
+        }
+    };
     const serviceCategories = useMemo(() => {
         const seen = new Set<string>();
 
@@ -1943,7 +2165,7 @@ function AtelierBarberView({
                         <p>{bookingError}</p>
                         <button
                             type="button"
-                            onClick={onRecoverBookingError}
+                            onClick={handleRecoverBookingError}
                             className="self-start rounded-lg border border-[#d4af37]/60 px-3 py-2 font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase transition hover:bg-[#d4af37]/10"
                         >
                             {bookingErrorKind === 'catalog'
@@ -2001,6 +2223,7 @@ function AtelierBarberView({
                 ) : (
                     <form
                         onSubmit={onSubmit}
+                        noValidate
                         className="mx-auto space-y-5 px-4 md:max-w-5xl md:px-0"
                     >
                         {activeStep === 1 ? (
@@ -2415,24 +2638,47 @@ function AtelierBarberView({
                                         </div>
                                         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#373229] pt-4">
                                             <div>
-                                                <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                    Profissional
-                                                </p>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                        Profissional
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setActiveStep(2)
+                                                        }
+                                                        className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
+                                                    >
+                                                        Alterar
+                                                    </button>
+                                                </div>
                                                 <p className="mt-1 truncate font-['DM_Sans'] text-sm text-[#f4efe6]">
-                                                    {selectedProfessional?.name}
+                                                    {selectedProfessional?.name ||
+                                                        'Não selecionado'}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                    Data e hora
-                                                </p>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                        Data e hora
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setActiveStep(3)
+                                                        }
+                                                        className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
+                                                    >
+                                                        Alterar
+                                                    </button>
+                                                </div>
                                                 <p className="mt-1 font-['DM_Sans'] text-sm text-[#f4efe6]">
                                                     {slot
                                                         ? formatDateTimeSlot(
                                                               slot,
                                                               unit.timezone,
                                                           )
-                                                        : ''}
+                                                        : 'Não selecionado'}
                                                 </p>
                                             </div>
                                         </div>
@@ -2468,13 +2714,19 @@ function AtelierBarberView({
                                 </div>
                                 <div className="mt-5 grid gap-3">
                                     <label
-                                        className="sr-only"
+                                        className="font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
                                         htmlFor="atelier-name"
                                     >
-                                        Nome
+                                        Nome{' '}
+                                        <span className="text-[#d4af37]">
+                                            *
+                                        </span>
                                     </label>
                                     <input
                                         id="atelier-name"
+                                        data-booking-field="name"
+                                        autoComplete="name"
+                                        maxLength={160}
                                         value={customerName}
                                         onChange={(event) =>
                                             onCustomerChange(
@@ -2485,17 +2737,34 @@ function AtelierBarberView({
                                         disabled={!slot}
                                         required
                                         placeholder="Seu nome"
+                                        aria-invalid={Boolean(fieldErrors.name)}
+                                        aria-describedby={
+                                            fieldErrors.name
+                                                ? 'atelier-name-error'
+                                                : undefined
+                                        }
                                         className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
                                     />
+                                    <BookingFieldError
+                                        id="atelier-name-error"
+                                        message={fieldErrors.name}
+                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                    />
                                     <label
-                                        className="sr-only"
+                                        className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
                                         htmlFor="atelier-email"
                                     >
-                                        E-mail (opcional)
+                                        E-mail{' '}
+                                        <span className="font-normal text-[#8f887b]">
+                                            (opcional)
+                                        </span>
                                     </label>
                                     <input
                                         id="atelier-email"
+                                        data-booking-field="email"
                                         type="email"
+                                        autoComplete="email"
+                                        maxLength={255}
                                         value={customerEmail}
                                         onChange={(event) =>
                                             onCustomerChange(
@@ -2505,22 +2774,34 @@ function AtelierBarberView({
                                         }
                                         disabled={!slot}
                                         placeholder="E-mail (opcional)"
+                                        aria-invalid={Boolean(
+                                            fieldErrors.email,
+                                        )}
+                                        aria-describedby={
+                                            fieldErrors.email
+                                                ? 'atelier-email-error'
+                                                : undefined
+                                        }
                                         className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
                                     />
-                                    <p className="-mt-1 flex items-center gap-2 font-['DM_Sans'] text-xs text-[#a9a39a]">
-                                        <MessageCircle className="size-3 text-[#d4af37]" />{' '}
-                                        Para envio do lembrete e comprovante via
-                                        WhatsApp.
-                                    </p>
+                                    <BookingFieldError
+                                        id="atelier-email-error"
+                                        message={fieldErrors.email}
+                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                    />
                                     <AtelierBookingPolicy />
                                     <label
-                                        className="sr-only"
+                                        className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
                                         htmlFor="atelier-notes"
                                     >
-                                        Observação (opcional)
+                                        Observação{' '}
+                                        <span className="font-normal text-[#8f887b]">
+                                            (opcional)
+                                        </span>
                                     </label>
                                     <textarea
                                         id="atelier-notes"
+                                        data-booking-field="notes"
                                         value={customerNotes}
                                         maxLength={500}
                                         onChange={(event) =>
@@ -2532,16 +2813,37 @@ function AtelierBarberView({
                                         disabled={!slot}
                                         placeholder="Observação (opcional)"
                                         rows={3}
+                                        aria-invalid={Boolean(
+                                            fieldErrors.notes,
+                                        )}
+                                        aria-describedby={
+                                            fieldErrors.notes
+                                                ? 'atelier-notes-error'
+                                                : undefined
+                                        }
                                         className="rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 py-3 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
                                     />
+                                    <BookingFieldError
+                                        id="atelier-notes-error"
+                                        message={fieldErrors.notes}
+                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                    />
                                     <label
-                                        className="sr-only"
+                                        className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
                                         htmlFor="atelier-phone"
                                     >
-                                        Telefone
+                                        WhatsApp ou telefone{' '}
+                                        <span className="text-[#d4af37]">
+                                            *
+                                        </span>
                                     </label>
                                     <input
                                         id="atelier-phone"
+                                        data-booking-field="phone"
+                                        type="tel"
+                                        inputMode="tel"
+                                        autoComplete="tel"
+                                        maxLength={19}
                                         value={customerPhone}
                                         onChange={(event) =>
                                             onCustomerChange(
@@ -2551,8 +2853,29 @@ function AtelierBarberView({
                                         }
                                         disabled={!slot}
                                         required
-                                        placeholder="WhatsApp / telefone"
+                                        placeholder="(00) 00000-0000"
+                                        aria-invalid={Boolean(
+                                            fieldErrors.phone,
+                                        )}
+                                        aria-describedby={
+                                            fieldErrors.phone
+                                                ? 'atelier-phone-help atelier-phone-error'
+                                                : 'atelier-phone-help'
+                                        }
                                         className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                    />
+                                    <p
+                                        id="atelier-phone-help"
+                                        className="-mt-1 flex items-center gap-2 font-['DM_Sans'] text-xs text-[#a9a39a]"
+                                    >
+                                        <MessageCircle className="size-3 text-[#d4af37]" />{' '}
+                                        Usaremos este número para contato e
+                                        identificação do agendamento.
+                                    </p>
+                                    <BookingFieldError
+                                        id="atelier-phone-error"
+                                        message={fieldErrors.phone}
+                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
                                     />
                                 </div>
                             </section>
@@ -2626,6 +2949,31 @@ function InfoCard({
         </section>
     );
 }
+
+function BookingFieldError({
+    id,
+    message,
+    className,
+}: {
+    id: string;
+    message?: string;
+    className?: string;
+}) {
+    if (!message) {
+        return null;
+    }
+
+    return (
+        <p
+            id={id}
+            role="alert"
+            className={className ?? 'text-xs text-destructive'}
+        >
+            {message}
+        </p>
+    );
+}
+
 function PublicShell({
     appearance,
     logoUrl,
