@@ -144,6 +144,7 @@ it('adjusts a finalized sale, replenishing inventory and cancelling commissions 
     $closingSession = (new FinalizeClosingSession)->handle($owner, $context, [
         'sale_ids' => [$sale->getKey()],
         'expected_total_cents' => 18000,
+        'payment_method' => 'pix',
     ]);
 
     $sale->refresh();

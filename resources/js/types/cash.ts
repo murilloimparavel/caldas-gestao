@@ -4,6 +4,7 @@ export type CashMovementType =
     | 'supply'
     | 'bleed'
     | 'sale_inflow'
+    | 'sale_reversal_outflow'
     | 'commission_outflow'
     | 'expense_outflow';
 

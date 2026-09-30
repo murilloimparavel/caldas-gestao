@@ -55,6 +55,15 @@ it('opens a cash shift and records audit event and initial amounts', function ()
     expect(AuditEvent::query()->where('action', 'cash_shift.opened')->where('resource_id', $shift->getKey())->exists())->toBeTrue();
 });
 
+it('returns to sales after opening a shift from the payment flow', function () {
+    [$owner] = cashTestWorkspace();
+
+    $this->actingAs($owner)->post(route('cash_shifts.store'), [
+        'initial_amount_cents' => 0,
+        'return_to' => 'sales',
+    ])->assertRedirect(route('sales.index'));
+});
+
 it('prevents opening a second cash shift when operator already has an active open shift in unit', function () {
     [$owner, $tenant, $unit, $context] = cashTestWorkspace();
 

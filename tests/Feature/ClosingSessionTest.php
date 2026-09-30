@@ -2,7 +2,10 @@
 
 use App\Actions\Identity\OnboardTenant;
 use App\Models\AuditEvent;
+use App\Models\CashMovement;
+use App\Models\CashShift;
 use App\Models\ClosingSession;
+use App\Models\ClosingSessionPayment;
 use App\Models\Customer;
 use App\Models\Membership;
 use App\Models\MembershipRole;
@@ -173,6 +176,12 @@ it('accepts permuta as a closing session payment method', function () {
 
 it('rejects cash closing when the received amount is lower than the total', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
+    CashShift::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'opened_by_user_id' => $owner->getKey(),
+        'expected_amount_cents' => 0,
+    ]);
 
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -196,6 +205,12 @@ it('rejects cash closing when the received amount is lower than the total', func
 
 it('records exact cash payment with no change', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
+    CashShift::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'opened_by_user_id' => $owner->getKey(),
+        'expected_amount_cents' => 0,
+    ]);
 
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -223,6 +238,12 @@ it('records exact cash payment with no change', function () {
 
 it('records excess cash and calculates the change', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
+    CashShift::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'opened_by_user_id' => $owner->getKey(),
+        'expected_amount_cents' => 0,
+    ]);
 
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -272,6 +293,64 @@ it('keeps cash fields null for noncash closing methods', function () {
         ->and($session->cash_change_cents)->toBeNull()
         ->and($session->receipt_payload['cash_received_cents'])->toBeNull()
         ->and($session->receipt_payload['cash_change_cents'])->toBeNull();
+});
+
+it('records split payments and adds only the applied cash amount to the open drawer', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+    $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);
+    $shift = CashShift::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'opened_by_user_id' => $owner->getKey(), 'expected_amount_cents' => 5000]);
+
+    $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'payment_allocations' => [
+            ['method' => 'cash', 'amount_cents' => 400, 'tendered_cents' => 600],
+            ['method' => 'pix', 'amount_cents' => 600],
+        ],
+    ])->assertSessionHasNoErrors();
+
+    expect(ClosingSessionPayment::query()->count())->toBe(2)
+        ->and(ClosingSessionPayment::query()->where('payment_method', 'cash')->value('change_cents'))->toBe(200)
+        ->and(ClosingSessionPayment::query()->where('payment_method', 'pix')->value('cash_shift_id'))->toBeNull()
+        ->and(CashMovement::query()->where('type', 'sale_inflow')->value('amount_cents'))->toBe(400)
+        ->and($shift->fresh()->expected_amount_cents)->toBe(5400);
+});
+
+it('rejects cash payments without an open shift and rejects allocation totals that do not match', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+    $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);
+
+    $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'payment_allocations' => [['method' => 'cash', 'amount_cents' => 1000, 'tendered_cents' => 1000]],
+    ])->assertSessionHasErrors('payment_allocations');
+
+    $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'payment_allocations' => [['method' => 'pix', 'amount_cents' => 900]],
+    ])->assertSessionHasErrors('payment_allocations');
+});
+
+it('appends an audited compensating payment reversal and adjusts only its open cash shift', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+    $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);
+    $shift = CashShift::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'opened_by_user_id' => $owner->getKey(), 'expected_amount_cents' => 0]);
+    $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'payment_allocations' => [['method' => 'cash', 'amount_cents' => 1000, 'tendered_cents' => 1400]],
+    ])->assertSessionHasNoErrors();
+    $session = ClosingSession::query()->firstOrFail();
+    $original = ClosingSessionPayment::query()->where('is_reversal', false)->firstOrFail();
+    expect($original->tendered_cents)->toBe(1400)->and($original->change_cents)->toBe(400)->and($shift->fresh()->expected_amount_cents)->toBe(1000);
+    expect(fn () => $original->forceFill(['amount_cents' => 1])->save())->toThrow(LogicException::class, 'Closing session payments are append-only.');
+    expect(fn () => $original->delete())->toThrow(LogicException::class, 'Closing session payments are append-only.');
+
+    $this->actingAs($owner)->post(route('closing-sessions.payments.reverse', [$session, $original]), ['reason' => 'Cobrança lançada por engano'])->assertRedirect(route('closing-sessions.show', $session))->assertSessionHasNoErrors();
+    expect(ClosingSessionPayment::query()->count())->toBe(2)
+        ->and(ClosingSessionPayment::query()->where('is_reversal', true)->value('reversal_reason'))->toBe('Cobrança lançada por engano')
+        ->and(CashMovement::query()->where('type', 'sale_reversal_outflow')->value('amount_cents'))->toBe(1000)
+        ->and($shift->fresh()->expected_amount_cents)->toBe(0);
+
+    $this->actingAs($owner)->post(route('closing-sessions.payments.reverse', [$session, $original]), ['reason' => 'Segundo estorno'])->assertSessionHasErrors('payment');
 });
 
 it('consolidates multiple sales for the same customer into a single closing session', function () {

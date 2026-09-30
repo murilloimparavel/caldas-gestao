@@ -1,16 +1,40 @@
-import { Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
+    AlertCircle,
     CheckCircle2,
     FileText,
     MapPin,
     Printer,
+    RotateCcw,
 } from 'lucide-react';
-import { formatMoney, PageCanvas } from '@/components/operational';
+import { useState } from 'react';
+import {
+    createIdempotencyKey,
+    FormActions,
+    FormErrorSummary,
+    FormField,
+    formatMoney,
+    PageCanvas,
+} from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import closingSessionPayments from '@/routes/closing-sessions/payments';
 import sales from '@/routes/sales';
-import type { ClosingSession, PaymentMethod } from '@/types';
+import type {
+    ClosingSession,
+    ClosingSessionPayment,
+    PaymentMethod,
+    SharedPageProps,
+} from '@/types';
 
 type Props = {
     session: ClosingSession;
@@ -45,8 +69,22 @@ function formatPaymentMethod(method: PaymentMethod | null | undefined): string {
     return method ? labels[method] : 'Não informado';
 }
 
+function paymentWasReversed(payment: ClosingSessionPayment): boolean {
+    return Boolean(
+        payment.is_reversal || payment.reversal || payment.reversal_of_id,
+    );
+}
 export default function ClosingSessionShow({ session }: Props) {
     const payload = session.receipt_payload;
+    const { props } = usePage<SharedPageProps>();
+    const permissions = new Set(props.auth.permissions);
+    const canReversePayment =
+        permissions.has('sale.close') || permissions.has('sale.manage');
+    const [reversePayment, setReversePayment] =
+        useState<ClosingSessionPayment | null>(null);
+    const [reverseKey, setReverseKey] = useState(() =>
+        createIdempotencyKey(`closing-session-payment-reversal:${session.id}`),
+    );
 
     const handlePrint = () => {
         window.print();
@@ -82,6 +120,10 @@ export default function ClosingSessionShow({ session }: Props) {
         payload?.cash_received_cents ?? session.cash_received_cents;
     const cashChangeCents =
         payload?.cash_change_cents ?? session.cash_change_cents;
+    const payments = session.payments ?? [];
+    const originalPayments = payments.filter((payment) => !payment.is_reversal);
+    const paymentRows =
+        originalPayments.length > 0 ? originalPayments : payments;
 
     return (
         <>
@@ -235,6 +277,199 @@ export default function ClosingSessionShow({ session }: Props) {
 
                         {/* Breakdown per Sale */}
                         <div className="space-y-6 p-6 sm:p-8">
+                            <section className="space-y-3 rounded-xl border border-border bg-card/60 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h3 className="font-display text-base font-semibold text-foreground">
+                                            Histórico de pagamentos
+                                        </h3>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Valores efetivamente aplicados no
+                                            fechamento, com troco e auditoria de
+                                            estornos.
+                                        </p>
+                                    </div>
+                                    <Badge variant="secondary">
+                                        {paymentRows.length}{' '}
+                                        {paymentRows.length === 1
+                                            ? 'método'
+                                            : 'métodos'}
+                                    </Badge>
+                                </div>
+
+                                {paymentRows.length === 0 ? (
+                                    <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                                        Este fechamento não possui os pagamentos
+                                        detalhados disponíveis.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {paymentRows.map((payment) => {
+                                            const isReversed =
+                                                paymentWasReversed(payment);
+                                            const reversal = payment.reversal;
+                                            const isCash =
+                                                payment.payment_method ===
+                                                'cash';
+
+                                            return (
+                                                <div
+                                                    key={payment.id}
+                                                    className="rounded-lg border border-border/80 bg-background p-3"
+                                                >
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <p className="text-sm font-semibold text-foreground">
+                                                                        {formatPaymentMethod(
+                                                                            payment.payment_method,
+                                                                        )}
+                                                                    </p>
+                                                                    {isReversed ? (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className="border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                                                                        >
+                                                                            Estornado
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className="border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                                                        >
+                                                                            Registrado
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    Registrado
+                                                                    em{' '}
+                                                                    {formatDateTime(
+                                                                        payment.recorded_at,
+                                                                    )}{' '}
+                                                                    por{' '}
+                                                                    {payment
+                                                                        .recorded_by
+                                                                        ?.name ??
+                                                                        'Operador'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 sm:shrink-0">
+                                                            <span className="text-base font-bold text-foreground tabular-nums">
+                                                                {formatMoney(
+                                                                    payment.amount_cents,
+                                                                )}
+                                                            </span>
+                                                            {!isReversed &&
+                                                            canReversePayment ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="gap-1.5 text-rose-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                                                                    onClick={() => {
+                                                                        setReverseKey(
+                                                                            createIdempotencyKey(
+                                                                                `closing-session-payment-reversal:${session.id}:${payment.id}`,
+                                                                            ),
+                                                                        );
+                                                                        setReversePayment(
+                                                                            payment,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <RotateCcw className="size-3.5" />
+                                                                    Estornar
+                                                                </Button>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-3 grid gap-2 border-t border-border/60 pt-3 text-xs sm:grid-cols-3">
+                                                        <div>
+                                                            <span className="text-muted-foreground">
+                                                                Valor aplicado
+                                                            </span>
+                                                            <p className="mt-0.5 font-semibold tabular-nums">
+                                                                {formatMoney(
+                                                                    payment.amount_cents,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        {isCash ? (
+                                                            <>
+                                                                <div>
+                                                                    <span className="text-muted-foreground">
+                                                                        Recebido
+                                                                    </span>
+                                                                    <p className="mt-0.5 font-semibold tabular-nums">
+                                                                        {formatMoney(
+                                                                            payment.tendered_cents ??
+                                                                                payment.amount_cents,
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-muted-foreground">
+                                                                        Troco
+                                                                    </span>
+                                                                    <p className="mt-0.5 font-semibold tabular-nums">
+                                                                        {formatMoney(
+                                                                            payment.change_cents ??
+                                                                                0,
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="sm:col-span-2">
+                                                                <span className="text-muted-foreground">
+                                                                    Impacto na
+                                                                    gaveta
+                                                                </span>
+                                                                <p className="mt-0.5 font-semibold text-muted-foreground">
+                                                                    Não altera o
+                                                                    saldo físico
+                                                                    do caixa
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {reversal ? (
+                                                        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50/60 p-2.5 text-xs text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
+                                                            <p className="font-semibold">
+                                                                Estorno
+                                                                registrado em{' '}
+                                                                {formatDateTime(
+                                                                    reversal.recorded_at,
+                                                                )}{' '}
+                                                                por{' '}
+                                                                {reversal
+                                                                    .recorded_by
+                                                                    ?.name ??
+                                                                    'Operador'}
+                                                            </p>
+                                                            {reversal.reversal_reason ? (
+                                                                <p className="mt-1">
+                                                                    Motivo:{' '}
+                                                                    {
+                                                                        reversal.reversal_reason
+                                                                    }
+                                                                </p>
+                                                            ) : null}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </section>
+
                             <h3 className="font-display text-base font-semibold text-foreground">
                                 Detalhamento por Comanda
                             </h3>
@@ -442,6 +677,102 @@ export default function ClosingSessionShow({ session }: Props) {
                     </div>
                 </div>
             </PageCanvas>
+
+            <Dialog
+                open={reversePayment !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setReversePayment(null);
+                    }
+                }}
+            >
+                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Estornar recebimento</DialogTitle>
+                        <DialogDescription>
+                            Registre um estorno compensatório com motivo
+                            obrigatório para manter o histórico auditável.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {reversePayment ? (
+                        <Form
+                            {...closingSessionPayments.reverse.form({
+                                closingSession: session.id,
+                                payment: reversePayment.id,
+                            })}
+                            headers={{ 'X-Idempotency-Key': reverseKey }}
+                            onSuccess={() => setReversePayment(null)}
+                            className="space-y-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <FormErrorSummary errors={errors} />
+
+                                    <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                                        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                                        <p>
+                                            O estorno devolve o valor deste
+                                            recebimento. Se o turno de caixa já
+                                            estiver fechado, ele não será
+                                            alterado retroativamente; o
+                                            histórico manterá a compensação
+                                            auditada.
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Recebimento
+                                            </span>
+                                            <span className="font-semibold">
+                                                {formatPaymentMethod(
+                                                    reversePayment.payment_method,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 flex justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Valor aplicado
+                                            </span>
+                                            <span className="font-bold tabular-nums">
+                                                {formatMoney(
+                                                    reversePayment.amount_cents,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <FormField
+                                        label="Motivo do estorno"
+                                        name="reason"
+                                        required
+                                        error={errors.reason}
+                                        description="Ex.: pagamento duplicado, cancelamento aprovado ou correção operacional."
+                                    >
+                                        <Textarea
+                                            id="reversal_reason"
+                                            name="reason"
+                                            rows={4}
+                                            required
+                                            placeholder="Descreva por que este recebimento está sendo estornado..."
+                                            autoFocus
+                                        />
+                                    </FormField>
+
+                                    <FormActions
+                                        processing={processing}
+                                        submitLabel="Confirmar estorno"
+                                        submittingLabel="Registrando estorno…"
+                                        onCancel={() => setReversePayment(null)}
+                                    />
+                                </>
+                            )}
+                        </Form>
+                    ) : null}
+                </DialogContent>
+            </Dialog>
 
             {/* Print-Only Layout (Optimized for thermal printer 80mm / 58mm) */}
             <div className="mx-auto hidden w-full max-w-[80mm] p-2 font-mono text-xs leading-relaxed break-words text-black tabular-nums print:block">

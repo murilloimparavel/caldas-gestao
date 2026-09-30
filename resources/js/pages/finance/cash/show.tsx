@@ -31,6 +31,12 @@ const movementTypeConfig: Record<
             'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
         isCredit: true,
     },
+    sale_reversal_outflow: {
+        label: 'Estorno de Venda (Saída)',
+        bgClass:
+            'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
+        isCredit: false,
+    },
     bleed: {
         label: 'Sangria (Saída)',
         bgClass:
@@ -84,6 +90,11 @@ export default function CashShow({ shift }: Props) {
     const totalSalesInflowCents =
         shift.movements
             ?.filter((m) => m.type === 'sale_inflow')
+            .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
+
+    const totalSaleReversalsCents =
+        shift.movements
+            ?.filter((m) => m.type === 'sale_reversal_outflow')
             .reduce((acc, m) => acc + m.amount_cents, 0) ?? 0;
 
     const totalBleedsCents =
@@ -355,6 +366,14 @@ export default function CashShow({ shift }: Props) {
                             <span>Entradas Vendas (+):</span>
                             <span className="font-semibold">
                                 +{formatMoney(totalSalesInflowCents)}
+                            </span>
+                        </div>
+                    )}
+                    {totalSaleReversalsCents > 0 && (
+                        <div className="flex justify-between">
+                            <span>Estornos de Vendas (-):</span>
+                            <span className="font-semibold">
+                                -{formatMoney(totalSaleReversalsCents)}
                             </span>
                         </div>
                     )}
