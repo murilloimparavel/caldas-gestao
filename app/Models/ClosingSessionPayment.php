@@ -29,26 +29,31 @@ class ClosingSessionPayment extends Model
         return ['amount_cents' => 'integer', 'tendered_cents' => 'integer', 'change_cents' => 'integer', 'recorded_at' => 'datetime', 'is_reversal' => 'boolean'];
     }
 
+    /** @return BelongsTo<ClosingSession, $this> */
     public function closingSession(): BelongsTo
     {
         return $this->belongsTo(ClosingSession::class);
     }
 
+    /** @return BelongsTo<CashShift, $this> */
     public function cashShift(): BelongsTo
     {
         return $this->belongsTo(CashShift::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by_user_id');
     }
 
+    /** @return BelongsTo<self, $this> */
     public function reversalOf(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reversal_of_id');
     }
 
+    /** @return HasOne<self, $this> */
     public function reversal(): HasOne
     {
         return $this->hasOne(self::class, 'reversal_of_id');

@@ -39,6 +39,25 @@ final class FinalizeClosingSession extends OperationalAction
     }
 
     /**
+     * @param  array{payment_allocations?: list<array{method: string, amount_cents: int, tendered_cents?: int|null}>, payment_method?: string|null, cash_received_cents?: int|null}  $data
+     * @return list<array{method: string, amount_cents: int, tendered_cents?: int|null}>
+     */
+    private function paymentAllocations(array $data, int $totalCents): array
+    {
+        if (isset($data['payment_allocations'])) {
+            return $data['payment_allocations'];
+        }
+
+        return [[
+            'method' => $data['payment_method'] ?? '',
+            'amount_cents' => $totalCents,
+            'tendered_cents' => ($data['payment_method'] ?? null) === 'cash'
+                ? (int) ($data['cash_received_cents'] ?? 0)
+                : null,
+        ]];
+    }
+
+    /**
      * @param  array{
      *     sale_ids: list<string>,
      *     expected_total_cents?: int|null,
@@ -142,18 +161,12 @@ final class FinalizeClosingSession extends OperationalAction
             $totalDiscountCents = (int) $sales->sum('discount_amount_cents');
             $calculatedFinalTotalCents = (int) $sales->sum('final_amount_cents');
 
-            $allocations = $data['payment_allocations'] ?? [[
-                'method' => $data['payment_method'] ?? '',
-                'amount_cents' => $calculatedFinalTotalCents,
-                'tendered_cents' => ($data['payment_method'] ?? null) === 'cash'
-                    ? (int) ($data['cash_received_cents'] ?? 0)
-                    : null,
-            ]];
-            $allocationTotal = array_sum(array_map(static fn (array $allocation): int => (int) ($allocation['amount_cents'] ?? 0), $allocations));
+            $allocations = $this->paymentAllocations($data, $calculatedFinalTotalCents);
+            $allocationTotal = array_sum(array_map(static fn (array $allocation): int => $allocation['amount_cents'], $allocations));
             if ($allocationTotal !== $calculatedFinalTotalCents) {
                 throw ValidationException::withMessages(['payment_allocations' => 'A soma das parcelas deve corresponder exatamente ao total da comanda.']);
             }
-            $hasCash = collect($allocations)->contains(fn (array $allocation): bool => ($allocation['method'] ?? null) === 'cash');
+            $hasCash = collect($allocations)->contains(fn (array $allocation): bool => $allocation['method'] === 'cash');
             $cashShift = CashShift::query()
                 ->where('tenant_id', $tenantId)->where('unit_id', $unitId)
                 ->where('opened_by_user_id', $actor->getKey())->where('status', 'open')
@@ -162,8 +175,8 @@ final class FinalizeClosingSession extends OperationalAction
                 throw ValidationException::withMessages(['payment_allocations' => 'Abra um novo turno de caixa para receber parcelas em dinheiro.']);
             }
             foreach ($allocations as $index => $allocation) {
-                $method = (string) ($allocation['method'] ?? '');
-                $amount = (int) ($allocation['amount_cents'] ?? 0);
+                $method = $allocation['method'];
+                $amount = $allocation['amount_cents'];
                 $tendered = $allocation['tendered_cents'] ?? null;
                 if ($amount <= 0 || ! in_array($method, ['pix', 'debit_card', 'credit_card', 'cash', 'permuta'], true)) {
                     throw ValidationException::withMessages(["payment_allocations.{$index}" => 'A parcela de pagamento é inválida.']);
@@ -181,12 +194,12 @@ final class FinalizeClosingSession extends OperationalAction
             }
 
             $cashAllocations = collect($allocations)->filter(
-                static fn (array $allocation): bool => ($allocation['method'] ?? null) === 'cash',
+                static fn (array $allocation): bool => $allocation['method'] === 'cash',
             );
             $cashReceivedCents = $cashAllocations->isNotEmpty()
                 ? (int) $cashAllocations->sum(static fn (array $allocation): int => (int) ($allocation['tendered_cents'] ?? 0))
                 : null;
-            $cashAppliedCents = (int) $cashAllocations->sum(static fn (array $allocation): int => (int) ($allocation['amount_cents'] ?? 0));
+            $cashAppliedCents = (int) $cashAllocations->sum(static fn (array $allocation): int => $allocation['amount_cents']);
             $cashChangeCents = $cashReceivedCents !== null
                 ? $cashReceivedCents - $cashAppliedCents
                 : null;
@@ -229,12 +242,16 @@ final class FinalizeClosingSession extends OperationalAction
                 'cash_received_cents' => $cashReceivedCents,
                 'cash_change_cents' => $cashChangeCents,
                 'payment_method' => $legacyPaymentMethod,
-                'payment_allocations' => collect($allocations)->map(fn (array $allocation): array => [
-                    'method' => $allocation['method'],
-                    'amount_cents' => (int) $allocation['amount_cents'],
-                    'tendered_cents' => $allocation['method'] === 'cash' ? (int) $allocation['tendered_cents'] : null,
-                    'change_cents' => $allocation['method'] === 'cash' ? (int) $allocation['tendered_cents'] - (int) $allocation['amount_cents'] : 0,
-                ])->values()->all(),
+                'payment_allocations' => collect($allocations)->map(function (array $allocation): array {
+                    $tendered = $allocation['tendered_cents'] ?? null;
+
+                    return [
+                        'method' => $allocation['method'],
+                        'amount_cents' => $allocation['amount_cents'],
+                        'tendered_cents' => $allocation['method'] === 'cash' ? $tendered : null,
+                        'change_cents' => $allocation['method'] === 'cash' ? (int) $tendered - $allocation['amount_cents'] : 0,
+                    ];
+                })->values()->all(),
                 'totals' => [
                     'total_gross_cents' => $totalGrossCents,
                     'total_discount_cents' => $totalDiscountCents,
@@ -286,7 +303,7 @@ final class FinalizeClosingSession extends OperationalAction
             foreach ($allocations as $allocation) {
                 $amount = (int) $allocation['amount_cents'];
                 $method = $allocation['method'];
-                $tendered = $method === 'cash' ? (int) $allocation['tendered_cents'] : null;
+                $tendered = $method === 'cash' ? ($allocation['tendered_cents'] ?? null) : null;
                 $change = $tendered === null ? 0 : $tendered - $amount;
                 ClosingSessionPayment::query()->create([
                     'id' => (string) Str::uuid7(), 'tenant_id' => $tenantId, 'unit_id' => $unitId,

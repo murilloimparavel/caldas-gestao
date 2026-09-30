@@ -24,4 +24,14 @@ class ReverseClosingSessionPaymentRequest extends FormRequest
     {
         return ['reason' => ['required', 'string', 'max:1000']];
     }
+
+    /**
+     * @param  string|null  $key
+     * @param  mixed  $default
+     * @return array{reason: string}
+     */
+    public function validated($key = null, $default = null): array
+    {
+        return parent::validated($key, $default);
+    }
 }
