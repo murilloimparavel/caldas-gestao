@@ -176,7 +176,7 @@ function UserManager({
             <CardHeader className="flex flex-row items-center justify-between gap-3">
                 <CardTitle className="flex items-center gap-2">
                     <UsersRound className="size-5 text-primary" />
-                    Usuários ({users.length})
+                    Usuários ({client.members})
                 </CardTitle>
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
@@ -268,45 +268,50 @@ function UserManager({
                                     <p className="text-sm font-medium">
                                         {user.name}
                                     </p>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-muted-foreground text-xs">
                                         {user.email} · {user.role ?? 'Membro'}
+                                        {user.status === 'revoked'
+                                            ? ' · Revogado'
+                                            : ''}
                                     </p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Form
-                                        method="post"
-                                        action={adminRoutes.clientUserAccess(
-                                            client.id,
-                                            user.id,
-                                        )}
-                                    >
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            type="submit"
+                                {user.status !== 'revoked' ? (
+                                    <div className="flex gap-2">
+                                        <Form
+                                            method="post"
+                                            action={adminRoutes.clientUserAccess(
+                                                client.id,
+                                                user.id,
+                                            )}
                                         >
-                                            <Mail className="size-4" />
-                                            Reenviar acesso
-                                        </Button>
-                                    </Form>
-                                    <Form
-                                        method="delete"
-                                        action={adminRoutes.clientMembershipRevoke(
-                                            client.id,
-                                            user.id,
-                                        )}
-                                    >
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            type="submit"
-                                            className="text-destructive"
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                type="submit"
+                                            >
+                                                <Mail className="size-4" />
+                                                Reenviar acesso
+                                            </Button>
+                                        </Form>
+                                        <Form
+                                            method="delete"
+                                            action={adminRoutes.clientMembershipRevoke(
+                                                client.id,
+                                                user.id,
+                                            )}
                                         >
-                                            <UserMinus className="size-4" />
-                                            Revogar
-                                        </Button>
-                                    </Form>
-                                </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                type="submit"
+                                                className="text-destructive"
+                                            >
+                                                <UserMinus className="size-4" />
+                                                Revogar
+                                            </Button>
+                                        </Form>
+                                    </div>
+                                ) : null}
                             </div>
                         ))}
                     </div>

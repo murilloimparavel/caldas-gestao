@@ -22,15 +22,19 @@ final class UpdatePlatformSubscription
         return DB::transaction(function () use ($actor, $tenant, $data): TenantSubscription {
             $plan = PlatformPlan::query()->whereKey($data['plan_id'])->firstOrFail();
             $subscription = TenantSubscription::query()->where('tenant_id', $tenant->getKey())->latest()->lockForUpdate()->first();
+            $endsAt = array_key_exists('ends_at', $data) ? $data['ends_at'] : $subscription?->ends_at;
+            if ($data['status'] === 'trial' && $endsAt === null) {
+                $endsAt = now()->addDays(max(1, (int) $plan->trial_days));
+            }
             $attributes = [
                 'tenant_id' => $tenant->getKey(),
                 'platform_plan_id' => $plan->getKey(),
                 'status' => $data['status'],
                 'billing_cycle' => $data['billing_cycle'] ?? $plan->billing_cycle,
                 'starts_at' => $data['starts_at'] ?? ($subscription?->starts_at ?? now()),
-                'ends_at' => $data['ends_at'] ?? ($subscription?->ends_at ?? ($data['status'] === 'trial' && $plan->trial_days > 0 ? now()->addDays($plan->trial_days) : null)),
-                'next_billing_at' => $data['next_billing_at'] ?? $subscription?->next_billing_at,
-                'grace_ends_at' => $data['grace_ends_at'] ?? $subscription?->grace_ends_at,
+                'ends_at' => $endsAt,
+                'next_billing_at' => array_key_exists('next_billing_at', $data) ? $data['next_billing_at'] : $subscription?->next_billing_at,
+                'grace_ends_at' => array_key_exists('grace_ends_at', $data) ? $data['grace_ends_at'] : $subscription?->grace_ends_at,
             ];
             $beforeStatus = $subscription?->status;
             $subscription ??= TenantSubscription::query()->create($attributes);
