@@ -1,7 +1,5 @@
 import PlatformDashboard from '@/pages/platform';
-import {
-    adminRoutes,
-} from '@/features/admin/types';
+import { adminRoutes } from '@/features/admin/types';
 import type { AdminAlert, AdminMetric } from '@/features/admin/types';
 
 type Props = {

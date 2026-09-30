@@ -21,7 +21,6 @@ export default function AdminTenants({
     filters = {},
 }: Props) {
     const clients: AdminClient[] = (tenants.data ?? []).map((tenant) => {
-
         const subscription = tenant.subscriptions?.[0];
         const memberEmail = tenant.memberships?.[0]?.user?.email;
 

@@ -1,16 +1,9 @@
 import { Head } from '@inertiajs/react';
 import { ClipboardList } from 'lucide-react';
 import { AdminPageHeader } from '@/features/admin/components/admin-page-header';
-import {
-    adminRoutes,
-    formatAdminDate,
-} from '@/features/admin/types';
+import { adminRoutes, formatAdminDate } from '@/features/admin/types';
 import type { AdminAuditEvent } from '@/features/admin/types';
-import {
-    EmptyState,
-    PageCanvas,
-    Pagination,
-} from '@/components/operational';
+import { EmptyState, PageCanvas, Pagination } from '@/components/operational';
 import type { Paginated } from '@/components/operational';
 import { Card, CardContent } from '@/components/ui/card';
 

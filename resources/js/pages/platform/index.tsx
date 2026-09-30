@@ -7,9 +7,7 @@ import {
 } from 'lucide-react';
 import { AdminMetricCard } from '@/features/admin/components/admin-metric-card';
 import { AdminPageHeader } from '@/features/admin/components/admin-page-header';
-import {
-    adminRoutes,
-} from '@/features/admin/types';
+import { adminRoutes } from '@/features/admin/types';
 import type { AdminAlert, AdminMetric } from '@/features/admin/types';
 import { PageCanvas } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
