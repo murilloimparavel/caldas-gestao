@@ -22,7 +22,10 @@ final class AdminController extends Controller
 {
     public function dashboard(): Response
     {
-        $tenants = Tenant::query()->with(['subscriptions' => fn ($query) => $query->with('plan')->latest(), 'memberships'])->get();
+        $tenants = Tenant::query()->with([
+            'subscriptions' => fn ($query) => $query->with('plan')->latest(),
+            'memberships' => fn ($query) => $query->where('status', 'active'),
+        ])->get();
         $attention = [];
         foreach ($tenants as $tenant) {
             $subscription = $tenant->subscriptions->first();
@@ -35,11 +38,11 @@ final class AdminController extends Controller
             if (in_array($subscription?->status, ['grace', 'expired'], true)) {
                 $attention[] = ['type' => 'subscription_due', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'message' => 'Assinatura vencida ou em carência.'];
             }
-            if ($tenant->memberships->where('status.value', 'active')->isEmpty()) {
+            if ($tenant->memberships->isEmpty()) {
                 $attention[] = ['type' => 'onboarding_pending', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'message' => 'Nenhum usuário ativo concluiu o onboarding.'];
             }
             $userLimit = data_get($subscription?->plan?->limits, 'users');
-            $activeUsers = $tenant->memberships->where('status.value', 'active')->count();
+            $activeUsers = $tenant->memberships->count();
             if (is_numeric($userLimit) && (int) $userLimit > 0 && $activeUsers >= ((int) $userLimit * 0.8)) {
                 $attention[] = ['type' => 'limit_near', 'tenantId' => $tenant->getKey(), 'tenant' => $tenant->name, 'message' => "Usuários próximos do limite ({$activeUsers}/{$userLimit})."];
             }
@@ -60,7 +63,12 @@ final class AdminController extends Controller
                 'subscriptions' => TenantSubscription::query()->count(),
                 'active_subscriptions' => TenantSubscription::query()->whereIn('status', ['trial', 'active', 'grace'])->count(),
             ],
-            'recentTenants' => Tenant::query()->withCount('memberships')->with('memberships.user:id,name,email')->latest()->limit(10)->get(),
+            'recentTenants' => Tenant::query()
+                ->withCount(['memberships' => fn ($query) => $query->where('status', 'active')])
+                ->with(['memberships' => fn ($query) => $query->with('user:id,name,email')->where('status', 'active')])
+                ->latest()
+                ->limit(10)
+                ->get(),
             'plans' => PlatformPlan::query()->where('is_active', true)->orderBy('price_cents')->get(['id', 'key', 'name', 'price_cents', 'billing_cycle', 'trial_days']),
             'alerts' => $alerts,
         ]);
@@ -69,7 +77,9 @@ final class AdminController extends Controller
     public function tenants(Request $request): Response
     {
         $search = trim((string) $request->string('search'));
-        $tenants = Tenant::query()->withCount('memberships')->with(['memberships' => fn ($query) => $query->with('user:id,name,email')->where('status', 'active'), 'subscriptions.plan'])
+        $tenants = Tenant::query()
+            ->withCount(['memberships' => fn ($query) => $query->where('status', 'active')])
+            ->with(['memberships' => fn ($query) => $query->with('user:id,name,email')->where('status', 'active'), 'subscriptions.plan'])
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('slug', 'like', "%{$search}%")))
             ->latest()->paginate(25)->withQueryString();
 
@@ -87,6 +97,7 @@ final class AdminController extends Controller
     public function show(Tenant $tenant): Response
     {
         $tenant->load(['memberships.user:id,name,email', 'memberships.membershipRoles.role', 'subscriptions.plan']);
+        $tenant->loadCount(['memberships' => fn ($query) => $query->where('status', 'active')]);
         $subscription = $tenant->subscriptions->sortByDesc('created_at')->first();
         $owner = $tenant->memberships->firstWhere('status.value', 'active')?->user;
 
@@ -95,9 +106,9 @@ final class AdminController extends Controller
                 'id' => $tenant->id, 'name' => $tenant->name, 'company' => $tenant->legal_name,
                 'email' => $owner?->email ?? '', 'status' => $subscription?->status ?? $tenant->status->value,
                 'plan' => $subscription?->plan?->name ?? 'Sem plano', 'monthlyValueCents' => $subscription?->plan?->price_cents ?? 0,
-                'members' => $tenant->memberships->count(), 'createdAt' => $tenant->created_at?->toISOString(),
+                'members' => $tenant->memberships_count, 'createdAt' => $tenant->created_at?->toISOString(),
                 'renewsAt' => $subscription?->ends_at?->toISOString(),
-                'subscription' => ['planId' => $subscription?->platform_plan_id, 'status' => $subscription?->status, 'billingCycle' => $subscription?->billing_cycle ?? $subscription?->plan?->billing_cycle, 'startedAt' => $subscription?->starts_at?->toISOString(), 'endsAt' => $subscription?->ends_at?->toISOString(), 'renewsAt' => $subscription?->next_billing_at?->toISOString() ?? $subscription?->ends_at?->toISOString(), 'seats' => $tenant->memberships->count(), 'paymentMethod' => $subscription?->provider],
+                'subscription' => ['planId' => $subscription?->platform_plan_id, 'status' => $subscription?->status, 'billingCycle' => $subscription?->billing_cycle ?? $subscription?->plan?->billing_cycle, 'startedAt' => $subscription?->starts_at?->toISOString(), 'endsAt' => $subscription?->ends_at?->toISOString(), 'renewsAt' => $subscription?->next_billing_at?->toISOString() ?? $subscription?->ends_at?->toISOString(), 'seats' => $tenant->memberships_count, 'paymentMethod' => $subscription?->provider],
             ],
             'users' => $tenant->memberships->map(fn ($membership): array => ['id' => $membership->getKey(), 'name' => $membership->user?->name, 'email' => $membership->user?->email, 'status' => $membership->status->value, 'role' => $membership->membershipRoles->first()?->role?->key]),
             'plans' => PlatformPlan::query()->where('is_active', true)->orderBy('price_cents')->get(['id', 'name', 'price_cents', 'billing_cycle', 'trial_days']),

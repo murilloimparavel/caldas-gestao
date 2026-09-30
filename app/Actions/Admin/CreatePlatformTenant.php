@@ -3,6 +3,9 @@
 namespace App\Actions\Admin;
 
 use App\Actions\Identity\OnboardTenant;
+use App\Enums\EntitlementSource;
+use App\Enums\EntitlementStatus;
+use App\Models\Entitlement;
 use App\Models\PlatformPlan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
@@ -30,17 +33,29 @@ final class CreatePlatformTenant
                     ->where('tenant_id', $tenant->getKey())
                     ->lockForUpdate()
                     ->first();
+                $startsAt = now();
+                $endsAt = $startsAt->copy()->addDays(max(1, (int) $plan->trial_days));
                 $attributes = [
                     'tenant_id' => $tenant->getKey(), 'platform_plan_id' => $plan->getKey(), 'status' => 'trial',
                     'billing_cycle' => $plan->billing_cycle,
-                    'starts_at' => now(), 'ends_at' => $plan->trial_days > 0 ? now()->addDays($plan->trial_days) : null,
+                    'starts_at' => $startsAt, 'ends_at' => $endsAt,
                     'metadata' => ['created_by' => 'admin_panel'],
                 ];
                 if ($subscription === null) {
-                    TenantSubscription::query()->create($attributes);
+                    $subscription = TenantSubscription::query()->create($attributes);
                 } else {
                     $subscription->update($attributes);
                 }
+                Entitlement::query()->updateOrCreate(
+                    ['tenant_id' => $tenant->getKey(), 'key' => 'saas.access'],
+                    [
+                        'status' => EntitlementStatus::Trial,
+                        'starts_at' => $subscription->starts_at,
+                        'ends_at' => $subscription->ends_at,
+                        'source' => EntitlementSource::Trial,
+                        'config' => [],
+                    ],
+                );
             }
 
             return $tenant->fresh(['memberships.user', 'units']);
