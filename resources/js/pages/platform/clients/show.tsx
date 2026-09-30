@@ -268,7 +268,7 @@ function UserManager({
                                     <p className="text-sm font-medium">
                                         {user.name}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {user.email} · {user.role ?? 'Membro'}
                                         {user.status === 'revoked'
                                             ? ' · Revogado'
