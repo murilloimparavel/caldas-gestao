@@ -12,7 +12,6 @@ import {
     Receipt,
     RotateCcw,
     Scissors,
-    Search,
     Sparkles,
     Trash2,
     Undo2,
@@ -36,6 +35,7 @@ import {
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CatalogItemPicker } from '@/components/catalog-item-picker';
 import {
     Dialog,
     DialogContent,
@@ -226,28 +226,6 @@ export default function SalesShow({
     const isSaleClosed =
         sale.status === 'finalized' || (sale.status as string) === 'closed';
 
-    const [catalogSearch, setCatalogSearch] = useState('');
-
-    const filteredServices = catalogSearch.trim()
-        ? services.filter(
-              (srv) =>
-                  srv.id === selectedServiceId ||
-                  srv.name
-                      .toLowerCase()
-                      .includes(catalogSearch.trim().toLowerCase()),
-          )
-        : services;
-
-    const filteredProducts = catalogSearch.trim()
-        ? products.filter(
-              (prod) =>
-                  prod.id === selectedProductId ||
-                  prod.name
-                      .toLowerCase()
-                      .includes(catalogSearch.trim().toLowerCase()),
-          )
-        : products;
-
     const selectedService = services.find((s) => s.id === selectedServiceId);
     const selectedProduct = products.find((p) => p.id === selectedProductId);
 
@@ -280,7 +258,6 @@ export default function SalesShow({
         setCustomPriceStr('');
         setQuantity(1);
         setItemDiscountStr('');
-        setCatalogSearch('');
     };
 
     const latestAdjustment = (sale.status_histories ?? [])
@@ -1094,30 +1071,10 @@ export default function SalesShow({
                                                         {itemType ===
                                                         'service' ? (
                                                             <div className="space-y-3">
-                                                                <div className="relative">
-                                                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                                                                    <Input
-                                                                        type="text"
-                                                                        placeholder="Filtrar serviços por nome..."
-                                                                        value={
-                                                                            catalogSearch
-                                                                        }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) =>
-                                                                            setCatalogSearch(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                            )
-                                                                        }
-                                                                        className="pl-9 text-sm"
-                                                                    />
-                                                                </div>
-
                                                                 <FormField
                                                                     label="Serviço"
                                                                     name="service_id"
+                                                                    required
                                                                     error={
                                                                         errors.service_id
                                                                     }
@@ -1137,68 +1094,21 @@ export default function SalesShow({
                                                                         </button>
                                                                     }
                                                                 >
-                                                                    <select
+                                                                    <CatalogItemPicker
                                                                         id="service_id"
                                                                         name="service_id"
+                                                                        type="service"
+                                                                        options={
+                                                                            services
+                                                                        }
                                                                         required
                                                                         value={
                                                                             selectedServiceId
                                                                         }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) =>
-                                                                            handleServiceChange(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                            )
+                                                                        onChange={
+                                                                            handleServiceChange
                                                                         }
-                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                                                                    >
-                                                                        <option value="">
-                                                                            Selecione
-                                                                            o
-                                                                            serviço
-                                                                        </option>
-                                                                        {filteredServices.map(
-                                                                            (
-                                                                                srv,
-                                                                            ) => (
-                                                                                <option
-                                                                                    key={
-                                                                                        srv.id
-                                                                                    }
-                                                                                    value={
-                                                                                        srv.id
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        srv.name
-                                                                                    }{' '}
-                                                                                    —{' '}
-                                                                                    {formatMoney(
-                                                                                        srv.price_cents,
-                                                                                    )}{' '}
-                                                                                    (
-                                                                                    {
-                                                                                        srv.duration_minutes
-                                                                                    }{' '}
-                                                                                    min)
-                                                                                </option>
-                                                                            ),
-                                                                        )}
-                                                                        {filteredServices.length ===
-                                                                            0 && (
-                                                                            <option
-                                                                                value=""
-                                                                                disabled
-                                                                            >
-                                                                                Nenhum
-                                                                                serviço
-                                                                                encontrado
-                                                                            </option>
-                                                                        )}
-                                                                    </select>
+                                                                    />
                                                                 </FormField>
 
                                                                 <FormField
@@ -1245,30 +1155,10 @@ export default function SalesShow({
                                                         {itemType ===
                                                         'product' ? (
                                                             <div className="space-y-3">
-                                                                <div className="relative">
-                                                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                                                                    <Input
-                                                                        type="text"
-                                                                        placeholder="Filtrar produtos por nome..."
-                                                                        value={
-                                                                            catalogSearch
-                                                                        }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) =>
-                                                                            setCatalogSearch(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                            )
-                                                                        }
-                                                                        className="pl-9 text-sm"
-                                                                    />
-                                                                </div>
-
                                                                 <FormField
                                                                     label="Produto"
                                                                     name="product_id"
+                                                                    required
                                                                     error={
                                                                         errors.product_id
                                                                     }
@@ -1288,69 +1178,21 @@ export default function SalesShow({
                                                                         </button>
                                                                     }
                                                                 >
-                                                                    <select
+                                                                    <CatalogItemPicker
                                                                         id="product_id"
                                                                         name="product_id"
+                                                                        type="product"
+                                                                        options={
+                                                                            products
+                                                                        }
                                                                         required
                                                                         value={
                                                                             selectedProductId
                                                                         }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) =>
-                                                                            handleProductChange(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                            )
+                                                                        onChange={
+                                                                            handleProductChange
                                                                         }
-                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                                                                    >
-                                                                        <option value="">
-                                                                            Selecione
-                                                                            o
-                                                                            produto
-                                                                        </option>
-                                                                        {filteredProducts.map(
-                                                                            (
-                                                                                prd,
-                                                                            ) => (
-                                                                                <option
-                                                                                    key={
-                                                                                        prd.id
-                                                                                    }
-                                                                                    value={
-                                                                                        prd.id
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        prd.name
-                                                                                    }{' '}
-                                                                                    —{' '}
-                                                                                    {formatMoney(
-                                                                                        prd.price_cents,
-                                                                                    )}{' '}
-                                                                                    (Estoque:{' '}
-                                                                                    {
-                                                                                        prd.current_stock
-                                                                                    }
-
-                                                                                    )
-                                                                                </option>
-                                                                            ),
-                                                                        )}
-                                                                        {filteredProducts.length ===
-                                                                            0 && (
-                                                                            <option
-                                                                                value=""
-                                                                                disabled
-                                                                            >
-                                                                                Nenhum
-                                                                                produto
-                                                                                encontrado
-                                                                            </option>
-                                                                        )}
-                                                                    </select>
+                                                                    />
                                                                 </FormField>
 
                                                                 <FormField
