@@ -552,7 +552,7 @@ final class PublicBookingController extends Controller
             return null;
         }
 
-        $startsAt = CarbonImmutable::parse($appointmentStartsAt)->setTimezone($timezone);
+        $startsAt = (new CarbonImmutable((string) $appointmentStartsAt))->setTimezone($timezone);
         $dateTime = $startsAt->locale('pt_BR')->translatedFormat('l, d/m/Y \\à\\s H:i');
         $message = implode("\n", [
             'Olá! Novo agendamento recebido pelo link online:',
