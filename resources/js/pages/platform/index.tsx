@@ -9,9 +9,8 @@ import { AdminMetricCard } from '@/features/admin/components/admin-metric-card';
 import { AdminPageHeader } from '@/features/admin/components/admin-page-header';
 import {
     adminRoutes,
-    type AdminAlert,
-    type AdminMetric,
 } from '@/features/admin/types';
+import type { AdminAlert, AdminMetric } from '@/features/admin/types';
 import { PageCanvas } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

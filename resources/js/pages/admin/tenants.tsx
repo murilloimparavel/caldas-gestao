@@ -1,5 +1,6 @@
 import PlatformClients from '@/pages/platform/clients';
-import { adminRoutes, type AdminClient } from '@/features/admin/types';
+import { adminRoutes } from '@/features/admin/types';
+import type { AdminClient } from '@/features/admin/types';
 
 type Tenant = {
     id: string;
@@ -20,8 +21,10 @@ export default function AdminTenants({
     filters = {},
 }: Props) {
     const clients: AdminClient[] = (tenants.data ?? []).map((tenant) => {
+
         const subscription = tenant.subscriptions?.[0];
         const memberEmail = tenant.memberships?.[0]?.user?.email;
+
         return {
             id: tenant.id,
             name: tenant.name,
@@ -34,6 +37,7 @@ export default function AdminTenants({
             renewsAt: subscription?.ends_at ?? null,
         };
     });
+
     return <PlatformClients clients={clients} filters={filters} />;
 }
 

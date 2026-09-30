@@ -1,12 +1,12 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head } from '@inertiajs/react';
 import { Check, Pencil, Plus, Power, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { AdminPageHeader } from '@/features/admin/components/admin-page-header';
 import {
     adminRoutes,
     formatAdminMoney,
-    type AdminPlan,
 } from '@/features/admin/types';
+import type { AdminPlan } from '@/features/admin/types';
 import {
     EmptyState,
     FormActions,

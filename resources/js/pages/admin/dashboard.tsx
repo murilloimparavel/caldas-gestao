@@ -1,9 +1,8 @@
 import PlatformDashboard from '@/pages/platform';
 import {
     adminRoutes,
-    type AdminAlert,
-    type AdminMetric,
 } from '@/features/admin/types';
+import type { AdminAlert, AdminMetric } from '@/features/admin/types';
 
 type Props = {
     metrics?: {
@@ -26,6 +25,7 @@ export default function AdminDashboard({
     const active = metrics.active_tenants ?? 0;
     const subscriptions = metrics.subscriptions ?? 0;
     const activeSubscriptions = metrics.active_subscriptions ?? 0;
+
     const dashboardMetrics: AdminMetric[] = [
         {
             label: 'Clientes cadastrados',
@@ -55,6 +55,7 @@ export default function AdminDashboard({
             tone: 'rose',
         },
     ];
+
     return (
         <PlatformDashboard
             metrics={dashboardMetrics}
