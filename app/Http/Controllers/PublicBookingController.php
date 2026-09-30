@@ -552,8 +552,10 @@ final class PublicBookingController extends Controller
             return null;
         }
 
-        $startsAt = (new CarbonImmutable((string) $appointmentStartsAt))->setTimezone($timezone);
-        $dateTime = $startsAt->locale('pt_BR')->translatedFormat('l, d/m/Y \\à\\s H:i');
+        $startsAt = (new \DateTimeImmutable((string) $appointmentStartsAt))->setTimezone(new \DateTimeZone($timezone));
+        $weekdays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+        $weekday = $weekdays[(int) $startsAt->format('w')];
+        $dateTime = $weekday.', '.$startsAt->format('d/m/Y \\à\\s H:i');
         $message = implode("\n", [
             'Olá! Novo agendamento recebido pelo link online:',
             'Profissional: '.$appointment->professional->name,
