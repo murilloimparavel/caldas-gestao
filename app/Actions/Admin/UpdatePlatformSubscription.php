@@ -31,7 +31,7 @@ final class UpdatePlatformSubscription
                 'platform_plan_id' => $plan->getKey(),
                 'status' => $data['status'],
                 'billing_cycle' => $data['billing_cycle'] ?? $plan->billing_cycle,
-                'starts_at' => $data['starts_at'] ?? ($subscription?->starts_at ?? now()),
+                'starts_at' => $data['starts_at'] ?? ($subscription->starts_at ?? now()),
                 'ends_at' => $endsAt,
                 'next_billing_at' => array_key_exists('next_billing_at', $data) ? $data['next_billing_at'] : $subscription?->next_billing_at,
                 'grace_ends_at' => array_key_exists('grace_ends_at', $data) ? $data['grace_ends_at'] : $subscription?->grace_ends_at,
