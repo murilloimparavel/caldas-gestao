@@ -546,11 +546,17 @@ final class PublicBookingController extends Controller
         $duration = $appointment->items->sum('duration_minutes');
         $price = number_format($appointment->items->sum('price_cents') / 100, 2, ',', '.');
         $timezone = (string) ($appointment->timezone ?: $unit->timezone ?: config('app.timezone'));
-        $startsAt = CarbonImmutable::instance($appointment->starts_at)->setTimezone($timezone);
+        $appointmentStartsAt = $appointment->starts_at;
+
+        if ($appointmentStartsAt === null) {
+            return null;
+        }
+
+        $startsAt = CarbonImmutable::parse($appointmentStartsAt)->setTimezone($timezone);
         $dateTime = $startsAt->locale('pt_BR')->translatedFormat('l, d/m/Y \\à\\s H:i');
         $message = implode("\n", [
             'Olá! Novo agendamento recebido pelo link online:',
-            'Profissional: '.($appointment->professional?->name ?? 'Não informado'),
+            'Profissional: '.$appointment->professional->name,
             'Data e horário: '.$dateTime.' ('.$timezone.')',
             'Serviços:',
             $services,
