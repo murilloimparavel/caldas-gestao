@@ -182,7 +182,10 @@ final class FinalizeClosingSession extends OperationalAction
                     throw ValidationException::withMessages(["payment_allocations.{$index}" => 'A parcela de pagamento é inválida.']);
                 }
                 if ($method === 'cash' && (! is_numeric($tendered) || (int) $tendered < $amount)) {
-                    throw ValidationException::withMessages(["payment_allocations.{$index}.tendered_cents" => 'O valor entregue deve ser igual ou superior ao valor aplicado em dinheiro.']);
+                    $errorKey = array_key_exists('payment_allocations', $data)
+                        ? "payment_allocations.{$index}.tendered_cents"
+                        : 'cash_received_cents';
+                    throw ValidationException::withMessages([$errorKey => 'O valor entregue deve ser igual ou superior ao valor aplicado em dinheiro.']);
                 }
             }
             $legacyPaymentMethod = count($allocations) === 1 ? $allocations[0]['method'] : null;
