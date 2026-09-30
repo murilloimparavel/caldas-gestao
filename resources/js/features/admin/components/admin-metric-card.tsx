@@ -3,8 +3,8 @@ import {
     ArrowUpRight,
     CircleDollarSign,
     UsersRound,
-    type LucideIcon,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { AdminMetric } from '@/features/admin/types';
@@ -24,6 +24,7 @@ export function AdminMetricCard({
     icon?: LucideIcon;
 }) {
     const positive = metric.trend?.startsWith('+');
+
     return (
         <Card className="gap-4 py-5">
             <CardContent className="flex items-start justify-between gap-4">

@@ -17,10 +17,12 @@ import {
     adminRoutes,
     formatAdminDate,
     formatAdminMoney,
-    type AdminAuditEvent,
-    type AdminClient,
-    type AdminPlan,
-    type AdminUser,
+} from '@/features/admin/types';
+import type {
+    AdminAuditEvent,
+    AdminClient,
+    AdminPlan,
+    AdminUser,
 } from '@/features/admin/types';
 import {
     EmptyState,
@@ -60,9 +62,6 @@ type Props = {
     users?: AdminUser[];
     audit?: AdminAuditEvent[];
 };
-
-const planPrice = (plan: AdminPlan): number =>
-    plan.priceCents ?? plan.price_cents ?? 0;
 
 function SubscriptionEditor({
     client,
@@ -171,6 +170,7 @@ function UserManager({
     users?: AdminUser[];
 }) {
     const [open, setOpen] = useState(false);
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -335,6 +335,7 @@ export default function PlatformClientShow({
         status: client.status,
     };
     const isSuspended = client.status === 'suspended';
+
     return (
         <>
             <Head title={client.name} />

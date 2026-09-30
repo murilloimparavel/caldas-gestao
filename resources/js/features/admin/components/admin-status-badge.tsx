@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { statusLabels, type AdminStatus } from '@/features/admin/types';
+import { statusLabels } from '@/features/admin/types';
+import type { AdminStatus } from '@/features/admin/types';
 
 export function AdminStatusBadge({ status }: { status: AdminStatus }) {
     return (

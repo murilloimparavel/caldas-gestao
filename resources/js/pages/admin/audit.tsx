@@ -4,14 +4,14 @@ import { AdminPageHeader } from '@/features/admin/components/admin-page-header';
 import {
     adminRoutes,
     formatAdminDate,
-    type AdminAuditEvent,
 } from '@/features/admin/types';
+import type { AdminAuditEvent } from '@/features/admin/types';
 import {
     EmptyState,
     PageCanvas,
     Pagination,
-    type Paginated,
 } from '@/components/operational';
+import type { Paginated } from '@/components/operational';
 import { Card, CardContent } from '@/components/ui/card';
 
 type RawEvent = AdminAuditEvent & {
@@ -24,9 +24,11 @@ type Props = { events?: Paginated<RawEvent> | RawEvent[] };
 
 export default function AdminAudit({ events: inputEvents = [] }: Props) {
     const paginator = Array.isArray(inputEvents) ? undefined : inputEvents;
+
     const events = Array.isArray(inputEvents)
         ? inputEvents
         : (inputEvents.data ?? []);
+
     return (
         <>
             <Head title="Auditoria administrativa" />
@@ -53,6 +55,7 @@ export default function AdminAudit({ events: inputEvents = [] }: Props) {
                                         event.created_at ??
                                         event.occurred_at ??
                                         '';
+
                                     return (
                                         <li
                                             key={event.id}

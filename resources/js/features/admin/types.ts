@@ -133,8 +133,12 @@ export function formatAdminMoney(cents: number): string {
 }
 
 export function formatAdminDate(value?: string | null): string {
-    if (!value) return 'Não informado';
+    if (!value) {
+        return 'Não informado';
+    }
+
     const date = new Date(value);
+
     return Number.isNaN(date.getTime())
         ? value
         : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(

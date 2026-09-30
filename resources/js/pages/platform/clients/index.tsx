@@ -6,8 +6,8 @@ import {
     adminRoutes,
     formatAdminDate,
     formatAdminMoney,
-    type AdminClient,
 } from '@/features/admin/types';
+import type { AdminClient } from '@/features/admin/types';
 import { PageCanvas } from '@/components/operational';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
