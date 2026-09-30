@@ -2,9 +2,9 @@
 
 use App\Http\Middleware\EnforceSaaSAccess;
 use App\Http\Middleware\EnsureFirstLoginComplete;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Http\Middleware\ResolveTenantDomain;
 use Illuminate\Console\Scheduling\Schedule;
