@@ -19,7 +19,6 @@ import {
     FormErrorSummary,
     FormField,
     formatMoney,
-    parseBrazilianCurrency,
     PageCanvas,
     Pagination,
     ResourceHeader,
@@ -27,6 +26,10 @@ import {
 import type { Paginated, ResourceFilters } from '@/components/operational';
 import { QuickCreateCustomerModal } from '@/components/operational/quick-create-dialogs';
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
+import {
+    CashShiftQuickOpenDialog,
+    PaymentAllocationFields,
+} from '@/components/payment-allocation-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,12 +50,12 @@ import closingSessions from '@/routes/closing-sessions';
 import sales from '@/routes/sales';
 import type {
     CustomerOption,
-    PaymentMethod,
     Sale,
     SaleCategoryOption,
     SaleMetrics,
     SaleStatus,
     SharedPageProps,
+    CashShift,
 } from '@/types';
 
 type Props = {
@@ -65,15 +68,8 @@ type Props = {
         customer_id?: string;
         sale_category_id?: string;
     };
+    active_cash_shift?: CashShift | null;
 };
-
-const paymentMethods: Array<{ value: PaymentMethod; label: string }> = [
-    { value: 'pix', label: 'PIX' },
-    { value: 'debit_card', label: 'Cartão de débito' },
-    { value: 'credit_card', label: 'Cartão de crédito' },
-    { value: 'cash', label: 'Dinheiro' },
-    { value: 'permuta', label: 'Permuta' },
-];
 
 const statusConfig: Record<
     SaleStatus,
@@ -154,11 +150,12 @@ export default function SalesIndex({
     customers: initialCustomers,
     metrics,
     filters,
+    active_cash_shift,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
-    const [cashReceived, setCashReceived] = useState('');
+    const [openCashShiftDialog, setOpenCashShiftDialog] = useState(false);
+    const [paymentAllocationValid, setPaymentAllocationValid] = useState(true);
     const [createKey] = useState(() => createIdempotencyKey('sale-open'));
     const [closeKey, setCloseKey] = useState(() =>
         createIdempotencyKey('closing-session'),
@@ -710,18 +707,14 @@ export default function SalesIndex({
                             headers={{
                                 'X-Idempotency-Key': closeKey,
                             }}
+                            onSubmit={(event) => {
+                                if (!paymentAllocationValid) {
+                                    event.preventDefault();
+                                }
+                            }}
                             onSuccess={() => {
                                 setCloseOpen(false);
                                 setSelectedIds([]);
-                            }}
-                            onSubmit={(event) => {
-                                if (
-                                    paymentMethod === 'cash' &&
-                                    parseBrazilianCurrency(cashReceived) <
-                                        selectedTotal
-                                ) {
-                                    event.preventDefault();
-                                }
                             }}
                             className="space-y-4"
                         >
@@ -791,107 +784,18 @@ export default function SalesIndex({
                                         </div>
                                     </div>
 
-                                    <FormField
-                                        label="Como foi pago?"
-                                        name="payment_method"
-                                        error={errors.payment_method}
-                                        required
-                                    >
-                                        <div
-                                            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-                                            role="radiogroup"
-                                            aria-label="Forma de pagamento"
-                                        >
-                                            {paymentMethods.map((method) => (
-                                                <label
-                                                    key={method.value}
-                                                    className={`cursor-pointer rounded-xl border p-3 text-center text-xs font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/60 ${paymentMethod === method.value ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' : 'border-border bg-muted/20 text-muted-foreground hover:border-primary/50'}`}
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="payment_method"
-                                                        value={method.value}
-                                                        checked={
-                                                            paymentMethod ===
-                                                            method.value
-                                                        }
-                                                        onChange={() =>
-                                                            setPaymentMethod(
-                                                                method.value,
-                                                            )
-                                                        }
-                                                        className="sr-only"
-                                                    />
-                                                    {method.label}
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </FormField>
-
-                                    {paymentMethod === 'cash' ? (
-                                        <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                                            <FormField
-                                                label="Valor recebido em dinheiro"
-                                                name="cash_received_cents"
-                                                error={
-                                                    errors.cash_received_cents
-                                                }
-                                                required
-                                            >
-                                                <Input
-                                                    id="cash_received"
-                                                    inputMode="decimal"
-                                                    placeholder="0,00"
-                                                    value={cashReceived}
-                                                    onChange={(event) =>
-                                                        setCashReceived(
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                    autoFocus
-                                                    required
-                                                    aria-describedby="cash-change"
-                                                />
-                                                <input
-                                                    type="hidden"
-                                                    name="cash_received_cents"
-                                                    value={parseBrazilianCurrency(
-                                                        cashReceived,
-                                                    )}
-                                                />
-                                            </FormField>
-                                            <div
-                                                id="cash-change"
-                                                className="flex items-center justify-between border-t border-emerald-500/20 pt-3 text-sm"
-                                            >
-                                                <span className="text-muted-foreground">
-                                                    Troco
-                                                </span>
-                                                <span
-                                                    aria-live="polite"
-                                                    className={`font-display text-xl font-bold ${parseBrazilianCurrency(cashReceived) >= selectedTotal ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
-                                                >
-                                                    {formatMoney(
-                                                        Math.max(
-                                                            0,
-                                                            parseBrazilianCurrency(
-                                                                cashReceived,
-                                                            ) - selectedTotal,
-                                                        ),
-                                                    )}
-                                                </span>
-                                            </div>
-                                            {parseBrazilianCurrency(
-                                                cashReceived,
-                                            ) < selectedTotal ? (
-                                                <p className="text-xs text-destructive">
-                                                    Informe pelo menos{' '}
-                                                    {formatMoney(selectedTotal)}{' '}
-                                                    para concluir.
-                                                </p>
-                                            ) : null}
-                                        </div>
-                                    ) : null}
+                                    <PaymentAllocationFields
+                                        key={closeKey}
+                                        totalCents={selectedTotal}
+                                        activeCashShift={active_cash_shift}
+                                        errors={errors}
+                                        onValidityChange={
+                                            setPaymentAllocationValid
+                                        }
+                                        onRequestOpenCashShift={() =>
+                                            setOpenCashShiftDialog(true)
+                                        }
+                                    />
 
                                     <FormField
                                         label="Observações do fechamento (opcional)"
@@ -917,6 +821,11 @@ export default function SalesIndex({
                         </Form>
                     </DialogContent>
                 </Dialog>
+
+                <CashShiftQuickOpenDialog
+                    open={openCashShiftDialog}
+                    onOpenChange={setOpenCashShiftDialog}
+                />
 
                 {/* Sales List / Grid */}
                 {paginator.data.length === 0 ? (

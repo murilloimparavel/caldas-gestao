@@ -156,6 +156,12 @@ export type ReceiptPayload = {
     payment_method?: PaymentMethod | null;
     cash_received_cents?: number | null;
     cash_change_cents?: number | null;
+    payment_allocations?: Array<{
+        method: PaymentMethod;
+        amount_cents: number;
+        tendered_cents?: number | null;
+        change_cents?: number;
+    }>;
     sales: Array<{
         id: string;
         category_name: string;
@@ -188,6 +194,12 @@ export type ClosingSession = {
     payment_method?: PaymentMethod | null;
     cash_received_cents?: number | null;
     cash_change_cents?: number | null;
+    payment_allocations?: Array<{
+        method: PaymentMethod;
+        amount_cents: number;
+        tendered_cents?: number | null;
+        change_cents?: number;
+    }>;
     status: ClosingSessionStatus;
     receipt_number: string | null;
     receipt_payload: ReceiptPayload | null;
@@ -197,7 +209,28 @@ export type ClosingSession = {
     created_at: string;
     updated_at: string;
     closed_by?: { id: string; name: string; email?: string } | null;
+    payments?: ClosingSessionPayment[];
     sales?: Sale[];
     unit?: { id: string; name: string; timezone?: string } | null;
     tenant?: { id: string; name: string; slug?: string } | null;
+};
+
+export type ClosingSessionPayment = {
+    id: string;
+    tenant_id?: string;
+    unit_id?: string;
+    closing_session_id: string;
+    cash_shift_id?: string | null;
+    payment_method: PaymentMethod;
+    amount_cents: number;
+    tendered_cents?: number | null;
+    change_cents?: number | null;
+    recorded_by_user_id?: string | null;
+    recorded_at: string;
+    reversal_of_id?: string | null;
+    is_reversal: boolean;
+    reversal_reason?: string | null;
+    recorded_by?: { id: string; name: string; email?: string } | null;
+    reversal_of?: ClosingSessionPayment | null;
+    reversal?: ClosingSessionPayment | null;
 };

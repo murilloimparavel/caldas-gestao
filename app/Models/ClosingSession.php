@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
@@ -97,5 +98,11 @@ class ClosingSession extends Model
     public function sales(): BelongsToMany
     {
         return $this->belongsToMany(Sale::class, 'closing_session_sales', 'closing_session_id', 'sale_id');
+    }
+
+    /** @return HasMany<ClosingSessionPayment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ClosingSessionPayment::class);
     }
 }

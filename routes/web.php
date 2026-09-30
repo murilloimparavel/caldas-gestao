@@ -263,6 +263,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->only(['index', 'show', 'store']);
         Route::resource('closing-sessions', ClosingSessionController::class)
             ->only(['show', 'store']);
+        Route::post('closing-sessions/{closingSession}/payments/{payment}/reverse', [ClosingSessionController::class, 'reversePayment'])->name('closing-sessions.payments.reverse');
         Route::post('sales/{sale}/discount', [SaleController::class, 'applyDiscount'])->name('sales.discount');
         Route::post('sales/{sale}/transition', [SaleController::class, 'transitionStatus'])->name('sales.transition');
         Route::post('sales/{sale}/adjust', [SaleController::class, 'adjust'])->name('sales.adjust');

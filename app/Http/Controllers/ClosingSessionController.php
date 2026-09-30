@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Closing\FinalizeClosingSession;
+use App\Actions\Closing\ReverseClosingSessionPayment;
 use App\Http\Requests\ClosingSessionRequest;
+use App\Http\Requests\ReverseClosingSessionPaymentRequest;
 use App\Models\ClosingSession;
+use App\Models\ClosingSessionPayment;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +32,9 @@ final class ClosingSessionController extends Controller
             'closedBy',
             'unit',
             'tenant',
+            'payments.recordedBy',
+            'payments.reversalOf',
+            'payments.reversal',
         ]);
 
         return Inertia::render('closing-sessions/show', [
@@ -48,5 +54,18 @@ final class ClosingSessionController extends Controller
         $session = ClosingSession::query()->findOrFail($reference['resource_id']);
 
         return to_route('closing-sessions.show', $session)->with('success', 'Fechamento consolidado realizado com sucesso.');
+    }
+
+    public function reversePayment(ReverseClosingSessionPaymentRequest $request, TenantContext $context, ClosingSession $closingSession, ClosingSessionPayment $payment, ReverseClosingSessionPayment $reversePayment): RedirectResponse
+    {
+        abort_unless($payment->closing_session_id === $closingSession->getKey(), 404);
+        $data = $request->validated();
+        $this->mutation->execute($request, $context, $request->user(), $data, function () use ($reversePayment, $request, $context, $payment, $data): array {
+            $reversal = $reversePayment->handle($request->user(), $context, $payment, $data);
+
+            return ['resource_id' => $reversal->getKey(), 'resource_type' => 'closing-session-payment-reversal'];
+        });
+
+        return to_route('closing-sessions.show', $closingSession)->with('success', 'Estorno registrado com sucesso.');
     }
 }

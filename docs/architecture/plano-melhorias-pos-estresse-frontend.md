@@ -50,21 +50,65 @@ flowchart LR
 
 ---
 
-### 💵 Sprint 2: Ergonomia do Caixa & PDV de Alta Performance (POS Pro)
-**Foco**: Velocidade na operação de balcão e impressão de comprovantes.
+### 💵 Sprint 2: Ergonomia do Caixa & integração financeira do PDV
+**Foco**: Velocidade de operação com rastreabilidade correta entre pagamento da comanda, meios de pagamento e turno de caixa.
 
 - [ ] **Atalhos Rápidos de Cédulas no Caixa**:
   - Adicionar chips clicáveis nos modais de Suprimento, Sangria e Fechamento de Caixa: `+R$ 10`, `+R$ 20`, `+R$ 50`, `+R$ 100` e botão `Limpar`, acelerando o fechamento em horários de pico.
 - [ ] **Split Payments (Divisão de Pagamentos na Comanda)**:
-  - Permitir liquidar uma comanda utilizando mais de uma forma de pagamento (ex: R$ 50,00 no PIX + R$ 60,00 no Cartão ou Dinheiro), com validação em tempo real do saldo restante.
+  - Permitir dividir o valor entre dinheiro, PIX, débito, crédito e permuta, mostrando total pago e saldo restante em tempo real.
+  - Só concluir o recebimento quando a soma das parcelas for exatamente o total final da comanda/consolidação. Não aceitar valor acima do total nem marcar recebimento parcial como quitado nesta entrega.
+  - Em pagamento em dinheiro, distinguir valor aplicado à comanda, valor entregue pelo cliente e troco. Exemplo: total R$ 10,00, cliente entrega R$ 14,00, troco R$ 4,00; registrar R$ 14,00 recebido, R$ 4,00 devolvido e entrada líquida de R$ 10,00. O troco é calculado, nunca digitado como valor independente.
+- [ ] **Integração do recebimento com Caixa Operacional**:
+  - Criar registro financeiro imutável por parcela recebida, ligado à sessão de fechamento, unidade e operador; não usar apenas um campo `payment_method` para representar pagamentos compostos.
+  - Resolver o turno pelo operador autenticado e unidade ativa. Associar pagamentos ao turno que está aberto no momento do recebimento; nunca atribuir automaticamente a um turno fechado/anterior.
+  - Para parcela em dinheiro, exigir turno aberto do operador. Sem turno aberto, oferecer “Abrir novo turno e continuar” ou “Voltar ao recebimento”; não concluir como pago em dinheiro sem registrar a entrada física. A comanda permanece pronta para cobrança enquanto a operação não for concluída.
+  - PIX, cartões e permuta entram no demonstrativo por meio de pagamento, mas não alteram o saldo físico esperado da gaveta. Se houver turno aberto, ficam associados a ele para o resumo de recebimentos; sem turno aberto, permanecem no fechamento/relatório financeiro sem vínculo retroativo a turno.
+  - Em pagamento misto, exigir turno aberto se qualquer parcela for em dinheiro; associar as parcelas ao turno atual e criar movimento físico `sale_inflow` apenas para o valor em dinheiro.
+- [ ] **Demonstrativo do turno por natureza**:
+  - Separar fundo inicial, vendas em dinheiro, suprimentos, sangrias/saídas e saldo físico esperado.
+  - Exibir PIX, débito, crédito e permuta em totais independentes “recebido no turno”, fora do saldo físico contado.
+  - Conferência final compara contagem física somente com o saldo esperado em dinheiro; os demais meios têm conciliação própria.
+  - Na conferência, mostrar o total esperado em dinheiro como referência e permitir informar o total contado. Contagem assistida por cédulas/moedas pode ser oferecida como atalho opcional, somando ao total; nunca exigir uma composição específica de notas, porque diversas composições físicas são válidas.
+- [ ] **Tratamento de exceções e histórico financeiro**:
+  - Não permitir inserir movimento em turno encerrado nem editar/excluir parcela confirmada. Correções após o fechamento devem gerar estorno/ajuste compensatório com motivo, usuário, horário e referência ao lançamento original.
+  - Migração de fechamentos antigos pode reconstruir o método e o valor registrados, mas não deve criar movimento em caixa histórico sem evidência de qual turno recebeu fisicamente o dinheiro.
+  - Garantir idempotência e proteção de concorrência para não duplicar recebimentos/movimentos em reenvios ou fechamento simultâneo do turno.
 - [ ] **Busca Rápida com Autocomplete no Lançamento de Itens**:
   - Campo de filtro em tempo real na gaveta de adicionar serviços e produtos, permitindo busca por nome ou código sem paginação manual.
 - [ ] **Layout de Impressão Térmica (80mm / 58mm)**:
   - Adicionar folha de estilos `@media print` dedicada para o resumo de fechamento de turno (`/finance/cash/{id}`) e para o comprovante de comanda (`/sales/{id}`), adaptando a tipografia e corte para impressoras térmicas ESC/POS (Epson, Bematech, Elgin).
 - [ ] **Critérios de QA & Aceite**:
   - Fechamento de turno simulado em menos de 10 segundos com os botões de atalho.
-  - Comanda faturada com 2 formas de pagamento somando o valor exato.
+  - Comanda paga com duas ou mais formas, parcelas somando exatamente o total, exibidas corretamente no recibo e no relatório.
+  - Dinheiro recebido com turno aberto aumenta o saldo físico exatamente uma vez; PIX/cartão/permuta não aumentam o dinheiro esperado.
+  - Sem turno aberto, parcela em dinheiro não pode ser confirmada antes de abrir um novo turno; não há associação automática ao último turno fechado.
+  - Pagamentos não monetários sem turno podem ser registrados sem alterar saldo físico e aparecem no relatório financeiro sem turno associado.
+  - Fechamento do turno mostra divergência física apenas sobre o dinheiro contado e os recebimentos não monetários em quadro separado.
   - Pré-visualização de impressão (Ctrl+P / Command+P) sem cortes laterais e com layout compacto de bobina.
+
+#### Regras de domínio e cenários cobertos
+
+O fluxo atual (`FinalizeClosingSession`) persiste um único método na sessão/recibo e finaliza as comandas; não cria `CashMovement`. `OpenCashShift` e a liquidação de obrigações procuram o turno aberto do operador autenticado na unidade. `CashMovement` representa entradas/saídas físicas e `expected_amount_cents` é o saldo esperado da gaveta. Esta integração deve manter esses conceitos separados.
+
+| Cenário | Regra proposta |
+|---|---|
+| Turno atual aberto; pagamento em dinheiro | Registrar parcela e movimento `sale_inflow` no turno atual, atomicamente com a confirmação do recebimento. |
+| Pagamento em dinheiro com troco | Registrar valor entregue e troco para auditoria; a entrada líquida na gaveta e no saldo esperado equivale ao valor em dinheiro aplicado à comanda (ex.: +R$ 14,00 recebidos, -R$ 4,00 de troco, impacto líquido +R$ 10,00). |
+| Turno atual aberto; PIX/cartão/permuta | Registrar parcelas para conciliação do turno, sem movimento que altere o saldo físico. |
+| Pagamento misto com qualquer parcela em dinheiro | Exigir turno aberto; vincular parcelas ao turno atual, lançar como dinheiro somente a parcela física. |
+| Sem turno aberto; pagamento totalmente não monetário | Permitir recebimento e fechamento, deixando-o fora de turnos encerrados e disponível no relatório financeiro. |
+| Sem turno aberto; há parcela em dinheiro | Não confirmar o recebimento. Oferecer abertura de novo turno e continuação; se cancelar, manter a comanda pronta para cobrança. |
+| Turno anterior encerrado | Não anexar novos recebimentos. Ajuste retroativo exige fluxo explícito, permissão, motivo e trilha de auditoria; fora do primeiro corte. |
+| Reenvio, concorrência, falha parcial | Uma transação e chave idempotente garantem um único registro por recebimento; falha reverte parcelas, movimento e atualização do turno juntos. |
+| Estorno de recebimento | Criar registro compensatório referenciando o original; preservar o histórico e ajustar o turno apenas se a correção pertencer ao turno ainda aberto. |
+| Contagem de encerramento do turno | Conferir total físico contado contra saldo esperado em dinheiro; oferecer contagem por denominação como conveniência opcional e aceitar qualquer combinação que some ao valor informado. |
+
+**Proposta de modelagem (a validar durante a implementação):** entidade de parcelas de pagamento da sessão de fechamento, com `tenant_id`, `unit_id`, `closing_session_id`, `cash_shift_id` anulável, método, `amount_cents` aplicado à venda, `tendered_cents` recebido para dinheiro, `change_cents` calculado, operador, horário e referência de estorno. `CashMovement` permanece como razão da movimentação física: apenas a entrada líquida da parcela em dinheiro cria `sale_inflow`. Valores seguem em centavos inteiros. Fechamentos legados sem turno comprovável não recebem movimentos retroativos.
+
+**Fora do primeiro corte:** quitar parcialmente/deixar saldo devedor, atribuição manual a turno fechado, fundo compartilhado entre operadores e integração com adquirentes/bancos. Esses casos exigem estados, permissões e conciliação próprios; não devem ser simulados com lançamentos manuais em turnos fechados.
+
+**Dependências para iniciar:** revisar as alterações locais existentes de método de pagamento da sessão/recibo e integrá-las sem descartá-las; decidir, com base no fluxo real do estabelecimento, se o caixa é individual por operador (comportamento atual) ou compartilhado por unidade. O padrão inicial recomendado é manter individual por operador.
 
 ---
 
@@ -118,7 +162,7 @@ flowchart LR
 | Sprint | Prazo Estimado | Subagente Executor | Entregáveis Principais |
 |---|---|---|---|
 | **Sprint 1** | Curto | `frontend_developer` | Saneamento de rotas Wayfinder, `MoneyInput`, `PhoneInput`, `DocumentInput` |
-| **Sprint 2** | Médio | `frontend_developer` | Atalhos de cédulas no Caixa, Split Payments, CSS Impressão Térmica 80mm |
+| **Sprint 2** | Médio | `frontend_developer` / `backend_developer` / Pest | Recebimento dividido, integração auditável com turno, relatórios separados por dinheiro e meios eletrônicos, atalhos de cédulas, impressão térmica |
 | **Sprint 3** | Médio | `frontend_developer` | Polling/reatividade na Agenda, atalhos de status, badges de cliente |
 | **Sprint 4** | Curto | `frontend_developer` | Mobile bottom bar no `/book`, botão WhatsApp, preview de retenção |
 | **Sprint 5** | Curto | `backend_developer` / Pest | Testes automatizados de regressão cobrindo os 5 fluxos |
