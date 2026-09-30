@@ -20,6 +20,7 @@ use App\Support\IdentityEventRecorder;
 use App\Support\OutboxEventStore;
 use App\Support\PublicBookingConfirmation;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -106,13 +107,17 @@ final class CreatePublicAppointment
         $duration = (int) $services->sum('duration_minutes');
         $endsAt = $startsAt->addMinutes($duration);
         $phone = $this->normalizePhone($data['phone']);
+        $phoneCandidates = array_values(array_unique([
+            $phone,
+            Str::startsWith($phone, '55') ? Str::substr($phone, 2) : $phone,
+        ]));
         $email = trim((string) ($data['email'] ?? ''));
         $notes = trim((string) ($data['notes'] ?? ''));
 
         $lockKey = sprintf('public-booking:%s:%s:%s', $tenant->getKey(), $unit->getKey(), $professional->getKey());
 
-        return Cache::lock($lockKey, 10)->block(5, function () use ($tenant, $unit, $data, $services, $professional, $startsAt, $endsAt, $timezone, $phone, $email, $notes): Appointment {
-            return DB::transaction(function () use ($tenant, $unit, $data, $services, $professional, $startsAt, $endsAt, $timezone, $phone, $email, $notes): Appointment {
+        return Cache::lock($lockKey, 10)->block(5, function () use ($tenant, $unit, $data, $services, $professional, $startsAt, $endsAt, $timezone, $phone, $phoneCandidates, $email, $notes): Appointment {
+            return DB::transaction(function () use ($tenant, $unit, $data, $services, $professional, $startsAt, $endsAt, $timezone, $phone, $phoneCandidates, $email, $notes): Appointment {
                 $this->availability->assertAvailable(
                     (string) $tenant->getKey(),
                     (string) $unit->getKey(),
@@ -124,7 +129,10 @@ final class CreatePublicAppointment
                 $customer = Customer::query()
                     ->whereBelongsTo($tenant)
                     ->whereBelongsTo($unit)
-                    ->where('phone', $phone)
+                    ->where(function (Builder $query) use ($phoneCandidates): void {
+                        $query->whereIn('phone_normalized', $phoneCandidates)
+                            ->orWhereIn('phone', $phoneCandidates);
+                    })
                     ->where('status', 'active')
                     ->lockForUpdate()
                     ->first();
@@ -138,13 +146,17 @@ final class CreatePublicAppointment
                             'name' => $data['name'],
                             'email' => $email !== '' ? $email : null,
                             'phone' => $phone,
+                            'phone_normalized' => $phone,
                             'status' => 'active',
                         ]), 1);
                     } catch (QueryException $exception) {
                         $customer = Customer::query()
                             ->whereBelongsTo($tenant)
                             ->whereBelongsTo($unit)
-                            ->where('phone', $phone)
+                            ->where(function (Builder $query) use ($phoneCandidates): void {
+                                $query->whereIn('phone_normalized', $phoneCandidates)
+                                    ->orWhereIn('phone', $phoneCandidates);
+                            })
                             ->where('status', 'active')
                             ->lockForUpdate()
                             ->first();
@@ -156,6 +168,7 @@ final class CreatePublicAppointment
                 } else {
                     $customer->update([
                         'name' => $data['name'],
+                        'phone_normalized' => $phone,
                         ...($email !== '' ? ['email' => $email] : []),
                     ]);
                 }
@@ -218,7 +231,9 @@ final class CreatePublicAppointment
 
     private function normalizePhone(string $phone): string
     {
-        return (string) preg_replace('/\D+/', '', $phone);
+        $digits = (string) preg_replace('/\D+/', '', $phone);
+
+        return strlen($digits) <= 11 ? '55'.$digits : $digits;
     }
 
     private function activePublication(Tenant $tenant, Unit $unit): ?OnlineBookingPublication
