@@ -11,7 +11,7 @@ it('counts only active memberships in platform tenant summaries', function (): v
     $tenant = Tenant::factory()->create();
     Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'status' => 'active']);
     Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'status' => 'invited']);
-    Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'status' => 'revoked']);
+    Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'status' => 'revoked', 'revoked_at' => now()]);
 
     $this->actingAs($admin)->withoutVite()->get(route('admin.tenants'))
         ->assertInertia(fn (Assert $page): Assert => $page
