@@ -20,7 +20,7 @@ class TenantSubscriptionFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id' => Tenant::factory(), 'platform_plan_id' => PlatformPlan::factory(), 'provider' => 'lastlink', 'status' => 'trial', 'starts_at' => now(), 'ends_at' => now()->addDays(14), 'metadata' => [],
+            'tenant_id' => Tenant::factory(), 'platform_plan_id' => PlatformPlan::factory(), 'provider' => 'lastlink', 'status' => 'trial', 'billing_cycle' => 'monthly', 'starts_at' => now(), 'ends_at' => now()->addDays(14), 'metadata' => [],
         ];
     }
 }
