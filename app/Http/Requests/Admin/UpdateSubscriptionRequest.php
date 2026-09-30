@@ -7,7 +7,10 @@ use Illuminate\Validation\Rule;
 
 final class UpdateSubscriptionRequest extends FormRequest
 {
-    public function authorize(): bool { return $this->user()?->isSuperAdmin() === true; }
+    public function authorize(): bool
+    {
+        return $this->user()?->isSuperAdmin() === true;
+    }
 
     public function rules(): array
     {
