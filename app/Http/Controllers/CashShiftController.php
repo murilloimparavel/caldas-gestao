@@ -81,7 +81,9 @@ final class CashShiftController extends Controller
             return ['resource_id' => $shift->getKey(), 'resource_type' => 'cash_shift'];
         });
 
-        return to_route('cash_shifts.index')->with('success', 'Caixa aberto com sucesso.');
+        return isset($data['return_to']) && $data['return_to'] === 'sales'
+            ? to_route('sales.index')->with('success', 'Caixa aberto com sucesso. Continue o recebimento da comanda.')
+            : to_route('cash_shifts.index')->with('success', 'Caixa aberto com sucesso.');
     }
 
     public function move(CashMovementRequest $request, TenantContext $context, CashShift $cashShift, RecordCashMovement $recordCashMovement): RedirectResponse

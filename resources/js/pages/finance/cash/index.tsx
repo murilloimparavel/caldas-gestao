@@ -1,5 +1,7 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
+    Calculator,
+    ChevronDown,
     History,
     Lock,
     MinusCircle,
@@ -62,6 +64,12 @@ const movementTypeConfig: Record<
         bgClass:
             'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
         isCredit: true,
+    },
+    sale_reversal_outflow: {
+        label: 'Estorno de Venda (Saída)',
+        bgClass:
+            'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
+        isCredit: false,
     },
     bleed: {
         label: 'Sangria (Saída)',
@@ -137,6 +145,30 @@ export default function CashIndex({ active_shift, metrics }: Props) {
     const [finalAmountFloat, setFinalAmountFloat] = useState('');
     const [finalAmountCents, setFinalAmountCents] = useState(0);
     const [closeNotes, setCloseNotes] = useState('');
+    const [showDenominationCount, setShowDenominationCount] = useState(false);
+    const [denominationCounts, setDenominationCounts] = useState<
+        Record<number, number>
+    >({});
+
+    const denominationOptions = [
+        { label: 'R$ 2', cents: 200 },
+        { label: 'R$ 5', cents: 500 },
+        { label: 'R$ 10', cents: 1000 },
+        { label: 'R$ 20', cents: 2000 },
+        { label: 'R$ 50', cents: 5000 },
+        { label: 'R$ 100', cents: 10000 },
+        { label: 'R$ 200', cents: 20000 },
+        { label: 'R$ 0,05', cents: 5 },
+        { label: 'R$ 0,10', cents: 10 },
+        { label: 'R$ 0,25', cents: 25 },
+        { label: 'R$ 0,50', cents: 50 },
+        { label: 'R$ 1,00', cents: 100 },
+    ] as const;
+
+    const denominationTotalCents = denominationOptions.reduce(
+        (total, { cents }) => total + cents * (denominationCounts[cents] ?? 0),
+        0,
+    );
 
     const calculatedDifferenceCents = active_shift
         ? finalAmountCents - active_shift.expected_amount_cents
@@ -838,6 +870,8 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                 setFinalAmountCents(0);
                                                 setFinalAmountFloat('');
                                                 setCloseNotes('');
+                                                setShowDenominationCount(false);
+                                                setDenominationCounts({});
                                             }}
                                             className="space-y-4"
                                         >
@@ -946,7 +980,159 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                                 );
                                                             }}
                                                         />
+                                                        <p className="mt-2 text-xs text-muted-foreground">
+                                                            Conte todo o
+                                                            dinheiro físico da
+                                                            gaveta, incluindo o
+                                                            fundo e os
+                                                            recebimentos. O
+                                                            sistema compara esse
+                                                            total com o esperado
+                                                            do turno.
+                                                        </p>
                                                     </FormField>
+
+                                                    <div className="rounded-lg border border-dashed border-border bg-muted/20">
+                                                        <button
+                                                            type="button"
+                                                            className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted/40"
+                                                            aria-expanded={
+                                                                showDenominationCount
+                                                            }
+                                                            onClick={() =>
+                                                                setShowDenominationCount(
+                                                                    (current) =>
+                                                                        !current,
+                                                                )
+                                                            }
+                                                        >
+                                                            <span className="flex items-center gap-2">
+                                                                <Calculator className="size-4 text-muted-foreground" />
+                                                                Conferir por
+                                                                denominações
+                                                                <span className="text-xs font-normal text-muted-foreground">
+                                                                    (opcional)
+                                                                </span>
+                                                            </span>
+                                                            <ChevronDown
+                                                                className={`size-4 transition-transform ${showDenominationCount ? 'rotate-180' : ''}`}
+                                                            />
+                                                        </button>
+
+                                                        {showDenominationCount && (
+                                                            <div className="space-y-3 border-t border-dashed border-border px-3 py-3">
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    Informe
+                                                                    quantidades
+                                                                    apenas se
+                                                                    isso ajudar
+                                                                    sua
+                                                                    conferência.
+                                                                    Não existe
+                                                                    uma
+                                                                    combinação
+                                                                    obrigatória
+                                                                    de notas.
+                                                                </p>
+                                                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                                    {denominationOptions.map(
+                                                                        ({
+                                                                            label,
+                                                                            cents,
+                                                                        }) => (
+                                                                            <label
+                                                                                key={
+                                                                                    cents
+                                                                                }
+                                                                                className="space-y-1"
+                                                                            >
+                                                                                <span className="text-[11px] font-medium text-muted-foreground">
+                                                                                    {
+                                                                                        label
+                                                                                    }
+                                                                                </span>
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    step="1"
+                                                                                    inputMode="numeric"
+                                                                                    aria-label={`Quantidade de ${label}`}
+                                                                                    value={
+                                                                                        denominationCounts[
+                                                                                            cents
+                                                                                        ] ??
+                                                                                        ''
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event,
+                                                                                    ) => {
+                                                                                        const value =
+                                                                                            Math.max(
+                                                                                                0,
+                                                                                                Number.parseInt(
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                    10,
+                                                                                                ) ||
+                                                                                                    0,
+                                                                                            );
+                                                                                        setDenominationCounts(
+                                                                                            (
+                                                                                                current,
+                                                                                            ) => ({
+                                                                                                ...current,
+                                                                                                [cents]:
+                                                                                                    value,
+                                                                                            }),
+                                                                                        );
+                                                                                    }}
+                                                                                    className="h-8"
+                                                                                />
+                                                                            </label>
+                                                                        ),
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-background px-2.5 py-2 text-xs">
+                                                                    <span className="text-muted-foreground">
+                                                                        Total
+                                                                        conferido
+                                                                        por
+                                                                        denominações
+                                                                    </span>
+                                                                    <span className="font-semibold text-foreground">
+                                                                        {formatMoney(
+                                                                            denominationTotalCents,
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    disabled={
+                                                                        processing ||
+                                                                        denominationTotalCents ===
+                                                                            0
+                                                                    }
+                                                                    onClick={() => {
+                                                                        setFinalAmountCents(
+                                                                            denominationTotalCents,
+                                                                        );
+                                                                        setFinalAmountFloat(
+                                                                            formatMoney(
+                                                                                denominationTotalCents,
+                                                                                'R$',
+                                                                            ),
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    Usar total
+                                                                    contado
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </div>
 
                                                     {/* Indicador de Diferença em Tempo Real */}
                                                     <div

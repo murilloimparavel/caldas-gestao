@@ -37,6 +37,10 @@ import type { CreatedEntity } from '@/components/operational/quick-create-dialog
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+    CashShiftQuickOpenDialog,
+    PaymentAllocationFields,
+} from '@/components/payment-allocation-fields';
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -57,6 +61,7 @@ import type {
     SaleItem,
     ServiceOption,
     SharedPageProps,
+    CashShift,
 } from '@/types';
 
 type Props = {
@@ -65,6 +70,7 @@ type Props = {
     products: ProductOption[];
     professionals: ProfessionalOption[];
     categories: SaleCategoryOption[];
+    active_cash_shift?: CashShift | null;
 };
 
 function formatDateTime(iso: string | null | undefined): string {
@@ -122,6 +128,7 @@ export default function SalesShow({
     services: initialServices,
     products: initialProducts,
     professionals,
+    active_cash_shift,
 }: Props) {
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
@@ -136,6 +143,8 @@ export default function SalesShow({
     const [discountOpen, setDiscountOpen] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
+    const [openCashShiftDialog, setOpenCashShiftDialog] = useState(false);
+    const [paymentAllocationValid, setPaymentAllocationValid] = useState(true);
     const [adjustOpen, setAdjustOpen] = useState(false);
 
     // Dynamic lists for quick-created items
@@ -505,6 +514,11 @@ export default function SalesShow({
                                             headers={{
                                                 'X-Idempotency-Key': closeKey,
                                             }}
+                                            onSubmit={(event) => {
+                                                if (!paymentAllocationValid) {
+                                                    event.preventDefault();
+                                                }
+                                            }}
                                             onSuccess={() =>
                                                 setCloseOpen(false)
                                             }
@@ -541,6 +555,7 @@ export default function SalesShow({
                                                                 )}
                                                             </span>
                                                         </div>
+
                                                         {sale.discount_amount_cents >
                                                         0 ? (
                                                             <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
@@ -568,6 +583,25 @@ export default function SalesShow({
                                                         </div>
                                                     </div>
 
+                                                    <PaymentAllocationFields
+                                                        key={closeKey}
+                                                        totalCents={
+                                                            sale.final_amount_cents
+                                                        }
+                                                        activeCashShift={
+                                                            active_cash_shift
+                                                        }
+                                                        errors={errors}
+                                                        onValidityChange={
+                                                            setPaymentAllocationValid
+                                                        }
+                                                        onRequestOpenCashShift={() =>
+                                                            setOpenCashShiftDialog(
+                                                                true,
+                                                            )
+                                                        }
+                                                    />
+
                                                     <FormField
                                                         label="Observações do fechamento (opcional)"
                                                         name="notes"
@@ -594,6 +628,11 @@ export default function SalesShow({
                                         </Form>
                                     </DialogContent>
                                 </Dialog>
+
+                                <CashShiftQuickOpenDialog
+                                    open={openCashShiftDialog}
+                                    onOpenChange={setOpenCashShiftDialog}
+                                />
                             </div>
                         ) : isSaleClosed ? (
                             <div className="no-print flex flex-wrap items-center gap-2 print:hidden">

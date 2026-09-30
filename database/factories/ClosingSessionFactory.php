@@ -21,6 +21,7 @@ class ClosingSessionFactory extends Factory
             'tenant_id' => fn (array $attributes): string => (string) Unit::query()->whereKey($attributes['unit_id'])->value('tenant_id'),
             'closing_subject' => 'customer:'.(string) Str::uuid7(),
             'currency' => 'BRL',
+            'payment_method' => null,
             'expected_total_cents' => 10000,
             'final_total_cents' => 10000,
             'status' => 'draft',

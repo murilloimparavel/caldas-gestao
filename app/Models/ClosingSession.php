@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string $unit_id
  * @property string $closing_subject
  * @property string $currency
+ * @property string|null $payment_method
  * @property int $expected_total_cents
  * @property int $final_total_cents
  * @property string $status
@@ -32,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'unit_id',
     'closing_subject',
     'currency',
+    'payment_method',
     'expected_total_cents',
     'final_total_cents',
     'status',
@@ -49,6 +52,7 @@ class ClosingSession extends Model
 
     protected $attributes = [
         'currency' => 'BRL',
+        'payment_method' => null,
         'final_total_cents' => 0,
         'status' => 'draft',
         'lock_version' => 1,
@@ -86,5 +90,11 @@ class ClosingSession extends Model
     public function sales(): BelongsToMany
     {
         return $this->belongsToMany(Sale::class, 'closing_session_sales', 'closing_session_id', 'sale_id');
+    }
+
+    /** @return HasMany<ClosingSessionPayment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ClosingSessionPayment::class);
     }
 }

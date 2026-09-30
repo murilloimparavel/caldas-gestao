@@ -26,6 +26,10 @@ import {
 import type { Paginated, ResourceFilters } from '@/components/operational';
 import { QuickCreateCustomerModal } from '@/components/operational/quick-create-dialogs';
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
+import {
+    CashShiftQuickOpenDialog,
+    PaymentAllocationFields,
+} from '@/components/payment-allocation-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,6 +55,7 @@ import type {
     SaleMetrics,
     SaleStatus,
     SharedPageProps,
+    CashShift,
 } from '@/types';
 
 type Props = {
@@ -63,6 +68,7 @@ type Props = {
         customer_id?: string;
         sale_category_id?: string;
     };
+    active_cash_shift?: CashShift | null;
 };
 
 const statusConfig: Record<
@@ -144,9 +150,12 @@ export default function SalesIndex({
     customers: initialCustomers,
     metrics,
     filters,
+    active_cash_shift,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const [closeOpen, setCloseOpen] = useState(false);
+    const [openCashShiftDialog, setOpenCashShiftDialog] = useState(false);
+    const [paymentAllocationValid, setPaymentAllocationValid] = useState(true);
     const [createKey] = useState(() => createIdempotencyKey('sale-open'));
     const [closeKey, setCloseKey] = useState(() =>
         createIdempotencyKey('closing-session'),
@@ -698,6 +707,11 @@ export default function SalesIndex({
                             headers={{
                                 'X-Idempotency-Key': closeKey,
                             }}
+                            onSubmit={(event) => {
+                                if (!paymentAllocationValid) {
+                                    event.preventDefault();
+                                }
+                            }}
                             onSuccess={() => {
                                 setCloseOpen(false);
                                 setSelectedIds([]);
@@ -770,6 +784,19 @@ export default function SalesIndex({
                                         </div>
                                     </div>
 
+                                    <PaymentAllocationFields
+                                        key={closeKey}
+                                        totalCents={selectedTotal}
+                                        activeCashShift={active_cash_shift}
+                                        errors={errors}
+                                        onValidityChange={
+                                            setPaymentAllocationValid
+                                        }
+                                        onRequestOpenCashShift={() =>
+                                            setOpenCashShiftDialog(true)
+                                        }
+                                    />
+
                                     <FormField
                                         label="Observações do fechamento (opcional)"
                                         name="notes"
@@ -794,6 +821,11 @@ export default function SalesIndex({
                         </Form>
                     </DialogContent>
                 </Dialog>
+
+                <CashShiftQuickOpenDialog
+                    open={openCashShiftDialog}
+                    onOpenChange={setOpenCashShiftDialog}
+                />
 
                 {/* Sales List / Grid */}
                 {paginator.data.length === 0 ? (

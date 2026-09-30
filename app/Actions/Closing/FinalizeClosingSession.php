@@ -5,7 +5,10 @@ namespace App\Actions\Closing;
 use App\Actions\Finance\Commissions\AccrueCommissionsForSale;
 use App\Actions\Marketing\Retention\RecordCustomerActivity;
 use App\Actions\Operational\OperationalAction;
+use App\Models\CashMovement;
+use App\Models\CashShift;
 use App\Models\ClosingSession;
+use App\Models\ClosingSessionPayment;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Sale;
@@ -39,6 +42,8 @@ final class FinalizeClosingSession extends OperationalAction
      * @param  array{
      *     sale_ids: list<string>,
      *     expected_total_cents?: int|null,
+     *     payment_method?: string|null,
+     *     payment_allocations?: list<array{method: string, amount_cents: int, tendered_cents?: int|null}>,
      *     notes?: string|null,
      *     lock_versions?: array<string, int>|null
      * }  $data
@@ -136,6 +141,35 @@ final class FinalizeClosingSession extends OperationalAction
             $totalDiscountCents = (int) $sales->sum('discount_amount_cents');
             $calculatedFinalTotalCents = (int) $sales->sum('final_amount_cents');
 
+            $allocations = $data['payment_allocations'] ?? [[
+                'method' => $data['payment_method'] ?? '',
+                'amount_cents' => $calculatedFinalTotalCents,
+            ]];
+            $allocationTotal = array_sum(array_map(static fn (array $allocation): int => (int) ($allocation['amount_cents'] ?? 0), $allocations));
+            if ($allocationTotal !== $calculatedFinalTotalCents) {
+                throw ValidationException::withMessages(['payment_allocations' => 'A soma das parcelas deve corresponder exatamente ao total da comanda.']);
+            }
+            $hasCash = collect($allocations)->contains(fn (array $allocation): bool => ($allocation['method'] ?? null) === 'cash');
+            $cashShift = CashShift::query()
+                ->where('tenant_id', $tenantId)->where('unit_id', $unitId)
+                ->where('opened_by_user_id', $actor->getKey())->where('status', 'open')
+                ->lockForUpdate()->first();
+            if ($hasCash && $cashShift === null) {
+                throw ValidationException::withMessages(['payment_allocations' => 'Abra um novo turno de caixa para receber parcelas em dinheiro.']);
+            }
+            foreach ($allocations as $index => $allocation) {
+                $method = (string) ($allocation['method'] ?? '');
+                $amount = (int) ($allocation['amount_cents'] ?? 0);
+                $tendered = $allocation['tendered_cents'] ?? null;
+                if ($amount <= 0 || ! in_array($method, ['pix', 'debit_card', 'credit_card', 'cash', 'permuta'], true)) {
+                    throw ValidationException::withMessages(["payment_allocations.{$index}" => 'A parcela de pagamento é inválida.']);
+                }
+                if ($method === 'cash' && (! is_numeric($tendered) || (int) $tendered < $amount)) {
+                    throw ValidationException::withMessages(["payment_allocations.{$index}.tendered_cents" => 'O valor entregue deve ser igual ou superior ao valor aplicado em dinheiro.']);
+                }
+            }
+            $legacyPaymentMethod = count($allocations) === 1 ? $allocations[0]['method'] : null;
+
             if (isset($data['expected_total_cents']) && (int) $data['expected_total_cents'] !== $calculatedFinalTotalCents) {
                 throw ValidationException::withMessages([
                     'expected_total_cents' => 'O total esperado difere do valor calculado das comandas selecionadas.',
@@ -171,6 +205,13 @@ final class FinalizeClosingSession extends OperationalAction
                     'email' => $firstSale->customer->email,
                 ] : null,
                 'currency' => 'BRL',
+                'payment_method' => $legacyPaymentMethod,
+                'payment_allocations' => collect($allocations)->map(fn (array $allocation): array => [
+                    'method' => $allocation['method'],
+                    'amount_cents' => (int) $allocation['amount_cents'],
+                    'tendered_cents' => $allocation['method'] === 'cash' ? (int) $allocation['tendered_cents'] : null,
+                    'change_cents' => $allocation['method'] === 'cash' ? (int) $allocation['tendered_cents'] - (int) $allocation['amount_cents'] : 0,
+                ])->values()->all(),
                 'totals' => [
                     'total_gross_cents' => $totalGrossCents,
                     'total_discount_cents' => $totalDiscountCents,
@@ -205,6 +246,7 @@ final class FinalizeClosingSession extends OperationalAction
                 'unit_id' => $unitId,
                 'closing_subject' => $closingSubject,
                 'currency' => 'BRL',
+                'payment_method' => $legacyPaymentMethod,
                 'expected_total_cents' => $calculatedFinalTotalCents,
                 'final_total_cents' => $calculatedFinalTotalCents,
                 'status' => 'completed',
@@ -215,6 +257,31 @@ final class FinalizeClosingSession extends OperationalAction
             ]);
 
             $session->sales()->attach($sales->pluck('id')->all());
+
+            foreach ($allocations as $allocation) {
+                $amount = (int) $allocation['amount_cents'];
+                $method = $allocation['method'];
+                $tendered = $method === 'cash' ? (int) $allocation['tendered_cents'] : null;
+                $change = $tendered === null ? 0 : $tendered - $amount;
+                ClosingSessionPayment::query()->create([
+                    'id' => (string) Str::uuid7(), 'tenant_id' => $tenantId, 'unit_id' => $unitId,
+                    'closing_session_id' => $session->getKey(), 'cash_shift_id' => $method === 'cash' ? $cashShift?->getKey() : null,
+                    'payment_method' => $method, 'amount_cents' => $amount, 'tendered_cents' => $tendered,
+                    'change_cents' => $change, 'recorded_by_user_id' => $actor->getKey(), 'recorded_at' => now(),
+                ]);
+                if ($method === 'cash' && $cashShift !== null) {
+                    CashMovement::query()->create([
+                        'id' => (string) Str::uuid7(), 'tenant_id' => $tenantId, 'unit_id' => $unitId,
+                        'cash_shift_id' => $cashShift->getKey(), 'type' => 'sale_inflow', 'amount_cents' => $amount,
+                        'reason' => 'Recebimento da comanda #'.$session->getKey(), 'reference_type' => 'closing_session',
+                        'reference_id' => $session->getKey(), 'user_id' => $actor->getKey(),
+                    ]);
+                    $cashShift->forceFill([
+                        'expected_amount_cents' => $cashShift->expected_amount_cents + $amount,
+                        'lock_version' => $cashShift->lock_version + 1,
+                    ])->save();
+                }
+            }
 
             foreach ($sales as $lockedSale) {
                 $fromStatus = $lockedSale->status;

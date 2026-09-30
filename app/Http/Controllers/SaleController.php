@@ -10,6 +10,7 @@ use App\Http\Requests\AdjustSaleRequest;
 use App\Http\Requests\OpenSaleRequest;
 use App\Http\Requests\SaleDiscountRequest;
 use App\Http\Requests\SaleStatusTransitionRequest;
+use App\Models\CashShift;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Professional;
@@ -95,6 +96,7 @@ final class SaleController extends Controller
         ];
 
         return Inertia::render('sales/index', [
+            'active_cash_shift' => CashShift::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('opened_by_user_id', $request->user()->getKey())->where('status', 'open')->latest('opened_at')->first(),
             'sales' => $sales,
             'categories' => $categories,
             'customers' => $customers,
@@ -108,7 +110,7 @@ final class SaleController extends Controller
         ]);
     }
 
-    public function show(Sale $sale, TenantContext $context): Response
+    public function show(Request $request, Sale $sale, TenantContext $context): Response
     {
         Gate::authorize('view', $sale);
 
@@ -164,6 +166,7 @@ final class SaleController extends Controller
             ->get(['id', 'name', 'type', 'uniqueness_scope']);
 
         return Inertia::render('sales/show', [
+            'active_cash_shift' => CashShift::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('opened_by_user_id', $request->user()->getKey())->where('status', 'open')->latest('opened_at')->first(),
             'sale' => $sale,
             'services' => $services,
             'products' => $products,

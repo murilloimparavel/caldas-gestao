@@ -20,6 +20,7 @@ final class OpenCashShiftRequest extends FormRequest
         return [
             'initial_amount_cents' => ['required', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'return_to' => ['nullable', 'in:sales'],
         ];
     }
 }
