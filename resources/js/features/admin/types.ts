@@ -85,32 +85,35 @@ export const adminRoutes = {
     dashboard: admin.dashboard.url(),
     audit: admin.audit.url(),
     clients: admin.tenants.url(),
-    client: (id: string | number) => adminTenants.show.url(id),
-    clientSuspend: (id: string | number) => adminTenants.suspend.url(id),
-    clientActivate: (id: string | number) => adminTenants.activate.url(id),
+    client: (id: string | number) => adminTenants.show.url(String(id)),
+    clientSuspend: (id: string | number) =>
+        adminTenants.suspend.url(String(id)),
+    clientActivate: (id: string | number) =>
+        adminTenants.activate.url(String(id)),
     createClient: adminTenants.create.url(),
     plans: adminPlans.index.url(),
-    plan: (id: string | number) => adminPlans.update.url(id),
-    planDeactivate: (id: string | number) => adminPlans.deactivate.url(id),
+    plan: (id: string | number) => adminPlans.update.url(String(id)),
+    planDeactivate: (id: string | number) =>
+        adminPlans.deactivate.url(String(id)),
     clientSubscription: (id: string | number) =>
-        adminSubscription.update.url(id),
-    clientUsers: (id: string | number) => adminUsers.store.url(id),
-    clientUserInvite: (id: string | number) => adminUsers.store.url(id),
+        adminSubscription.update.url(String(id)),
+    clientUsers: (id: string | number) => adminUsers.store.url(String(id)),
+    clientUserInvite: (id: string | number) => adminUsers.store.url(String(id)),
     clientUserAccess: (
         tenantId: string | number,
         membershipId: string | number,
     ) =>
         adminUsers.sendAccess.url({
-            tenant: tenantId,
-            membership: membershipId,
+            tenant: String(tenantId),
+            membership: String(membershipId),
         }),
     clientMembershipRevoke: (
         tenantId: string | number,
         membershipId: string | number,
     ) =>
         adminMemberships.revoke.url({
-            tenant: tenantId,
-            membership: membershipId,
+            tenant: String(tenantId),
+            membership: String(membershipId),
         }),
 };
 
