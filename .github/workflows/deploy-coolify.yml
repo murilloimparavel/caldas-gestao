@@ -22,6 +22,19 @@ jobs:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
         run: test -n "$COOLIFY_DEPLOY_TOKEN"
 
+      - name: Sincronizar administrador da plataforma
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+          SUPER_ADMIN_EMAILS: ${{ secrets.SUPER_ADMIN_EMAILS }}
+        run: |
+          test -n "$SUPER_ADMIN_EMAILS"
+          payload="$(jq -n --arg key 'SUPER_ADMIN_EMAILS' --arg value "$SUPER_ADMIN_EMAILS" '{key: $key, value: $value, is_preview: false}')"
+          curl --fail-with-body --silent --show-error --request PATCH \
+            --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "$payload" \
+            "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv/envs"
+
       - name: Garantir tag de imagem de produção
         env:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
