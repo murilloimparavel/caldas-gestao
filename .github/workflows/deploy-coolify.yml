@@ -29,11 +29,37 @@ jobs:
         run: |
           test -n "$SUPER_ADMIN_EMAILS"
           payload="$(jq -n --arg key 'SUPER_ADMIN_EMAILS' --arg value "$SUPER_ADMIN_EMAILS" '{key: $key, value: $value, is_preview: false}')"
-          curl --fail-with-body --silent --show-error --request PATCH \
+          set +e
+          patch_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request PATCH \
             --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
             --header "Content-Type: application/json" \
             --data "$payload" \
-            "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv/envs"
+            "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv/envs")"
+          patch_exit=$?
+          set -e
+
+          if [ "$patch_exit" -ne 0 ] && [ "$patch_status" != "404" ]; then
+            echo "Coolify PATCH request failed with curl exit $patch_exit and HTTP status $patch_status."
+            exit "$patch_exit"
+          fi
+
+          if [ "$patch_status" = "404" ]; then
+            post_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST \
+              --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload" \
+              "https://cy.caldasindica.com/api/v1/applications/svurav3cvfovuz8adtv1fuwv/envs")"
+
+            case "$post_status" in
+              2??) ;;
+              *) echo "Coolify POST request failed with HTTP status $post_status."; exit 1 ;;
+            esac
+          else
+            case "$patch_status" in
+              2??) ;;
+              *) echo "Coolify PATCH request failed with HTTP status $patch_status."; exit 1 ;;
+            esac
+          fi
 
       - name: Garantir tag de imagem de produção
         env:
