@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\PlatformPlanController;
+use App\Http\Controllers\Admin\PlatformUserController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
@@ -138,8 +141,30 @@ Route::get('/', function () {
 
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
+Route::redirect('/admin/login', '/login')->name('admin.login');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
+        Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/audit', [AdminController::class, 'audit'])->name('audit');
+        Route::get('/plans', [PlatformPlanController::class, 'index'])->name('plans.index');
+        Route::post('/plans', [PlatformPlanController::class, 'store'])->name('plans.store');
+        Route::put('/plans/{platform_plan}', [PlatformPlanController::class, 'update'])->name('plans.update');
+        Route::post('/plans/{platform_plan}/deactivate', [PlatformPlanController::class, 'deactivate'])->name('plans.deactivate');
+        Route::post('/plans/{platform_plan}/reactivate', [PlatformPlanController::class, 'reactivate'])->name('plans.reactivate');
+        Route::get('/tenants', [AdminController::class, 'tenants'])->name('tenants');
+        Route::get('/tenants/create', [AdminController::class, 'create'])->name('tenants.create');
+        Route::get('/tenants/{tenant}', [AdminController::class, 'show'])->name('tenants.show');
+        Route::post('/tenants', [AdminController::class, 'storeTenant'])->name('tenants.store');
+        Route::post('/tenants/{tenant}/users', [PlatformUserController::class, 'store'])->name('tenants.users.store');
+        Route::post('/tenants/{tenant}/users/{membership}/send-access', [PlatformUserController::class, 'sendAccess'])->name('tenants.users.send-access');
+        Route::delete('/tenants/{tenant}/memberships/{membership}', [PlatformUserController::class, 'revoke'])->name('tenants.memberships.revoke');
+        Route::post('/tenants/{tenant}/suspend', [AdminController::class, 'suspend'])->name('tenants.suspend');
+        Route::post('/tenants/{tenant}/activate', [AdminController::class, 'activate'])->name('tenants.activate');
+        Route::patch('/tenants/{tenant}/subscription', [AdminController::class, 'updateSubscription'])->name('tenants.subscription.update');
+        Route::patch('/tenants/{tenant}/status', [AdminController::class, 'updateTenantStatus'])->name('tenants.status.update');
+    });
+
     Route::get('/first-login/password', [FirstLoginPasswordController::class, 'edit'])->name('first-login-password.edit');
     Route::put('/first-login/password', [FirstLoginPasswordController::class, 'update'])->middleware('throttle:6,1')->name('first-login-password.update');
 });

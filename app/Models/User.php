@@ -36,7 +36,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'must_change_password', 'temporary_password_expires_at', 'first_login_at'])]
+#[Fillable(['name', 'email', 'password', 'must_change_password', 'temporary_password_expires_at', 'first_login_at', 'is_super_admin'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -57,7 +57,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'must_change_password' => 'boolean',
             'temporary_password_expires_at' => 'datetime',
             'first_login_at' => 'datetime',
+            'is_super_admin' => 'boolean',
         ];
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin
+            || in_array($this->email_normalized, config('admin.super_admin_emails', []), true);
     }
 
     /**

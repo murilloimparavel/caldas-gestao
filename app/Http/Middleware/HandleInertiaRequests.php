@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $isPlatformAdmin = $request->routeIs('admin.*') && $user?->isSuperAdmin() === true;
         $context = $request->attributes->get(TenantContext::class);
         $context = $context instanceof TenantContext ? $context : null;
         $explicitTenant = $request->session()->get('tenant_id')
@@ -53,6 +54,11 @@ class HandleInertiaRequests extends Middleware
         $explicitUnit = $request->session()->get('unit_id')
             ?? $request->header('X-Unit-Id')
             ?? $request->route('unit');
+
+        if ($isPlatformAdmin) {
+            $explicitTenant = null;
+            $explicitUnit = null;
+        }
 
         if ($context === null && $user !== null) {
             try {
