@@ -1,4 +1,12 @@
 <x-mail::layout>
+<x-slot:head>
+<style>
+:root {
+    --caldas-primary-color: {{ config('branding.primary_color', '#3167d8') }};
+}
+</style>
+</x-slot:head>
+
 <x-slot:header>
 <x-mail::header :url="config('app.url')">
 @if (config('branding.logo_url'))
