@@ -40,7 +40,7 @@ export function ResourceViewToggle({
         label: string;
         value: ResourceView;
     }[] = [
-        { icon: LayoutGrid, label: 'Cards', value: 'cards' },
+        { icon: LayoutGrid, label: 'Cartões', value: 'cards' },
         { icon: List, label: 'Lista', value: 'list' },
     ];
 

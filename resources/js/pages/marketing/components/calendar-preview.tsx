@@ -61,7 +61,7 @@ export function CalendarPreview() {
                                     Matheus Silva
                                 </p>
                                 <p className="text-3xs text-[#A9A79D]">
-                                    Master Barber
+                                    Barbeiro master
                                 </p>
                             </div>
                         </div>
@@ -161,7 +161,7 @@ export function CalendarPreview() {
                             </p>
                             <div className="mt-2 flex items-center justify-between text-3xs text-sky-300/80">
                                 <span>R$ 380,00</span>
-                                <span>Google Cal Conectado</span>
+                                <span>Google Calendar conectado</span>
                             </div>
                         </div>
 
@@ -182,7 +182,7 @@ export function CalendarPreview() {
                             <div className="mt-2 flex items-center justify-between text-3xs text-amber-300/80">
                                 <span>R$ 130,00</span>
                                 <span className="text-amber-300">
-                                    Site online
+                                    Site público
                                 </span>
                             </div>
                         </div>

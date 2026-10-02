@@ -22,7 +22,7 @@ type Props = {
 export default function Dashboard({ dashboard: snapshot }: Props) {
     return (
         <>
-            <Head title="Dashboard Operacional" />
+            <Head title="Painel operacional" />
             <div className="dashboard-canvas flex min-h-full min-w-0 flex-1 flex-col gap-5 px-3 py-4 pb-[calc(6rem+env(safe-area-inset-bottom))] min-[380px]:px-4 sm:gap-6 sm:px-6 sm:py-6 sm:pb-6 lg:px-8 lg:py-8">
                 {/* 1. Header with greeting, filters and refresh */}
                 <DashboardHeader
@@ -101,5 +101,5 @@ export default function Dashboard({ dashboard: snapshot }: Props) {
 }
 
 Dashboard.layout = {
-    breadcrumbs: [{ title: 'Dashboard', href: dashboard() }],
+    breadcrumbs: [{ title: 'Painel', href: dashboard() }],
 };

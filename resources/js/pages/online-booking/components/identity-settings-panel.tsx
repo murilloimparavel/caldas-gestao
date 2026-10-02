@@ -43,7 +43,7 @@ export function IdentitySettingsPanel({
                             Essencial — claro e direto
                         </option>
                         <option value="atelier-barber">
-                            Atelier Barber — dark premium
+                            Atelier Barber — escuro e sofisticado
                         </option>
                     </select>
                     <p

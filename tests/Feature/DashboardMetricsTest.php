@@ -186,7 +186,12 @@ it('calculates occupancy against merged availability and subtracts overlapping b
         'professional_id' => $professional->id,
         'starts_at' => Carbon::parse('2026-08-26 11:00:00'),
         'ends_at' => Carbon::parse('2026-08-26 12:00:00'),
-        'status' => 'confirmed',
+        // PostgreSQL rejects overlapping active appointments. Keep this
+        // fixture inactive so the assertions stay focused on availability
+        // and overlapping schedule blocks.
+        'status' => 'cancelled',
+        'cancelled_at' => Carbon::parse('2026-08-26 10:30:00'),
+        'cancel_reason' => 'Teste de disponibilidade',
     ]);
 
     Appointment::factory()->create([
@@ -196,6 +201,8 @@ it('calculates occupancy against merged availability and subtracts overlapping b
         'starts_at' => Carbon::parse('2026-08-26 13:00:00'),
         'ends_at' => Carbon::parse('2026-08-26 14:00:00'),
         'status' => 'cancelled',
+        'cancelled_at' => Carbon::parse('2026-08-26 12:30:00'),
+        'cancel_reason' => 'Cliente cancelou o horário',
     ]);
 
     Appointment::factory()->create([
@@ -234,7 +241,7 @@ it('calculates occupancy against merged availability and subtracts overlapping b
         );
 });
 
-it('uses each availability rule timezone and counts overlapping appointments once', function () {
+it('uses each availability rule timezone and counts adjacent appointments once', function () {
     Carbon::setTestNow('2026-08-26 12:00:00');
 
     [$owner, $tenant, $unit] = dashboardTestWorkspace();
@@ -270,8 +277,8 @@ it('uses each availability rule timezone and counts overlapping appointments onc
         'tenant_id' => $tenant->id,
         'unit_id' => $unit->id,
         'professional_id' => $professional->id,
-        'starts_at' => Carbon::parse('2026-08-26 09:30:00', 'America/Sao_Paulo'),
-        'ends_at' => Carbon::parse('2026-08-26 10:30:00', 'America/Sao_Paulo'),
+        'starts_at' => Carbon::parse('2026-08-26 10:00:00', 'America/Sao_Paulo'),
+        'ends_at' => Carbon::parse('2026-08-26 11:00:00', 'America/Sao_Paulo'),
         'status' => 'confirmed',
     ]);
 
@@ -279,9 +286,9 @@ it('uses each availability rule timezone and counts overlapping appointments onc
         ->get(route('dashboard', ['preset' => 'today']))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('dashboard.professionalOccupancy.bookedMinutes', 90)
+            ->where('dashboard.professionalOccupancy.bookedMinutes', 120)
             ->where('dashboard.professionalOccupancy.availableMinutes', 240)
-            ->where('dashboard.professionalOccupancy.overallPercentage', 37.5)
+            ->where('dashboard.professionalOccupancy.overallPercentage', 50)
         );
 });
 

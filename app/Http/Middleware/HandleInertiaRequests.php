@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
                 $context = TenantContext::fromRequest($request);
             } catch (AuthorizationException) {
                 if ($explicitTenant !== null || $explicitUnit !== null) {
-                    throw new AuthorizationException('The selected tenant context is not available to this user.');
+                    throw new AuthorizationException('O contexto da conta selecionada não está disponível para este usuário.');
                 }
             }
         }

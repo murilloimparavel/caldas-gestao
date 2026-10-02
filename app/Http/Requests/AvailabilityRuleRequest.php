@@ -46,7 +46,7 @@ final class AvailabilityRuleRequest extends FormRequest
             $endsAt = $this->input('ends_at');
 
             if (is_string($startsAt) && is_string($endsAt) && $endsAt <= $startsAt) {
-                $validator->errors()->add('ends_at', 'The end time must be after the start time.');
+                $validator->errors()->add('ends_at', 'O horário de término deve ser posterior ao horário de início.');
             }
         }];
     }

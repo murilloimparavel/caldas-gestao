@@ -43,7 +43,7 @@ final class GoogleCalendarController extends Controller
 
     public function callback(Request $request): RedirectResponse|JsonResponse
     {
-        abort_unless($this->returnUrl->isOfficialHost($request->getHost()), 404, 'The Google Calendar callback must use the official host.');
+        abort_unless($this->returnUrl->isOfficialHost($request->getHost()), 404, 'O retorno do Google Agenda deve usar o domínio oficial.');
 
         $stateValue = (string) $request->query('state');
         $returnUrl = $this->oauth->returnUrl($stateValue);
@@ -65,7 +65,7 @@ final class GoogleCalendarController extends Controller
         }
 
         return $returnUrl === null
-            ? to_route('calendar.index')->with('success', 'Google Calendar conectado.')
+            ? to_route('calendar.index')->with('success', 'Google Agenda conectado.')
             : redirect()->away($this->withResult($returnUrl, 'connected'));
     }
 
@@ -78,19 +78,19 @@ final class GoogleCalendarController extends Controller
             return response()->json(['status' => 'disconnected']);
         }
 
-        return to_route('calendar.index')->with('success', 'Google Calendar desconectado.');
+        return to_route('calendar.index')->with('success', 'Google Agenda desconectado.');
     }
 
     private function authorizeView(TenantContext $context): void
     {
         Gate::authorize('viewAny', Appointment::class);
-        abort_unless($context->unit !== null, 403, 'An active unit is required for Google Calendar.');
+        abort_unless($context->unit !== null, 403, 'É necessário selecionar uma unidade ativa para usar o Google Agenda.');
     }
 
     private function authorizeConfiguration(TenantContext $context): void
     {
-        abort_unless($context->unit !== null, 403, 'An active unit is required for Google Calendar.');
-        abort_unless($this->authorization->can($context->user, $context, 'calendar.configure', $context->unit), 403, 'You are not allowed to configure Google Calendar.');
+        abort_unless($context->unit !== null, 403, 'É necessário selecionar uma unidade ativa para usar o Google Agenda.');
+        abort_unless($this->authorization->can($context->user, $context, 'calendar.configure', $context->unit), 403, 'Você não tem permissão para configurar o Google Agenda.');
     }
 
     private function callbackError(Request $request, string $message, int $status, ?string $returnUrl = null): RedirectResponse|JsonResponse

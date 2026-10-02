@@ -82,7 +82,7 @@ export function PublicPreview({ previewUrl }: { previewUrl?: string | null }) {
     const frame = (mode: Viewport) => (
         <iframe
             key={`${previewUrl}-${mode}-${frameAttempt}`}
-            title={`Prévia pública do agendamento online em ${mode === 'mobile' ? 'celular' : 'desktop'}`}
+            title={`Prévia pública do agendamento online em ${mode === 'mobile' ? 'celular' : 'computador'}`}
             src={previewUrl ?? undefined}
             onLoad={() => {
                 setFrameLoaded(true);
@@ -133,12 +133,12 @@ export function PublicPreview({ previewUrl }: { previewUrl?: string | null }) {
                                     aria-hidden="true"
                                     className="size-4"
                                 />
-                                <span>Mobile</span>
+                                <span>Celular</span>
                             </button>
                             <button
                                 type="button"
                                 aria-pressed={viewport === 'desktop'}
-                                aria-label="Prévia em desktop"
+                                aria-label="Prévia em computador"
                                 onClick={openDesktopPreview}
                                 className={`flex min-h-9 items-center gap-1.5 rounded-md px-2.5 text-xs transition-colors ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                             >
@@ -146,7 +146,7 @@ export function PublicPreview({ previewUrl }: { previewUrl?: string | null }) {
                                     aria-hidden="true"
                                     className="size-4"
                                 />
-                                <span>Desktop</span>
+                                <span>Computador</span>
                             </button>
                         </div>
                     </div>
@@ -174,19 +174,19 @@ export function PublicPreview({ previewUrl }: { previewUrl?: string | null }) {
                                 />
                             </div>
                             <h3 className="text-sm font-semibold text-foreground sm:text-base">
-                                Prévia desktop ampliada
+                                Prévia ampliada no computador
                             </h3>
                             <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
                                 A página será renderizada com viewport de{' '}
                                 {DESKTOP_PREVIEW_WIDTH} px para exibir o layout
-                                desktop real.
+                                computador.
                             </p>
                             <Button
                                 type="button"
                                 className="mt-4"
                                 onClick={openDesktopPreview}
                             >
-                                Abrir prévia desktop
+                                Abrir prévia no computador
                             </Button>
                         </div>
                     ) : (
@@ -226,7 +226,7 @@ export function PublicPreview({ previewUrl }: { previewUrl?: string | null }) {
                 >
                     <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-hidden p-4 sm:max-w-[min(96vw,1360px)] sm:p-6">
                         <DialogHeader className="pr-10 text-left">
-                            <DialogTitle>Prévia em desktop</DialogTitle>
+                            <DialogTitle>Prévia em computador</DialogTitle>
                             <DialogDescription>
                                 A página pública está usando um viewport de{' '}
                                 {DESKTOP_PREVIEW_WIDTH} px. Em telas menores,
