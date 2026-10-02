@@ -107,7 +107,7 @@ export function TopKpiCards({
     ];
 
     return (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
             {kpis.map((kpi) => {
                 const Icon = kpi.icon;
 
@@ -116,15 +116,15 @@ export function TopKpiCards({
                         key={kpi.id}
                         className="relative overflow-hidden border-border/60 transition-all hover:shadow-sm"
                     >
-                        <CardContent className="p-5">
-                            <div className="flex items-center justify-between">
+                        <CardContent className="p-3.5 sm:p-5">
+                            <div className="flex min-w-0 items-center justify-between gap-2">
                                 <div className="flex items-center gap-3">
                                     <div
                                         className={`flex size-10 items-center justify-center rounded-lg ${kpi.iconBg}`}
                                     >
                                         <Icon className="size-5" />
                                     </div>
-                                    <span className="text-sm font-medium text-muted-foreground">
+                                    <span className="min-w-0 truncate text-xs font-medium text-muted-foreground sm:text-sm">
                                         {kpi.title}
                                     </span>
                                 </div>
@@ -134,9 +134,9 @@ export function TopKpiCards({
                                 />
                             </div>
 
-                            <div className="mt-4 flex items-end justify-between">
+                            <div className="mt-3 flex flex-wrap items-end justify-between gap-2 sm:mt-4">
                                 <div>
-                                    <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                                    <p className="text-xl font-bold tracking-tight break-words text-foreground min-[380px]:text-2xl sm:text-3xl">
                                         {kpi.value}
                                     </p>
                                     <p className="mt-0.5 text-xs text-muted-foreground">

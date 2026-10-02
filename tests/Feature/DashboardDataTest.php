@@ -23,6 +23,7 @@ it('serves operational dashboard snapshot payload', function () {
                 ->has('visitsTrend')
                 ->has('statusBreakdown')
                 ->has('professionalPerformance')
+                ->has('professionalOccupancy')
                 ->has('salesCategoryBreakdown')
                 ->has('scheduleHeatmap')
                 ->has('appointments')

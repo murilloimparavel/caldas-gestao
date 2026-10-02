@@ -68,7 +68,7 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
     };
 
     return (
-        <Card className="border-border/60">
+        <Card className="max-w-full min-w-0 overflow-hidden border-border/60">
             <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">
                     Vendas por Categoria
@@ -110,44 +110,61 @@ export function SalesCategoryBreakdown({ data }: SalesCategoryBreakdownProps) {
                             />
                         </div>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            {categoriesList.map((item) => {
-                                const Icon = getCategoryIcon(item.category);
+                        <p
+                            id="sales-category-mobile-hint"
+                            className="mt-4 mb-2 text-3xs text-muted-foreground sm:hidden"
+                        >
+                            Deslize para o lado para ver cada categoria.
+                        </p>
+                        <div
+                            className="max-w-full min-w-0 overflow-x-auto overscroll-x-contain sm:overflow-visible"
+                            role="region"
+                            aria-label="Resumo de vendas por categoria rolável horizontalmente"
+                            aria-describedby="sales-category-mobile-hint"
+                            // The scroll region needs focus so keyboard users can pan it.
+                            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+                            tabIndex={0}
+                        >
+                            <div className="flex w-max snap-x gap-3 pb-1 sm:grid sm:w-auto sm:snap-none sm:grid-cols-2 sm:pb-0 xl:grid-cols-3">
+                                {categoriesList.map((item) => {
+                                    const Icon = getCategoryIcon(item.category);
 
-                                return (
-                                    <div
-                                        key={item.category}
-                                        className="flex flex-col rounded-lg border border-border/40 bg-muted/20 p-3 transition-colors hover:bg-muted/40"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5">
-                                                <span
-                                                    className="size-2 rounded-full"
-                                                    style={{
-                                                        backgroundColor:
-                                                            item.color,
-                                                    }}
-                                                />
-                                                <span className="text-xs font-medium text-muted-foreground">
-                                                    {item.label}
-                                                </span>
+                                    return (
+                                        <div
+                                            key={item.category}
+                                            className="flex w-[170px] shrink-0 snap-start flex-col rounded-lg border border-border/40 bg-muted/20 p-3 transition-colors hover:bg-muted/40 sm:w-auto sm:shrink"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span
+                                                        className="size-2 rounded-full"
+                                                        style={{
+                                                            backgroundColor:
+                                                                item.color,
+                                                        }}
+                                                    />
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        {item.label}
+                                                    </span>
+                                                </div>
+                                                <Icon className="size-3.5 text-muted-foreground" />
                                             </div>
-                                            <Icon className="size-3.5 text-muted-foreground" />
+                                            <span className="mt-2 text-base font-bold text-foreground">
+                                                {item.totalAmount ??
+                                                    (item.total_cents !==
+                                                    undefined
+                                                        ? formatCurrency(
+                                                              item.total_cents,
+                                                          )
+                                                        : 'R$ 0,00')}
+                                            </span>
+                                            <span className="text-3xs font-medium text-muted-foreground">
+                                                {item.percentage}% do total
+                                            </span>
                                         </div>
-                                        <span className="mt-2 text-base font-bold text-foreground">
-                                            {item.totalAmount ??
-                                                (item.total_cents !== undefined
-                                                    ? formatCurrency(
-                                                          item.total_cents,
-                                                      )
-                                                    : 'R$ 0,00')}
-                                        </span>
-                                        <span className="text-3xs font-medium text-muted-foreground">
-                                            {item.percentage}% do total
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </>
                 )}

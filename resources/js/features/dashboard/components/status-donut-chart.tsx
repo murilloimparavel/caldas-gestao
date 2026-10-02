@@ -53,13 +53,13 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
                     Distribuição percentual por situação
                 </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="px-3.5 pt-3.5 sm:px-6 sm:pt-4">
                 {!hasData ? (
                     <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
                         Nenhum agendamento no período
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+                    <div className="flex flex-col items-center gap-4 sm:gap-6 xl:flex-row xl:justify-between">
                         <p className="sr-only" id="status-donut-summary">
                             Distribuição de status:{' '}
                             {data
@@ -114,7 +114,7 @@ export function StatusDonutChart({ data = [] }: StatusDonutChartProps) {
 
                         {/* Legend */}
                         <ul
-                            className="grid w-full flex-1 gap-2.5"
+                            className="grid w-full min-w-0 flex-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-1"
                             aria-label="Detalhamento dos status"
                         >
                             {data.map((item) => (

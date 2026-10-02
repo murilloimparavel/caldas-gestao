@@ -3,8 +3,10 @@
 namespace App\Actions\Dashboard;
 
 use App\Models\Appointment;
+use App\Models\AvailabilityRule;
 use App\Models\Professional;
 use App\Models\Sale;
+use App\Models\ScheduleBlock;
 use App\Models\Tenant;
 use App\Models\Unit;
 use Carbon\CarbonImmutable;
@@ -133,6 +135,7 @@ class GetDashboardSnapshot
 
         // 8. Professionals performance
         $professionalPerformance = $this->calculateProfessionalsPerformance($tenant, $unit, $startDate, $endDate, $prevStartDate, $prevEndDate);
+        $professionalOccupancy = $this->calculateProfessionalOccupancy($tenant, $unit, $startDate, $endDate, $timezone);
 
         // 9. Sales by category
         $salesCategoryBreakdown = $this->calculateSalesByCategory($tenant, $unit, $startDate, $endDate);
@@ -160,6 +163,7 @@ class GetDashboardSnapshot
             'visitsTrend' => $visitsTrend,
             'statusBreakdown' => $statusBreakdown,
             'professionalPerformance' => $professionalPerformance,
+            'professionalOccupancy' => $professionalOccupancy,
             'salesCategoryBreakdown' => $salesCategoryBreakdown,
             'scheduleHeatmap' => $scheduleHeatmap,
             'appointments' => $nextAppointments,
@@ -441,6 +445,161 @@ class GetDashboardSnapshot
         usort($result, fn ($a, $b) => $b['totalServices'] <=> $a['totalServices']);
 
         return $result;
+    }
+
+    /**
+     * @return array{overallPercentage: ?float, bookedMinutes: int, availableMinutes: int, professionals: list<array{id: string, name: string, avatarUrl: ?string, bookedMinutes: int, availableMinutes: int, occupancyPercentage: ?float}>}
+     */
+    private function calculateProfessionalOccupancy(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
+    {
+        $professionals = Professional::query()
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($query) => $query->where('unit_id', $unit->id))
+            ->where('status', 'active')
+            ->get();
+
+        $rangeEnd = $endDate->addMicrosecond();
+        [$rangeStart, $rangeEnd] = $this->utcDateRange($startDate, $rangeEnd);
+
+        $appointments = Appointment::query()
+            ->select(['id', 'professional_id', 'starts_at', 'ends_at', 'status'])
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($query) => $query->where('unit_id', $unit->id))
+            ->whereIn('status', ['scheduled', 'confirmed', 'checked_in', 'in_service', 'completed'])
+            ->where('starts_at', '<', $rangeEnd)
+            ->where('ends_at', '>', $rangeStart)
+            ->get()
+            ->groupBy('professional_id');
+
+        $blocks = ScheduleBlock::query()
+            ->select(['professional_id', 'starts_at', 'ends_at'])
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($query) => $query->where('unit_id', $unit->id))
+            ->where('status', 'active')
+            ->where('starts_at', '<', $rangeEnd)
+            ->where('ends_at', '>', $rangeStart)
+            ->get();
+
+        $availabilityByProfessional = AvailabilityRule::query()
+            ->select(['professional_id', 'weekday', 'starts_at', 'ends_at', 'timezone'])
+            ->where('tenant_id', $tenant->id)
+            ->when($unit, fn ($query) => $query->where('unit_id', $unit->id))
+            ->where('status', 'active')
+            ->get()
+            ->groupBy('professional_id');
+
+        $bookedTotal = 0;
+        $availableTotal = 0;
+        $result = [];
+
+        foreach ($professionals as $professional) {
+            $bookedIntervals = [];
+            foreach ($appointments->get($professional->id, collect()) as $appointment) {
+                $appointmentStart = CarbonImmutable::parse($appointment->starts_at)->setTimezone($timezone)->max($startDate);
+                $appointmentEnd = CarbonImmutable::parse($appointment->ends_at)->setTimezone($timezone)->min($rangeEnd);
+                if ($appointmentEnd->greaterThan($appointmentStart)) {
+                    $bookedIntervals[] = [$appointmentStart, $appointmentEnd];
+                }
+            }
+            $bookedMinutes = collect($this->mergeOccupancyIntervals($bookedIntervals))
+                ->sum(fn (array $interval): int => (int) $interval[0]->diffInMinutes($interval[1]));
+
+            $availabilityIntervals = [];
+            $rules = $availabilityByProfessional->get($professional->id, collect());
+            for ($day = $startDate->startOfDay(); $day->lte($endDate); $day = $day->addDay()) {
+                foreach ($rules->where('weekday', $day->dayOfWeek) as $rule) {
+                    $ruleTimezone = $rule->timezone ?: $timezone;
+                    $slotStart = CarbonImmutable::parse($day->toDateString().' '.(string) $rule->starts_at, $ruleTimezone)->setTimezone($timezone)->max($startDate);
+                    $slotEnd = CarbonImmutable::parse($day->toDateString().' '.(string) $rule->ends_at, $ruleTimezone)->setTimezone($timezone)->min($rangeEnd);
+                    if (! $slotEnd->greaterThan($slotStart)) {
+                        continue;
+                    }
+
+                    $availabilityIntervals[] = [$slotStart, $slotEnd];
+                }
+            }
+
+            $availableMinutes = 0;
+            foreach ($this->mergeOccupancyIntervals($availabilityIntervals) as [$slotStart, $slotEnd]) {
+                $slotMinutes = (int) $slotStart->diffInMinutes($slotEnd);
+                $blockIntervals = [];
+                foreach ($blocks as $block) {
+                    if ($block->professional_id !== null && $block->professional_id !== $professional->id) {
+                        continue;
+                    }
+
+                    $blockStart = CarbonImmutable::parse($block->starts_at)->setTimezone($timezone)->max($slotStart);
+                    $blockEnd = CarbonImmutable::parse($block->ends_at)->setTimezone($timezone)->min($slotEnd);
+                    if ($blockEnd->greaterThan($blockStart)) {
+                        $blockIntervals[] = [$blockStart, $blockEnd];
+                    }
+                }
+
+                $excludedMinutes = 0;
+                foreach ($this->mergeOccupancyIntervals($blockIntervals) as [$blockStart, $blockEnd]) {
+                    $excludedMinutes += (int) $blockStart->diffInMinutes($blockEnd);
+                }
+
+                $availableMinutes += max(0, $slotMinutes - min($slotMinutes, $excludedMinutes));
+            }
+
+            $occupancyPercentage = $availableMinutes > 0 ? round(($bookedMinutes / $availableMinutes) * 100, 1) : null;
+            $bookedTotal += $bookedMinutes;
+            $availableTotal += $availableMinutes;
+            $result[] = [
+                'id' => $professional->id,
+                'name' => $professional->name,
+                'avatarUrl' => $professional->avatar_url,
+                'bookedMinutes' => $bookedMinutes,
+                'availableMinutes' => $availableMinutes,
+                'occupancyPercentage' => $occupancyPercentage,
+            ];
+        }
+
+        usort($result, fn (array $left, array $right): int => ($right['occupancyPercentage'] ?? -1) <=> ($left['occupancyPercentage'] ?? -1));
+
+        return [
+            'overallPercentage' => $availableTotal > 0 ? round(($bookedTotal / $availableTotal) * 100, 1) : null,
+            'bookedMinutes' => $bookedTotal,
+            'availableMinutes' => $availableTotal,
+            'professionals' => $result,
+        ];
+    }
+
+    /**
+     * Merge touching or overlapping intervals so duplicate availability rules
+     * and overlapping schedule blocks cannot inflate occupancy totals.
+     *
+     * @param  list<array{CarbonImmutable, CarbonImmutable}>  $intervals
+     * @return list<array{CarbonImmutable, CarbonImmutable}>
+     */
+    private function mergeOccupancyIntervals(array $intervals): array
+    {
+        usort($intervals, fn (array $left, array $right): int => $left[0]->getTimestamp() <=> $right[0]->getTimestamp());
+
+        $merged = [];
+        foreach ($intervals as [$start, $end]) {
+            $lastIndex = count($merged) - 1;
+            if ($lastIndex < 0 || $start->greaterThan($merged[$lastIndex][1])) {
+                $merged[] = $this->occupancyInterval($start, $end);
+
+                continue;
+            }
+
+            if ($end->greaterThan($merged[$lastIndex][1])) {
+                $merged[$lastIndex] = $this->occupancyInterval($merged[$lastIndex][0], $end);
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @return array{CarbonImmutable, CarbonImmutable}
+     */
+    private function occupancyInterval(CarbonImmutable $start, CarbonImmutable $end): array
+    {
+        return [$start, $end];
     }
 
     /**

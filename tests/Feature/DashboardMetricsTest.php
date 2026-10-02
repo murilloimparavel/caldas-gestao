@@ -2,11 +2,13 @@
 
 use App\Actions\Identity\OnboardTenant;
 use App\Models\Appointment;
+use App\Models\AvailabilityRule;
 use App\Models\FinancialObligation;
 use App\Models\Professional;
 use App\Models\Sale;
 use App\Models\SaleCategory;
 use App\Models\SaleItem;
+use App\Models\ScheduleBlock;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
@@ -122,6 +124,9 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
                     ->where('averageTicket', 'R$ 50,00')
                     ->etc()
                 )
+                ->where('professionalOccupancy.overallPercentage', null)
+                ->where('professionalOccupancy.professionals.0.bookedMinutes', 240)
+                ->where('professionalOccupancy.professionals.0.occupancyPercentage', null)
                 ->has('salesCategoryBreakdown')
                 ->where('salesCategoryBreakdown.0.totalAmount', 'R$ 112,50')
                 ->where('salesCategoryBreakdown.1.totalAmount', 'R$ 37,50')
@@ -133,6 +138,150 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
                 ->has('attentionItems', 1)
                 ->etc()
             )
+        );
+});
+
+it('calculates occupancy against merged availability and subtracts overlapping blocks', function () {
+    Carbon::setTestNow('2026-08-26 12:00:00');
+
+    [$owner, $tenant, $unit] = dashboardTestWorkspace();
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'name' => 'Ana Silva',
+    ]);
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'weekday' => 3,
+        'starts_at' => '09:00:00',
+        'ends_at' => '17:00:00',
+        'timezone' => 'America/Sao_Paulo',
+    ]);
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'weekday' => 3,
+        'starts_at' => '12:00:00',
+        'ends_at' => '17:00:00',
+        'timezone' => 'America/Sao_Paulo',
+    ]);
+
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 10:00:00'),
+        'ends_at' => Carbon::parse('2026-08-26 12:00:00'),
+        'status' => 'confirmed',
+    ]);
+
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 11:00:00'),
+        'ends_at' => Carbon::parse('2026-08-26 12:00:00'),
+        'status' => 'confirmed',
+    ]);
+
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 13:00:00'),
+        'ends_at' => Carbon::parse('2026-08-26 14:00:00'),
+        'status' => 'cancelled',
+    ]);
+
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 14:00:00'),
+        'ends_at' => Carbon::parse('2026-08-26 15:00:00'),
+        'status' => 'no_show',
+    ]);
+
+    ScheduleBlock::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 12:00:00', 'UTC'),
+        'ends_at' => Carbon::parse('2026-08-26 13:00:00', 'UTC'),
+    ]);
+
+    ScheduleBlock::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => null,
+        'starts_at' => Carbon::parse('2026-08-26 12:30:00', 'UTC'),
+        'ends_at' => Carbon::parse('2026-08-26 14:00:00', 'UTC'),
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', ['preset' => 'today']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('dashboard.professionalOccupancy.bookedMinutes', 120)
+            ->where('dashboard.professionalOccupancy.availableMinutes', 360)
+            ->where('dashboard.professionalOccupancy.overallPercentage', 33.3)
+            ->where('dashboard.professionalOccupancy.professionals.0.occupancyPercentage', 33.3)
+        );
+});
+
+it('uses each availability rule timezone and counts overlapping appointments once', function () {
+    Carbon::setTestNow('2026-08-26 12:00:00');
+
+    [$owner, $tenant, $unit] = dashboardTestWorkspace();
+    $tenant->forceFill(['timezone' => 'America/Sao_Paulo'])->save();
+    $unit->forceFill(['timezone' => 'America/Sao_Paulo'])->save();
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'name' => 'Ana Silva',
+    ]);
+
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'weekday' => 3,
+        'starts_at' => '12:00:00',
+        'ends_at' => '16:00:00',
+        'timezone' => 'UTC',
+    ]);
+
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 09:00:00', 'America/Sao_Paulo'),
+        'ends_at' => Carbon::parse('2026-08-26 10:00:00', 'America/Sao_Paulo'),
+        'status' => 'confirmed',
+    ]);
+
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'professional_id' => $professional->id,
+        'starts_at' => Carbon::parse('2026-08-26 09:30:00', 'America/Sao_Paulo'),
+        'ends_at' => Carbon::parse('2026-08-26 10:30:00', 'America/Sao_Paulo'),
+        'status' => 'confirmed',
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', ['preset' => 'today']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('dashboard.professionalOccupancy.bookedMinutes', 90)
+            ->where('dashboard.professionalOccupancy.availableMinutes', 240)
+            ->where('dashboard.professionalOccupancy.overallPercentage', 37.5)
         );
 });
 

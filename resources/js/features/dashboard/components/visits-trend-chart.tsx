@@ -40,7 +40,7 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
 
     return (
         <Card className="min-w-0 overflow-hidden border-border/60">
-            <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardHeader className="flex flex-col gap-2 px-3.5 pb-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6">
                 <div className="min-w-0">
                     <CardTitle className="text-base font-semibold">
                         Tendência de Visitas
@@ -64,7 +64,7 @@ export function VisitsTrendChart({ data = [] }: VisitsTrendChartProps) {
                         Nenhum dado de visitas disponível para o período
                     </div>
                 ) : (
-                    <div className="relative min-w-0 overflow-x-auto pb-1">
+                    <div className="relative min-w-0 [scrollbar-width:auto] [scrollbar-color:var(--color-primary)_var(--color-muted)] overflow-x-auto overscroll-x-contain pb-2">
                         <div
                             className="flex h-44 min-w-full items-end gap-1.5 border-b border-border/50 px-1 sm:gap-2"
                             style={{

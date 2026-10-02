@@ -56,6 +56,22 @@ export type ProfessionalPerformance = {
     average_ticket_cents?: number;
 };
 
+export type ProfessionalOccupancyItem = {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+    bookedMinutes: number;
+    availableMinutes: number;
+    occupancyPercentage: number | null;
+};
+
+export type ProfessionalOccupancy = {
+    overallPercentage: number | null;
+    bookedMinutes: number;
+    availableMinutes: number;
+    professionals: ProfessionalOccupancyItem[];
+};
+
 export type CategorySales = {
     category: string;
     label: string;
@@ -130,6 +146,7 @@ export type DashboardSnapshot = {
     visitsTrend: DailyVisitTrend[];
     statusBreakdown: AppointmentStatusCount[];
     professionalPerformance: ProfessionalPerformance[];
+    professionalOccupancy: ProfessionalOccupancy;
     salesCategoryBreakdown: CategorySales[];
     scheduleHeatmap: ScheduleHeatmapCell[];
     appointments: AppointmentSummary[];

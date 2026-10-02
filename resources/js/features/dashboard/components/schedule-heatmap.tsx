@@ -22,6 +22,21 @@ const DAYS = [
 ];
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h to 19h
+const PERIODS = [
+    { id: 'morning', label: 'Manhã', range: '8–11h', hours: [8, 9, 10, 11] },
+    {
+        id: 'afternoon',
+        label: 'Tarde',
+        range: '12–15h',
+        hours: [12, 13, 14, 15],
+    },
+    {
+        id: 'evening',
+        label: 'Fim do dia',
+        range: '16–19h',
+        hours: [16, 17, 18, 19],
+    },
+] as const;
 
 export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
     const getIntensityClass = (pct: number) => {
@@ -123,8 +138,60 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
         );
     };
 
+    const getPeriodCount = (dayId: number, hours: readonly number[]): number =>
+        hours.reduce((total, hour) => total + getCellCount(dayId, hour), 0);
+
+    const maxPeriodCount = DAYS.reduce(
+        (max, day) =>
+            Math.max(
+                max,
+                ...PERIODS.map((period) =>
+                    getPeriodCount(day.id, period.hours),
+                ),
+            ),
+        0,
+    );
+
+    const getLevelLabel = (
+        count: number,
+        referenceCount = maxCount,
+    ): string => {
+        if (count === 0) {
+            return 'Livre';
+        }
+
+        const relativeCount =
+            referenceCount > 0 ? (count / referenceCount) * 100 : 0;
+
+        if (relativeCount < 20) {
+            return 'Baixo';
+        }
+
+        if (relativeCount < 70) {
+            return 'Médio';
+        }
+
+        return 'Alto';
+    };
+
+    const peak = DAYS.reduce<{
+        count: number;
+        dayLabel: string;
+        hour: number | null;
+    }>(
+        (currentPeak, day) =>
+            HOURS.reduce((dayPeak, hour) => {
+                const count = getCellCount(day.id, hour);
+
+                return count > dayPeak.count
+                    ? { count, dayLabel: day.label, hour }
+                    : dayPeak;
+            }, currentPeak),
+        { count: 0, dayLabel: '', hour: null },
+    );
+
     return (
-        <Card className="border-border/60">
+        <Card className="max-w-full min-w-0 overflow-hidden border-border/60">
             <CardHeader className="pb-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -152,8 +219,100 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                 </div>
             </CardHeader>
             <CardContent className="pt-2">
-                <div className="overflow-x-auto">
-                    <div className="min-w-[500px]">
+                <div className="mb-4 space-y-2 sm:hidden">
+                    {peak.count > 0 ? (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
+                            <p className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
+                                Horário de pico
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-foreground">
+                                {peak.dayLabel} às {peak.hour}h · {peak.count}{' '}
+                                {peak.count === 1
+                                    ? 'agendamento'
+                                    : 'agendamentos'}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-dashed border-border px-3 py-2.5 text-xs text-muted-foreground">
+                            Nenhum agendamento registrado neste período.
+                        </div>
+                    )}
+                </div>
+
+                <div
+                    className="space-y-2 sm:hidden"
+                    role="table"
+                    aria-label="Resumo de agendamentos por dia e período"
+                >
+                    <div
+                        className="grid grid-cols-[3.25rem_repeat(3,minmax(0,1fr))] gap-1 text-center text-3xs font-medium text-muted-foreground"
+                        role="row"
+                    >
+                        <div role="columnheader" />
+                        {PERIODS.map((period) => (
+                            <div key={period.id} role="columnheader">
+                                <span className="block">{period.label}</span>
+                                <span className="font-normal">
+                                    {period.range}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                    {DAYS.map((day) => (
+                        <div
+                            key={day.id}
+                            className="grid grid-cols-[3.25rem_repeat(3,minmax(0,1fr))] items-stretch gap-1"
+                            role="row"
+                        >
+                            <span
+                                className="flex items-center text-xs font-medium text-muted-foreground"
+                                role="rowheader"
+                            >
+                                {day.label}
+                            </span>
+                            {PERIODS.map((period) => {
+                                const count = getPeriodCount(
+                                    day.id,
+                                    period.hours,
+                                );
+                                const level = getLevelLabel(
+                                    count,
+                                    maxPeriodCount,
+                                );
+                                const intensity =
+                                    maxPeriodCount > 0
+                                        ? (count / maxPeriodCount) * 100
+                                        : 0;
+
+                                return (
+                                    <div
+                                        key={period.id}
+                                        role="cell"
+                                        aria-label={`${day.label}, ${period.label} (${period.range}): ${count} ${count === 1 ? 'agendamento' : 'agendamentos'}, nível ${level}`}
+                                        className={`flex min-h-12 flex-col items-center justify-center rounded-md px-1 py-1 text-center ${getIntensityClass(intensity)}`}
+                                    >
+                                        <span className="text-sm font-semibold tabular-nums">
+                                            {count}
+                                        </span>
+                                        <span className="text-[9px] leading-tight">
+                                            {level}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
+
+                <div
+                    className="hidden max-w-full min-w-0 overflow-x-auto overscroll-x-contain rounded-md pb-1 sm:block"
+                    role="region"
+                    aria-label="Mapa de calor rolável horizontalmente"
+                    // The scroll region needs focus so keyboard users can pan it.
+                    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+                    tabIndex={0}
+                >
+                    <div className="w-[560px] min-w-[560px] sm:w-full sm:min-w-[540px]">
                         {/* Header Hours */}
                         <div className="grid grid-cols-[48px_repeat(12,1fr)] gap-1 pb-1.5 text-center text-2xs font-medium text-muted-foreground">
                             <div />
@@ -190,19 +349,17 @@ export function ScheduleHeatmap({ data = [] }: ScheduleHeatmapProps) {
                                                 key={hour}
                                                 role="gridcell"
                                                 tabIndex={0}
-                                                aria-label={`${day.label}, ${hour} horas: ${count > 0 ? `${count} agendamentos, ${Math.round(pct)}% do maior movimento` : 'nenhum agendamento'}`}
+                                                aria-label={`${day.label}, ${hour} horas: ${count > 0 ? `${count} ${count === 1 ? 'agendamento' : 'agendamentos'}, nível ${getLevelLabel(count)}` : 'nenhum agendamento'}`}
                                                 className={`group relative flex h-7 items-center justify-center rounded text-2xs transition-all hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:scale-105 ${getIntensityClass(
                                                     pct,
                                                 )}`}
                                             >
-                                                {count > 0
-                                                    ? `${Math.round(pct)}%`
-                                                    : 'Livre'}
+                                                {count > 0 ? count : 'Livre'}
                                                 {/* Tooltip */}
                                                 <div className="absolute -top-8 z-20 hidden rounded bg-popover px-2 py-1 text-3xs font-medium whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
                                                     {day.label} às {hour}h:{' '}
                                                     {count > 0
-                                                        ? `${count} ${count === 1 ? 'agendamento' : 'agendamentos'} · ${Math.round(pct)}% da faixa mais ocupada`
+                                                        ? `${count} ${count === 1 ? 'agendamento' : 'agendamentos'} · nível ${getLevelLabel(count)}`
                                                         : 'Nenhum agendamento'}
                                                 </div>
                                             </div>

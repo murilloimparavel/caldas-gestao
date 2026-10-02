@@ -118,17 +118,17 @@ export function DashboardHeader({
     };
 
     return (
-        <div className="flex flex-col gap-6 border-b border-border/40 pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:gap-6 sm:pb-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     Olá, {userName} 👋
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
                     Acompanhe os resultados e o ritmo operacional em tempo real.
                 </p>
             </div>
 
-            <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[min(100%,34rem)]">
+            <div className="flex w-full min-w-0 flex-col gap-3 lg:w-auto lg:min-w-[min(100%,34rem)]">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="flex-1 space-y-1.5">
                         <label

@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, User } from 'lucide-react';
+import { MoveHorizontal, TrendingDown, TrendingUp, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     Card,
@@ -34,7 +34,7 @@ export function ProfessionalPerformanceTable({
     };
 
     return (
-        <Card className="border-border/60">
+        <Card className="max-w-full min-w-0 overflow-hidden border-border/60">
             <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">
                     Desempenho por Profissional
@@ -50,95 +50,117 @@ export function ProfessionalPerformanceTable({
                     </div>
                 ) : (
                     <>
-                        <div className="grid gap-2 p-3 sm:hidden">
-                            {data.map((prof) => {
-                                const totalServices =
-                                    prof.services_count ??
-                                    prof.totalServices ??
-                                    0;
+                        <p
+                            id="professional-performance-mobile-hint"
+                            className="flex items-center gap-1.5 px-3 pb-2 text-3xs text-muted-foreground sm:hidden"
+                        >
+                            <MoveHorizontal
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                            Deslize para navegar entre os profissionais.
+                        </p>
+                        <div
+                            className="max-w-full overflow-x-auto overscroll-x-contain px-3 pb-3 sm:hidden"
+                            role="region"
+                            aria-label="Desempenho por profissional"
+                            aria-describedby="professional-performance-mobile-hint"
+                            // The scroll region needs focus so keyboard users can pan it.
+                            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+                            tabIndex={0}
+                        >
+                            <div className="flex w-max snap-x gap-2">
+                                {data.map((prof) => {
+                                    const totalServices =
+                                        prof.services_count ??
+                                        prof.totalServices ??
+                                        0;
 
-                                const variation =
-                                    prof.variation_percentage ??
-                                    prof.changePercentage ??
-                                    0;
-                                const avgTicket =
-                                    prof.average_ticket_cents !== undefined
-                                        ? formatCurrency(
-                                              prof.average_ticket_cents,
-                                          )
-                                        : formatCurrency(prof.averageTicket);
-                                const initials = prof.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')
-                                    .slice(0, 2)
-                                    .toUpperCase();
+                                    const variation =
+                                        prof.variation_percentage ??
+                                        prof.changePercentage ??
+                                        0;
+                                    const avgTicket =
+                                        prof.average_ticket_cents !== undefined
+                                            ? formatCurrency(
+                                                  prof.average_ticket_cents,
+                                              )
+                                            : formatCurrency(
+                                                  prof.averageTicket,
+                                              );
+                                    const initials = prof.name
+                                        .split(' ')
+                                        .map((n) => n[0])
+                                        .join('')
+                                        .slice(0, 2)
+                                        .toUpperCase();
 
-                                return (
-                                    <article
-                                        key={prof.id}
-                                        className="rounded-xl border border-border/60 bg-muted/20 p-3"
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <Avatar className="size-9 border border-border/50">
-                                                {(prof.avatar_url ??
-                                                    prof.avatarUrl) && (
-                                                    <AvatarImage
-                                                        src={
-                                                            prof.avatar_url ??
-                                                            prof.avatarUrl
-                                                        }
-                                                        alt=""
-                                                    />
-                                                )}
-                                                <AvatarFallback className="bg-primary/10 text-2xs font-semibold text-primary">
-                                                    {initials || (
-                                                        <User className="size-3.5" />
+                                    return (
+                                        <article
+                                            key={prof.id}
+                                            className="w-[215px] shrink-0 snap-start rounded-xl border border-border/60 bg-muted/20 p-3"
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <Avatar className="size-9 border border-border/50">
+                                                    {(prof.avatar_url ??
+                                                        prof.avatarUrl) && (
+                                                        <AvatarImage
+                                                            src={
+                                                                prof.avatar_url ??
+                                                                prof.avatarUrl
+                                                            }
+                                                            alt=""
+                                                        />
                                                     )}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                                                {prof.name}
-                                            </span>
-                                            <span
-                                                className={`inline-flex items-center gap-1 text-xs font-semibold ${variation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
-                                            >
-                                                {variation >= 0 ? (
-                                                    <TrendingUp
-                                                        className="size-3"
-                                                        aria-hidden="true"
-                                                    />
-                                                ) : (
-                                                    <TrendingDown
-                                                        className="size-3"
-                                                        aria-hidden="true"
-                                                    />
-                                                )}
-                                                {variation >= 0 ? '+' : ''}
-                                                {variation}%
-                                            </span>
-                                        </div>
-                                        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                                            <div>
-                                                <dt className="text-muted-foreground">
-                                                    Atendimentos
-                                                </dt>
-                                                <dd className="mt-0.5 font-semibold text-foreground">
-                                                    {totalServices}
-                                                </dd>
+                                                    <AvatarFallback className="bg-primary/10 text-2xs font-semibold text-primary">
+                                                        {initials || (
+                                                            <User className="size-3.5" />
+                                                        )}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="min-w-0 flex-1 text-sm leading-tight font-semibold break-words whitespace-normal text-foreground">
+                                                    {prof.name}
+                                                </span>
+                                                <span
+                                                    className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${variation >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
+                                                >
+                                                    {variation >= 0 ? (
+                                                        <TrendingUp
+                                                            className="size-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                    ) : (
+                                                        <TrendingDown
+                                                            className="size-3"
+                                                            aria-hidden="true"
+                                                        />
+                                                    )}
+                                                    {variation >= 0 ? '+' : ''}
+                                                    {variation}%
+                                                </span>
                                             </div>
-                                            <div>
-                                                <dt className="text-muted-foreground">
-                                                    Ticket médio
-                                                </dt>
-                                                <dd className="mt-0.5 font-semibold text-foreground">
-                                                    {avgTicket}
-                                                </dd>
-                                            </div>
-                                        </dl>
-                                    </article>
-                                );
-                            })}
+                                            <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                                <div>
+                                                    <dt className="text-muted-foreground">
+                                                        Atendimentos
+                                                    </dt>
+                                                    <dd className="mt-0.5 font-semibold text-foreground">
+                                                        {totalServices}
+                                                    </dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="text-muted-foreground">
+                                                        Ticket médio
+                                                    </dt>
+                                                    <dd className="mt-0.5 font-semibold text-foreground">
+                                                        {avgTicket}
+                                                    </dd>
+                                                </div>
+                                            </dl>
+                                        </article>
+                                    );
+                                })}
+                            </div>
                         </div>
                         <div className="hidden overflow-x-auto sm:block">
                             <table className="w-full text-left text-xs">
