@@ -51,10 +51,10 @@ export default function BillingIndex({
                 <section className="rounded-xl border bg-card p-6 shadow-sm">
                     <p className="text-sm text-muted-foreground">Plano atual</p>
                     <h2 className="mt-1 text-xl font-semibold">
-                        {subscription.plan.name ?? 'Free'}
+                        {subscription.plan.name ?? 'Gratuito'}
                     </h2>
                     <p className="mt-3">
-                        Status:{' '}
+                        Situação:{' '}
                         <strong>
                             {labels[subscription.status] ?? subscription.status}
                         </strong>

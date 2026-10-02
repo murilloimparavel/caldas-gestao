@@ -44,7 +44,7 @@ final class GoogleCalendarOAuth
         $this->ensureConfigured();
 
         if ($context->unit === null) {
-            throw new AuthorizationException('An active unit is required to connect Google Calendar.');
+            throw new AuthorizationException('É necessário selecionar uma unidade ativa para conectar o Google Agenda.');
         }
 
         $state = Str::random(64);
@@ -97,27 +97,27 @@ final class GoogleCalendarOAuth
                 ->first();
 
             if ($state === null || $state->consumed_at !== null || $state->expires_at->isPast()) {
-                throw new GoogleCalendarOAuthException('The Google Calendar authorization state is invalid or expired. Start the connection again.');
+                throw new GoogleCalendarOAuthException('O estado de autorização do Google Agenda é inválido ou expirou. Inicie a conexão novamente.');
             }
 
             $user = $state->user;
 
             if ($user === null) {
-                throw new AuthorizationException('The Google Calendar authorization user is no longer available.');
+                throw new AuthorizationException('O usuário da autorização do Google Agenda não está mais disponível.');
             }
 
             try {
                 $context = TenantContext::forUser($user, (string) $state->tenant_id, (string) $state->unit_id);
             } catch (AuthorizationException $exception) {
-                throw new AuthorizationException('The Google Calendar authorization no longer belongs to an active tenant unit.', $exception->getCode(), $exception);
+                throw new AuthorizationException('A autorização do Google Agenda não pertence mais a uma unidade ativa da conta.', $exception->getCode(), $exception);
             }
 
             if ($context->unit === null) {
-                throw new AuthorizationException('An active unit is required to connect Google Calendar.');
+                throw new AuthorizationException('É necessário selecionar uma unidade ativa para conectar o Google Agenda.');
             }
 
             if (! app(AuthorizationService::class)->can($user, $context, 'calendar.configure', $context->unit)) {
-                throw new AuthorizationException('The user is no longer allowed to configure Google Calendar.');
+                throw new AuthorizationException('O usuário não tem mais permissão para configurar o Google Agenda.');
             }
 
             return $state;
@@ -125,12 +125,12 @@ final class GoogleCalendarOAuth
 
         if (filled($oauthError)) {
             $this->consume($state->getKey());
-            throw new GoogleCalendarOAuthException('Google Calendar authorization was denied.');
+            throw new GoogleCalendarOAuthException('A autorização do Google Agenda foi recusada.');
         }
 
         if (blank($code)) {
             $this->consume($state->getKey());
-            throw new GoogleCalendarOAuthException('Google Calendar did not return an authorization code. Start the connection again.');
+            throw new GoogleCalendarOAuthException('O Google Agenda não retornou um código de autorização. Inicie a conexão novamente.');
         }
 
         $tokenResponse = Http::asForm()
@@ -146,13 +146,13 @@ final class GoogleCalendarOAuth
             ]);
 
         if ($tokenResponse->failed()) {
-            throw $this->remoteFailure($tokenResponse, 'Google rejected the authorization code. Start the connection again.');
+            throw $this->remoteFailure($tokenResponse, 'O Google recusou o código de autorização. Inicie a conexão novamente.');
         }
 
         $accessToken = $tokenResponse->json('access_token');
 
         if (! is_string($accessToken) || $accessToken === '') {
-            throw new GoogleCalendarOAuthException('Google returned an invalid access token. Start the connection again.');
+            throw new GoogleCalendarOAuthException('O Google retornou um token de acesso inválido. Inicie a conexão novamente.');
         }
 
         $userinfoResponse = Http::withToken($accessToken)
@@ -161,7 +161,7 @@ final class GoogleCalendarOAuth
             ->get((string) config('services.google_calendar.userinfo_url'));
 
         if ($userinfoResponse->failed()) {
-            throw $this->remoteFailure($userinfoResponse, 'Google did not return account information. Start the connection again.');
+            throw $this->remoteFailure($userinfoResponse, 'O Google não retornou os dados da conta. Inicie a conexão novamente.');
         }
 
         $accountEmail = $userinfoResponse->json('email');
@@ -250,7 +250,7 @@ final class GoogleCalendarOAuth
             $state = GoogleCalendarOAuthState::query()->lockForUpdate()->find($stateId);
 
             if ($state === null || $state->consumed_at !== null || $state->expires_at->isPast()) {
-                throw new GoogleCalendarOAuthException('The Google Calendar authorization state is invalid or expired. Start the connection again.');
+                throw new GoogleCalendarOAuthException('O estado de autorização do Google Agenda é inválido ou expirou. Inicie a conexão novamente.');
             }
 
             $state->forceFill(['consumed_at' => now()])->save();

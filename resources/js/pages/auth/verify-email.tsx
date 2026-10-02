@@ -42,5 +42,5 @@ export default function VerifyEmail({ status }: { status?: string }) {
 VerifyEmail.layout = {
     title: 'Verificação de e-mail',
     description:
-        'Por favor, verifique seu endereço de e-mail clicando no link que acabamos de enviar para você.',
+        'Enviamos um link de confirmação para o e-mail cadastrado. Acesse sua caixa de entrada e clique no link para continuar.',
 };

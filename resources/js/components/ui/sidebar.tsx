@@ -214,8 +214,8 @@ function Sidebar({
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetHeader className="sr-only">
-          <SheetTitle>Sidebar</SheetTitle>
-          <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+          <SheetTitle>Barra lateral</SheetTitle>
+          <SheetDescription>Exibe a barra lateral no celular.</SheetDescription>
         </SheetHeader>
         <SheetContent
           id="mobile-sidebar-menu"
@@ -327,7 +327,7 @@ function SidebarTrigger({
           ) : (
             <PanelLeftCloseIcon />
           ))}
-        {!children && <span className="sr-only">Toggle sidebar</span>}
+        {!children && <span className="sr-only">Alternar barra lateral</span>}
       </button>
     </Button>
   )
@@ -340,10 +340,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle sidebar"
+      aria-label="Alternar barra lateral"
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle sidebar"
+      title="Alternar barra lateral"
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",

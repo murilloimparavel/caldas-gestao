@@ -1,7 +1,7 @@
 import type { SVGAttributes } from 'react';
 
 export default function AppLogoIcon({
-    'aria-label': ariaLabel = 'Application logo',
+    'aria-label': ariaLabel = 'Logotipo da aplicação',
     ...props
 }: SVGAttributes<SVGElement>) {
     return (
