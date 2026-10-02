@@ -22,6 +22,7 @@ use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\User;
 use App\Policies\AppointmentPolicy;
 use App\Policies\AvailabilityRulePolicy;
 use App\Policies\CustomerCommunicationPreferencePolicy;
@@ -43,11 +44,14 @@ use App\Support\NativeTlsCertificateVerifier;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +94,8 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(Verified::class, ActivateVerifiedOwnerMemberships::class);
 
+        $this->configureTransactionalEmails();
+
         RateLimiter::for('public-booking', fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
         RateLimiter::for('public-booking-create', fn (Request $request): Limit => Limit::perMinute(8)->by($request->ip()));
         Gate::policy(Tenant::class, TenantPolicy::class);
@@ -131,5 +137,39 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Configure the built-in authentication notifications in the application's voice.
+     */
+    private function configureTransactionalEmails(): void
+    {
+        ResetPassword::toMailUsing(function (User $notifiable, string $token): MailMessage {
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ], false));
+
+            return (new MailMessage)
+                ->theme('caldas')
+                ->subject('Redefina sua senha no '.config('branding.name'))
+                ->greeting('Olá, '.$notifiable->name.'!')
+                ->line('Recebemos um pedido para criar uma nova senha para sua conta.')
+                ->action('Criar nova senha', $url)
+                ->line('Este link vale por '.config('auth.passwords.'.config('auth.defaults.passwords').'.expire').' minutos.')
+                ->line('Se você não fez este pedido, pode ignorar este e-mail.')
+                ->salutation('Até logo,<br>'.config('branding.name'));
+        });
+
+        VerifyEmail::toMailUsing(function (User $notifiable, string $url): MailMessage {
+            return (new MailMessage)
+                ->theme('caldas')
+                ->subject('Confirme seu e-mail no '.config('branding.name'))
+                ->greeting('Olá, '.$notifiable->name.'!')
+                ->line('Falta só um passo para começar: confirme que este endereço de e-mail é seu.')
+                ->action('Confirmar meu e-mail', $url)
+                ->line('Se você não criou esta conta, pode ignorar esta mensagem.')
+                ->salutation('Até logo,<br>'.config('branding.name'));
+        });
     }
 }

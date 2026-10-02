@@ -1,0 +1,27 @@
+body,
+body *:not(html):not(style):not(br):not(tr):not(code) {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    position: relative;
+}
+
+body { background-color: #f6f8fb; color: #374151; height: 100%; line-height: 1.4; margin: 0; padding: 0; width: 100% !important; }
+a { color: {{ config('branding.primary_color', '#3167d8') }}; }
+h1 { color: #172033; font-size: 20px; font-weight: 700; margin-top: 0; text-align: left; }
+p { font-size: 16px; line-height: 1.5em; margin-top: 0; text-align: left; }
+img { max-width: 100%; }
+.wrapper, .content { background-color: #f6f8fb; margin: 0; padding: 0; width: 100%; }
+.header { padding: 28px 0; text-align: center; }
+.header a { color: #172033; font-size: 19px; font-weight: 700; text-decoration: none; }
+.logo { height: 56px; margin: 0 auto; max-height: 56px; width: auto; }
+.body { background-color: #f6f8fb; border: 0; margin: 0; padding: 0; width: 100%; }
+.inner-body { background-color: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 0 auto; padding: 0; width: 570px; }
+.content-cell { max-width: 100vw; padding: 36px; }
+.subcopy { border-top: 1px solid #e5e7eb; margin-top: 25px; padding-top: 25px; }
+.subcopy p { font-size: 13px; }
+.footer { margin: 0 auto; padding: 18px 0; text-align: center; width: 570px; }
+.footer p { color: #9ca3af; font-size: 12px; text-align: center; }
+.action { margin: 26px auto; padding: 0; text-align: center; width: 100%; }
+.button { border-radius: 7px; box-shadow: 0 2px 4px rgba(23, 32, 51, .12); color: #fff !important; display: inline-block; font-size: 15px; font-weight: 700; padding: 12px 22px; text-decoration: none; background-color: {{ config('branding.primary_color', '#3167d8') }}; }
+@media only screen and (max-width: 600px) { .inner-body, .footer { width: 100% !important; } .content-cell { padding: 28px 22px !important; } }
+@media only screen and (max-width: 500px) { .button { width: 100% !important; } }

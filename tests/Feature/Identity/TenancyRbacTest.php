@@ -16,10 +16,12 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Notifications\MembershipInvitation;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /** @return array{0: User, 1: Tenant, 2: TenantContext} */
@@ -349,4 +351,37 @@ it('builds composite pivot factories without database writes in definitions', fu
         ->and($membershipUnit->tenant_id)->toBe($membershipUnit->unit->tenant_id)
         ->and($membershipRole->tenant_id)->toBe($membershipRole->membership->tenant_id)
         ->and($membershipRole->tenant_id)->toBe($membershipRole->role->tenant_id);
+});
+
+it('builds a branded invitation notification for an existing collaborator', function () {
+    $user = User::factory()->create(['name' => 'Ana']);
+    $notification = new MembershipInvitation('Caldas Centro', route('login'));
+    $mail = $notification->toMail($user);
+
+    expect($mail->subject)->toBe('Você recebeu um convite para Caldas Centro')
+        ->and($mail->greeting)->toBe('Olá, Ana!')
+        ->and($mail->actionText)->toBe('Acessar o sistema')
+        ->and($notification->afterCommit)->toBeTrue();
+});
+
+it('sends invitations only when membership is created or reinvited', function () {
+    [$owner, $tenant, $context] = ownerWorkspace();
+    $user = User::factory()->create();
+    Notification::fake();
+
+    $membership = (new InviteMembership)->handle($owner, $context, $tenant, $user);
+
+    Notification::assertSentToTimes($user, MembershipInvitation::class, 1);
+
+    (new InviteMembership)->handle($owner, $context, $tenant, $user);
+    Notification::assertSentToTimes($user, MembershipInvitation::class, 1);
+
+    $membership->forceFill(['status' => MembershipStatus::Active])->save();
+    (new InviteMembership)->handle($owner, $context, $tenant, $user);
+    Notification::assertSentToTimes($user, MembershipInvitation::class, 1);
+
+    (new RevokeMembership)->handle($owner, $context, $membership);
+    (new InviteMembership)->handle($owner, $context, $tenant, $user);
+
+    Notification::assertSentToTimes($user, MembershipInvitation::class, 2);
 });

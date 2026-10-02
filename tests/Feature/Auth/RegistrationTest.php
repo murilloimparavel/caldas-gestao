@@ -3,6 +3,9 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Notifications\WelcomeUser;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 use Tests\Concerns\RefreshDatabase;
 use Tests\TestCase;
@@ -27,6 +30,8 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register()
     {
+        Notification::fake();
+
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
@@ -40,6 +45,31 @@ class RegistrationTest extends TestCase
         $user = User::query()->sole();
 
         $this->assertSame('test@example.com', $user->email_normalized);
+
+        Notification::assertSentTo($user, WelcomeUser::class);
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_welcome_notification_uses_plain_portuguese_branding(): void
+    {
+        Notification::fake();
+
+        $this->post(route('register.store'), [
+            'name' => 'Ana',
+            'email' => 'ana@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $user = User::query()->sole();
+
+        Notification::assertSentTo($user, WelcomeUser::class, function (WelcomeUser $notification) use ($user): bool {
+            $mail = $notification->toMail($user);
+
+            return $mail->subject === 'Bem-vindo ao '.config('branding.name')
+                && $mail->greeting === 'Olá, Ana!'
+                && $mail->actionText === 'Acessar o sistema';
+        });
     }
 
     public function test_registration_rejects_an_email_that_only_differs_by_case_and_whitespace(): void

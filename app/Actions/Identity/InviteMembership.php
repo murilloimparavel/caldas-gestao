@@ -6,6 +6,7 @@ use App\Enums\MembershipStatus;
 use App\Models\Membership;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\MembershipInvitation;
 use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
 use App\Support\IdentityEventRecorder;
@@ -41,6 +42,8 @@ final class InviteMembership
 
                 $this->events->record($actor, $context, 'membership.invited', $membership);
 
+                $user->notify(new MembershipInvitation($tenant->name, route('login')));
+
                 return $membership;
             }
 
@@ -52,6 +55,7 @@ final class InviteMembership
                     'lock_version' => $membership->lock_version + 1,
                 ])->save();
                 $this->events->record($actor, $context, 'membership.reinvited', $membership);
+                $user->notify(new MembershipInvitation($tenant->name, route('login')));
             }
 
             return $membership->fresh();

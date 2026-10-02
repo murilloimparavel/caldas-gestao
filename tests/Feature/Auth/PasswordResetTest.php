@@ -38,6 +38,23 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class);
     }
 
+    public function test_reset_password_notification_uses_plain_portuguese_branding(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['name' => 'Ana']);
+
+        $this->post(route('password.email'), ['email' => $user->email]);
+
+        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): bool {
+            $mail = $notification->toMail($user);
+
+            return $mail->subject === 'Redefina sua senha no '.config('branding.name')
+                && $mail->greeting === 'Olá, Ana!'
+                && $mail->actionText === 'Criar nova senha';
+        });
+    }
+
     public function test_reset_password_lookup_uses_the_canonical_email(): void
     {
         Notification::fake();
