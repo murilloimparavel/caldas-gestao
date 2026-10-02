@@ -55,7 +55,10 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
 
             setQrCodeSvg(svg);
         } catch {
-            setErrors((prev) => [...prev, 'Não foi possível carregar o código QR']);
+            setErrors((prev) => [
+                ...prev,
+                'Não foi possível carregar o código QR',
+            ]);
             setQrCodeSvg(null);
         }
     }, [submit]);
@@ -68,7 +71,10 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
 
             setManualSetupKey(key);
         } catch {
-            setErrors((prev) => [...prev, 'Não foi possível carregar a chave de configuração']);
+            setErrors((prev) => [
+                ...prev,
+                'Não foi possível carregar a chave de configuração',
+            ]);
             setManualSetupKey(null);
         }
     }, [submit]);
@@ -79,7 +85,10 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
             const codes = (await submit(recoveryCodes())) as string[];
             setRecoveryCodesList(codes);
         } catch {
-            setErrors((prev) => [...prev, 'Não foi possível carregar os códigos de recuperação']);
+            setErrors((prev) => [
+                ...prev,
+                'Não foi possível carregar os códigos de recuperação',
+            ]);
             setRecoveryCodesList([]);
         }
     }, [submit]);

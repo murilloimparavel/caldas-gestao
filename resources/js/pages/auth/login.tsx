@@ -75,9 +75,7 @@ export default function Login({ status, canResetPassword }: Props) {
 
                                 <div className="grid gap-2">
                                     <div className="flex items-center">
-                                        <Label htmlFor="password">
-                                            Senha
-                                        </Label>
+                                        <Label htmlFor="password">Senha</Label>
                                         {canResetPassword && (
                                             <TextLink
                                                 href={request()}
@@ -117,7 +115,9 @@ export default function Login({ status, canResetPassword }: Props) {
 
                             <div className="text-center text-sm text-muted-foreground">
                                 Ainda não tem uma conta?{' '}
-                                <TextLink href={register()}>Criar conta</TextLink>
+                                <TextLink href={register()}>
+                                    Criar conta
+                                </TextLink>
                             </div>
                         </>
                     );

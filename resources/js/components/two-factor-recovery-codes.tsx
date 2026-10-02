@@ -77,7 +77,8 @@ export default function TwoFactorRecoveryCodes({
                             className="size-4"
                             aria-hidden="true"
                         />
-                        {codesAreVisible ? 'Ocultar' : 'Exibir'} códigos de recuperação
+                        {codesAreVisible ? 'Ocultar' : 'Exibir'} códigos de
+                        recuperação
                     </Button>
 
                     {canRegenerateCodes && (
@@ -148,8 +149,8 @@ export default function TwoFactorRecoveryCodes({
                                     <p id="regenerate-warning">
                                         Cada código de recuperação pode ser
                                         usado uma vez para acessar sua conta e
-                                        será removido após o uso. Se precisar
-                                        de mais códigos, clique em{' '}
+                                        será removido após o uso. Se precisar de
+                                        mais códigos, clique em{' '}
                                         <span className="font-bold">
                                             Gerar novos códigos
                                         </span>{' '}
