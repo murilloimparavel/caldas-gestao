@@ -22,12 +22,14 @@ export function useOnlineBookingActions({
     const [publicationProcessing, setPublicationProcessing] = useState(false);
     const [galleryItems, setGalleryItems] = useState(gallery);
 
-    const copyPublicUrl = async (): Promise<void> => {
-        if (!publicUrl || !navigator.clipboard) {
+    const copyPublicUrl = async (
+        url: string | null = publicUrl,
+    ): Promise<void> => {
+        if (!url || !navigator.clipboard) {
             return;
         }
 
-        await navigator.clipboard.writeText(publicUrl);
+        await navigator.clipboard.writeText(url);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2200);
     };
