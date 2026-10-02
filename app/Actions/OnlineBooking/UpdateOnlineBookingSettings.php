@@ -30,17 +30,18 @@ final class UpdateOnlineBookingSettings extends OperationalAction
     public function handle(User $actor, TenantContext $context, array $data): Unit
     {
         $unit = $this->unit($actor, $context, 'unit.update');
+        $expectedVersion = (int) $data['lock_version'];
         $serviceIds = array_values(array_unique($data['service_ids']));
         $professionalIds = array_values(array_unique($data['professional_ids']));
 
-        return DB::transaction(function () use ($actor, $context, $unit, $data, $serviceIds, $professionalIds): Unit {
+        return DB::transaction(function () use ($actor, $context, $unit, $data, $serviceIds, $professionalIds, $expectedVersion): Unit {
             $lockedUnit = Unit::query()
                 ->whereKey($unit->getKey())
                 ->where('tenant_id', $context->tenant->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($lockedUnit->lock_version !== $data['lock_version']) {
+            if ($lockedUnit->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('As configurações de agendamento foram modificadas concorrentemente.');
             }
 
