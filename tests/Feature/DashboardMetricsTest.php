@@ -201,6 +201,8 @@ it('calculates occupancy against merged availability and subtracts overlapping b
         'starts_at' => Carbon::parse('2026-08-26 13:00:00'),
         'ends_at' => Carbon::parse('2026-08-26 14:00:00'),
         'status' => 'cancelled',
+        'cancelled_at' => Carbon::parse('2026-08-26 12:30:00'),
+        'cancel_reason' => 'Cliente cancelou o horário',
     ]);
 
     Appointment::factory()->create([
@@ -286,7 +288,7 @@ it('uses each availability rule timezone and counts adjacent appointments once',
         ->assertInertia(fn (Assert $page) => $page
             ->where('dashboard.professionalOccupancy.bookedMinutes', 120)
             ->where('dashboard.professionalOccupancy.availableMinutes', 240)
-            ->where('dashboard.professionalOccupancy.overallPercentage', 50.0)
+            ->where('dashboard.professionalOccupancy.overallPercentage', 50)
         );
 });
 
