@@ -22,6 +22,7 @@ use App\Models\TenantSubscription;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -759,7 +760,7 @@ it('applies public hours and minimum notice to availability', function () {
 it('uses Carbon weekday keys for public hours with Monday enabled and Sunday disabled', function () {
     [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
     $timezone = $unit->timezone ?? $tenant->timezone ?? config('app.timezone');
-    $monday = CarbonImmutable::now($timezone)->addWeek()->startOfWeek()->startOfDay();
+    $monday = CarbonImmutable::now($timezone)->addWeek()->startOfWeek(Carbon::MONDAY)->startOfDay();
     $sunday = $monday->addDays(6);
 
     AvailabilityRule::factory()->create([

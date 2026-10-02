@@ -202,7 +202,7 @@ test('completes OAuth once and rejects replayed state', function (): void {
     expect(GoogleCalendarConnection::query()->sole()->toArray())->not->toHaveKey('access_token');
     expect(GoogleCalendarOAuthState::query()->sole()->consumed_at)->not->toBeNull();
 
-    $callback()->assertUnprocessable()->assertJsonPath('message', 'The Google Calendar authorization state is invalid or expired. Start the connection again.');
+    $callback()->assertUnprocessable()->assertJsonPath('message', 'O estado de autorização do Google Agenda é inválido ou expirou. Inicie a conexão novamente.');
     Http::assertSentCount(2);
 });
 
