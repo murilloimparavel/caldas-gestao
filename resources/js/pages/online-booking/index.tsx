@@ -127,6 +127,7 @@ export default function OnlineBookingIndex({
                     canPublish={Boolean(draft && readiness.publishable)}
                 />
                 <Form
+                    key={`online-booking-${unit.id}-${unit.lock_version}`}
                     {...onlineBooking.update.form()}
                     options={{ preserveScroll: true }}
                     className="space-y-5"
@@ -168,7 +169,7 @@ export default function OnlineBookingIndex({
                                     '#2563eb'
                                 }
                             />
-                            {wasSuccessful && (
+                            {wasSuccessful && !flash.error && (
                                 <div
                                     role="status"
                                     className="flex items-center gap-2 rounded-xl border border-emerald-300/60 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-200"

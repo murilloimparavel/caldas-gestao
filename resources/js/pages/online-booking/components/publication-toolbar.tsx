@@ -94,14 +94,25 @@ export function PublicationToolbar({
                     Visualizar página
                 </Button>
                 {isPublished ? (
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={onUnpublish}
-                        disabled={processing}
-                    >
-                        Retirar do ar
-                    </Button>
+                    <>
+                        {hasPendingChanges ? (
+                            <Button
+                                type="button"
+                                onClick={onPublish}
+                                disabled={!canPublish || processing}
+                            >
+                                Publicar alterações
+                            </Button>
+                        ) : null}
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={onUnpublish}
+                            disabled={processing}
+                        >
+                            Retirar do ar
+                        </Button>
+                    </>
                 ) : (
                     <Button
                         type="button"
