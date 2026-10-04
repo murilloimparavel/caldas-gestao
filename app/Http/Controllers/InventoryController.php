@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Inventory\RecordInventoryMovement;
 use App\Http\Requests\InventoryMovementRequest;
+use App\Models\Category;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Support\OperationalMutation;
@@ -48,9 +49,43 @@ final class InventoryController extends Controller
             ->values()
             ->all();
 
+        $inventoryByCategory = Product::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('current_stock', '>', 0)
+            ->select('category_id')
+            ->selectRaw('SUM(current_stock * cost_price_cents) as cost_value_cents')
+            ->selectRaw('SUM(current_stock * sale_price_cents) as sale_value_cents')
+            ->groupBy('category_id')
+            ->toBase()
+            ->get();
+
+        $categoryNames = Category::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->whereIn('id', $inventoryByCategory->pluck('category_id')->filter()->all())
+            ->pluck('name', 'id');
+
+        $inventoryCategories = $inventoryByCategory
+            ->map(fn ($row): array => [
+                'id' => $row->category_id,
+                'name' => $row->category_id !== null
+                    ? ($categoryNames->get($row->category_id) ?? 'Sem categoria')
+                    : 'Sem categoria',
+                'cost_value_cents' => (int) $row->cost_value_cents,
+                'sale_value_cents' => (int) $row->sale_value_cents,
+            ])
+            ->sortBy('name')
+            ->values();
+
         return Inertia::render('inventory/index', [
             'movements' => $movements,
             'products' => $products,
+            'inventorySummary' => [
+                'total_cost_cents' => (int) $inventoryCategories->sum('cost_value_cents'),
+                'total_sale_cents' => (int) $inventoryCategories->sum('sale_value_cents'),
+                'categories' => $inventoryCategories->all(),
+            ],
             'filters' => [
                 'product_id' => $productId,
                 'type' => $type,

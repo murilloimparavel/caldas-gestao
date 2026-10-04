@@ -60,36 +60,6 @@ final class ProductController extends Controller
             ->values()
             ->all();
 
-        $inventoryByCategory = Product::query()
-            ->where('tenant_id', $context->tenant->getKey())
-            ->where('unit_id', $context->unit?->getKey())
-            ->where('current_stock', '>', 0)
-            ->whereNull('deleted_at')
-            ->select('category_id')
-            ->selectRaw('SUM(current_stock * cost_price_cents) as cost_value_cents')
-            ->selectRaw('SUM(current_stock * sale_price_cents) as sale_value_cents')
-            ->groupBy('category_id')
-            ->toBase()
-            ->get();
-
-        $categoryNames = Category::query()
-            ->where('tenant_id', $context->tenant->getKey())
-            ->where('unit_id', $context->unit?->getKey())
-            ->whereIn('id', $inventoryByCategory->pluck('category_id')->filter()->all())
-            ->pluck('name', 'id');
-
-        $inventoryCategories = $inventoryByCategory
-            ->map(fn ($row): array => [
-                'id' => $row->category_id,
-                'name' => $row->category_id !== null
-                    ? ($categoryNames->get($row->category_id) ?? 'Sem categoria')
-                    : 'Sem categoria',
-                'cost_value_cents' => (int) $row->cost_value_cents,
-                'sale_value_cents' => (int) $row->sale_value_cents,
-            ])
-            ->sortBy('name')
-            ->values();
-
         return Inertia::render('products/index', [
             'products' => $products,
             'filters' => [
@@ -98,11 +68,6 @@ final class ProductController extends Controller
                 'status' => $status,
             ],
             'categoryOptions' => $categoryOptions,
-            'inventorySummary' => [
-                'total_cost_cents' => (int) $inventoryCategories->sum('cost_value_cents'),
-                'total_sale_cents' => (int) $inventoryCategories->sum('sale_value_cents'),
-                'categories' => $inventoryCategories->all(),
-            ],
         ]);
     }
 
