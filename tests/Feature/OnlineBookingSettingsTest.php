@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\OnlineBooking\EnsureOnlineBookingSite;
 use App\Actions\OnlineBooking\PublishOnlineBookingSite;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Enums\TenantDomainKind;
@@ -117,6 +118,11 @@ it('rejects stale versions and cross-scope selections', function () {
 
 it('uses an active public tenant domain for the booking link', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $site = app(EnsureOnlineBookingSite::class)->handle($context);
+    $site->draft->forceFill(['revision' => 4])->save();
+    $site->forceFill(['draft_revision' => 3])->save();
+
     $domain = TenantDomain::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'hostname' => 'romawear.com.br',
@@ -128,10 +134,16 @@ it('uses an active public tenant domain for the booking link', function () {
         'service_ids' => [$service->getKey()],
         'professional_ids' => [$professional->getKey()],
         'public_domain_id' => $domain->getKey(),
-        'lock_version' => $unit->lock_version,
+        'lock_version' => (string) $unit->lock_version,
     ];
 
     $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertRedirect();
+
+    $site->refresh();
+
+    expect($site->public_domain_id)->toBe($domain->getKey())
+        ->and($site->draft_revision)->toBe(5)
+        ->and($site->draft->revision)->toBe(5);
 
     $this->actingAs($owner)->getJson(route('online_booking.index'))
         ->assertJsonPath('settings.public_domain_id', $domain->getKey())
