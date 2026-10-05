@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import calendar from '@/routes/calendar';
+import { collaborators as collaboratorsIndex } from '@/routes/settings';
 import cashShifts from '@/routes/cash_shifts';
 import categories from '@/routes/categories';
 import commissions from '@/routes/commissions';
@@ -167,6 +168,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 icon: Globe2,
                 permission: 'unit.view',
             },
+            {
+                title: 'Colaboradores',
+                href: collaboratorsIndex(),
+                icon: Users,
+                permissions: ['membership.manage', 'role.manage'],
+            },
         ],
     },
     {
@@ -203,7 +210,12 @@ export function AppSidebar() {
         .map((group) => ({
             ...group,
             items: group.items.filter(
-                (item) => !item.permission || permissions.has(item.permission),
+                (item) =>
+                    (!item.permission || permissions.has(item.permission)) &&
+                    (!item.permissions ||
+                        item.permissions.every((permission) =>
+                            permissions.has(permission),
+                        )),
             ),
         }))
         .filter((group) => group.items.length > 0);
