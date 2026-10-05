@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $category_id
  * @property string|null $supplier_id
  * @property string|null $customer_id
+ * @property string|null $customer_package_id
  * @property string $description
  * @property int $amount_cents
  * @property Carbon $due_date
@@ -45,6 +46,7 @@ use Illuminate\Support\Carbon;
     'category_id',
     'supplier_id',
     'customer_id',
+    'customer_package_id',
     'description',
     'amount_cents',
     'due_date',
@@ -103,5 +105,11 @@ class FinancialObligation extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /** @return BelongsTo<CustomerPackage, $this> */
+    public function customerPackage(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPackage::class);
     }
 }

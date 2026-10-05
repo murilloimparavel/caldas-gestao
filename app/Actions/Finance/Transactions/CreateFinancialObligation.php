@@ -5,6 +5,7 @@ namespace App\Actions\Finance\Transactions;
 use App\Actions\Operational\OperationalAction;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\CustomerPackage;
 use App\Models\FinancialObligation;
 use App\Models\Supplier;
 use App\Models\User;
@@ -78,6 +79,20 @@ final class CreateFinancialObligation extends OperationalAction
                 }
             }
 
+            if (! empty($data['customer_package_id'])) {
+                $customerPackageExists = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($data['customer_package_id'])
+                    ->exists();
+
+                if (! $customerPackageExists) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'O pacote do cliente não pertence a esta unidade.',
+                    ]);
+                }
+            }
+
             $obligation = FinancialObligation::query()->create([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $tenantId,
@@ -86,6 +101,7 @@ final class CreateFinancialObligation extends OperationalAction
                 'category_id' => ! empty($data['category_id']) ? $data['category_id'] : null,
                 'supplier_id' => ! empty($data['supplier_id']) ? $data['supplier_id'] : null,
                 'customer_id' => ! empty($data['customer_id']) ? $data['customer_id'] : null,
+                'customer_package_id' => ! empty($data['customer_package_id']) ? $data['customer_package_id'] : null,
                 'description' => trim((string) ($data['description'] ?? '')),
                 'amount_cents' => $amountCents,
                 'due_date' => $data['due_date'],

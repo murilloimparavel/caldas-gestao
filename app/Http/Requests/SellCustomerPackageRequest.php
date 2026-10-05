@@ -47,6 +47,7 @@ final class SellCustomerPackageRequest extends FormRequest
             'sale_id' => ['nullable', 'uuid', $saleExists],
             'total_sessions' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'expires_at' => ['nullable', 'date'],
+            'payment_method' => ['required', 'string', Rule::in(['pix', 'dinheiro', 'cartao_credito', 'cartao_debito', 'boleto', 'transferencia', 'outros'])],
         ];
     }
 

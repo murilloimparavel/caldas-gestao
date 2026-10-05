@@ -2,6 +2,8 @@
 
 namespace App\Actions\Marketing\Packages;
 
+use App\Actions\Finance\Transactions\CreateFinancialObligation;
+use App\Actions\Finance\Transactions\SettleFinancialObligation;
 use App\Actions\Operational\OperationalAction;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
@@ -17,10 +19,19 @@ use Illuminate\Support\Str;
 
 final class SellCustomerPackage extends OperationalAction
 {
+    public function __construct(
+        private readonly CreateFinancialObligation $createFinancialObligation,
+        private readonly SettleFinancialObligation $settleFinancialObligation,
+    ) {
+        parent::__construct();
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, array $data): CustomerPackage
     {
         $unit = $this->unit($actor, $context, 'package.sell');
+        $this->unit($actor, $context, 'financial.manage');
+        $this->unit($actor, $context, 'financial.settle');
 
         $customerId = (string) ($data['customer_id'] ?? '');
         $templateId = (string) ($data['package_template_id'] ?? '');
@@ -84,7 +95,9 @@ final class SellCustomerPackage extends OperationalAction
             ->values()
             ->all();
 
-        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt, $serviceAllocations): CustomerPackage {
+        $paymentMethod = trim((string) ($data['payment_method'] ?? ''));
+
+        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt, $serviceAllocations, $paymentMethod): CustomerPackage {
             $customerPackage = CustomerPackage::query()->create([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $context->tenant->getKey(),
@@ -115,6 +128,27 @@ final class SellCustomerPackage extends OperationalAction
                 ]);
             }
 
+            $financialObligation = null;
+            $priceCents = (int) ($customerPackage->price_cents_snapshot ?? 0);
+
+            if ($priceCents > 0) {
+                $financialObligation = $this->createFinancialObligation->handle($actor, $context, [
+                    'type' => 'receivable',
+                    'customer_id' => $customer->getKey(),
+                    'customer_package_id' => $customerPackage->getKey(),
+                    'description' => 'Venda de pacote: '.($customerPackage->name_snapshot ?? $template->name),
+                    'amount_cents' => $priceCents,
+                    'due_date' => now()->toDateString(),
+                    'notes' => 'Pagamento informado pelo operador na atribuição do pacote.',
+                ]);
+
+                $financialObligation = $this->settleFinancialObligation->handle($actor, $context, $financialObligation, [
+                    'paid_date' => now()->toDateString(),
+                    'payment_method' => $paymentMethod,
+                    'lock_version' => $financialObligation->lock_version,
+                ]);
+            }
+
             $this->events->record($actor, $context, 'customer_package.sold', $customerPackage, [
                 'customer_id' => $customer->getKey(),
                 'package_template_id' => $template->getKey(),
@@ -126,9 +160,11 @@ final class SellCustomerPackage extends OperationalAction
                 'remaining_sessions' => $totalSessions,
                 'expires_at' => $expiresAt,
                 'status' => 'active',
+                'financial_obligation_id' => $financialObligation?->getKey(),
+                'payment_method' => $financialObligation?->payment_method,
             ]);
 
-            return $customerPackage->load(['packageTemplate.services', 'customer']);
+            return $customerPackage->load(['packageTemplate.services', 'customer', 'financialObligation']);
         }, 5);
     }
 }

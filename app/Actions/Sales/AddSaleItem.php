@@ -29,6 +29,12 @@ final class AddSaleItem extends OperationalAction
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
 
+        if (! empty($data['customer_package_id'])
+            && ! $this->authorization->can($actor, $context, 'package.consume', $unit)
+            && ! $this->authorization->can($actor, $context, 'package.manage', $unit)) {
+            throw new AuthorizationException('O ator não pode consumir saldo de pacotes nesta unidade.');
+        }
+
         if ($sale->tenant_id !== $tenantId || $sale->unit_id !== $unitId) {
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }

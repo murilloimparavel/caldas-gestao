@@ -14,6 +14,7 @@ use App\Http\Requests\RetentionCustomerRequest;
 use App\Http\Requests\UpdateCustomerCommunicationPreferenceRequest;
 use App\Models\Customer;
 use App\Models\CustomerCommunicationPreference;
+use App\Models\FinancialObligation;
 use App\Models\PackageTemplate;
 use App\Models\SubscriptionPlan;
 use App\Support\OperationalMutation;
@@ -75,6 +76,7 @@ final class CustomerController extends Controller
                     'serviceBalances.service:id,name',
                     'usages.user:id,name',
                 ])
+                ->when(Gate::allows('viewAny', FinancialObligation::class), fn ($query) => $query->with('financialObligation:id,customer_package_id,amount_cents,status,paid_date,payment_method'))
                 ->orderBy('created_at', 'desc'),
             'subscriptions' => fn ($query) => $query
                 ->with('plan:id,name,price_cents,billing_cycle')
@@ -114,6 +116,7 @@ final class CustomerController extends Controller
                 'total_spent_cents' => $totalSpentCents,
                 'total_visits' => $totalVisits,
             ],
+            'can_view_finance' => Gate::allows('viewAny', FinancialObligation::class),
         ]);
     }
 

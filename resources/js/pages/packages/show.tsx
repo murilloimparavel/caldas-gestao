@@ -91,6 +91,12 @@ type CustomerPackageRecord = {
         remaining_quantity: number;
         service?: { id: string; name: string } | null;
     }>;
+    financial_obligation?: {
+        amount_cents: number;
+        paid_date: string | null;
+        payment_method: string | null;
+        status: string;
+    } | null;
 };
 
 type PackageTemplate = {
@@ -106,10 +112,25 @@ type PackageTemplate = {
 };
 
 type Props = {
+    can_view_finance?: boolean;
     customerPackages: Paginated<CustomerPackageRecord>;
     package: PackageTemplate;
     serviceOptions?: RelationOption[];
 };
+
+function paymentMethodLabel(method: string | null): string {
+    const labels: Record<string, string> = {
+        boleto: 'Boleto Bancário',
+        cartao_credito: 'Cartão de Crédito',
+        cartao_debito: 'Cartão de Débito',
+        dinheiro: 'Dinheiro',
+        pix: 'PIX',
+        transferencia: 'Transferência Bancária',
+        outros: 'Outro',
+    };
+
+    return method ? (labels[method] ?? method) : 'Não informado';
+}
 
 function ServiceQuantityFields({
     options,
@@ -228,6 +249,7 @@ export default function PackageShow({
     package: pkg,
     serviceOptions = [],
     customerPackages,
+    can_view_finance = false,
 }: Props) {
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -746,6 +768,45 @@ export default function PackageShow({
                                                     </span>
                                                 )}
                                             </div>
+                                            {can_view_finance && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {cp.financial_obligation ? (
+                                                        <>
+                                                            Pagamento
+                                                            registrado:{' '}
+                                                            {paymentMethodLabel(
+                                                                cp
+                                                                    .financial_obligation
+                                                                    .payment_method,
+                                                            )}
+                                                            {' · '}
+                                                            {formatMoney(
+                                                                cp
+                                                                    .financial_obligation
+                                                                    .amount_cents,
+                                                            )}
+                                                            {cp
+                                                                .financial_obligation
+                                                                .paid_date && (
+                                                                <>
+                                                                    {
+                                                                        ' · recebido em '
+                                                                    }
+                                                                    {new Date(
+                                                                        cp
+                                                                            .financial_obligation
+                                                                            .paid_date,
+                                                                    ).toLocaleDateString(
+                                                                        'pt-BR',
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        'Sem lançamento financeiro associado.'
+                                                    )}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-3">
