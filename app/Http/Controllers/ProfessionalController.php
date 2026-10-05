@@ -72,7 +72,6 @@ final class ProfessionalController extends Controller
         ]);
     }
 
-    /** @return array<int, array{id:string,name:string}> */
     private function hasServices(TenantContext $context): bool
     {
         return $context->unit === null
