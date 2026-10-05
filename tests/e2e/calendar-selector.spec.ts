@@ -6,6 +6,7 @@ const fixturePassword = 'CaldasE2E!2026';
 
 const viewports = [
     { height: 844, name: 'mobile', width: 390 },
+    { height: 900, name: 'small-tablet', width: 700 },
     { height: 900, name: 'tablet', width: 768 },
     { height: 900, name: 'desktop', width: 1280 },
 ] as const;
@@ -76,6 +77,18 @@ for (const viewport of viewports) {
             page,
         }) => {
             const dialog = await openAppointmentDialog(page);
+            const dialogBox = await dialog.boundingBox();
+
+            expect(dialogBox).not.toBeNull();
+
+            if (dialogBox) {
+                expect(dialogBox.x).toBeGreaterThanOrEqual(16);
+                expect(
+                    page.viewportSize()!.width - dialogBox.x - dialogBox.width,
+                ).toBeGreaterThanOrEqual(16);
+                expect(dialogBox.width).toBeLessThanOrEqual(768);
+            }
+
             const service = dialog.getByRole('combobox', {
                 name: 'Selecione um serviço',
             });
