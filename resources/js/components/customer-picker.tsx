@@ -631,10 +631,12 @@ export function CustomerPicker({
 
             <div className="relative">
                 <div className="relative">
-                    <Search
-                        className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground"
-                        aria-hidden="true"
-                    />
+                    {!selected && !anonymousSelected ? (
+                        <Search
+                            className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true"
+                        />
+                    ) : null}
                     <input
                         ref={inputRef}
                         id={inputId}

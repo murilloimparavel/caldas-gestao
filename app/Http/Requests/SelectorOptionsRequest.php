@@ -45,7 +45,7 @@ final class SelectorOptionsRequest extends FormRequest
                     'subscription-plans',
                 ]),
             ],
-            'search' => ['sometimes', 'string', 'max:100'],
+            'search' => ['sometimes', 'nullable', 'string', 'max:100'],
             'category_id' => ['sometimes', 'nullable', 'uuid'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],

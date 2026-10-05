@@ -91,7 +91,8 @@ export function RemoteOptionPicker({
     const [error, setError] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
     const [retry, setRetry] = useState(0);
-    const requestKey = `${resource}:${query}`;
+    const normalizedQuery = query.trim();
+    const requestKey = `${resource}:${normalizedQuery}`;
     const requestSequenceRef = useRef(0);
     const loadedKeyRef = useRef(requestKey);
     const [loadedKey, setLoadedKey] = useState(requestKey);
@@ -125,7 +126,11 @@ export function RemoteOptionPicker({
             setError(false);
             void fetch(
                 selectorOptions.index.url(resource, {
-                    query: { search: query, page: requestPage, per_page: 25 },
+                    query: {
+                        ...(normalizedQuery ? { search: normalizedQuery } : {}),
+                        page: requestPage,
+                        per_page: 25,
+                    },
                 }),
                 {
                     credentials: 'same-origin',
@@ -184,7 +189,16 @@ export function RemoteOptionPicker({
             window.clearTimeout(timeout);
             controller.abort();
         };
-    }, [localOptionsOnly, open, page, query, requestKey, resource, retry]);
+    }, [
+        localOptionsOnly,
+        normalizedQuery,
+        open,
+        page,
+        query,
+        requestKey,
+        resource,
+        retry,
+    ]);
 
     const updatePosition = useCallback(() => {
         const anchor = inputRef.current;
