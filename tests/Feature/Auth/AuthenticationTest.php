@@ -21,8 +21,6 @@ class AuthenticationTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('auth/login'),
         );
-
-        $this->get(route('admin.login'))->assertRedirect(route('login'));
     }
 
     public function test_admin_login_screen_has_a_distinct_inertia_entry()
