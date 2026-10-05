@@ -128,6 +128,9 @@ for (const viewport of viewports) {
                 }),
             ).toBeVisible();
             await expect(dialog.getByText('Maria da Silva')).toBeVisible();
+            await expect(
+                customer.locator('xpath=preceding-sibling::svg'),
+            ).toHaveCount(0);
 
             await page
                 .getByRole('button', { name: 'Limpar cliente selecionado' })

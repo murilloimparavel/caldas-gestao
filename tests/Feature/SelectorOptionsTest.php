@@ -57,6 +57,13 @@ it('returns paginated active selector options scoped to the tenant unit', functi
         ->getJson(route('selector-options.index', ['resource' => 'suppliers']));
 
     $supplierResponse->assertSuccessful()->assertJsonPath('data.0.name', 'Fornecedor Global');
+
+    $emptySearchResponse = $this
+        ->actingAs($owner)
+        ->withHeaders(['X-Tenant-Id' => $tenant->id, 'X-Unit-Id' => $unit->id])
+        ->getJson(route('selector-options.index', ['resource' => 'services', 'search' => '']));
+
+    $emptySearchResponse->assertSuccessful()->assertJsonPath('data.0.name', 'Corte Premium');
 });
 
 it('rejects unauthenticated and arbitrary selector resources', function () {
