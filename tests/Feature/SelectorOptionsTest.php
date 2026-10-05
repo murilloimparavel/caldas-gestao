@@ -81,6 +81,28 @@ it('rejects unauthenticated and arbitrary selector resources', function () {
         ->assertJsonValidationErrors('resource');
 });
 
+it('limits professional selectors to the linked professional', function () {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, ['name' => 'Selector '.Str::random(8)]);
+    $unit = $tenant->units()->firstOrFail();
+    $linked = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Profissional próprio']);
+    $other = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Outro profissional']);
+    $collaborator = User::factory()->create();
+    $membership = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $collaborator->getKey(), 'professional_id' => $linked->getKey(), 'status' => 'active']);
+    MembershipUnit::factory()->forMembership($membership)->forUnit($unit)->create(['is_primary' => true]);
+    $role = Role::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Profissional', 'key' => 'professional-'.Str::lower(Str::random(8))]);
+    $permission = Permission::query()->where('key', 'professional.view')->firstOrFail();
+    RolePermission::query()->create(['tenant_id' => $tenant->getKey(), 'role_id' => $role->getKey(), 'permission_id' => $permission->getKey()]);
+    MembershipRole::factory()->forMembership($membership)->forRole($role)->create();
+
+    $response = $this->actingAs($collaborator)
+        ->withHeaders(['X-Tenant-Id' => $tenant->getKey(), 'X-Unit-Id' => $unit->getKey()])
+        ->getJson(route('selector-options.index', ['resource' => 'professionals']));
+
+    $response->assertSuccessful()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $linked->getKey());
+    expect($response->json('data'))->not->toContain(['id' => $other->getKey(), 'name' => $other->name, 'phone' => $other->phone]);
+});
+
 it('serializes only the allowlisted fields for every selector resource', function () {
     $owner = User::factory()->create();
     $tenant = (new OnboardTenant)->handle($owner, [

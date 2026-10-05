@@ -89,7 +89,7 @@ final class FinalizeClosingSession extends OperationalAction
             }
 
             /** @var Collection<int, Sale> $sales */
-            $sales = Sale::query()
+            $sales = $this->professionalScope->constrainSales(Sale::query(), $context)
                 ->with(['customer', 'category', 'items.service', 'items.product', 'items.professional', 'appointmentLink.appointment'])
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)

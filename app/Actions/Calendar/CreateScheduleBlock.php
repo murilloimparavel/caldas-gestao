@@ -21,6 +21,8 @@ final class CreateScheduleBlock extends OperationalAction
         if ($data['professional_id'] !== null) {
             Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
         }
+        $professionalId = $this->assertProfessional($context, $data['professional_id'] === null ? null : (string) $data['professional_id']);
+        $data['professional_id'] = $professionalId;
 
         return DB::transaction(function () use ($actor, $context, $data, $tenantId, $unitId): ScheduleBlock {
             $block = ScheduleBlock::query()->create([

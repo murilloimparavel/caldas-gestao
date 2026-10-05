@@ -30,6 +30,10 @@ final class ReverseClosingSessionPayment extends OperationalAction
 
         return DB::transaction(function () use ($actor, $context, $payment, $reason, $unit): ClosingSessionPayment {
             $original = ClosingSessionPayment::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->whereKey($payment->getKey())->lockForUpdate()->firstOrFail();
+            $closingSession = $original->closingSession()->with('sales.items')->firstOrFail();
+            if (! $this->professionalScope->ownsClosingSession($context, $closingSession)) {
+                throw new AuthorizationException('O estorno não pertence ao profissional vinculado.');
+            }
             if ($original->is_reversal) {
                 throw ValidationException::withMessages(['payment' => 'Um estorno não pode ser estornado novamente.']);
             }

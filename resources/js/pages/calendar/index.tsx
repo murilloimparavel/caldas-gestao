@@ -239,6 +239,8 @@ function optionList(
 type GoogleCalendarStatus = {
     status: 'connected' | 'disconnected' | 'not_configured';
     configured: boolean;
+    can_configure: boolean;
+    configuration_blocked_reason?: string | null;
     connection: {
         google_account_email?: string | null;
         calendar_name?: string | null;
@@ -284,6 +286,7 @@ function GoogleCalendarPanel(): ReactElement {
 
     const connected = state?.status === 'connected';
     const unavailable = state?.status === 'not_configured';
+    const configurationBlocked = state?.can_configure === false;
 
     return (
         <section
@@ -307,9 +310,12 @@ function GoogleCalendarPanel(): ReactElement {
                                 ? 'Verificando conexão…'
                                 : unavailable
                                   ? 'Integração indisponível neste ambiente.'
-                                  : connected
-                                    ? `Conectado${state?.connection?.google_account_email ? ` como ${state.connection.google_account_email}` : ''}.`
-                                    : 'Conecte o calendário desta unidade para sincronizar agendamentos.'}
+                                  : configurationBlocked
+                                    ? (state?.configuration_blocked_reason ??
+                                      'A integração é gerenciada pelo administrador da unidade.')
+                                    : connected
+                                      ? `Conectado${state?.connection?.google_account_email ? ` como ${state.connection.google_account_email}` : ''}.`
+                                      : 'Conecte o calendário desta unidade para sincronizar agendamentos.'}
                         </p>
                     </div>
                 </div>
@@ -327,7 +333,7 @@ function GoogleCalendarPanel(): ReactElement {
                             className={loading ? 'animate-spin' : undefined}
                         />
                     </Button>
-                    {connected ? (
+                    {configurationBlocked ? null : connected ? (
                         <Button
                             type="button"
                             variant="outline"

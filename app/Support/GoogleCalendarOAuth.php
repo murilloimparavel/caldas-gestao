@@ -21,7 +21,7 @@ final class GoogleCalendarOAuth
     }
 
     /**
-     * @return array{status:string,configured:bool,connection:array<string,mixed>|null}
+     * @return array{status:string,configured:bool,can_configure:bool,configuration_blocked_reason:string|null,connection:array<string,mixed>|null}
      */
     public function status(TenantContext $context): array
     {
@@ -30,12 +30,16 @@ final class GoogleCalendarOAuth
             ->where('unit_id', $context->unit?->getKey())
             ->first();
 
+        $canConfigure = $context->membership->professional_id === null;
+
         return [
             'status' => $this->configured() ? ($connection->status ?? 'disconnected') : 'not_configured',
             'configured' => $this->configured(),
-            'connection' => $connection?->only([
+            'can_configure' => $canConfigure,
+            'configuration_blocked_reason' => $canConfigure ? null : 'Google Calendar é gerenciado pelo administrador da unidade.',
+            'connection' => $canConfigure ? $connection?->only([
                 'id', 'provider', 'status', 'google_account_email', 'calendar_id', 'calendar_name', 'scopes', 'token_expires_at', 'last_error', 'last_synced_at',
-            ]),
+            ]) : null,
         ];
     }
 
@@ -114,6 +118,10 @@ final class GoogleCalendarOAuth
 
             if ($context->unit === null) {
                 throw new AuthorizationException('É necessário selecionar uma unidade ativa para conectar o Google Agenda.');
+            }
+
+            if ($context->membership->professional_id !== null) {
+                throw new AuthorizationException('O Google Agenda é gerenciado pelo administrador do tenant para colaboradores vinculados a profissionais.');
             }
 
             if (! app(AuthorizationService::class)->can($user, $context, 'calendar.configure', $context->unit)) {
