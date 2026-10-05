@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /**
  * @property UnitStatus $status
+ * @property array<string, string|null>|null $address
  * @property int $lock_version
  * @property bool $appointment_sales_automation_enabled
  * @property string|null $appointment_default_sale_category_id

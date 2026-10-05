@@ -12,7 +12,7 @@ class ResetUserPassword implements ResetsUserPasswords
 {
     use PasswordValidationRules;
 
-    public function __construct(private readonly PasswordSessionRevoker $sessions = new PasswordSessionRevoker) {}
+    public function __construct(private readonly PasswordSessionRevoker $sessions) {}
 
     /**
      * Validate and reset the user's forgotten password.

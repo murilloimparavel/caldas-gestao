@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\MembershipStatus;
 use App\Models\Membership;
 use App\Models\TenantDomain;
+use App\Models\User;
 use App\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -48,7 +49,7 @@ final class ResolveTenantContext
             return $next($request);
         }
 
-        $context = TenantContext::fromRequest($request);
+        $context = $this->oauthConsentContext($request, $user) ?? TenantContext::fromRequest($request);
 
         app()->instance(TenantContext::class, $context);
         Context::add([
@@ -59,6 +60,29 @@ final class ResolveTenantContext
         $request->attributes->set(TenantContext::class, $context);
 
         return $next($request);
+    }
+
+    private function oauthConsentContext(Request $request, User $user): ?TenantContext
+    {
+        if ($request->route('purpose') !== 'oauth.consent') {
+            return null;
+        }
+
+        $authorization = $request->session()->get('integration.oauth.context');
+
+        if (! is_array($authorization)
+            || ! is_string($authorization['user_id'] ?? null)
+            || $authorization['user_id'] !== (string) $user->getAuthIdentifier()
+            || ! is_string($authorization['tenant_id'] ?? null)
+            || (! is_null($authorization['unit_id'] ?? null) && ! is_string($authorization['unit_id']))) {
+            abort(403, 'An active OAuth authorization context is required.');
+        }
+
+        return TenantContext::forUser(
+            $user,
+            $authorization['tenant_id'],
+            $authorization['unit_id'] ?? null,
+        );
     }
 
     private function identifier(?string $value): ?string

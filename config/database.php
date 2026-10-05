@@ -101,7 +101,7 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'app').',public'),
+            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'app')),
             'sslmode' => env('DB_SSLMODE', 'require'),
         ],
 
@@ -121,7 +121,7 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'app').',public'),
+            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'app')),
             'sslmode' => env('MIGRATION_DB_SSLMODE', env('DB_SSLMODE', 'require')),
         ],
 

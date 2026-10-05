@@ -14,20 +14,29 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 
+$trustedProxies = require __DIR__.'/../config/trustedproxy.php';
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function (): void {
             require __DIR__.'/../routes/health.php';
+            require __DIR__.'/../routes/ai.php';
         },
     )
-    ->withMiddleware(function (Middleware $middleware): void {
+    ->withMiddleware(function (Middleware $middleware) use ($trustedProxies): void {
         $middleware->redirectGuestsTo(fn (Request $request): string => $request->is('admin') || $request->is('admin/*')
             ? route('admin.login')
             : route('login'));
-        $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(
+            at: $trustedProxies['proxies'] ?? [],
+            headers: Request::HEADER_X_FORWARDED_FOR |
+                Request::HEADER_X_FORWARDED_PROTO |
+                Request::HEADER_X_FORWARDED_PORT,
+        );
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias([

@@ -11,6 +11,7 @@ use App\Support\PayloadGovernance;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
 
@@ -139,6 +140,9 @@ class HandleInertiaRequests extends Middleware
                 ],
                 'permissions' => $permissions,
                 'entitlements' => $entitlements,
+                'canManageIntegrations' => $user !== null
+                    && $context !== null
+                    && Gate::forUser($user)->allows('manage-integrations'),
             ],
             'workspace' => $workspace,
             'flash' => [
@@ -146,6 +150,7 @@ class HandleInertiaRequests extends Middleware
                 'info' => $request->session()->get('info'),
                 'warning' => $request->session()->get('warning'),
                 'error' => $request->session()->get('error'),
+                'proposalIds' => $request->session()->get('proposal_ids', []),
             ],
             'ui' => [
                 'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

@@ -51,6 +51,7 @@ export type Flash = {
     info?: string | null;
     warning?: string | null;
     error?: string | null;
+    proposalIds?: string[];
 };
 
 export type Ui = {
