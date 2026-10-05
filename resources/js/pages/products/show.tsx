@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUploader } from '@/components/ui/image-uploader';
 import { Input } from '@/components/ui/input';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import categories from '@/routes/categories';
 import products from '@/routes/products';
 import type { SharedPageProps } from '@/types';
@@ -89,7 +90,7 @@ type Product = {
 };
 
 type Props = {
-    categoryOptions: CategoryOption[];
+    categoryOptions?: CategoryOption[];
     movements?: Paginated<InventoryMovementItem>;
     product: Product;
 };
@@ -206,11 +207,13 @@ export default function ProductShow({
     const [selectedPhoto, setSelectedPhoto] = useState<File | string | null>(
         product.photo_url || product.image_url || null,
     );
+    const [selectedCategoryId, setSelectedCategoryId] = useState(
+        product.category_id ?? '',
+    );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('product.manage');
     const canAdjustStock =
         props.auth.permissions.includes('inventory.manage') || canManage;
-
     const profitCents = product.sale_price_cents - product.cost_price_cents;
     const profitMargin =
         product.sale_price_cents > 0
@@ -346,30 +349,24 @@ export default function ProductShow({
                                                 name="category_id"
                                                 error={errors.category_id}
                                             >
-                                                <select
+                                                <RemoteOptionPicker
                                                     id="category_id"
                                                     name="category_id"
-                                                    defaultValue={
-                                                        product.category_id ??
-                                                        ''
+                                                    options={categoryOptions}
+                                                    selectedOption={
+                                                        product.category ??
+                                                        undefined
+                                                    }
+                                                    placeholder="Sem categoria"
+                                                    resource="categories"
+                                                    value={selectedCategoryId}
+                                                    onChange={(value) =>
+                                                        setSelectedCategoryId(
+                                                            value,
+                                                        )
                                                     }
                                                     disabled={!canManage}
-                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                                                >
-                                                    <option value="">
-                                                        Sem categoria
-                                                    </option>
-                                                    {categoryOptions.map(
-                                                        (cat) => (
-                                                            <option
-                                                                key={cat.id}
-                                                                value={cat.id}
-                                                            >
-                                                                {cat.name}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </select>
+                                                />
                                             </FormField>
                                         </div>
 

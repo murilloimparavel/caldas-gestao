@@ -26,6 +26,8 @@ import {
 import type { Paginated, ResourceFilters } from '@/components/operational';
 import { QuickCreateCustomerModal } from '@/components/operational/quick-create-dialogs';
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
+import { CustomerPicker } from '@/components/customer-picker';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     CashShiftQuickOpenDialog,
     PaymentAllocationFields,
@@ -161,6 +163,9 @@ export default function SalesIndex({
         createIdempotencyKey('closing-session'),
     );
     const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [filterSaleCategory, setFilterSaleCategory] = useState(
+        filters.sale_category_id ?? '',
+    );
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { view, setView } = useResourceView('caldas-gestao:sales:view');
     const { props } = usePage<SharedPageProps>();
@@ -302,42 +307,26 @@ export default function SalesIndex({
                                                                 errors.sale_category_id
                                                             }
                                                         >
-                                                            <select
+                                                            <RemoteOptionPicker
                                                                 id="sale_category_id"
                                                                 name="sale_category_id"
-                                                                required
+                                                                options={
+                                                                    categories
+                                                                }
+                                                                placeholder="Selecione a categoria"
+                                                                resource="sale-categories"
                                                                 value={
                                                                     selectedCategory
                                                                 }
-                                                                onChange={(e) =>
+                                                                onChange={(
+                                                                    value,
+                                                                ) =>
                                                                     setSelectedCategory(
-                                                                        e.target
-                                                                            .value,
+                                                                        value,
                                                                     )
                                                                 }
-                                                                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-                                                            >
-                                                                <option value="">
-                                                                    Selecione a
-                                                                    categoria
-                                                                </option>
-                                                                {categories.map(
-                                                                    (cat) => (
-                                                                        <option
-                                                                            key={
-                                                                                cat.id
-                                                                            }
-                                                                            value={
-                                                                                cat.id
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                cat.name
-                                                                            }
-                                                                        </option>
-                                                                    ),
-                                                                )}
-                                                            </select>
+                                                                required
+                                                            />
                                                         </FormField>
                                                         {selectedCategoryObj ? (
                                                             <p className="mt-1.5 text-xs text-muted-foreground">
@@ -369,13 +358,25 @@ export default function SalesIndex({
                                                     </div>
 
                                                     <div className="sm:col-span-2">
-                                                        <FormField
-                                                            label="Cliente (opcional)"
+                                                        <CustomerPicker
+                                                            label="Cliente"
                                                             name="customer_id"
+                                                            id="customer_id"
+                                                            value={
+                                                                selectedCustomer
+                                                            }
+                                                            options={
+                                                                customerList
+                                                            }
+                                                            onChange={
+                                                                setSelectedCustomer
+                                                            }
                                                             error={
                                                                 errors.customer_id
                                                             }
-                                                            description={
+                                                            helper="Opcional — cliente avulso / não identificado"
+                                                            allowAnonymous
+                                                            action={
                                                                 <button
                                                                     type="button"
                                                                     onClick={() =>
@@ -389,47 +390,7 @@ export default function SalesIndex({
                                                                     Cliente
                                                                 </button>
                                                             }
-                                                        >
-                                                            <select
-                                                                id="customer_id"
-                                                                name="customer_id"
-                                                                value={
-                                                                    selectedCustomer
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setSelectedCustomer(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-                                                            >
-                                                                <option value="">
-                                                                    Cliente
-                                                                    avulso / Não
-                                                                    identificado
-                                                                </option>
-                                                                {customerList.map(
-                                                                    (cust) => (
-                                                                        <option
-                                                                            key={
-                                                                                cust.id
-                                                                            }
-                                                                            value={
-                                                                                cust.id
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                cust.name
-                                                                            }
-                                                                            {cust.phone
-                                                                                ? ` (${cust.phone})`
-                                                                                : ''}
-                                                                        </option>
-                                                                    ),
-                                                                )}
-                                                            </select>
-                                                        </FormField>
+                                                        />
                                                     </div>
 
                                                     <div className="sm:col-span-2">
@@ -572,19 +533,25 @@ export default function SalesIndex({
                         </div>
 
                         <div className="sm:col-span-3">
-                            <select
-                                aria-label="Filtrar por categoria"
+                            <RemoteOptionPicker
+                                id="sale_category_filter"
+                                label="Categoria"
                                 name="sale_category_id"
-                                defaultValue={filters.sale_category_id ?? ''}
-                                className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                            >
-                                <option value="">Todas as categorias</option>
-                                {categories.map((cat) => (
-                                    <option key={cat.id} value={cat.id}>
-                                        {cat.name}
-                                    </option>
-                                ))}
-                            </select>
+                                options={categories.filter(
+                                    (category) =>
+                                        category.id === filterSaleCategory,
+                                )}
+                                selectedOption={categories.find(
+                                    (category) =>
+                                        category.id === filterSaleCategory,
+                                )}
+                                placeholder="Todas as categorias"
+                                resource="sale-categories"
+                                value={filterSaleCategory}
+                                onChange={(value) =>
+                                    setFilterSaleCategory(value)
+                                }
+                            />
                         </div>
 
                         <div className="flex items-center gap-2 sm:col-span-2 sm:justify-end">

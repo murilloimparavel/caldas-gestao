@@ -81,20 +81,17 @@ final class CustomerController extends Controller
                 ->orderByDesc('created_at'),
         ]);
 
-        $packageTemplates = PackageTemplate::query()
+        $hasPackageTemplates = PackageTemplate::query()
             ->where('tenant_id', $customer->tenant_id)
             ->where('unit_id', $customer->unit_id)
             ->where('is_active', true)
-            ->with('services:id,name,price_cents')
-            ->orderBy('name')
-            ->get();
+            ->exists();
 
-        $planOptions = SubscriptionPlan::query()
+        $hasPlanOptions = SubscriptionPlan::query()
             ->where('tenant_id', $customer->tenant_id)
             ->where('unit_id', $customer->unit_id)
             ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'price_cents', 'billing_cycle']);
+            ->exists();
 
         $subscriptions = $customer->subscriptions;
         $activeSubscription = $subscriptions->first(fn ($subscription): bool => in_array($subscription->status, ['active', 'paused'], true));
@@ -109,10 +106,10 @@ final class CustomerController extends Controller
 
         return Inertia::render('customers/show', [
             'customer' => $customer,
-            'packageTemplates' => $packageTemplates,
+            'hasPackageTemplates' => $hasPackageTemplates,
             'active_subscription' => $activeSubscription,
             'subscription_history' => $subscriptions,
-            'planOptions' => $planOptions,
+            'hasPlanOptions' => $hasPlanOptions,
             'metrics' => [
                 'total_spent_cents' => $totalSpentCents,
                 'total_visits' => $totalVisits,

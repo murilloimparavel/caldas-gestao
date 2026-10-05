@@ -890,7 +890,7 @@ it('renders sale show with auxiliary services, products, professionals and categ
         );
 });
 
-it('includes sale links and sale categories in calendar index payload', function () {
+it('includes sale links in calendar payload and loads sale categories through selector options', function () {
     [$owner, $tenant, $unit] = saleTestWorkspace();
 
     $category = SaleCategory::factory()->create([
@@ -934,11 +934,19 @@ it('includes sale links and sale categories in calendar index payload', function
 
     $response = $this->actingAs($owner)->get(route('calendar.index'));
 
+    $saleCategoryOptionsResponse = $this->actingAs($owner)
+        ->getJson(route('selector-options.index', ['resource' => 'sale-categories']));
+
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('calendar/index')
-            ->has('options.sale_categories', 1)
+            ->missing('options.sale_categories')
             ->has('appointments.0.sale_link')
             ->where('appointments.0.sale_link.sale_id', $sale->getKey())
         );
+
+    $saleCategoryOptionsResponse->assertSuccessful()
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.id', $category->getKey())
+        ->assertJsonPath('data.0.name', 'Barbearia');
 });

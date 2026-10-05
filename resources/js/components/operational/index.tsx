@@ -1,13 +1,27 @@
 import { Link } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronLeft, ChevronRight, Search, UsersRound } from 'lucide-react';
-import type { FormEvent, ReactElement, ReactNode } from 'react';
-import { Children, cloneElement, isValidElement, useState } from 'react';
+import type {
+    Dispatch,
+    FormEvent,
+    ReactElement,
+    ReactNode,
+    SetStateAction,
+} from 'react';
+import {
+    Children,
+    cloneElement,
+    isValidElement,
+    useEffect,
+    useRef,
+    useState,
+} from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import selectorOptions from '@/routes/selector-options';
 
 export type ResourceStatus = 'active' | 'inactive';
 
@@ -38,6 +52,23 @@ export type RelationOption = {
     name: string;
     status?: ResourceStatus;
 };
+
+export type RelationResource =
+    | 'categories'
+    | 'customers'
+    | 'packages'
+    | 'products'
+    | 'professionals'
+    | 'sale-categories'
+    | 'services'
+    | 'subscription-plans';
+
+const normalizeRelationSearch = (value: string): string =>
+    value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('pt-BR')
+        .trim();
 
 export function createIdempotencyKey(
     scope: string,
@@ -78,6 +109,110 @@ export function parseBrazilianCurrency(value: string): number {
     return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 100)) : 0;
 }
 
+type RemoteRelationState = {
+    error: boolean;
+    hasMore: boolean;
+    loading: boolean;
+    options: RelationOption[];
+    retry: () => void;
+    setPage: Dispatch<SetStateAction<number>>;
+};
+
+function useRemoteRelationOptions(
+    resource: RelationResource | undefined,
+    query: string,
+): RemoteRelationState {
+    const [options, setOptions] = useState<RelationOption[]>([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    const loadedQuery = useRef(query);
+    const [displayQuery, setDisplayQuery] = useState(query);
+
+    useEffect(() => {
+        if (!resource) {
+            return;
+        }
+
+        const controller = new AbortController();
+        const requestedPage = query === loadedQuery.current ? page : 1;
+        const timeout = window.setTimeout(() => {
+            setLoading(true);
+            setError(false);
+
+            void fetch(
+                selectorOptions.index.url(resource, {
+                    query: {
+                        search: query,
+                        page: requestedPage,
+                        per_page: 25,
+                    },
+                }),
+                {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal,
+                },
+            )
+                .then(async (response) => {
+                    if (!response.ok) {
+                        throw new Error('selector-options-request-failed');
+                    }
+
+                    return (await response.json()) as {
+                        data?: RelationOption[];
+                        meta?: { has_more?: boolean };
+                    };
+                })
+                .then((payload) => {
+                    setOptions((current) =>
+                        requestedPage === 1 || query !== loadedQuery.current
+                            ? (payload.data ?? [])
+                            : [
+                                  ...current,
+                                  ...(payload.data ?? []).filter(
+                                      (option) =>
+                                          !current.some(
+                                              (item) => item.id === option.id,
+                                          ),
+                                  ),
+                              ],
+                    );
+                    setHasMore(Boolean(payload.meta?.has_more));
+                    loadedQuery.current = query;
+                    setDisplayQuery(query);
+                })
+                .catch((reason: unknown) => {
+                    if (
+                        reason instanceof DOMException &&
+                        reason.name === 'AbortError'
+                    ) {
+                        return;
+                    }
+
+                    setError(true);
+                })
+                .finally(() => setLoading(false));
+        }, 200);
+
+        return () => {
+            window.clearTimeout(timeout);
+            controller.abort();
+        };
+    }, [page, query, resource, retryCount]);
+
+    return {
+        error,
+        hasMore: displayQuery === query && hasMore,
+        loading,
+        options: displayQuery === query ? options : [],
+        retry: () => setRetryCount((current) => current + 1),
+        setPage,
+    };
+}
+
 export function RelationCheckboxes({
     name,
     options,
@@ -86,6 +221,7 @@ export function RelationCheckboxes({
     disabled = false,
     form,
     onSelectionChange,
+    resource,
 }: {
     name: string;
     options: RelationOption[];
@@ -94,14 +230,37 @@ export function RelationCheckboxes({
     disabled?: boolean;
     form?: string;
     onSelectionChange?: (selectedIds: string[]) => void;
+    resource?: RelationResource;
 }) {
+    const initialSelection =
+        selectedIds.length > 0 ? selectedIds : (initialSelected ?? []);
+    const [internalSelectedIds, setInternalSelectedIds] =
+        useState<string[]>(initialSelection);
     const selectedOptionIds = onSelectionChange
         ? selectedIds
-        : selectedIds.length > 0
-          ? selectedIds
-          : (initialSelected ?? []);
+        : internalSelectedIds;
+    const [query, setQuery] = useState('');
+    const remote = useRemoteRelationOptions(resource, query);
+    const selectedIdsSet = new Set(selectedOptionIds);
 
-    if (options.length === 0) {
+    const availableOptions = resource
+        ? [
+              ...options.filter((option) => selectedIdsSet.has(option.id)),
+              ...remote.options,
+          ]
+        : options;
+    const mergedOptions = Array.from(
+        new Map(availableOptions.map((option) => [option.id, option])).values(),
+    );
+    const normalizedQuery = normalizeRelationSearch(query);
+    const visibleOptions = mergedOptions.filter((option) =>
+        normalizeRelationSearch(option.name).includes(normalizedQuery),
+    );
+    const hiddenSelectedIds = selectedOptionIds.filter(
+        (id) => !visibleOptions.some((option) => option.id === id),
+    );
+
+    if (!resource && options.length === 0) {
         return (
             <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
                 Nenhuma opção disponível nesta unidade ainda.
@@ -110,63 +269,339 @@ export function RelationCheckboxes({
     }
 
     return (
-        <div className="grid gap-2 sm:grid-cols-2">
-            {options.map((option) => {
-                const inputId = `${name}-${option.id}`;
-
-                return (
-                    <label
-                        key={option.id}
-                        htmlFor={inputId}
-                        className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm transition-colors has-checked:border-primary/60 has-checked:bg-secondary/70"
-                    >
-                        <input
-                            id={inputId}
-                            type="checkbox"
-                            name={`${name}[]`}
-                            value={option.id}
-                            form={form}
-                            {...(onSelectionChange
-                                ? {
-                                      checked: selectedOptionIds.includes(
-                                          option.id,
-                                      ),
-                                      onChange: (
-                                          event: FormEvent<HTMLInputElement>,
-                                      ) => {
-                                          const nextSelectedIds = new Set(
-                                              selectedOptionIds,
-                                          );
-
-                                          if (event.currentTarget.checked) {
-                                              nextSelectedIds.add(option.id);
-                                          } else {
-                                              nextSelectedIds.delete(option.id);
-                                          }
-
-                                          onSelectionChange(
-                                              Array.from(nextSelectedIds),
-                                          );
-                                      },
-                                  }
-                                : {
-                                      defaultChecked:
-                                          selectedOptionIds.includes(option.id),
-                                  })}
-                            disabled={disabled}
-                            className="size-4 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring"
-                        />
-                        <span className="min-w-0 flex-1 truncate">
-                            {option.name}
-                        </span>
-                        {option.status === 'inactive' ? (
-                            <span className="text-2xs font-medium text-muted-foreground uppercase">
-                                Inativo
-                            </span>
+        <div className="space-y-3">
+            <div className="space-y-2">
+                <Input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Pesquisar por nome"
+                    aria-label={`Pesquisar ${name.replaceAll('_', ' ')}`}
+                    aria-controls={`${name}-options`}
+                    autoComplete="off"
+                />
+                {resource ? (
+                    <>
+                        {remote.loading ? (
+                            <p
+                                role="status"
+                                className="text-xs text-muted-foreground"
+                            >
+                                Carregando opções…
+                            </p>
                         ) : null}
-                    </label>
-                );
-            })}
+                        {remote.error ? (
+                            <div
+                                role="alert"
+                                className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                            >
+                                <span>
+                                    Não foi possível carregar as opções.
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={remote.retry}
+                                >
+                                    Tentar novamente
+                                </Button>
+                            </div>
+                        ) : null}
+                    </>
+                ) : null}
+            </div>
+            {hiddenSelectedIds.map((id) => (
+                <input
+                    key={id}
+                    type="hidden"
+                    name={`${name}[]`}
+                    value={id}
+                    form={form}
+                />
+            ))}
+            {visibleOptions.length === 0 && !remote.loading ? (
+                <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                    {query
+                        ? 'Nenhum resultado encontrado.'
+                        : 'Nenhuma opção disponível nesta unidade ainda.'}
+                </p>
+            ) : (
+                <div
+                    id={`${name}-options`}
+                    className="grid gap-2 sm:grid-cols-2"
+                >
+                    {visibleOptions.map((option) => {
+                        const inputId = `${name}-${option.id}`;
+
+                        return (
+                            <label
+                                key={option.id}
+                                htmlFor={inputId}
+                                className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm transition-colors has-checked:border-primary/60 has-checked:bg-secondary/70"
+                            >
+                                <input
+                                    id={inputId}
+                                    type="checkbox"
+                                    name={`${name}[]`}
+                                    value={option.id}
+                                    form={form}
+                                    checked={selectedOptionIds.includes(
+                                        option.id,
+                                    )}
+                                    onChange={(
+                                        event: FormEvent<HTMLInputElement>,
+                                    ) => {
+                                        const nextSelectedIds = new Set(
+                                            selectedOptionIds,
+                                        );
+
+                                        if (event.currentTarget.checked) {
+                                            nextSelectedIds.add(option.id);
+                                        } else {
+                                            nextSelectedIds.delete(option.id);
+                                        }
+
+                                        const nextIds =
+                                            Array.from(nextSelectedIds);
+
+                                        if (onSelectionChange) {
+                                            onSelectionChange(nextIds);
+                                        } else {
+                                            setInternalSelectedIds(nextIds);
+                                        }
+                                    }}
+                                    disabled={disabled}
+                                    className="size-4 rounded border-input text-primary accent-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                />
+                                <span className="min-w-0 flex-1 truncate">
+                                    {option.name}
+                                </span>
+                                {option.status === 'inactive' ? (
+                                    <span className="text-2xs font-medium text-muted-foreground uppercase">
+                                        Inativo
+                                    </span>
+                                ) : null}
+                            </label>
+                        );
+                    })}
+                </div>
+            )}
+            {resource && remote.hasMore ? (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={remote.loading}
+                    onClick={() => remote.setPage((page) => page + 1)}
+                >
+                    {remote.loading ? 'Carregando…' : 'Carregar mais opções'}
+                </Button>
+            ) : null}
+        </div>
+    );
+}
+
+export function RelationQuantityFields({
+    options,
+    initial = {},
+    resource = 'services',
+    form,
+}: {
+    options: RelationOption[];
+    initial?: Record<string, number>;
+    resource?: RelationResource;
+    form?: string;
+}) {
+    const [selected, setSelected] = useState<Record<string, number>>(initial);
+    const [query, setQuery] = useState('');
+    const remote = useRemoteRelationOptions(resource, query);
+    const selectedIds = Object.keys(selected).filter(
+        (id) => (selected[id] ?? 0) > 0,
+    );
+    const selectedIdsSet = new Set(selectedIds);
+    const mergedOptions = Array.from(
+        new Map(
+            [
+                ...options.filter((option) => selectedIdsSet.has(option.id)),
+                ...remote.options,
+            ].map((option) => [option.id, option]),
+        ).values(),
+    );
+    const normalizedQuery = normalizeRelationSearch(query);
+    const visibleOptions = mergedOptions.filter((option) =>
+        normalizeRelationSearch(option.name).includes(normalizedQuery),
+    );
+    const hiddenSelectedIds = selectedIds.filter(
+        (id) => !visibleOptions.some((option) => option.id === id),
+    );
+    const totalSessions = selectedIds.reduce(
+        (total, id) => total + (selected[id] ?? 0),
+        0,
+    );
+
+    const updateQuantity = (id: string, quantity: number): void => {
+        setSelected((current) => ({
+            ...current,
+            [id]: quantity,
+        }));
+    };
+
+    return (
+        <div className="space-y-3">
+            <input
+                type="hidden"
+                name="total_sessions"
+                value={totalSessions}
+                form={form}
+            />
+            {form
+                ? hiddenSelectedIds.map((id) => (
+                      <div key={id}>
+                          <input
+                              type="hidden"
+                              name="service_ids[]"
+                              value={id}
+                              form={form}
+                          />
+                          <input
+                              type="hidden"
+                              name={`service_quantities[${id}]`}
+                              value={selected[id]}
+                              form={form}
+                          />
+                      </div>
+                  ))
+                : hiddenSelectedIds.map((id) => (
+                      <div key={id}>
+                          <input
+                              type="hidden"
+                              name="service_ids[]"
+                              value={id}
+                          />
+                          <input
+                              type="hidden"
+                              name={`service_quantities[${id}]`}
+                              value={selected[id]}
+                          />
+                      </div>
+                  ))}
+            <div className="space-y-2">
+                <Input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Pesquisar serviço"
+                    aria-label="Pesquisar serviços"
+                    autoComplete="off"
+                />
+                {remote.loading ? (
+                    <p role="status" className="text-xs text-muted-foreground">
+                        Carregando serviços…
+                    </p>
+                ) : null}
+                {remote.error ? (
+                    <div
+                        role="alert"
+                        className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                    >
+                        <span>Não foi possível carregar os serviços.</span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={remote.retry}
+                        >
+                            Tentar novamente
+                        </Button>
+                    </div>
+                ) : null}
+            </div>
+            {visibleOptions.length === 0 && !remote.loading ? (
+                <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                    {query
+                        ? 'Nenhum serviço encontrado.'
+                        : 'Nenhum serviço disponível nesta unidade ainda.'}
+                </p>
+            ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                    {visibleOptions.map((option) => {
+                        const quantity = selected[option.id] ?? 0;
+                        const inputId = `${option.id}-service-toggle`;
+
+                        return (
+                            <div
+                                key={option.id}
+                                className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-muted/20 p-3 transition-colors has-checked:border-primary/60 has-checked:bg-secondary/70"
+                            >
+                                <input
+                                    id={inputId}
+                                    type="checkbox"
+                                    name="service_ids[]"
+                                    value={option.id}
+                                    form={form}
+                                    checked={quantity > 0}
+                                    onChange={(event) =>
+                                        updateQuantity(
+                                            option.id,
+                                            event.currentTarget.checked
+                                                ? Math.max(1, quantity || 1)
+                                                : 0,
+                                        )
+                                    }
+                                    className="size-4 rounded border-input accent-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                />
+                                <label
+                                    htmlFor={inputId}
+                                    className="min-w-0 flex-1 truncate text-sm"
+                                >
+                                    {option.name}
+                                </label>
+                                <input
+                                    type="number"
+                                    name={`service_quantities[${option.id}]`}
+                                    min="1"
+                                    max="1000"
+                                    value={quantity || ''}
+                                    disabled={quantity === 0}
+                                    form={form}
+                                    onChange={(event) =>
+                                        updateQuantity(
+                                            option.id,
+                                            Math.max(
+                                                1,
+                                                Number(event.target.value) || 1,
+                                            ),
+                                        )
+                                    }
+                                    aria-label={`Quantidade de ${option.name}`}
+                                    className="h-9 w-20 rounded-md border bg-background px-2 text-center text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+            {remote.hasMore ? (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={remote.loading}
+                    onClick={() => remote.setPage((page) => page + 1)}
+                >
+                    {remote.loading ? 'Carregando…' : 'Carregar mais serviços'}
+                </Button>
+            ) : null}
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Total do pacote: </span>
+                <strong>
+                    {totalSessions} {totalSessions === 1 ? 'sessão' : 'sessões'}
+                </strong>
+                <p className="mt-1 text-xs text-muted-foreground">
+                    O total é calculado automaticamente pela soma dos serviços.
+                </p>
+            </div>
         </div>
     );
 }

@@ -40,7 +40,7 @@ final class ServiceController extends Controller
 
         return Inertia::render('services/index', [
             'services' => $services,
-            'professionalOptions' => $this->professionalOptions($context),
+            'hasProfessionals' => $this->hasProfessionals($context),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -52,29 +52,31 @@ final class ServiceController extends Controller
     {
         Gate::authorize('view', $service);
 
+        $service->load('professionals:id,name');
+        $professionalOptions = $service->professionals
+            ->map(fn (Professional $professional): array => [
+                'id' => (string) $professional->getKey(),
+                'name' => $professional->name,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('services/show', [
-            'service' => $service->load('professionals:id,name'),
-            'professionalOptions' => $this->professionalOptions($context),
+            'service' => $service,
+            'professionalOptions' => $professionalOptions,
+            'hasProfessionalOptions' => $this->hasProfessionals($context) || $professionalOptions !== [],
         ]);
     }
 
-    /** @return array<int, array{id:string,name:string}> */
-    private function professionalOptions(TenantContext $context): array
+    private function hasProfessionals(TenantContext $context): bool
     {
         return $context->unit === null
-            ? []
+            ? false
             : Professional::query()
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $context->unit->getKey())
                 ->where('status', 'active')
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn (Professional $professional): array => [
-                    'id' => (string) $professional->getKey(),
-                    'name' => $professional->name,
-                ])
-                ->values()
-                ->all();
+                ->exists();
     }
 
     public function store(ServiceRequest $request, TenantContext $context, CreateService $createService): RedirectResponse|JsonResponse
