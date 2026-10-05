@@ -897,10 +897,16 @@ it('shows package reservations by current and other sales on the sale page', fun
     [$owner, $tenant, $unit] = saleTestWorkspace();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+    ]);
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
         'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
         'status' => 'open',
     ]);
     $otherSale = Sale::factory()->create([

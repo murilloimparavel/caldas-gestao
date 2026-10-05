@@ -222,7 +222,7 @@ final class AddSaleItem extends OperationalAction
             $customerPackage = null;
 
             if (! empty($data['customer_package_id'])) {
-                if ($itemType !== 'service' || $serviceId === null || $lockedSale->customer_id === null) {
+                if ($itemType !== 'service' || $lockedSale->customer_id === null) {
                     throw ValidationException::withMessages([
                         'customer_package_id' => 'Pacotes só podem cobrir serviços de uma comanda vinculada a um cliente.',
                     ]);
@@ -276,7 +276,7 @@ final class AddSaleItem extends OperationalAction
                     ->where('customer_package_id', $customerPackage->getKey())
                     ->where('status', 'reserved')
                     ->sum('sessions_reserved');
-                $serviceAvailable = max(0, (int) ($serviceBalance?->remaining_quantity ?? 0) - $reservedServiceQuantity);
+                $serviceAvailable = max(0, (int) ($serviceBalance->remaining_quantity ?? 0) - $reservedServiceQuantity);
                 $packageAvailable = max(0, $customerPackage->remaining_sessions - $reservedPackageQuantity);
                 $coveredQuantity = min($quantity, $serviceAvailable, $packageAvailable);
 

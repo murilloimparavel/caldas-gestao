@@ -314,7 +314,6 @@ export default function SalesShow({
         setQuantity(1);
         setItemDiscountStr('');
         setSelectedCustomerPackageId('');
-        setCatalogSearch('');
     };
 
     const latestAdjustment = (sale.status_histories ?? [])
@@ -565,7 +564,11 @@ export default function SalesShow({
                                                 'X-Idempotency-Key': closeKey,
                                             }}
                                             onSubmit={(event) => {
-                                                if (!paymentAllocationValid) {
+                                                if (
+                                                    sale.final_amount_cents >
+                                                        0 &&
+                                                    !paymentAllocationValid
+                                                ) {
                                                     event.preventDefault();
                                                 }
                                             }}
@@ -633,24 +636,35 @@ export default function SalesShow({
                                                         </div>
                                                     </div>
 
-                                                    <PaymentAllocationFields
-                                                        key={closeKey}
-                                                        totalCents={
-                                                            sale.final_amount_cents
-                                                        }
-                                                        activeCashShift={
-                                                            active_cash_shift
-                                                        }
-                                                        errors={errors}
-                                                        onValidityChange={
-                                                            setPaymentAllocationValid
-                                                        }
-                                                        onRequestOpenCashShift={() =>
-                                                            setOpenCashShiftDialog(
-                                                                true,
-                                                            )
-                                                        }
-                                                    />
+                                                    {sale.final_amount_cents >
+                                                    0 ? (
+                                                        <PaymentAllocationFields
+                                                            key={closeKey}
+                                                            totalCents={
+                                                                sale.final_amount_cents
+                                                            }
+                                                            activeCashShift={
+                                                                active_cash_shift
+                                                            }
+                                                            errors={errors}
+                                                            onValidityChange={
+                                                                setPaymentAllocationValid
+                                                            }
+                                                            onRequestOpenCashShift={() =>
+                                                                setOpenCashShiftDialog(
+                                                                    true,
+                                                                )
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                                            Os serviços desta
+                                                            comanda foram
+                                                            cobertos pelo
+                                                            pacote. O fechamento
+                                                            não gera cobrança.
+                                                        </p>
+                                                    )}
 
                                                     <FormField
                                                         label="Observações do fechamento (opcional)"

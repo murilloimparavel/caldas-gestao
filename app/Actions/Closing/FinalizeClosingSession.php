@@ -48,6 +48,10 @@ final class FinalizeClosingSession extends OperationalAction
      */
     private function paymentAllocations(array $data, int $totalCents): array
     {
+        if ($totalCents === 0) {
+            return [];
+        }
+
         if (isset($data['payment_allocations'])) {
             return $data['payment_allocations'];
         }
@@ -289,6 +293,9 @@ final class FinalizeClosingSession extends OperationalAction
                 ->lockForUpdate()->first();
             if ($hasCash && $cashShift === null) {
                 throw ValidationException::withMessages(['payment_allocations' => 'Abra um novo turno de caixa para receber parcelas em dinheiro.']);
+            }
+            if ($calculatedFinalTotalCents === 0 && $allocations !== []) {
+                throw ValidationException::withMessages(['payment_allocations' => 'Uma comanda sem valor a receber não pode registrar pagamento.']);
             }
             foreach ($allocations as $index => $allocation) {
                 $method = $allocation['method'];

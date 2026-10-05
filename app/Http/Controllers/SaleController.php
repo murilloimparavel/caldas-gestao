@@ -168,7 +168,7 @@ final class SaleController extends Controller
 
                     return [
                         'id' => $package->getKey(),
-                        'name' => $package->name_snapshot ?? $package->packageTemplate?->name ?? 'Pacote de serviços',
+                        'name' => $package->name_snapshot ?? $package->packageTemplate->name ?? 'Pacote de serviços',
                         'remaining_sessions' => (int) $package->remaining_sessions,
                         'reserved_sessions' => $packageReserved,
                         'other_reserved_sessions' => $otherSaleReserved,
@@ -177,7 +177,7 @@ final class SaleController extends Controller
                         'expires_at' => $package->expires_at?->toDateString(),
                         'services' => $package->serviceBalances->map(fn ($balance): array => [
                             'id' => $balance->service_id,
-                            'name' => $balance->service?->name ?? 'Serviço',
+                            'name' => $balance->service->name ?? 'Serviço',
                             'allocated' => (int) $balance->allocated_quantity,
                             'remaining' => (int) $balance->remaining_quantity,
                             'reserved' => (int) $serviceReservations->get($balance->service_id, collect())->sum('sessions_reserved'),

@@ -140,6 +140,16 @@ type PackageTemplateOption = {
     validity_days: number;
 };
 
+const PACKAGE_PAYMENT_METHODS = [
+    { value: 'pix', label: 'PIX' },
+    { value: 'dinheiro', label: 'Dinheiro' },
+    { value: 'cartao_credito', label: 'Cartão de Crédito' },
+    { value: 'cartao_debito', label: 'Cartão de Débito' },
+    { value: 'boleto', label: 'Boleto Bancário' },
+    { value: 'transferencia', label: 'Transferência Bancária' },
+    { value: 'outros', label: 'Outro' },
+];
+
 type ActiveSubscription = {
     billing_cycle?: string;
     cancelled_at: string | null;
@@ -959,6 +969,60 @@ export default function CustomerShow({
                                                                 </FormField>
                                                             </div>
 
+                                                            {(packageTemplates.find(
+                                                                (template) =>
+                                                                    template.id ===
+                                                                    selectedPackageTemplateId,
+                                                            )?.price_cents ??
+                                                                0) > 0 && (
+                                                                <FormField
+                                                                    id="payment_method"
+                                                                    label="Forma de pagamento informada"
+                                                                    required
+                                                                    error={
+                                                                        errors.payment_method
+                                                                    }
+                                                                >
+                                                                    <select
+                                                                        id="payment_method"
+                                                                        name="payment_method"
+                                                                        required
+                                                                        defaultValue="pix"
+                                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                                                    >
+                                                                        {PACKAGE_PAYMENT_METHODS.map(
+                                                                            (
+                                                                                method,
+                                                                            ) => (
+                                                                                <option
+                                                                                    key={
+                                                                                        method.value
+                                                                                    }
+                                                                                    value={
+                                                                                        method.value
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        method.label
+                                                                                    }
+                                                                                </option>
+                                                                            ),
+                                                                        )}
+                                                                    </select>
+                                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                                        Informe
+                                                                        como o
+                                                                        cliente
+                                                                        pagou. O
+                                                                        sistema
+                                                                        registra
+                                                                        essa
+                                                                        confirmação
+                                                                        manual.
+                                                                    </p>
+                                                                </FormField>
+                                                            )}
+
                                                             <FormActions
                                                                 cancelLabel="Cancelar"
                                                                 onCancel={() =>
@@ -966,7 +1030,23 @@ export default function CustomerShow({
                                                                         false,
                                                                     )
                                                                 }
-                                                                submitLabel="Confirmar Venda"
+                                                                submitLabel={
+                                                                    selectedPackageTemplateId ===
+                                                                    ''
+                                                                        ? 'Selecionar pacote'
+                                                                        : (packageTemplates.find(
+                                                                                (
+                                                                                    template,
+                                                                                ) =>
+                                                                                    template.id ===
+                                                                                    selectedPackageTemplateId,
+                                                                            )
+                                                                                ?.price_cents ??
+                                                                                0) >
+                                                                            0
+                                                                          ? 'Confirmar venda e recebimento'
+                                                                          : 'Atribuir pacote gratuito'
+                                                                }
                                                                 submitting={
                                                                     processing
                                                                 }

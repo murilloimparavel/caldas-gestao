@@ -7,6 +7,8 @@ use App\Actions\Sales\AddSaleItem;
 use App\Actions\Sales\AdjustSale;
 use App\Actions\Sales\RemoveSaleItem;
 use App\Actions\Sales\TransitionSaleStatus;
+use App\Models\CashMovement;
+use App\Models\ClosingSessionPayment;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
@@ -197,13 +199,69 @@ it('reserves package sessions on service items, splits uncovered quantity, and c
         'customer_package_id' => $package->getKey(),
     ]))->toThrow(ValidationException::class);
 
-    (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$sale->getKey()], 'expected_total_cents' => 5000]);
+    (new FinalizeClosingSession)->handle($owner, $context, [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 5000,
+        'payment_method' => 'pix',
+    ]);
 
     expect($package->fresh()->remaining_sessions)->toBe(0)
         ->and($package->fresh()->status)->toBe('exhausted')
         ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(0)
         ->and(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('consumed')
         ->and(PackageUsage::query()->where('sale_item_id', $item->getKey())->value('sessions_consumed'))->toBe(2);
+});
+
+it('closes a fully package-covered service without a payment allocation', function (): void {
+    [$owner, $tenant, $unit] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 5000]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 0,
+        'final_amount_cents' => 0,
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'remaining_sessions' => 1,
+        'total_sessions' => 1,
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 1,
+        'remaining_quantity' => 1,
+    ]);
+
+    $this->actingAs($owner)->post(route('sales.items.store', $sale), [
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 0,
+    ])->assertSessionHasNoErrors();
+
+    expect($sale->fresh()->status)->toBe('finalized')
+        ->and($package->fresh()->remaining_sessions)->toBe(0)
+        ->and(ClosingSessionPayment::query()->exists())->toBeFalse()
+        ->and(CashMovement::query()->exists())->toBeFalse();
 });
 
 it('releases an open package reservation when its service item is removed', function (): void {

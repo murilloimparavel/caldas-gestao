@@ -675,7 +675,10 @@ export default function SalesIndex({
                                 'X-Idempotency-Key': closeKey,
                             }}
                             onSubmit={(event) => {
-                                if (!paymentAllocationValid) {
+                                if (
+                                    selectedTotal > 0 &&
+                                    !paymentAllocationValid
+                                ) {
                                     event.preventDefault();
                                 }
                             }}
@@ -751,18 +754,26 @@ export default function SalesIndex({
                                         </div>
                                     </div>
 
-                                    <PaymentAllocationFields
-                                        key={closeKey}
-                                        totalCents={selectedTotal}
-                                        activeCashShift={active_cash_shift}
-                                        errors={errors}
-                                        onValidityChange={
-                                            setPaymentAllocationValid
-                                        }
-                                        onRequestOpenCashShift={() =>
-                                            setOpenCashShiftDialog(true)
-                                        }
-                                    />
+                                    {selectedTotal > 0 ? (
+                                        <PaymentAllocationFields
+                                            key={closeKey}
+                                            totalCents={selectedTotal}
+                                            activeCashShift={active_cash_shift}
+                                            errors={errors}
+                                            onValidityChange={
+                                                setPaymentAllocationValid
+                                            }
+                                            onRequestOpenCashShift={() =>
+                                                setOpenCashShiftDialog(true)
+                                            }
+                                        />
+                                    ) : (
+                                        <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                            As comandas selecionadas foram
+                                            totalmente cobertas por pacotes. O
+                                            fechamento não gera cobrança.
+                                        </p>
+                                    )}
 
                                     <FormField
                                         label="Observações do fechamento (opcional)"
