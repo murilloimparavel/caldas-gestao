@@ -2293,7 +2293,7 @@ export default function CalendarIndex(props: CalendarProps) {
                     }
                 }}
             >
-                <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-y-auto p-4 sm:w-full sm:max-w-3xl sm:p-6">
+                <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-2rem)] overflow-y-auto p-4 sm:max-w-3xl sm:p-6 lg:w-full">
                     <DialogHeader>
                         <DialogTitle>
                             {editing
