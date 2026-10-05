@@ -71,6 +71,24 @@ type Props = {
     professionals: ProfessionalOption[];
     categories: SaleCategoryOption[];
     active_cash_shift?: CashShift | null;
+    customerPackages: CustomerPackageOption[];
+};
+
+type CustomerPackageOption = {
+    id: string;
+    name: string;
+    remaining_sessions: number;
+    reserved_sessions: number;
+    available_sessions: number;
+    expires_at: string | null;
+    services: Array<{
+        id: string;
+        name: string;
+        allocated: number;
+        remaining: number;
+        reserved: number;
+        available: number;
+    }>;
 };
 
 function formatDateTime(iso: string | null | undefined): string {
@@ -129,6 +147,7 @@ export default function SalesShow({
     products: initialProducts,
     professionals,
     active_cash_shift,
+    customerPackages,
 }: Props) {
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
@@ -166,6 +185,8 @@ export default function SalesShow({
     const [customPriceStr, setCustomPriceStr] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [itemDiscountStr, setItemDiscountStr] = useState('');
+    const [selectedCustomerPackageId, setSelectedCustomerPackageId] =
+        useState('');
 
     const handleServiceCreated = (created: CreatedEntity) => {
         const newOpt: ServiceOption = {
@@ -236,13 +257,40 @@ export default function SalesShow({
               : parseBrazilianCurrency(customPriceStr);
 
     const calculatedItemDiscountCents = parseBrazilianCurrency(itemDiscountStr);
+    const selectedPackage = customerPackages.find(
+        (customerPackage) => customerPackage.id === selectedCustomerPackageId,
+    );
+    const selectedPackageService = selectedPackage?.services.find(
+        (service) => service.id === selectedServiceId,
+    );
+    const estimatedCoveredQuantity = selectedPackageService
+        ? Math.min(
+              quantity,
+              selectedPackageService.available,
+              selectedPackage?.available_sessions ?? 0,
+          )
+        : 0;
     const calculatedItemSubtotalCents = Math.max(
         0,
-        calculatedUnitPriceCents * quantity - calculatedItemDiscountCents,
+        calculatedUnitPriceCents * (quantity - estimatedCoveredQuantity) -
+            calculatedItemDiscountCents,
     );
 
     const handleServiceChange = (serviceId: string) => {
         setSelectedServiceId(serviceId);
+        const packageStillEligible = customerPackages.some(
+            (customerPackage) =>
+                customerPackage.id === selectedCustomerPackageId &&
+                customerPackage.available_sessions > 0 &&
+                customerPackage.services.some(
+                    (service) =>
+                        service.id === serviceId && service.available > 0,
+                ),
+        );
+
+        if (!packageStillEligible) {
+            setSelectedCustomerPackageId('');
+        }
     };
 
     const handleProductChange = (productId: string) => {
@@ -258,6 +306,8 @@ export default function SalesShow({
         setCustomPriceStr('');
         setQuantity(1);
         setItemDiscountStr('');
+        setSelectedCustomerPackageId('');
+        setCatalogSearch('');
     };
 
     const latestAdjustment = (sale.status_histories ?? [])
@@ -822,6 +872,83 @@ export default function SalesShow({
                     )}
                 </div>
 
+                {customerPackages.length > 0 ? (
+                    <section className="surface-panel space-y-4 border-emerald-200/70 bg-emerald-50/40 p-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/15">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-xl bg-emerald-100 p-2 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                                <Package className="size-4" />
+                            </div>
+                            <div>
+                                <h2 className="font-semibold text-foreground">
+                                    Pacotes ativos deste cliente
+                                </h2>
+                                <p className="text-xs text-muted-foreground">
+                                    As sessões reservadas em outras comandas já
+                                    são descontadas da disponibilidade.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="grid gap-3 lg:grid-cols-2">
+                            {customerPackages.map((customerPackage) => (
+                                <div
+                                    key={customerPackage.id}
+                                    className="rounded-xl border border-border/80 bg-card p-3.5"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="font-medium text-foreground">
+                                            {customerPackage.name}
+                                        </p>
+                                        <Badge variant="secondary">
+                                            {customerPackage.available_sessions}{' '}
+                                            disponíveis
+                                        </Badge>
+                                    </div>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Saldo geral:{' '}
+                                        {customerPackage.remaining_sessions}{' '}
+                                        restantes
+                                        {customerPackage.reserved_sessions > 0
+                                            ? ` · ${customerPackage.reserved_sessions} reservadas em outras comandas`
+                                            : ''}
+                                        {customerPackage.expires_at
+                                            ? ` · vence em ${new Intl.DateTimeFormat('pt-BR').format(new Date(`${customerPackage.expires_at}T12:00:00`))}`
+                                            : ''}
+                                    </p>
+                                    <div className="mt-3 space-y-2">
+                                        {customerPackage.services.map(
+                                            (service) => (
+                                                <div
+                                                    key={service.id}
+                                                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-border/60 pt-2 text-xs"
+                                                >
+                                                    <span className="font-medium text-foreground">
+                                                        {service.name}
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                        {service.allocated -
+                                                            service.remaining}{' '}
+                                                        utilizadas ·{' '}
+                                                        {service.remaining}{' '}
+                                                        restantes
+                                                        {service.reserved > 0
+                                                            ? ` · ${service.reserved} reservadas`
+                                                            : ''}
+                                                        {' · '}
+                                                        <strong className="text-foreground">
+                                                            {service.available}{' '}
+                                                            disponíveis agora
+                                                        </strong>
+                                                    </span>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                ) : null}
+
                 {/* 2-Column Grid: Main Items + Summary Sidebar */}
                 <div className="grid gap-6 lg:grid-cols-12">
                     {/* Main Column: Items Table & Actions */}
@@ -886,6 +1013,13 @@ export default function SalesShow({
                                             >
                                                 {({ errors, processing }) => (
                                                     <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="customer_package_id"
+                                                            value={
+                                                                selectedCustomerPackageId
+                                                            }
+                                                        />
                                                         <FormErrorSummary
                                                             errors={errors}
                                                         />
@@ -1035,6 +1169,129 @@ export default function SalesShow({
                                                                         localOptionsOnly
                                                                     />
                                                                 </FormField>
+
+                                                                {customerPackages.some(
+                                                                    (
+                                                                        customerPackage,
+                                                                    ) =>
+                                                                        customerPackage.services.some(
+                                                                            (
+                                                                                service,
+                                                                            ) =>
+                                                                                service.id ===
+                                                                                    selectedServiceId &&
+                                                                                service.available >
+                                                                                    0,
+                                                                        ) &&
+                                                                        customerPackage.available_sessions >
+                                                                            0,
+                                                                ) ? (
+                                                                    <FormField
+                                                                        label="Cobrir com pacote (opcional)"
+                                                                        name="customer_package_id"
+                                                                        error={
+                                                                            errors.customer_package_id
+                                                                        }
+                                                                    >
+                                                                        <select
+                                                                            id="customer_package_id"
+                                                                            value={
+                                                                                selectedCustomerPackageId
+                                                                            }
+                                                                            onChange={(
+                                                                                event,
+                                                                            ) =>
+                                                                                setSelectedCustomerPackageId(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                            className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
+                                                                        >
+                                                                            <option value="">
+                                                                                Cobrar
+                                                                                o
+                                                                                serviço
+                                                                                normalmente
+                                                                            </option>
+                                                                            {customerPackages
+                                                                                .filter(
+                                                                                    (
+                                                                                        customerPackage,
+                                                                                    ) =>
+                                                                                        customerPackage.available_sessions >
+                                                                                            0 &&
+                                                                                        customerPackage.services.some(
+                                                                                            (
+                                                                                                service,
+                                                                                            ) =>
+                                                                                                service.id ===
+                                                                                                    selectedServiceId &&
+                                                                                                service.available >
+                                                                                                    0,
+                                                                                        ),
+                                                                                )
+                                                                                .map(
+                                                                                    (
+                                                                                        customerPackage,
+                                                                                    ) => {
+                                                                                        const balance =
+                                                                                            customerPackage.services.find(
+                                                                                                (
+                                                                                                    service,
+                                                                                                ) =>
+                                                                                                    service.id ===
+                                                                                                    selectedServiceId,
+                                                                                            );
+
+                                                                                        return (
+                                                                                            <option
+                                                                                                key={
+                                                                                                    customerPackage.id
+                                                                                                }
+                                                                                                value={
+                                                                                                    customerPackage.id
+                                                                                                }
+                                                                                            >
+                                                                                                {
+                                                                                                    customerPackage.name
+                                                                                                }{' '}
+                                                                                                ·{' '}
+                                                                                                {balance?.available ??
+                                                                                                    0}{' '}
+                                                                                                disponíveis
+                                                                                                para
+                                                                                                este
+                                                                                                serviço
+                                                                                            </option>
+                                                                                        );
+                                                                                    },
+                                                                                )}
+                                                                        </select>
+                                                                        {selectedPackageService ? (
+                                                                            <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
+                                                                                {
+                                                                                    estimatedCoveredQuantity
+                                                                                }{' '}
+                                                                                de{' '}
+                                                                                {
+                                                                                    quantity
+                                                                                }{' '}
+                                                                                unidade(s)
+                                                                                coberta(s);
+                                                                                parcela
+                                                                                a
+                                                                                pagar:{' '}
+                                                                                {formatMoney(
+                                                                                    calculatedItemSubtotalCents,
+                                                                                )}
+
+                                                                                .
+                                                                            </p>
+                                                                        ) : null}
+                                                                    </FormField>
+                                                                ) : null}
                                                             </div>
                                                         ) : null}
 
@@ -1283,8 +1540,10 @@ export default function SalesShow({
                                                         {/* Item Preview Total */}
                                                         <div className="flex items-center justify-between rounded-xl bg-muted/40 p-3 text-sm">
                                                             <span className="text-muted-foreground">
-                                                                Subtotal
-                                                                estimado:
+                                                                {estimatedCoveredQuantity >
+                                                                0
+                                                                    ? `A pagar (${estimatedCoveredQuantity} coberta${estimatedCoveredQuantity > 1 ? 's' : ''}):`
+                                                                    : 'Subtotal estimado:'}
                                                             </span>
                                                             <span className="font-semibold text-foreground">
                                                                 {formatMoney(
@@ -1394,6 +1653,36 @@ export default function SalesShow({
                                                                         }
                                                                     </span>
                                                                 </div>
+                                                                {(
+                                                                    item as SaleItem & {
+                                                                        covered_quantity: number;
+                                                                    }
+                                                                )
+                                                                    .covered_quantity >
+                                                                0 ? (
+                                                                    <span className="pl-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                                                        {
+                                                                            (
+                                                                                item as SaleItem & {
+                                                                                    covered_quantity: number;
+                                                                                }
+                                                                            )
+                                                                                .covered_quantity
+                                                                        }{' '}
+                                                                        de{' '}
+                                                                        {
+                                                                            item.quantity
+                                                                        }{' '}
+                                                                        sessão(ões)
+                                                                        coberta(s)
+                                                                        pelo
+                                                                        pacote ·
+                                                                        R$ 0,00
+                                                                        a pagar
+                                                                        nessas
+                                                                        sessões
+                                                                    </span>
+                                                                ) : null}
                                                             </div>
                                                         </td>
                                                         <td className="px-3 py-3.5 text-xs text-muted-foreground">
