@@ -46,6 +46,8 @@ final class AdjustSale extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         $reason = trim($reason);
         if ($reason === '') {
             throw ValidationException::withMessages([

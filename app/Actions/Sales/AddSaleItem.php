@@ -30,6 +30,8 @@ final class AddSaleItem extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         if (! in_array($sale->status, ['draft', 'open', 'ready_to_bill'], true)) {
             throw ValidationException::withMessages([
                 'sale' => 'Apenas comandas em aberto ou em rascunho podem receber novos itens.',
@@ -173,6 +175,11 @@ final class AddSaleItem extends OperationalAction
             $professionalId = isset($data['professional_id']) && ! empty($data['professional_id'])
                 ? (string) $data['professional_id']
                 : null;
+            $linkedProfessionalId = $this->assertProfessional($context, $professionalId);
+
+            if ($linkedProfessionalId !== null && $professionalId === null && $itemType !== 'product') {
+                $professionalId = $linkedProfessionalId;
+            }
 
             if ($professionalId !== null) {
                 $professionalExists = Professional::query()
@@ -192,6 +199,12 @@ final class AddSaleItem extends OperationalAction
             $sellerProfessionalId = isset($data['seller_professional_id']) && ! empty($data['seller_professional_id'])
                 ? (string) $data['seller_professional_id']
                 : null;
+
+            $sellerProfessionalId = $this->assertProfessional($context, $sellerProfessionalId);
+
+            if ($linkedProfessionalId !== null && $sellerProfessionalId === null && $itemType === 'product') {
+                $sellerProfessionalId = $linkedProfessionalId;
+            }
 
             if ($sellerProfessionalId !== null) {
                 $sellerProfessionalExists = Professional::query()

@@ -21,9 +21,13 @@ final class UpdateScheduleBlock extends OperationalAction
         if ($block->tenant_id !== $context->tenant->getKey() || $block->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The schedule block belongs to another workspace.');
         }
+        if (! $this->professionalScope->ownsScheduleBlock($context, $block)) {
+            throw new AuthorizationException('O bloqueio não pertence ao profissional vinculado.');
+        }
         if ($data['professional_id'] !== null) {
             Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
         }
+        $data['professional_id'] = $this->assertProfessional($context, $data['professional_id'] === null ? null : (string) $data['professional_id']);
 
         return DB::transaction(function () use ($actor, $context, $block, $data): ScheduleBlock {
             $locked = ScheduleBlock::query()->whereKey($block->getKey())->lockForUpdate()->firstOrFail();

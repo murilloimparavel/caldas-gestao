@@ -24,6 +24,8 @@ final class RemoveSaleItem extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         if ($item->sale_id !== $sale->getKey() || $item->tenant_id !== $tenantId || $item->unit_id !== $unitId) {
             throw new AuthorizationException('O item não pertence a esta comanda.');
         }
