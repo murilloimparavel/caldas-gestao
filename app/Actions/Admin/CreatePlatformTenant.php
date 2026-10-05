@@ -10,16 +10,20 @@ use App\Models\PlatformPlan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Models\User;
+use App\Support\AuditEventWriter;
 use Illuminate\Support\Facades\DB;
 
 final class CreatePlatformTenant
 {
-    public function __construct(private readonly OnboardTenant $onboard) {}
+    public function __construct(
+        private readonly OnboardTenant $onboard,
+        private readonly AuditEventWriter $audit = new AuditEventWriter,
+    ) {}
 
     /** @param array<string, mixed> $data */
-    public function handle(array $data): Tenant
+    public function handle(User $actor, array $data): Tenant
     {
-        return DB::transaction(function () use ($data): Tenant {
+        return DB::transaction(function () use ($actor, $data): Tenant {
             $owner = User::query()->create([
                 'name' => $data['owner_name'], 'email' => $data['owner_email'],
                 'password' => $data['owner_password'], 'must_change_password' => true,
@@ -57,6 +61,14 @@ final class CreatePlatformTenant
                     ],
                 );
             }
+
+            $this->audit->record([
+                'actor_user_id' => $actor->getKey(),
+                'tenant_id' => $tenant->getKey(),
+                'action' => 'platform.tenant.created',
+                'resource_type' => 'tenant',
+                'resource_id' => $tenant->getKey(),
+            ]);
 
             return $tenant->fresh(['memberships.user', 'units']);
         }, 5);

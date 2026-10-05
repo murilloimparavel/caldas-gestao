@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 use Tests\Concerns\RefreshDatabase;
@@ -106,6 +108,29 @@ class PasswordResetTest extends TestCase
 
             return true;
         });
+    }
+
+    public function test_password_reset_revokes_database_sessions_and_remember_token(): void
+    {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create();
+        $user->forceFill(['remember_token' => 'old-token'])->saveQuietly();
+        $rememberToken = $user->remember_token;
+
+        DB::table('sessions')->insert([
+            'id' => 'password-reset-session',
+            'user_id' => $user->getKey(),
+            'payload' => 'payload',
+            'last_activity' => now()->timestamp,
+        ]);
+
+        app(ResetUserPassword::class)->reset($user, [
+            'password' => 'New-password-123!',
+            'password_confirmation' => 'New-password-123!',
+        ]);
+
+        expect(DB::table('sessions')->where('user_id', $user->getKey())->exists())->toBeFalse()
+            ->and($user->fresh()->remember_token)->not->toBe($rememberToken);
     }
 
     public function test_password_cannot_be_reset_with_invalid_token(): void

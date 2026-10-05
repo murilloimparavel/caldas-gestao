@@ -75,4 +75,5 @@ export type AuthLayoutProps = {
     name?: string;
     title?: string;
     description?: string;
+    admin?: boolean;
 };

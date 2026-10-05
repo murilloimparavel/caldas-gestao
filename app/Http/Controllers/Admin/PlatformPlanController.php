@@ -22,32 +22,43 @@ final class PlatformPlanController extends Controller
 
     public function store(PlatformPlanRequest $request, AuditEventWriter $audit): RedirectResponse
     {
-        $plan = DB::transaction(fn (): PlatformPlan => PlatformPlan::query()->create($request->validated()));
-        $this->audit($audit, $request->user(), 'platform.plan.created', $plan);
+        DB::transaction(function () use ($audit, $request): void {
+            $plan = PlatformPlan::query()->create($request->validated());
+            $this->audit($audit, $request->user(), 'platform.plan.created', $plan);
+        });
 
         return to_route('admin.plans.index')->with('success', 'Plano criado.');
     }
 
     public function update(PlatformPlanRequest $request, PlatformPlan $platformPlan, AuditEventWriter $audit): RedirectResponse
     {
-        $platformPlan->update($request->validated());
-        $this->audit($audit, $request->user(), 'platform.plan.updated', $platformPlan, ['key' => $platformPlan->key, 'price_cents' => $platformPlan->price_cents, 'billing_cycle' => $platformPlan->billing_cycle, 'is_active' => $platformPlan->is_active]);
+        DB::transaction(function () use ($audit, $platformPlan, $request): void {
+            $platformPlan = PlatformPlan::query()->whereKey($platformPlan->getKey())->lockForUpdate()->firstOrFail();
+            $platformPlan->update($request->validated());
+            $this->audit($audit, $request->user(), 'platform.plan.updated', $platformPlan, ['key' => $platformPlan->key, 'price_cents' => $platformPlan->price_cents, 'billing_cycle' => $platformPlan->billing_cycle, 'is_active' => $platformPlan->is_active]);
+        });
 
         return back()->with('success', 'Plano atualizado.');
     }
 
     public function deactivate(Request $request, PlatformPlan $platformPlan, AuditEventWriter $audit): RedirectResponse
     {
-        $platformPlan->update(['is_active' => false]);
-        $this->audit($audit, $request->user(), 'platform.plan.deactivated', $platformPlan);
+        DB::transaction(function () use ($audit, $platformPlan, $request): void {
+            $platformPlan = PlatformPlan::query()->whereKey($platformPlan->getKey())->lockForUpdate()->firstOrFail();
+            $platformPlan->update(['is_active' => false]);
+            $this->audit($audit, $request->user(), 'platform.plan.deactivated', $platformPlan);
+        });
 
         return back()->with('success', 'Plano desativado.');
     }
 
     public function reactivate(Request $request, PlatformPlan $platformPlan, AuditEventWriter $audit): RedirectResponse
     {
-        $platformPlan->update(['is_active' => true]);
-        $this->audit($audit, $request->user(), 'platform.plan.reactivated', $platformPlan);
+        DB::transaction(function () use ($audit, $platformPlan, $request): void {
+            $platformPlan = PlatformPlan::query()->whereKey($platformPlan->getKey())->lockForUpdate()->firstOrFail();
+            $platformPlan->update(['is_active' => true]);
+            $this->audit($audit, $request->user(), 'platform.plan.reactivated', $platformPlan);
+        });
 
         return back()->with('success', 'Plano reativado.');
     }
