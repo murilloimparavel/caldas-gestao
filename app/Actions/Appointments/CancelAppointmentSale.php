@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\Appointment;
 use App\Models\AppointmentSaleLink;
 use App\Models\CashMovement;
+use App\Models\PackageUsageReservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SaleStatusHistory;
@@ -122,6 +123,28 @@ final class CancelAppointmentSale extends OperationalAction
                 'status' => 'cancelled',
                 'lock_version' => $sale->lock_version,
             ]);
+
+            $reservations = PackageUsageReservation::query()
+                ->where('tenant_id', $sale->tenant_id)
+                ->where('unit_id', $sale->unit_id)
+                ->where('sale_id', $sale->getKey())
+                ->where('status', 'reserved')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($reservations as $reservation) {
+                $reservation->forceFill([
+                    'status' => 'released',
+                    'released_at' => now(),
+                    'release_reason' => 'Agendamento cancelado',
+                ])->save();
+
+                $this->events->record($actor, $context, 'package_usage.reservation_released', $reservation, [
+                    'package_usage_id' => $reservation->getKey(),
+                    'quantity' => $reservation->sessions_reserved,
+                    'reason_code' => 'appointment_cancelled',
+                ]);
+            }
         }
 
         return $sale->fresh(['items', 'appointmentLink']);

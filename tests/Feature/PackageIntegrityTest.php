@@ -1,13 +1,20 @@
 <?php
 
+use App\Actions\Closing\FinalizeClosingSession;
 use App\Actions\Identity\OnboardTenant;
 use App\Actions\Marketing\Packages\ConsumePackageSession;
+use App\Actions\Sales\AddSaleItem;
+use App\Actions\Sales\RemoveSaleItem;
+use App\Actions\Sales\TransitionSaleStatus;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\IdempotencyKey;
 use App\Models\PackageTemplate;
 use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
 use App\Models\Sale;
+use App\Models\SaleCategory;
 use App\Models\SaleItem;
 use App\Models\Service;
 use App\Models\Tenant;
@@ -15,6 +22,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /** @return array{0: User, 1: Tenant, 2: Unit, 3: TenantContext} */
 function packageIntegrityWorkspace(): array
@@ -120,6 +128,123 @@ it('consumes only an eligible service item from the selected customer sale', fun
         'sale_id' => $sale->getKey(),
         'sale_item_id' => $ineligibleItem->getKey(),
     ]))->toThrow(InvalidArgumentException::class, 'not eligible');
+});
+
+it('reserves package sessions on service items, splits uncovered quantity, and consumes the reservation at closing', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 5000]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 0,
+        'final_amount_cents' => 0,
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 2]],
+        'total_sessions' => 2,
+        'remaining_sessions' => 2,
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 2,
+        'remaining_quantity' => 2,
+    ]);
+
+    $this->actingAs($owner)->post(route('sales.items.store', $sale), [
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'quantity' => 3,
+    ])->assertSessionHasNoErrors();
+    $item = SaleItem::query()->where('sale_id', $sale->getKey())->firstOrFail();
+
+    expect($item->unit_price_cents)->toBe(5000)
+        ->and($item->quantity)->toBe(3)
+        ->and($item->covered_quantity)->toBe(2)
+        ->and($item->total_cents)->toBe(5000)
+        ->and($sale->fresh()->final_amount_cents)->toBe(5000)
+        ->and(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('reserved')
+        ->and($package->fresh()->remaining_sessions)->toBe(2);
+
+    expect(fn () => (new AddSaleItem)->handle($owner, $context, $sale->fresh(), [
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+    ]))->toThrow(ValidationException::class);
+
+    (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$sale->getKey()], 'expected_total_cents' => 5000]);
+
+    expect($package->fresh()->remaining_sessions)->toBe(0)
+        ->and($package->fresh()->status)->toBe('exhausted')
+        ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(0)
+        ->and(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('consumed')
+        ->and(PackageUsage::query()->where('sale_item_id', $item->getKey())->value('sessions_consumed'))->toBe(2);
+});
+
+it('releases an open package reservation when its service item is removed', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'service']);
+    $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open', 'total_amount_cents' => 0, 'final_amount_cents' => 0]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(), 'allocated_quantity' => 1, 'remaining_quantity' => 1,
+    ]);
+    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
+    ]);
+
+    (new RemoveSaleItem)->handle($owner, $context, $sale, $item);
+
+    expect(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('released')
+        ->and($sale->fresh()->final_amount_cents)->toBe(0)
+        ->and($package->fresh()->remaining_sessions)->toBe(5)
+        ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(1);
+});
+
+it('releases package reservations when an open sale is cancelled', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'service']);
+    $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open', 'total_amount_cents' => 0, 'final_amount_cents' => 0]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(), 'allocated_quantity' => 1, 'remaining_quantity' => 1,
+    ]);
+    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
+    ]);
+
+    (new TransitionSaleStatus)->handle($owner, $context, $sale, 'cancelled');
+
+    expect(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('released')
+        ->and($package->fresh()->remaining_sessions)->toBe(5)
+        ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(1);
 });
 
 it('tracks quantities and consumption independently for each package service', function (): void {

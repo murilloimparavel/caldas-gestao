@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
@@ -120,7 +121,15 @@ final class ConsumePackageSession extends OperationalAction
                     ->lockForUpdate()
                     ->first();
 
-                if ($balance !== null && $balance->remaining_quantity < $sessionsToConsume) {
+                $reservedServiceQuantity = (int) PackageUsageReservation::query()
+                    ->where('tenant_id', $context->tenant->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->where('customer_package_id', $locked->getKey())
+                    ->where('service_id', $serviceId)
+                    ->where('status', 'reserved')
+                    ->sum('sessions_reserved');
+
+                if ($balance !== null && $balance->remaining_quantity - $reservedServiceQuantity < $sessionsToConsume) {
                     throw new ConflictHttpException('Not enough sessions remaining for this service.');
                 }
 
@@ -136,8 +145,16 @@ final class ConsumePackageSession extends OperationalAction
                 }
             }
 
-            if ($locked->remaining_sessions < $sessionsToConsume) {
-                throw new ConflictHttpException("Not enough sessions remaining. Available: {$locked->remaining_sessions}, requested: {$sessionsToConsume}.");
+            $reservedPackageQuantity = (int) PackageUsageReservation::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $unit->getKey())
+                ->where('customer_package_id', $locked->getKey())
+                ->where('status', 'reserved')
+                ->sum('sessions_reserved');
+            $availableSessions = $locked->remaining_sessions - $reservedPackageQuantity;
+
+            if ($availableSessions < $sessionsToConsume) {
+                throw new ConflictHttpException("Not enough sessions remaining. Available: {$availableSessions}, requested: {$sessionsToConsume}.");
             }
 
             $newRemaining = $locked->remaining_sessions - $sessionsToConsume;

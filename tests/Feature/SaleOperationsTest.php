@@ -362,7 +362,7 @@ it('handles uniqueness scopes and returns existing active sale idempotently', fu
     expect(Sale::query()->where('sale_category_id', $noneCategory->getKey())->count())->toBe(2);
 });
 
-it('adds service, product and custom items with immutable snapshots and computes totals', function () {
+it('allows regular service items without a package and adds product and custom items with snapshots', function () {
     [$owner, $tenant, $unit] = saleTestWorkspace();
 
     $category = SaleCategory::factory()->create([

@@ -117,6 +117,12 @@ class CustomerPackage extends Model
         return $this->hasMany(PackageUsage::class);
     }
 
+    /** @return HasMany<PackageUsageReservation, $this> */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(PackageUsageReservation::class);
+    }
+
     /** @return HasMany<CustomerPackageService, $this> */
     public function serviceBalances(): HasMany
     {
