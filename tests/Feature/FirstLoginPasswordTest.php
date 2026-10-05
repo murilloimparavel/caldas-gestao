@@ -67,7 +67,7 @@ it('updates the password and completes the first login state', function (): void
         ->and($user->first_login_at)->not->toBeNull();
     expect(Hash::check('New-password-123!', $user->password))->toBeTrue();
     expect($user->remember_token)->not->toBe($rememberToken)
-        ->and(DB::table('sessions')->where('user_id', $user->getKey())->exists())->toBeFalse();
+        ->and(DB::table('sessions')->where('id', 'first-login-password-session')->exists())->toBeFalse();
 });
 
 it('blocks access when the temporary password has expired', function (): void {

@@ -108,7 +108,7 @@ class SecurityTest extends TestCase
         $user->refresh();
         $this->assertTrue(Hash::check('new-password', $user->password));
         $this->assertNotSame($rememberToken, $user->remember_token);
-        $this->assertFalse(DB::table('sessions')->where('user_id', $user->getKey())->exists());
+        $this->assertDatabaseMissing('sessions', ['id' => 'password-update-session']);
     }
 
     public function test_correct_password_must_be_provided_to_update_password()
