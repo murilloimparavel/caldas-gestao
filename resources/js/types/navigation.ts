@@ -18,6 +18,7 @@ export type SidebarNavItem = Omit<NavItem, 'href'> & {
     disabled?: boolean;
     permission?: string;
     adminOnly?: boolean;
+    permissions?: string[];
 };
 
 export type SidebarNavGroup = {

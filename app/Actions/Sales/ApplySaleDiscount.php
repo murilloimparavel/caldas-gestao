@@ -29,9 +29,12 @@ final class ApplySaleDiscount extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         return DB::transaction(function () use ($actor, $context, $sale, $data): Sale {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if (isset($data['lock_version']) && $lockedSale->lock_version !== (int) $data['lock_version']) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');

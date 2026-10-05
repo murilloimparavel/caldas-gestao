@@ -37,6 +37,9 @@ final class TransferAppointmentItemsToSale extends OperationalAction
             ]);
         }
 
+        $this->assertOwnAppointment($context, $appointment);
+        $this->assertOwnSale($context, $sale);
+
         return DB::transaction(function () use ($actor, $context, $sale, $appointment, $permission, $tenantId, $unitId): Sale {
             $appointmentItems = AppointmentItem::query()
                 ->where('tenant_id', $tenantId)
@@ -57,6 +60,7 @@ final class TransferAppointmentItemsToSale extends OperationalAction
             }
 
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
             $existingItems = $lockedSale->items()->get();
 
             $allocatedPackageCounts = [];

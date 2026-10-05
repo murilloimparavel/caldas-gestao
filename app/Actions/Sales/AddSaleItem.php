@@ -65,6 +65,8 @@ final class AddSaleItem extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         if (! in_array($sale->status, ['draft', 'open', 'ready_to_bill'], true)) {
             throw ValidationException::withMessages([
                 'sale' => 'Apenas comandas em aberto ou em rascunho podem receber novos itens.',
@@ -85,6 +87,7 @@ final class AddSaleItem extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $sale, $data, $itemType, $sourceId, $tenantId, $unitId, $packageGuardDate): SaleItem {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if (isset($data['lock_version']) && $lockedSale->lock_version !== (int) $data['lock_version']) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');
@@ -273,6 +276,11 @@ final class AddSaleItem extends OperationalAction
             $professionalId = isset($data['professional_id']) && ! empty($data['professional_id'])
                 ? (string) $data['professional_id']
                 : null;
+            $linkedProfessionalId = $this->assertProfessional($context, $professionalId);
+
+            if ($linkedProfessionalId !== null && $professionalId === null && $itemType !== 'product') {
+                $professionalId = $linkedProfessionalId;
+            }
 
             if ($itemType === 'package' && $professionalId === null) {
                 throw ValidationException::withMessages([
@@ -303,6 +311,12 @@ final class AddSaleItem extends OperationalAction
                 throw ValidationException::withMessages([
                     'seller_professional_id' => 'Pacotes usam o profissional executor, não o profissional vendedor.',
                 ]);
+            } elseif ($itemType !== 'package') {
+                $sellerProfessionalId = $this->assertProfessional($context, $sellerProfessionalId);
+
+                if ($linkedProfessionalId !== null && $sellerProfessionalId === null && $itemType === 'product') {
+                    $sellerProfessionalId = $linkedProfessionalId;
+                }
             }
 
             if ($sellerProfessionalId !== null) {

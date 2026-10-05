@@ -11,20 +11,24 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use stdClass;
 
 class GetDashboardSnapshot
 {
+    private ?string $professionalId = null;
+
     /**
      * Execute the snapshot aggregation action.
      *
      * @param  array{preset?: string, start_date?: string, end_date?: string}  $filters
      * @return array<string, mixed>
      */
-    public function handle(Tenant $tenant, ?Unit $unit = null, array $filters = []): array
+    public function handle(Tenant $tenant, ?Unit $unit = null, array $filters = [], ?string $professionalId = null): array
     {
+        $this->professionalId = $professionalId;
         $preset = $filters['preset'] ?? '30d';
 
         $timezone = $unit?->timezone ?: $tenant->timezone ?: config('app.timezone');
@@ -36,22 +40,22 @@ class GetDashboardSnapshot
         $prevStartDate = $prevEndDate->subDays($daysCount - 1)->startOfDay();
 
         // Query builders base
-        $currentSalesQuery = Sale::query()
+        $currentSalesQuery = $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate));
 
-        $prevSalesQuery = Sale::query()
+        $prevSalesQuery = $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('created_at', $this->utcDateRange($prevStartDate, $prevEndDate));
 
-        $currentAppointmentsQuery = Appointment::query()
+        $currentAppointmentsQuery = $this->constrainAppointments(Appointment::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate));
 
-        $prevAppointmentsQuery = Appointment::query()
+        $prevAppointmentsQuery = $this->constrainAppointments(Appointment::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('starts_at', $this->utcDateRange($prevStartDate, $prevEndDate));
@@ -70,20 +74,22 @@ class GetDashboardSnapshot
         // 2. Sales metrics
         $currentOrphanPackageRevenue = $this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate);
         $prevOrphanPackageRevenue = $this->orphanPaidPackageObligations($tenant, $unit, $prevStartDate, $prevEndDate);
-        $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'finalized')->sum('final_amount_cents')
-            + (int) $currentOrphanPackageRevenue->sum('amount_cents');
-        $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'finalized')->sum('final_amount_cents')
-            + (int) $prevOrphanPackageRevenue->sum('amount_cents');
+        $totalSalesCents = $this->sumScopedSaleAmounts((clone $currentSalesQuery)->where('status', 'finalized')->with('items')->get())
+            + ($this->professionalId === null ? (int) $currentOrphanPackageRevenue->sum('amount_cents') : 0);
+        $prevTotalSalesCents = $this->sumScopedSaleAmounts((clone $prevSalesQuery)->where('status', 'finalized')->with('items')->get())
+            + ($this->professionalId === null ? (int) $prevOrphanPackageRevenue->sum('amount_cents') : 0);
 
         $todayStart = CarbonImmutable::now($timezone)->startOfDay();
         $todayEnd = CarbonImmutable::now($timezone)->endOfDay();
-        $todaySalesCents = (int) Sale::query()
+        $todaySalesCents = $this->sumScopedSaleAmounts($this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
             ->whereBetween('created_at', $this->utcDateRange($todayStart, $todayEnd))
-            ->sum('final_amount_cents')
-            + (int) $this->orphanPaidPackageObligations($tenant, $unit, $todayStart, $todayEnd)->sum('amount_cents');
+            ->with('items')->get());
+        if ($this->professionalId === null) {
+            $todaySalesCents += (int) $this->orphanPaidPackageObligations($tenant, $unit, $todayStart, $todayEnd)->sum('amount_cents');
+        }
 
         $salesVariationPercentage = $this->calculateVariation($totalSalesCents, $prevTotalSalesCents);
 
@@ -196,6 +202,42 @@ class GetDashboardSnapshot
         };
     }
 
+    /**
+     * @param  Builder<Sale>  $query
+     * @return Builder<Sale>
+     */
+    private function constrainSales(Builder $query): Builder
+    {
+        if ($this->professionalId === null) {
+            return $query;
+        }
+
+        $professionalId = $this->professionalId;
+
+        return $query->where(function (Builder $saleQuery) use ($professionalId): void {
+            $saleQuery
+                ->where('professional_id', $professionalId)
+                ->orWhereHas('items', function (Builder $itemsQuery) use ($professionalId): void {
+                    $itemsQuery->where(function (Builder $query) use ($professionalId): void {
+                        $query->where('professional_id', $professionalId)
+                            ->orWhere('seller_professional_id', $professionalId);
+                    });
+                })
+                ->orWhereHas('appointmentLink.appointment', fn (Builder $appointmentQuery) => $appointmentQuery->where('professional_id', $professionalId));
+        });
+    }
+
+    /**
+     * @param  Builder<Appointment>  $query
+     * @return Builder<Appointment>
+     */
+    private function constrainAppointments(Builder $query): Builder
+    {
+        return $this->professionalId === null
+            ? $query
+            : $query->where('professional_id', $this->professionalId);
+    }
+
     private function calculateVariation(float|int $current, float|int $previous): float
     {
         if ($previous == 0) {
@@ -216,6 +258,32 @@ class GetDashboardSnapshot
         return 'R$ '.number_format($cents / 100, 2, ',', '.');
     }
 
+    /** @param Collection<int, Sale> $sales */
+    private function sumScopedSaleAmounts(Collection $sales): int
+    {
+        return (int) $sales->sum(fn (Sale $sale): int => $this->scopedSaleAmount($sale));
+    }
+
+    private function scopedSaleAmount(Sale $sale): int
+    {
+        if ($this->professionalId === null) {
+            return (int) $sale->final_amount_cents;
+        }
+
+        $items = $sale->items;
+        $ownedItems = $items->filter(fn ($item): bool => $item->professional_id === $this->professionalId || $item->seller_professional_id === $this->professionalId);
+        if ($ownedItems->isEmpty()) {
+            return $sale->professional_id === $this->professionalId && $items->isEmpty()
+                ? (int) $sale->final_amount_cents
+                : 0;
+        }
+
+        $gross = (int) $items->sum('total_cents');
+        $ownedGross = (int) $ownedItems->sum('total_cents');
+
+        return $gross > 0 ? (int) round((int) $sale->final_amount_cents * ($ownedGross / $gross)) : 0;
+    }
+
     private function getTrend(float $variation): string
     {
         if ($variation > 0) {
@@ -233,19 +301,22 @@ class GetDashboardSnapshot
      */
     private function calculateSalesSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $sales = Sale::query()
-            ->select(['created_at', 'final_amount_cents'])
+        $sales = $this->constrainSales(Sale::query())
+            ->select(['id', 'created_at', 'final_amount_cents'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
             ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate))
+            ->with('items')
             ->get()
             ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
-            ->map(fn (Collection $daySales): int => (int) $daySales->sum('final_amount_cents'));
+            ->map(fn (Collection $daySales): int => $this->sumScopedSaleAmounts($daySales));
 
-        foreach ($this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate) as $obligation) {
-            $dateKey = CarbonImmutable::parse((string) $obligation->paid_date, $timezone)->toDateString();
-            $sales[$dateKey] = (int) ($sales[$dateKey] ?? 0) + (int) $obligation->amount_cents;
+        if ($this->professionalId === null) {
+            foreach ($this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate) as $obligation) {
+                $dateKey = CarbonImmutable::parse((string) $obligation->paid_date, $timezone)->toDateString();
+                $sales[$dateKey] = (int) ($sales[$dateKey] ?? 0) + (int) $obligation->amount_cents;
+            }
         }
 
         $data = [];
@@ -264,7 +335,7 @@ class GetDashboardSnapshot
      */
     private function calculateAppointmentsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $appointments = Appointment::query()
+        $appointments = $this->constrainAppointments(Appointment::query())
             ->select(['starts_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -289,8 +360,8 @@ class GetDashboardSnapshot
      */
     private function calculateTicketsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $tickets = Sale::query()
-            ->select(['created_at'])
+        $tickets = $this->constrainSales(Sale::query())
+            ->select(['id', 'created_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
@@ -315,7 +386,7 @@ class GetDashboardSnapshot
      */
     private function calculateVisitsTrend(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $appointments = Appointment::query()
+        $appointments = $this->constrainAppointments(Appointment::query())
             ->select(['starts_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -325,19 +396,22 @@ class GetDashboardSnapshot
             ->groupBy(fn (Appointment $appointment): string => CarbonImmutable::parse($appointment->starts_at)->setTimezone($timezone)->toDateString())
             ->map->count();
 
-        $sales = Sale::query()
-            ->select(['created_at', 'final_amount_cents'])
+        $sales = $this->constrainSales(Sale::query())
+            ->select(['id', 'created_at', 'final_amount_cents'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
             ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate))
+            ->with('items')
             ->get()
             ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
-            ->map(fn (Collection $daySales): int => (int) $daySales->sum('final_amount_cents'));
+            ->map(fn (Collection $daySales): int => $this->sumScopedSaleAmounts($daySales));
 
-        foreach ($this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate) as $obligation) {
-            $dateKey = CarbonImmutable::parse((string) $obligation->paid_date, $timezone)->toDateString();
-            $sales[$dateKey] = (int) ($sales[$dateKey] ?? 0) + (int) $obligation->amount_cents;
+        if ($this->professionalId === null) {
+            foreach ($this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate) as $obligation) {
+                $dateKey = CarbonImmutable::parse((string) $obligation->paid_date, $timezone)->toDateString();
+                $sales[$dateKey] = (int) ($sales[$dateKey] ?? 0) + (int) $obligation->amount_cents;
+            }
         }
 
         $trend = [];
@@ -407,9 +481,10 @@ class GetDashboardSnapshot
         $professionals = Professional::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->when($this->professionalId !== null, fn ($q) => $q->whereKey($this->professionalId))
             ->get();
 
-        $currentAppointmentsCount = Appointment::query()
+        $currentAppointmentsCount = $this->constrainAppointments(Appointment::query())
             ->selectRaw('professional_id, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -417,7 +492,7 @@ class GetDashboardSnapshot
             ->groupBy('professional_id')
             ->pluck('aggregate', 'professional_id');
 
-        $prevAppointmentsCount = Appointment::query()
+        $prevAppointmentsCount = $this->constrainAppointments(Appointment::query())
             ->selectRaw('professional_id, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -425,18 +500,20 @@ class GetDashboardSnapshot
             ->groupBy('professional_id')
             ->pluck('aggregate', 'professional_id');
 
-        $currentSalesByProf = DB::table('sale_items')
-            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
-            ->selectRaw('sale_items.professional_id, SUM(sale_items.total_cents) as total_cents')
-            ->where('sales.tenant_id', $tenant->id)
-            ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
-            ->where('sales.status', 'finalized')
-            ->whereNull('sale_items.deleted_at')
-            ->whereNull('sales.deleted_at')
-            ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
-            ->whereNotNull('sale_items.professional_id')
-            ->groupBy('sale_items.professional_id')
-            ->pluck('total_cents', 'sale_items.professional_id');
+        $currentSalesByProf = $this->professionalId === null
+            ? DB::table('sale_items')
+                ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                ->selectRaw('sale_items.professional_id, SUM(sale_items.total_cents) as total_cents')
+                ->where('sales.tenant_id', $tenant->id)
+                ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
+                ->where('sales.status', 'finalized')
+                ->whereNull('sale_items.deleted_at')
+                ->whereNull('sales.deleted_at')
+                ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
+                ->whereNotNull('sale_items.professional_id')
+                ->groupBy('sale_items.professional_id')
+                ->pluck('total_cents', 'sale_items.professional_id')
+            : $this->calculateProfessionalSales($tenant, $unit, $startDate, $endDate);
 
         $result = [];
 
@@ -464,6 +541,74 @@ class GetDashboardSnapshot
     }
 
     /**
+     * Allocate each finalized sale's net amount to the professional responsible
+     * for each item, preserving the sale discount and cent rounding.
+     *
+     * @return Collection<string, int>
+     */
+    private function calculateProfessionalSales(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): Collection
+    {
+        $items = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->select([
+                'sale_items.sale_id',
+                'sale_items.item_type',
+                'sale_items.total_cents',
+                'sale_items.professional_id',
+                'sale_items.seller_professional_id',
+                'sales.professional_id as sale_professional_id',
+                'sales.final_amount_cents',
+            ])
+            ->where('sales.tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
+            ->where('sales.status', 'finalized')
+            ->whereNull('sale_items.deleted_at')
+            ->whereNull('sales.deleted_at')
+            ->when($this->professionalId !== null, fn ($q) => $q->where(function ($query): void {
+                $query->where('sales.professional_id', $this->professionalId)
+                    ->orWhereExists(function ($ownedItemQuery): void {
+                        $ownedItemQuery->selectRaw('1')
+                            ->from('sale_items as scoped_sale_items')
+                            ->whereColumn('scoped_sale_items.sale_id', 'sales.id')
+                            ->whereNull('scoped_sale_items.deleted_at')
+                            ->where(function ($professionalQuery): void {
+                                $professionalQuery->where('scoped_sale_items.professional_id', $this->professionalId)
+                                    ->orWhere('scoped_sale_items.seller_professional_id', $this->professionalId);
+                            });
+                    });
+            }))
+            ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
+            ->get();
+
+        $totals = [];
+        foreach ($items->groupBy('sale_id') as $saleItems) {
+            $grossAmount = (int) $saleItems->sum('total_cents');
+            if ($grossAmount <= 0) {
+                continue;
+            }
+
+            $finalAmount = (int) $saleItems->first()->final_amount_cents;
+            $allocated = 0;
+            foreach ($saleItems as $index => $item) {
+                $share = $index === $saleItems->count() - 1
+                    ? $finalAmount - $allocated
+                    : (int) round($finalAmount * ((int) $item->total_cents / $grossAmount));
+                $allocated += $share;
+
+                $professionalId = $item->item_type === 'product'
+                    ? ($item->seller_professional_id ?? $item->professional_id)
+                    : ($item->professional_id ?? $item->seller_professional_id);
+                $professionalId ??= $item->sale_professional_id;
+                if ($professionalId !== null) {
+                    $totals[$professionalId] = ($totals[$professionalId] ?? 0) + $share;
+                }
+            }
+        }
+
+        return collect($totals);
+    }
+
+    /**
      * @return array{overallPercentage: ?float, bookedMinutes: int, availableMinutes: int, professionals: list<array{id: string, name: string, avatarUrl: ?string, bookedMinutes: int, availableMinutes: int, occupancyPercentage: ?float}>}
      */
     private function calculateProfessionalOccupancy(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
@@ -471,6 +616,7 @@ class GetDashboardSnapshot
         $professionals = Professional::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($query) => $query->where('unit_id', $unit->id))
+            ->when($this->professionalId !== null, fn ($query) => $query->whereKey($this->professionalId))
             ->where('status', 'active')
             ->get();
 
@@ -484,6 +630,7 @@ class GetDashboardSnapshot
             ->whereIn('status', ['scheduled', 'confirmed', 'checked_in', 'in_service', 'completed'])
             ->where('starts_at', '<', $rangeEnd)
             ->where('ends_at', '>', $rangeStart)
+            ->when($this->professionalId !== null, fn ($q) => $q->where('professional_id', $this->professionalId))
             ->get()
             ->groupBy('professional_id');
 
@@ -494,6 +641,9 @@ class GetDashboardSnapshot
             ->where('status', 'active')
             ->where('starts_at', '<', $rangeEnd)
             ->where('ends_at', '>', $rangeStart)
+            ->when($this->professionalId !== null, fn ($q) => $q->where(function ($blockQuery): void {
+                $blockQuery->where('professional_id', $this->professionalId)->orWhereNull('professional_id');
+            }))
             ->get();
 
         $availabilityByProfessional = AvailabilityRule::query()
@@ -501,6 +651,7 @@ class GetDashboardSnapshot
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($query) => $query->where('unit_id', $unit->id))
             ->where('status', 'active')
+            ->when($this->professionalId !== null, fn ($q) => $q->where('professional_id', $this->professionalId))
             ->get()
             ->groupBy('professional_id');
 
@@ -628,36 +779,54 @@ class GetDashboardSnapshot
     {
         $items = DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
-            ->select(['sale_items.sale_id', 'sale_items.item_type', 'sale_items.total_cents', 'sales.final_amount_cents'])
+            ->select(['sale_items.sale_id', 'sale_items.item_type', 'sale_items.total_cents', 'sale_items.professional_id', 'sale_items.seller_professional_id', 'sales.final_amount_cents'])
             ->where('sales.tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('sales.unit_id', $unit->id))
             ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
+            ->when($this->professionalId !== null, fn ($q) => $q->where(function ($query): void {
+                $query->where('sales.professional_id', $this->professionalId)
+                    ->orWhereExists(function ($ownedItemQuery): void {
+                        $ownedItemQuery->selectRaw('1')
+                            ->from('sale_items as scoped_sale_items')
+                            ->whereColumn('scoped_sale_items.sale_id', 'sales.id')
+                            ->whereNull('scoped_sale_items.deleted_at')
+                            ->where(function ($professionalQuery): void {
+                                $professionalQuery->where('scoped_sale_items.professional_id', $this->professionalId)
+                                    ->orWhere('scoped_sale_items.seller_professional_id', $this->professionalId);
+                            });
+                    });
+            }))
             ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
             ->get();
 
         $categoryTotals = ['service' => 0, 'product' => 0, 'package' => 0];
         foreach ($items->groupBy('sale_id') as $saleItems) {
             $finalAmount = (int) $saleItems->first()->final_amount_cents;
-            $categoryItems = $saleItems->filter(fn ($item): bool => array_key_exists((string) $item->item_type, $categoryTotals))->values();
-            $grossAmount = (int) $categoryItems->sum('total_cents');
+            $allCategoryItems = $saleItems->filter(fn ($item): bool => array_key_exists((string) $item->item_type, $categoryTotals))->values();
+            $grossAmount = (int) $allCategoryItems->sum('total_cents');
             if ($grossAmount <= 0) {
                 continue;
             }
 
             $allocated = 0;
-            foreach ($categoryItems as $index => $item) {
+            foreach ($allCategoryItems as $index => $item) {
                 $type = (string) $item->item_type;
-                $share = $index === $categoryItems->count() - 1
+                $share = $index === $allCategoryItems->count() - 1
                     ? $finalAmount - $allocated
                     : (int) round($finalAmount * ((int) $item->total_cents / $grossAmount));
-                $categoryTotals[$type] += $share;
                 $allocated += $share;
+
+                if ($this->professionalId === null || $item->professional_id === $this->professionalId || $item->seller_professional_id === $this->professionalId) {
+                    $categoryTotals[$type] += $share;
+                }
             }
         }
 
-        $categoryTotals['package'] += (int) $this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate)->sum('amount_cents');
+        if ($this->professionalId === null) {
+            $categoryTotals['package'] += (int) $this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate)->sum('amount_cents');
+        }
 
         $servicesCents = $categoryTotals['service'];
         $productsCents = $categoryTotals['product'];
@@ -793,7 +962,7 @@ class GetDashboardSnapshot
     {
         $now = CarbonImmutable::now($timezone);
 
-        $appointments = Appointment::query()
+        $appointments = $this->constrainAppointments(Appointment::query())
             ->with(['customer', 'professional', 'items.service'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -835,6 +1004,10 @@ class GetDashboardSnapshot
             ->where('due_date', '<', CarbonImmutable::now()->toDateString())
             ->count();
 
+        if ($this->professionalId !== null) {
+            $overdueCount = 0;
+        }
+
         if ($overdueCount > 0) {
             $items[] = [
                 'id' => 'overdue_bills',
@@ -846,7 +1019,7 @@ class GetDashboardSnapshot
 
         // 2. Open draft sales created more than 4 hours ago
         $fourHoursAgo = CarbonImmutable::now()->subHours(4);
-        $openSalesCount = Sale::query()
+        $openSalesCount = $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'draft')
