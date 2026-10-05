@@ -642,9 +642,9 @@
     "semantic_hash": ""
   },
   "app/Support/PayloadGovernance.php": {
-    "mtime": 1791213103.3559635,
-    "seen": 1791213130.158473,
-    "ast_hash": "028d233f34f75f6581039e4ec256250d",
+    "mtime": 1791220960.4441164,
+    "seen": 1791221022.2105541,
+    "ast_hash": "c665e4b50a93ba064eb3a109233f8b58",
     "semantic_hash": ""
   },
   "app/Support/TenantContext.php": {
@@ -1716,9 +1716,9 @@
     "semantic_hash": "a0ffd5aaedf0fb1e6b89a24ee509aa1e"
   },
   "routes/settings.php": {
-    "mtime": 1791211420.079925,
-    "seen": 1791213088.969522,
-    "ast_hash": "3e87e1fdb347d7b781ef9ceb9f5a158f",
+    "mtime": 1791220905.2095842,
+    "seen": 1791221022.2232552,
+    "ast_hash": "d5de6effcc90d2c9af328deea20a85a2",
     "semantic_hash": ""
   },
   "routes/web.php": {
@@ -4548,9 +4548,9 @@
     "semantic_hash": ""
   },
   "app/Actions/Identity/ActivateVerifiedOwnerMemberships.php": {
-    "mtime": 1790948592.5556335,
-    "seen": 1791213088.968828,
-    "ast_hash": "8802a21bef0393c22ac8946234171eb4",
+    "mtime": 1791221222.847104,
+    "seen": 1791221448.542737,
+    "ast_hash": "014502fd2e5724552b9809b168dee527",
     "semantic_hash": ""
   },
   "app/Actions/OnlineBooking/UpdateOnlineBookingSettings.php": {
@@ -6312,9 +6312,9 @@
     "semantic_hash": ""
   },
   "app/Http/Controllers/CollaboratorController.php": {
-    "mtime": 1791213103.3557842,
-    "seen": 1791213130.151765,
-    "ast_hash": "70524f2f19956deb3d5c07404b2f9f0d",
+    "mtime": 1791221640.0203846,
+    "seen": 1791221716.2195148,
+    "ast_hash": "da784845c194a7ab0f0c3699467097e3",
     "semantic_hash": ""
   },
   "app/Http/Controllers/MetaConversionController.php": {
@@ -7092,9 +7092,9 @@
     "semantic_hash": ""
   },
   "resources/js/pages/settings/collaborators.tsx": {
-    "mtime": 1791211420.0795877,
-    "seen": 1791213088.969504,
-    "ast_hash": "418da2464e9aa3bdf49689657d95a71c",
+    "mtime": 1791221865.9099705,
+    "seen": 1791221878.953449,
+    "ast_hash": "c297b96f0bda6124f483b25b738faf6a",
     "semantic_hash": ""
   },
   "scripts/prepare-belasis-catalog.php": {
@@ -7140,9 +7140,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/CollaboratorManagementTest.php": {
-    "mtime": 1791213111.933028,
-    "seen": 1791213130.171922,
-    "ast_hash": "e590ac1d0595e12deddb50e13ea30aac",
+    "mtime": 1791221654.9390335,
+    "seen": 1791221716.242027,
+    "ast_hash": "a944b61489a35830e9621c1167fec403",
     "semantic_hash": ""
   },
   "tests/Feature/DelinquencyBookingAccessTest.php": {
@@ -7425,6 +7425,12 @@
     "mtime": 1790948593.082806,
     "seen": 1791213088.9698272,
     "ast_hash": "0a2fbaa2c0b8ed604c503f9d3a65d62d",
+    "semantic_hash": ""
+  },
+  "app/Notifications/CollaboratorAccessNotification.php": {
+    "mtime": 1791221388.1092618,
+    "seen": 1791221448.559915,
+    "ast_hash": "85c29ed53edc8a68dc3d081feea5a77a",
     "semantic_hash": ""
   }
 }

@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import { Plus, ShieldCheck, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { PageCanvas, ResourceHeader } from '@/components/operational';
@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import InputError from '@/components/input-error';
 import collaborators from '@/routes/settings/collaborators';
+import type { SharedPageProps } from '@/types';
 
 type Permission = { id: string; key: string; description: string };
 type Role = {
@@ -31,6 +33,13 @@ type Props = {
     permissions: Permission[];
     professionals: Professional[];
     canManage: boolean;
+};
+
+const statusLabels: Record<string, string> = {
+    invited: 'Convite pendente',
+    active: 'Ativo',
+    revoked: 'Acesso revogado',
+    suspended: 'Suspenso',
 };
 
 const moduleLabels: Record<string, string> = {
@@ -71,6 +80,8 @@ export default function Collaborators({
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
         [],
     );
+    const { props } = usePage<SharedPageProps>();
+    const flash = props.flash;
 
     return (
         <>
@@ -88,6 +99,15 @@ export default function Collaborators({
                         ) : undefined
                     }
                 />
+
+                {(flash.success || flash.warning || flash.error) && (
+                    <div
+                        className={`mb-6 rounded-lg border px-4 py-3 text-sm ${flash.error ? 'border-destructive/40 text-destructive' : flash.warning ? 'border-amber-500/40 text-amber-700' : 'border-emerald-500/40 text-emerald-700'}`}
+                        role="status"
+                    >
+                        {flash.error ?? flash.warning ?? flash.success}
+                    </div>
+                )}
 
                 {showRole && (
                     <Card className="mb-6">
@@ -155,20 +175,46 @@ export default function Collaborators({
                         </CardHeader>
                         <CardContent>
                             <p className="mb-3 text-sm text-muted-foreground">
-                                O colaborador precisa ter um usuário já
-                                cadastrado e com e-mail verificado.
+                                Enviaremos um link para definir a senha e
+                                confirmar o e-mail antes de liberar o acesso.
                             </p>
                             <Form
                                 {...collaborators.store.form()}
                                 className="flex flex-col gap-3 sm:flex-row"
                             >
-                                <Input
-                                    name="email"
-                                    type="email"
-                                    placeholder="E-mail de um usuário cadastrado"
-                                    required
-                                />
-                                <Button type="submit">Adicionar</Button>
+                                {({ errors, processing }) => (
+                                    <>
+                                        <div className="flex flex-1 flex-col gap-1">
+                                            <Input
+                                                name="name"
+                                                placeholder="Nome completo"
+                                                required
+                                                disabled={processing}
+                                            />
+                                            <InputError message={errors.name} />
+                                        </div>
+                                        <div className="flex flex-1 flex-col gap-1">
+                                            <Input
+                                                name="email"
+                                                type="email"
+                                                placeholder="E-mail"
+                                                required
+                                                disabled={processing}
+                                            />
+                                            <InputError
+                                                message={errors.email}
+                                            />
+                                        </div>
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing
+                                                ? 'Enviando...'
+                                                : 'Enviar acesso'}
+                                        </Button>
+                                    </>
+                                )}
                             </Form>
                         </CardContent>
                     </Card>
@@ -274,45 +320,51 @@ export default function Collaborators({
                                     ))}
                                     {membership.status !== 'active' && (
                                         <Badge variant="outline">
-                                            {membership.status === 'invited'
-                                                ? 'Convite pendente'
-                                                : membership.status}
+                                            {statusLabels[membership.status] ??
+                                                membership.status}
                                         </Badge>
                                     )}
                                 </div>
                                 {canManage && (
                                     <div className="flex flex-col gap-2 sm:flex-row">
-                                        <Form
-                                            {...collaborators.role.assign.form(
-                                                membership.id,
-                                            )}
-                                        >
-                                            <select
-                                                name="role_id"
-                                                className="h-9 rounded-md border bg-background px-2 text-sm"
-                                                defaultValue=""
+                                        {membership.status === 'active' ? (
+                                            <Form
+                                                {...collaborators.role.assign.form(
+                                                    membership.id,
+                                                )}
                                             >
-                                                <option value="" disabled>
-                                                    Perfil
-                                                </option>
-                                                {roles.map((role) => (
-                                                    <option
-                                                        key={role.id}
-                                                        value={role.id}
-                                                    >
-                                                        {role.name}
+                                                <select
+                                                    name="role_id"
+                                                    className="h-9 rounded-md border bg-background px-2 text-sm"
+                                                    defaultValue=""
+                                                >
+                                                    <option value="" disabled>
+                                                        Perfil
                                                     </option>
-                                                ))}
-                                            </select>
-                                            <input
-                                                type="hidden"
-                                                name="scope_kind"
-                                                value="tenant"
-                                            />
-                                            <Button type="submit" size="sm">
-                                                <ShieldCheck /> Atribuir
-                                            </Button>
-                                        </Form>
+                                                    {roles.map((role) => (
+                                                        <option
+                                                            key={role.id}
+                                                            value={role.id}
+                                                        >
+                                                            {role.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <input
+                                                    type="hidden"
+                                                    name="scope_kind"
+                                                    value="tenant"
+                                                />
+                                                <Button type="submit" size="sm">
+                                                    <ShieldCheck /> Atribuir
+                                                </Button>
+                                            </Form>
+                                        ) : (
+                                            <span className="max-w-48 text-xs text-muted-foreground">
+                                                Confirme o e-mail para atribuir
+                                                um perfil.
+                                            </span>
+                                        )}
                                         <Form
                                             {...collaborators.professional.update.form(
                                                 membership.id,
@@ -374,6 +426,71 @@ export default function Collaborators({
                                                 Revogar acesso
                                             </Button>
                                         </Form>
+                                        {membership.status === 'invited' && (
+                                            <Form
+                                                {...collaborators.access.resend.form(
+                                                    membership.id,
+                                                )}
+                                            >
+                                                {({ processing }) => (
+                                                    <Button
+                                                        type="submit"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled={processing}
+                                                    >
+                                                        {processing
+                                                            ? 'Enviando...'
+                                                            : 'Reenviar acesso'}
+                                                    </Button>
+                                                )}
+                                            </Form>
+                                        )}
+                                        {membership.status === 'revoked' &&
+                                            membership.user && (
+                                                <Form
+                                                    {...collaborators.store.form()}
+                                                >
+                                                    {({ processing }) => (
+                                                        <>
+                                                            <input
+                                                                type="hidden"
+                                                                name="name"
+                                                                value={
+                                                                    membership
+                                                                        .user
+                                                                        ?.name ??
+                                                                    ''
+                                                                }
+                                                                readOnly
+                                                            />
+                                                            <input
+                                                                type="hidden"
+                                                                name="email"
+                                                                value={
+                                                                    membership
+                                                                        .user
+                                                                        ?.email ??
+                                                                    ''
+                                                                }
+                                                                readOnly
+                                                            />
+                                                            <Button
+                                                                type="submit"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                {processing
+                                                                    ? 'Enviando...'
+                                                                    : 'Reativar e reenviar'}
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </Form>
+                                            )}
                                     </div>
                                 )}
                             </div>

@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/collaborators/{membership}/role', [CollaboratorController::class, 'assignRole'])->name('settings.collaborators.role.assign');
         Route::patch('settings/collaborators/{membership}/professional', [CollaboratorController::class, 'linkProfessional'])->name('settings.collaborators.professional.update');
         Route::delete('settings/collaborators/{membership}', [CollaboratorController::class, 'revoke'])->name('settings.collaborators.revoke');
+        Route::post('settings/collaborators/{membership}/resend-access', [CollaboratorController::class, 'resendAccess'])->name('settings.collaborators.access.resend');
     });
 });
 

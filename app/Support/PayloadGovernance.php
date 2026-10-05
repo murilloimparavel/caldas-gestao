@@ -17,7 +17,7 @@ final class PayloadGovernance
     private const AUDIT_KEYS = [
         'lock_version', 'scope_kind', 'unit_id', 'role_id', 'membership_id',
         'resource_id', 'resource_type', 'status', 'reason_code', 'quantity',
-        'price_cents', 'duration_minutes', 'service_ids', 'professional_ids', 'permission_ids',
+        'price_cents', 'duration_minutes', 'service_ids', 'professional_ids', 'permission_ids', 'verification_sent',
         'category_id', 'is_active', 'cost_price_cents', 'sale_price_cents',
         'current_stock', 'min_stock', 'unit_of_measure',
         'type', 'uniqueness_scope', 'key', 'sale_category_id', 'customer_id',
