@@ -141,7 +141,7 @@ it('does not expose integration controls without a valid tenant context or activ
     $tenant = (new OnboardTenant)->handle($owner, ['name' => 'No SaaS Workspace']);
     TenantSubscription::factory()->create([
         'tenant_id' => $tenant->getKey(),
-        'status' => 'canceled',
+        'status' => 'cancelled',
         'ends_at' => now()->subDay(),
     ]);
 
