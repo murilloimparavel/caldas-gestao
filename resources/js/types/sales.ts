@@ -52,6 +52,7 @@ export type SaleItem = {
     name_snapshot: string;
     unit_price_cents: number;
     quantity: number;
+    covered_quantity: number;
     discount_cents: number;
     total_cents: number;
     service?: { id: string; name: string; duration_minutes?: number } | null;

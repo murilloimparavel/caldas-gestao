@@ -48,9 +48,11 @@ final class AccrueCommissionsForSale extends OperationalAction
                 continue;
             }
 
+            $commissionableQuantity = max(0, $item->quantity - $item->covered_quantity);
+            $commissionBaseAmountCents = $item->total_cents;
             $commissionAmountCents = match ($matchedRule->type) {
-                'percentage' => (int) round(($item->total_cents * $matchedRule->value_rate) / 100),
-                'fixed' => (int) ($matchedRule->value_rate * max(1, $item->quantity)),
+                'percentage' => (int) round(($commissionBaseAmountCents * $matchedRule->value_rate) / 100),
+                'fixed' => (int) ($matchedRule->value_rate * $commissionableQuantity),
                 default => 0,
             };
 
@@ -63,7 +65,10 @@ final class AccrueCommissionsForSale extends OperationalAction
                 'sale_id' => $sale->getKey(),
                 'sale_item_id' => $item->getKey(),
                 'item_name_snapshot' => $item->name_snapshot,
-                'gross_amount_cents' => $item->total_cents,
+                'gross_amount_cents' => $commissionBaseAmountCents,
+                'quantity' => $item->quantity,
+                'covered_quantity' => $item->covered_quantity,
+                'commissionable_quantity' => $commissionableQuantity,
                 'rate_type' => $matchedRule->type,
                 'rate_value' => $matchedRule->value_rate,
                 'commission_amount_cents' => $commissionAmountCents,
@@ -77,6 +82,9 @@ final class AccrueCommissionsForSale extends OperationalAction
                 'sale_id' => $accrual->sale_id,
                 'sale_item_id' => $accrual->sale_item_id,
                 'gross_amount_cents' => $accrual->gross_amount_cents,
+                'quantity' => $accrual->quantity,
+                'covered_quantity' => $accrual->covered_quantity,
+                'commissionable_quantity' => $accrual->commissionable_quantity,
                 'rate_type' => $accrual->rate_type,
                 'rate_value' => $accrual->rate_value,
                 'commission_amount_cents' => $accrual->commission_amount_cents,

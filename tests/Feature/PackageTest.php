@@ -5,6 +5,7 @@ use App\Actions\Identity\OnboardTenant;
 use App\Models\CashMovement;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\FinancialObligation;
 use App\Models\Membership;
 use App\Models\MembershipRole;
@@ -190,6 +191,47 @@ it('sells a package to a customer and calculates validity', function () {
     ]);
 });
 
+it('assigns a free package without creating a payment obligation', function (): void {
+    [$owner, $tenant, $unit] = packageTestWorkspace();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'price_cents' => 0,
+    ]);
+
+    $this->actingAs($owner)->post(route('customer-packages.store'), [
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+    ])->assertSessionHasNoErrors();
+
+    $package = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
+
+    expect($package->financialObligation)->toBeNull()
+        ->and(FinancialObligation::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
+});
+
+it('requires payment method for a package that has a price', function (): void {
+    [$owner, $tenant, $unit] = packageTestWorkspace();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'price_cents' => 10000,
+    ]);
+
+    $this->actingAs($owner)->post(route('customer-packages.store'), [
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+    ])->assertSessionHasErrors('payment_method');
+});
+
 it('records one paid financial obligation and one cash movement for an idempotent package purchase', function () {
     [$owner, $tenant, $unit, $context] = packageTestWorkspace();
     $customer = Customer::factory()->create([
@@ -292,9 +334,22 @@ it('consumes package sessions atomically, records usage and exhausts package on 
         'status' => 'active',
         'expires_at' => now()->addDays(30)->toDateString(),
     ]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $customerPackage->forceFill([
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ])->save();
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $customerPackage->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 2,
+        'remaining_quantity' => 2,
+    ]);
 
     // 1st consumption
     $consume1 = $this->actingAs($owner)->post(route('customer-packages.consume', $customerPackage), [
+        'service_id' => $service->getKey(),
         'sessions_consumed' => 1,
     ]);
     $consume1->assertSessionHasNoErrors();
@@ -311,6 +366,7 @@ it('consumes package sessions atomically, records usage and exhausts package on 
 
     // 2nd consumption (exhausts package)
     $consume2 = $this->actingAs($owner)->post(route('customer-packages.consume', $customerPackage), [
+        'service_id' => $service->getKey(),
         'sessions_consumed' => 1,
     ]);
     $consume2->assertSessionHasNoErrors();
@@ -321,6 +377,7 @@ it('consumes package sessions atomically, records usage and exhausts package on 
 
     // 3rd consumption attempt should fail with 409
     $consume3 = $this->actingAs($owner)->post(route('customer-packages.consume', $customerPackage), [
+        'service_id' => $service->getKey(),
         'sessions_consumed' => 1,
     ]);
     $consume3->assertStatus(409);
@@ -337,8 +394,21 @@ it('fails to consume from an expired package and transitions its status to expir
         'status' => 'active',
         'expires_at' => now()->subDay()->toDateString(),
     ]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $customerPackage->forceFill([
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ])->save();
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $customerPackage->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 5,
+        'remaining_quantity' => 5,
+    ]);
 
     $response = $this->actingAs($owner)->post(route('customer-packages.consume', $customerPackage), [
+        'service_id' => $service->getKey(),
         'sessions_consumed' => 1,
     ]);
 

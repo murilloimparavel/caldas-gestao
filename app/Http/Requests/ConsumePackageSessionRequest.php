@@ -43,7 +43,7 @@ final class ConsumePackageSessionRequest extends FormRequest
 
         return [
             'sessions_consumed' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'service_id' => ['nullable', 'uuid'],
+            'service_id' => ['required', 'uuid'],
             'sale_id' => ['nullable', 'uuid', $saleExists],
             'sale_item_id' => ['nullable', 'uuid', $saleItemExists],
             'lock_version' => ['sometimes', 'integer', 'min:0'],

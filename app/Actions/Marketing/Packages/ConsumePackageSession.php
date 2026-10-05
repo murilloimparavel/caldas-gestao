@@ -40,6 +40,14 @@ final class ConsumePackageSession extends OperationalAction
             throw new \InvalidArgumentException('A sale item requires an associated sale.');
         }
 
+        if ($saleId !== null || $saleItemId !== null) {
+            throw new \InvalidArgumentException('Comanda vinculada deve consumir o pacote apenas pelo fechamento da comanda.');
+        }
+
+        if ($serviceId === null) {
+            throw new \InvalidArgumentException('A service must be selected when consuming package sessions.');
+        }
+
         $package = DB::transaction(function () use ($actor, $context, $unit, $customerPackage, $sessionsToConsume, $saleId, $saleItemId, $serviceId): ?CustomerPackage {
             /** @var CustomerPackage $locked */
             $locked = CustomerPackage::query()
@@ -113,6 +121,15 @@ final class ConsumePackageSession extends OperationalAction
             }
 
             if ($serviceId !== null) {
+                $eligibleServiceIds = collect($locked->eligible_services_snapshot ?? [])
+                    ->pluck('id')
+                    ->map(static fn (mixed $eligibleServiceId): string => (string) $eligibleServiceId)
+                    ->all();
+
+                if (! in_array($serviceId, $eligibleServiceIds, true)) {
+                    throw new \InvalidArgumentException('The selected service is not eligible for this package.');
+                }
+
                 $balance = CustomerPackageService::query()
                     ->where('tenant_id', $context->tenant->getKey())
                     ->where('unit_id', $unit->getKey())
@@ -129,20 +146,18 @@ final class ConsumePackageSession extends OperationalAction
                     ->where('status', 'reserved')
                     ->sum('sessions_reserved');
 
-                if ($balance !== null && $balance->remaining_quantity - $reservedServiceQuantity < $sessionsToConsume) {
+                if ($balance === null || $balance->remaining_quantity - $reservedServiceQuantity < $sessionsToConsume) {
                     throw new ConflictHttpException('Not enough sessions remaining for this service.');
                 }
 
-                if ($balance !== null) {
-                    CustomerPackageService::query()
-                        ->where('tenant_id', $context->tenant->getKey())
-                        ->where('unit_id', $unit->getKey())
-                        ->where('customer_package_id', $locked->getKey())
-                        ->where('service_id', $serviceId)
-                        ->update([
-                            'remaining_quantity' => $balance->remaining_quantity - $sessionsToConsume,
-                        ]);
-                }
+                CustomerPackageService::query()
+                    ->where('tenant_id', $context->tenant->getKey())
+                    ->where('unit_id', $unit->getKey())
+                    ->where('customer_package_id', $locked->getKey())
+                    ->where('service_id', $serviceId)
+                    ->update([
+                        'remaining_quantity' => $balance->remaining_quantity - $sessionsToConsume,
+                    ]);
             }
 
             $reservedPackageQuantity = (int) PackageUsageReservation::query()

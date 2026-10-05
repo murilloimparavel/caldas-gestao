@@ -33,6 +33,9 @@ export type CommissionAccrual = {
     sale_item_id: string;
     item_name_snapshot: string;
     gross_amount_cents: number;
+    quantity: number | null;
+    covered_quantity: number | null;
+    commissionable_quantity: number | null;
     rate_type: CommissionRuleType;
     rate_value: number;
     commission_amount_cents: number;

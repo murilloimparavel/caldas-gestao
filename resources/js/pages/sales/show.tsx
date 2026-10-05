@@ -79,6 +79,8 @@ type CustomerPackageOption = {
     name: string;
     remaining_sessions: number;
     reserved_sessions: number;
+    other_reserved_sessions: number;
+    current_sale_reserved_sessions: number;
     available_sessions: number;
     expires_at: string | null;
     services: Array<{
@@ -87,6 +89,8 @@ type CustomerPackageOption = {
         allocated: number;
         remaining: number;
         reserved: number;
+        other_reserved: number;
+        current_sale_reserved: number;
         available: number;
     }>;
 };
@@ -256,7 +260,6 @@ export default function SalesShow({
               ? (selectedProduct?.price_cents ?? 0)
               : parseBrazilianCurrency(customPriceStr);
 
-    const calculatedItemDiscountCents = parseBrazilianCurrency(itemDiscountStr);
     const selectedPackage = customerPackages.find(
         (customerPackage) => customerPackage.id === selectedCustomerPackageId,
     );
@@ -270,6 +273,10 @@ export default function SalesShow({
               selectedPackage?.available_sessions ?? 0,
           )
         : 0;
+    const calculatedItemDiscountCents =
+        estimatedCoveredQuantity === quantity
+            ? 0
+            : parseBrazilianCurrency(itemDiscountStr);
     const calculatedItemSubtotalCents = Math.max(
         0,
         calculatedUnitPriceCents * (quantity - estimatedCoveredQuantity) -
@@ -872,6 +879,23 @@ export default function SalesShow({
                     )}
                 </div>
 
+                {sale.customer && customerPackages.length === 0 ? (
+                    <section className="surface-panel flex items-start gap-3 border-border/80 p-4 sm:p-5">
+                        <div className="rounded-xl bg-muted p-2 text-muted-foreground">
+                            <Package className="size-4" />
+                        </div>
+                        <div>
+                            <h2 className="font-semibold text-foreground">
+                                Nenhum pacote ativo disponível
+                            </h2>
+                            <p className="text-xs text-muted-foreground">
+                                Este cliente não tem pacotes ativos com sessões
+                                restantes e dentro da validade.
+                            </p>
+                        </div>
+                    </section>
+                ) : null}
+
                 {customerPackages.length > 0 ? (
                     <section className="surface-panel space-y-4 border-emerald-200/70 bg-emerald-50/40 p-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/15">
                         <div className="flex items-start gap-3">
@@ -883,8 +907,10 @@ export default function SalesShow({
                                     Pacotes ativos deste cliente
                                 </h2>
                                 <p className="text-xs text-muted-foreground">
-                                    As sessões reservadas em outras comandas já
-                                    são descontadas da disponibilidade.
+                                    “Restantes” é o saldo do pacote;
+                                    “disponíveis agora” desconta reservas de
+                                    outras comandas e considera as desta
+                                    comanda.
                                 </p>
                             </div>
                         </div>
@@ -898,7 +924,20 @@ export default function SalesShow({
                                         <p className="font-medium text-foreground">
                                             {customerPackage.name}
                                         </p>
-                                        <Badge variant="secondary">
+                                        <Badge
+                                            variant={
+                                                customerPackage.available_sessions >
+                                                0
+                                                    ? 'secondary'
+                                                    : 'outline'
+                                            }
+                                            className={
+                                                customerPackage.available_sessions ===
+                                                0
+                                                    ? 'border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-300'
+                                                    : ''
+                                            }
+                                        >
                                             {customerPackage.available_sessions}{' '}
                                             disponíveis
                                         </Badge>
@@ -907,8 +946,9 @@ export default function SalesShow({
                                         Saldo geral:{' '}
                                         {customerPackage.remaining_sessions}{' '}
                                         restantes
-                                        {customerPackage.reserved_sessions > 0
-                                            ? ` · ${customerPackage.reserved_sessions} reservadas em outras comandas`
+                                        {customerPackage.other_reserved_sessions >
+                                        0
+                                            ? ` · ${customerPackage.other_reserved_sessions} reservadas em outras comandas`
                                             : ''}
                                         {customerPackage.expires_at
                                             ? ` · vence em ${new Intl.DateTimeFormat('pt-BR').format(new Date(`${customerPackage.expires_at}T12:00:00`))}`
@@ -930,8 +970,13 @@ export default function SalesShow({
                                                         utilizadas ·{' '}
                                                         {service.remaining}{' '}
                                                         restantes
-                                                        {service.reserved > 0
-                                                            ? ` · ${service.reserved} reservadas`
+                                                        {service.other_reserved >
+                                                        0
+                                                            ? ` · ${service.other_reserved} reservadas em outras comandas`
+                                                            : ''}
+                                                        {service.current_sale_reserved >
+                                                        0
+                                                            ? ` · ${service.current_sale_reserved} reservadas nesta comanda`
                                                             : ''}
                                                         {' · '}
                                                         <strong className="text-foreground">
@@ -943,6 +988,13 @@ export default function SalesShow({
                                             ),
                                         )}
                                     </div>
+                                    {customerPackage.available_sessions ===
+                                    0 ? (
+                                        <p className="mt-3 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+                                            Sem sessões disponíveis para novas
+                                            reservas.
+                                        </p>
+                                    ) : null}
                                 </div>
                             ))}
                         </div>
@@ -1516,6 +1568,10 @@ export default function SalesShow({
                                                                     value={
                                                                         itemDiscountStr
                                                                     }
+                                                                    disabled={
+                                                                        estimatedCoveredQuantity ===
+                                                                        quantity
+                                                                    }
                                                                     onChange={(
                                                                         e,
                                                                     ) =>
@@ -1527,6 +1583,19 @@ export default function SalesShow({
                                                                     }
                                                                     placeholder="0,00"
                                                                 />
+                                                                {estimatedCoveredQuantity ===
+                                                                quantity ? (
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        O pacote
+                                                                        cobre
+                                                                        todo o
+                                                                        serviço;
+                                                                        não há
+                                                                        valor
+                                                                        para
+                                                                        descontar.
+                                                                    </p>
+                                                                ) : null}
                                                                 <input
                                                                     type="hidden"
                                                                     name="discount_cents"
@@ -1662,12 +1731,7 @@ export default function SalesShow({
                                                                 0 ? (
                                                                     <span className="pl-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                                                                         {
-                                                                            (
-                                                                                item as SaleItem & {
-                                                                                    covered_quantity: number;
-                                                                                }
-                                                                            )
-                                                                                .covered_quantity
+                                                                            item.covered_quantity
                                                                         }{' '}
                                                                         de{' '}
                                                                         {

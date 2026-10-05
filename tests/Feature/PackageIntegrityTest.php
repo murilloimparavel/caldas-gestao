@@ -4,6 +4,7 @@ use App\Actions\Closing\FinalizeClosingSession;
 use App\Actions\Identity\OnboardTenant;
 use App\Actions\Marketing\Packages\ConsumePackageSession;
 use App\Actions\Sales\AddSaleItem;
+use App\Actions\Sales\AdjustSale;
 use App\Actions\Sales\RemoveSaleItem;
 use App\Actions\Sales\TransitionSaleStatus;
 use App\Models\Customer;
@@ -29,6 +30,7 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /** @return array{0: User, 1: Tenant, 2: Unit, 3: TenantContext} */
 function packageIntegrityWorkspace(): array
@@ -95,7 +97,7 @@ it('snapshots package terms and rejects a source sale for another customer', fun
         ->and($package->price_cents_snapshot)->toBe(24900);
 });
 
-it('consumes only an eligible service item from the selected customer sale', function (): void {
+it('requires sale-linked package consumption to go through the sale closing flow', function (): void {
     [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $eligibleService = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
@@ -124,18 +126,18 @@ it('consumes only an eligible service item from the selected customer sale', fun
         'service_id' => $ineligibleService->getKey(),
     ]);
 
-    (new ConsumePackageSession)->handle($owner, $context, $package, [
+    expect(fn () => (new ConsumePackageSession)->handle($owner, $context, $package, [
         'sale_id' => $sale->getKey(),
         'sale_item_id' => $eligibleItem->getKey(),
-    ]);
-
-    expect($package->fresh()->remaining_sessions)->toBe(4)
-        ->and(PackageUsage::query()->where('sale_item_id', $eligibleItem->getKey())->exists())->toBeTrue();
+    ]))->toThrow(InvalidArgumentException::class, 'apenas pelo fechamento');
 
     expect(fn () => (new ConsumePackageSession)->handle($owner, $context, $package->fresh(), [
         'sale_id' => $sale->getKey(),
         'sale_item_id' => $ineligibleItem->getKey(),
-    ]))->toThrow(InvalidArgumentException::class, 'not eligible');
+    ]))->toThrow(InvalidArgumentException::class, 'apenas pelo fechamento');
+
+    expect($package->fresh()->remaining_sessions)->toBe(5)
+        ->and(PackageUsage::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
 });
 
 it('reserves package sessions on service items, splits uncovered quantity, and consumes the reservation at closing', function (): void {
@@ -255,6 +257,123 @@ it('releases package reservations when an open sale is cancelled', function (): 
         ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(1);
 });
 
+it('prevents manual package consumption from taking sessions already reserved by a sale', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'remaining_sessions' => 1,
+        'total_sessions' => 1,
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 1,
+        'remaining_quantity' => 1,
+    ]);
+    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+    ]);
+
+    expect(fn () => (new ConsumePackageSession)->handle($owner, $context, $package, [
+        'service_id' => $service->getKey(),
+        'sessions_consumed' => 1,
+    ]))->toThrow(ConflictHttpException::class);
+
+    expect($package->fresh()->remaining_sessions)->toBe(1)
+        ->and(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('reserved');
+});
+
+it('restores consumed package balance when its sale is adjusted without reactivating an expired package', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'finalized',
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'remaining_sessions' => 0,
+        'total_sessions' => 1,
+        'expires_at' => now()->subDay()->toDateString(),
+        'status' => 'expired',
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ]);
+    $serviceBalance = CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 1,
+        'remaining_quantity' => 0,
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'quantity' => 1,
+        'covered_quantity' => 1,
+        'total_cents' => 0,
+    ]);
+    $usage = PackageUsage::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'sessions_consumed' => 1,
+        'user_id' => $owner->getKey(),
+    ]);
+    $reservation = PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'user_id' => $owner->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'consumed',
+    ]);
+
+    (new AdjustSale)->handle($owner, $context, $sale, 'Estorno para corrigir a comanda');
+
+    expect($package->fresh()->remaining_sessions)->toBe(1)
+        ->and($package->fresh()->status)->toBe('expired')
+        ->and($serviceBalance->fresh()->remaining_quantity)->toBe(1)
+        ->and($usage->fresh()->reversed_at)->not->toBeNull()
+        ->and($reservation->fresh()->status)->toBe('released');
+});
+
 it('tracks quantities and consumption independently for each package service', function (): void {
     [$owner, $tenant, $unit] = packageIntegrityWorkspace();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
@@ -369,15 +488,29 @@ it('scopes package idempotency to the customer package route resource', function
         'unit_id' => $unit->getKey(),
         'customer_id' => $customer->getKey(),
     ]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    foreach ([$firstPackage, $secondPackage] as $package) {
+        $package->forceFill([
+            'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+        ])->save();
+        CustomerPackageService::query()->create([
+            'tenant_id' => $tenant->getKey(),
+            'unit_id' => $unit->getKey(),
+            'customer_package_id' => $package->getKey(),
+            'service_id' => $service->getKey(),
+            'allocated_quantity' => 5,
+            'remaining_quantity' => 5,
+        ]);
+    }
 
     $this->actingAs($owner)
         ->withHeader('X-Idempotency-Key', 'package-consume-scope')
-        ->post(route('customer-packages.consume', $firstPackage), [])
+        ->post(route('customer-packages.consume', $firstPackage), ['service_id' => $service->getKey()])
         ->assertSessionHasNoErrors();
 
     $this->actingAs($owner)
         ->withHeader('X-Idempotency-Key', 'package-consume-scope')
-        ->post(route('customer-packages.consume', $secondPackage), [])
+        ->post(route('customer-packages.consume', $secondPackage), ['service_id' => $service->getKey()])
         ->assertStatus(409);
 
     expect($firstPackage->fresh()->remaining_sessions)->toBe(4)
