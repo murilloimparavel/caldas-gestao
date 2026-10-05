@@ -10,8 +10,9 @@ use App\Models\User;
 
 it('creates a bounded trial and access entitlement when a tenant uses a zero-day plan', function (): void {
     $plan = PlatformPlan::factory()->create(['trial_days' => 0]);
+    $actor = User::factory()->create();
 
-    $tenant = app(CreatePlatformTenant::class)->handle([
+    $tenant = app(CreatePlatformTenant::class)->handle($actor, [
         'name' => 'Zero Day Trial',
         'slug' => 'zero-day-trial',
         'owner_name' => 'Owner',
