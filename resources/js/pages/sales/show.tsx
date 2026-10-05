@@ -35,7 +35,7 @@ import {
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CatalogItemPicker } from '@/components/catalog-item-picker';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     CashShiftQuickOpenDialog,
     PaymentAllocationFields,
@@ -160,6 +160,7 @@ export default function SalesShow({
     );
     const [selectedServiceId, setSelectedServiceId] = useState('');
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
     const [sellerProfessionalId, setSellerProfessionalId] = useState('');
     const [customName, setCustomName] = useState('');
     const [customPriceStr, setCustomPriceStr] = useState('');
@@ -251,6 +252,7 @@ export default function SalesShow({
     const resetItemForm = () => {
         setSelectedServiceId('');
         setSelectedProductId('');
+        setSelectedProfessionalId('');
         setSellerProfessionalId('');
         setCustomName('');
         setCustomPriceStr('');
@@ -983,20 +985,25 @@ export default function SalesShow({
                                                                         </button>
                                                                     }
                                                                 >
-                                                                    <CatalogItemPicker
+                                                                    <RemoteOptionPicker
                                                                         id="service_id"
                                                                         name="service_id"
-                                                                        type="service"
                                                                         options={
                                                                             services
                                                                         }
-                                                                        required
+                                                                        placeholder="Selecione um serviço"
+                                                                        resource="services"
                                                                         value={
                                                                             selectedServiceId
                                                                         }
-                                                                        onChange={
-                                                                            handleServiceChange
+                                                                        onChange={(
+                                                                            value,
+                                                                        ) =>
+                                                                            handleServiceChange(
+                                                                                value,
+                                                                            )
                                                                         }
+                                                                        required
                                                                     />
                                                                 </FormField>
 
@@ -1007,36 +1014,26 @@ export default function SalesShow({
                                                                         errors.professional_id
                                                                     }
                                                                 >
-                                                                    <select
+                                                                    <RemoteOptionPicker
                                                                         id="professional_id"
                                                                         name="professional_id"
-                                                                        defaultValue=""
-                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                                                                    >
-                                                                        <option value="">
-                                                                            Sem
-                                                                            profissional
-                                                                            atribuído
-                                                                        </option>
-                                                                        {professionals.map(
-                                                                            (
-                                                                                p,
-                                                                            ) => (
-                                                                                <option
-                                                                                    key={
-                                                                                        p.id
-                                                                                    }
-                                                                                    value={
-                                                                                        p.id
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        p.name
-                                                                                    }
-                                                                                </option>
-                                                                            ),
-                                                                        )}
-                                                                    </select>
+                                                                        options={
+                                                                            professionals
+                                                                        }
+                                                                        placeholder="Sem profissional atribuído"
+                                                                        resource="professionals"
+                                                                        value={
+                                                                            selectedProfessionalId
+                                                                        }
+                                                                        onChange={(
+                                                                            value,
+                                                                        ) =>
+                                                                            setSelectedProfessionalId(
+                                                                                value,
+                                                                            )
+                                                                        }
+                                                                        localOptionsOnly
+                                                                    />
                                                                 </FormField>
                                                             </div>
                                                         ) : null}
@@ -1067,20 +1064,25 @@ export default function SalesShow({
                                                                         </button>
                                                                     }
                                                                 >
-                                                                    <CatalogItemPicker
+                                                                    <RemoteOptionPicker
                                                                         id="product_id"
                                                                         name="product_id"
-                                                                        type="product"
                                                                         options={
                                                                             products
                                                                         }
-                                                                        required
+                                                                        placeholder="Selecione um produto"
+                                                                        resource="products"
                                                                         value={
                                                                             selectedProductId
                                                                         }
-                                                                        onChange={
-                                                                            handleProductChange
+                                                                        onChange={(
+                                                                            value,
+                                                                        ) =>
+                                                                            handleProductChange(
+                                                                                value,
+                                                                            )
                                                                         }
+                                                                        required
                                                                     />
                                                                 </FormField>
 
@@ -1091,47 +1093,26 @@ export default function SalesShow({
                                                                         errors.seller_professional_id
                                                                     }
                                                                 >
-                                                                    <select
+                                                                    <RemoteOptionPicker
                                                                         id="seller_professional_id"
                                                                         name="seller_professional_id"
+                                                                        options={
+                                                                            professionals
+                                                                        }
+                                                                        placeholder="Sem vendedor atribuído"
+                                                                        resource="professionals"
                                                                         value={
                                                                             sellerProfessionalId
                                                                         }
                                                                         onChange={(
-                                                                            e,
+                                                                            value,
                                                                         ) =>
                                                                             setSellerProfessionalId(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
+                                                                                value,
                                                                             )
                                                                         }
-                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                                                                    >
-                                                                        <option value="">
-                                                                            Sem
-                                                                            vendedor
-                                                                            atribuído
-                                                                        </option>
-                                                                        {professionals.map(
-                                                                            (
-                                                                                p,
-                                                                            ) => (
-                                                                                <option
-                                                                                    key={
-                                                                                        p.id
-                                                                                    }
-                                                                                    value={
-                                                                                        p.id
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        p.name
-                                                                                    }
-                                                                                </option>
-                                                                            ),
-                                                                        )}
-                                                                    </select>
+                                                                        localOptionsOnly
+                                                                    />
                                                                 </FormField>
                                                             </div>
                                                         ) : null}
@@ -1206,36 +1187,26 @@ export default function SalesShow({
                                                                         errors.professional_id
                                                                     }
                                                                 >
-                                                                    <select
+                                                                    <RemoteOptionPicker
                                                                         id="professional_id"
                                                                         name="professional_id"
-                                                                        defaultValue=""
-                                                                        className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                                                                    >
-                                                                        <option value="">
-                                                                            Sem
-                                                                            profissional
-                                                                            atribuído
-                                                                        </option>
-                                                                        {professionals.map(
-                                                                            (
-                                                                                p,
-                                                                            ) => (
-                                                                                <option
-                                                                                    key={
-                                                                                        p.id
-                                                                                    }
-                                                                                    value={
-                                                                                        p.id
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        p.name
-                                                                                    }
-                                                                                </option>
-                                                                            ),
-                                                                        )}
-                                                                    </select>
+                                                                        options={
+                                                                            professionals
+                                                                        }
+                                                                        placeholder="Sem profissional atribuído"
+                                                                        resource="professionals"
+                                                                        value={
+                                                                            selectedProfessionalId
+                                                                        }
+                                                                        onChange={(
+                                                                            value,
+                                                                        ) =>
+                                                                            setSelectedProfessionalId(
+                                                                                value,
+                                                                            )
+                                                                        }
+                                                                        localOptionsOnly
+                                                                    />
                                                                 </FormField>
                                                             </div>
                                                         ) : null}

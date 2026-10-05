@@ -47,6 +47,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import customerSubscriptionsRoutes from '@/routes/customer-subscriptions';
 import subscriptionsRoutes from '@/routes/subscriptions';
 import type { SharedPageProps } from '@/types';
@@ -91,6 +92,7 @@ type SubscriptionPlan = {
 };
 
 type Props = {
+    hasServices?: boolean;
     plan: SubscriptionPlan;
     serviceOptions?: RelationOption[];
     subscribers: Paginated<SubscriberRecord>;
@@ -157,6 +159,7 @@ function SubscriberStatusBadge({ status }: { status: string }) {
 export default function SubscriptionsShow({
     plan,
     serviceOptions = [],
+    hasServices = false,
     subscribers,
 }: Props) {
     const [editOpen, setEditOpen] = useState(false);
@@ -164,6 +167,7 @@ export default function SubscriptionsShow({
     const [cancelSubOpen, setCancelSubOpen] = useState<string | null>(null);
     const [consumeSubscriber, setConsumeSubscriber] =
         useState<SubscriberAction | null>(null);
+    const [consumeServiceId, setConsumeServiceId] = useState('');
     const [renewSubscriber, setRenewSubscriber] =
         useState<SubscriberAction | null>(null);
     const { props } = usePage<SharedPageProps>();
@@ -172,8 +176,10 @@ export default function SubscriptionsShow({
     const canCancel = permissions.has('subscription.cancel');
     const canConsume = permissions.has('subscription.usage');
     const canRenew = permissions.has('subscription.renew');
+    const selectedServiceIds = plan.services.map((service) => service.id);
 
     function openConsumption(subscriber: SubscriberRecord): void {
+        setConsumeServiceId('');
         setConsumeSubscriber({
             id: subscriber.id,
             idempotencyKey: createIdempotencyKey(
@@ -291,7 +297,7 @@ export default function SubscriptionsShow({
                                                     />
                                                 </FormField>
 
-                                                {serviceOptions.length > 0 && (
+                                                {hasServices && (
                                                     <FormField
                                                         name="service_ids"
                                                         label="Serviços Inclusos"
@@ -304,9 +310,10 @@ export default function SubscriptionsShow({
                                                             options={
                                                                 serviceOptions
                                                             }
-                                                            selectedIds={plan.services.map(
-                                                                (s) => s.id,
-                                                            )}
+                                                            selectedIds={
+                                                                selectedServiceIds
+                                                            }
+                                                            resource="services"
                                                         />
                                                     </FormField>
                                                 )}
@@ -804,7 +811,10 @@ export default function SubscriptionsShow({
                                 'X-Idempotency-Key':
                                     consumeSubscriber.idempotencyKey,
                             }}
-                            onSuccess={() => setConsumeSubscriber(null)}
+                            onSuccess={() => {
+                                setConsumeSubscriber(null);
+                                setConsumeServiceId('');
+                            }}
                             className="space-y-4"
                         >
                             {({ processing, errors }) => (
@@ -815,25 +825,19 @@ export default function SubscriptionsShow({
                                         label="Serviço"
                                         error={errors.service_id}
                                     >
-                                        <select
+                                        <RemoteOptionPicker
                                             id="subscription-service-id"
                                             name="service_id"
+                                            options={plan.services}
+                                            placeholder="Selecione um serviço"
+                                            resource="services"
+                                            localOptionsOnly
+                                            value={consumeServiceId}
+                                            onChange={(value) =>
+                                                setConsumeServiceId(value)
+                                            }
                                             required
-                                            defaultValue=""
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                        >
-                                            <option value="">
-                                                Selecione um serviço
-                                            </option>
-                                            {plan.services.map((service) => (
-                                                <option
-                                                    key={service.id}
-                                                    value={service.id}
-                                                >
-                                                    {service.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        />
                                     </FormField>
                                     <FormField
                                         name="quantity"

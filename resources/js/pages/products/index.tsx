@@ -28,6 +28,7 @@ import {
 import type { Paginated, ResourceFilters } from '@/components/operational';
 import { QuickCreateCategoryModal } from '@/components/operational/quick-create-dialogs';
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -82,7 +83,7 @@ type InventorySummary = {
 };
 
 type Props = {
-    categoryOptions: CategoryOption[];
+    categoryOptions?: CategoryOption[];
     filters: ResourceFilters & { category_id?: string };
     inventorySummary: InventorySummary;
     products: Paginated<Product>;
@@ -310,46 +311,25 @@ export default function ProductsIndex({
                                                                     </button>
                                                                 }
                                                             >
-                                                                <select
+                                                                <RemoteOptionPicker
                                                                     id="category_id"
                                                                     name="category_id"
+                                                                    options={
+                                                                        categories
+                                                                    }
+                                                                    placeholder="Sem categoria"
+                                                                    resource="categories"
                                                                     value={
                                                                         selectedCategoryId
                                                                     }
                                                                     onChange={(
-                                                                        e,
+                                                                        value,
                                                                     ) =>
                                                                         setSelectedCategoryId(
-                                                                            e
-                                                                                .target
-                                                                                .value,
+                                                                            value,
                                                                         )
                                                                     }
-                                                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-                                                                >
-                                                                    <option value="">
-                                                                        Sem
-                                                                        categoria
-                                                                    </option>
-                                                                    {categories.map(
-                                                                        (
-                                                                            cat,
-                                                                        ) => (
-                                                                            <option
-                                                                                key={
-                                                                                    cat.id
-                                                                                }
-                                                                                value={
-                                                                                    cat.id
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    cat.name
-                                                                                }
-                                                                            </option>
-                                                                        ),
-                                                                    )}
-                                                                </select>
+                                                                />
                                                             </FormField>
                                                         </div>
 

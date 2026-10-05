@@ -56,6 +56,8 @@ import {
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CustomerPicker } from '@/components/customer-picker';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     Dialog,
     DialogContent,
@@ -92,7 +94,6 @@ import type {
     CalendarAppointmentSaleLink,
     CalendarOption,
     CalendarProps,
-    SaleCategoryOptionSummary,
     ScheduleBlock,
 } from '@/types/calendar';
 
@@ -513,12 +514,15 @@ function AppointmentForm({
         }
     };
 
-    const handleServiceChange = (serviceId: string) => {
+    const handleServiceChange = (
+        serviceId: string,
+        selectedOption?: { duration_minutes?: number | null },
+    ) => {
         setSelectedService(serviceId);
 
-        const selectedServiceOption = serviceList.find(
-            (service) => service.id === serviceId,
-        );
+        const selectedServiceOption =
+            selectedOption ??
+            serviceList.find((service) => service.id === serviceId);
 
         if (selectedServiceOption?.duration_minutes) {
             setSelectedDuration(selectedServiceOption.duration_minutes);
@@ -767,10 +771,20 @@ function AppointmentForm({
 
                             <div className="grid min-w-0 gap-5 md:grid-cols-2">
                                 <div className="min-w-0 md:col-span-2">
-                                    <FormField
+                                    <CustomerPicker
                                         label="Cliente"
                                         name="customer_id"
+                                        id="customer_id"
+                                        value={selectedCustomer}
+                                        options={customerList}
+                                        selectedOption={
+                                            appointment?.customer ?? null
+                                        }
+                                        onChange={setSelectedCustomer}
+                                        required
+                                        disabled={isCancelled || isCompleted}
                                         error={errors.customer_id}
+                                        helper="Pesquise por nome ou telefone"
                                         action={
                                             !isCancelled && !isCompleted ? (
                                                 <button
@@ -786,35 +800,7 @@ function AppointmentForm({
                                                 </button>
                                             ) : undefined
                                         }
-                                    >
-                                        <select
-                                            id="customer_id"
-                                            name="customer_id"
-                                            value={selectedCustomer}
-                                            onChange={(e) =>
-                                                setSelectedCustomer(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            disabled={
-                                                isCancelled || isCompleted
-                                            }
-                                            required
-                                            className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                        >
-                                            <option value="">
-                                                Selecione um cliente
-                                            </option>
-                                            {customerList.map((customer) => (
-                                                <option
-                                                    key={customer.id}
-                                                    value={customer.id}
-                                                >
-                                                    {customer.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </FormField>
+                                    />
                                 </div>
                                 <FormField
                                     label="Serviço"
@@ -834,29 +820,24 @@ function AppointmentForm({
                                         ) : undefined
                                     }
                                 >
-                                    <select
+                                    <RemoteOptionPicker
                                         id="service_id"
                                         name="service_id"
+                                        options={serviceList}
+                                        placeholder="Selecione um serviço"
+                                        selectedOption={
+                                            appointment?.service ??
+                                            appointment?.items?.[0]?.service ??
+                                            undefined
+                                        }
+                                        resource="services"
                                         value={selectedService}
-                                        onChange={(e) =>
-                                            handleServiceChange(e.target.value)
+                                        onChange={(value, option) =>
+                                            handleServiceChange(value, option)
                                         }
                                         disabled={isCancelled || isCompleted}
                                         required
-                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                    >
-                                        <option value="">
-                                            Selecione um serviço
-                                        </option>
-                                        {serviceList.map((service) => (
-                                            <option
-                                                key={service.id}
-                                                value={service.id}
-                                            >
-                                                {service.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </FormField>
                                 <FormField
                                     label="Profissional"
@@ -878,33 +859,23 @@ function AppointmentForm({
                                         ) : undefined
                                     }
                                 >
-                                    <select
+                                    <RemoteOptionPicker
                                         id="professional_id"
                                         name="professional_id"
+                                        options={professionalList}
+                                        placeholder="Selecione um profissional"
+                                        selectedOption={
+                                            appointment?.professional ??
+                                            undefined
+                                        }
+                                        resource="professionals"
                                         value={selectedProfessional}
-                                        onChange={(e) =>
-                                            setSelectedProfessional(
-                                                e.target.value,
-                                            )
+                                        onChange={(value) =>
+                                            setSelectedProfessional(value)
                                         }
                                         disabled={isCancelled || isCompleted}
                                         required
-                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-70"
-                                    >
-                                        <option value="">
-                                            Selecione um profissional
-                                        </option>
-                                        {professionalList.map(
-                                            (professional) => (
-                                                <option
-                                                    key={professional.id}
-                                                    value={professional.id}
-                                                >
-                                                    {professional.name}
-                                                </option>
-                                            ),
-                                        )}
-                                    </select>
+                                    />
                                 </FormField>
                                 <FormField
                                     label="Data e horário"
@@ -1493,16 +1464,15 @@ function AppointmentSummaryHeader({
 
 function OpenAppointmentSaleForm({
     appointment,
-    categories,
     onClose,
 }: {
     appointment: CalendarAppointment;
-    categories: SaleCategoryOptionSummary[];
     onClose: () => void;
 }) {
     const [mutationKey] = useState(() =>
         createIdempotencyKey(`appointment-sale-open:${appointment.id}`),
     );
+    const [selectedSaleCategory, setSelectedSaleCategory] = useState('');
 
     return (
         <Form
@@ -1550,19 +1520,16 @@ function OpenAppointmentSaleForm({
                         name="sale_category_id"
                         error={errors.sale_category_id}
                     >
-                        <select
+                        <RemoteOptionPicker
                             id="appointment_sale_category_id"
                             name="sale_category_id"
+                            options={[]}
+                            placeholder="Selecione a categoria"
+                            resource="sale-categories"
+                            value={selectedSaleCategory}
+                            onChange={(value) => setSelectedSaleCategory(value)}
                             required
-                            className="h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[2px] focus-visible:ring-ring/50"
-                        >
-                            <option value="">Selecione a categoria</option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                </option>
-                            ))}
-                        </select>
+                        />
                     </FormField>
 
                     <FormField
@@ -1609,19 +1576,12 @@ function ScheduleBlockForm({
         createIdempotencyKey('schedule-block-create'),
     );
 
-    const [professionalList, setProfessionalList] =
-        useState<CalendarOption[]>(initialProfessionals);
     const [selectedProfessional, setSelectedProfessional] = useState(
         defaultProfessionalId,
     );
     const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
 
     const handleProfessionalCreated = (created: CreatedEntity) => {
-        const newOpt: CalendarOption = { id: created.id, name: created.name };
-        setProfessionalList((prev) => [
-            ...prev.filter((p) => p.id !== created.id),
-            newOpt,
-        ]);
         setSelectedProfessional(created.id);
     };
 
@@ -1657,26 +1617,22 @@ function ScheduleBlockForm({
                                         </button>
                                     }
                                 >
-                                    <select
+                                    <RemoteOptionPicker
                                         id="professional_id"
                                         name="professional_id"
+                                        options={[]}
+                                        selectedOption={initialProfessionals.find(
+                                            (professional) =>
+                                                professional.id ===
+                                                defaultProfessionalId,
+                                        )}
+                                        placeholder="Toda a unidade (Bloqueio geral)"
+                                        resource="professionals"
                                         value={selectedProfessional}
-                                        onChange={(e) =>
-                                            setSelectedProfessional(
-                                                e.target.value,
-                                            )
+                                        onChange={(value) =>
+                                            setSelectedProfessional(value)
                                         }
-                                        className="h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                                    >
-                                        <option value="">
-                                            Toda a unidade (Bloqueio geral)
-                                        </option>
-                                        {professionalList.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </FormField>
                             </div>
                             <FormField
@@ -1820,7 +1776,6 @@ export default function CalendarIndex(props: CalendarProps) {
         ['appointment.manage', 'calendar.manage'].includes(permission),
     );
     const canManageSales = permissions.includes('sale.manage');
-    const saleCategories = props.options?.sale_categories ?? [];
     const appointments =
         props.calendar?.appointments ?? props.appointments ?? [];
 
@@ -1918,7 +1873,7 @@ export default function CalendarIndex(props: CalendarProps) {
         props.options?.professionals,
         props.professionals,
     );
-    const services = optionList(props.options?.services, props.services);
+    const services: CalendarOption[] = [];
     const loadError = typeof props.error === 'string' ? props.error : undefined;
     const flashAutomationError = page.props.flash?.error ?? undefined;
     const flashAutomationIssue = flashAutomationError
@@ -2427,7 +2382,6 @@ export default function CalendarIndex(props: CalendarProps) {
                     {editing ? (
                         <OpenAppointmentSaleForm
                             appointment={editing}
-                            categories={saleCategories}
                             onClose={() => {
                                 setOpenSaleDialogOpen(false);
                                 setEditing(null);

@@ -57,6 +57,7 @@ type Professional = {
 
 type Props = {
     filters: ResourceFilters;
+    hasServices?: boolean;
     options?: {
         services?: RelationOption[];
     };
@@ -69,6 +70,7 @@ export default function ProfessionalsIndex({
     filters,
     options,
     serviceOptions,
+    hasServices,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const { view, setView } = useResourceView(
@@ -212,12 +214,21 @@ export default function ProfessionalsIndex({
                                                         <p className="text-sm font-medium text-foreground">
                                                             Serviços habilitados
                                                         </p>
-                                                        <RelationCheckboxes
-                                                            name="service_ids"
-                                                            options={
-                                                                availableServices
-                                                            }
-                                                        />
+                                                        {hasServices ? (
+                                                            <RelationCheckboxes
+                                                                name="service_ids"
+                                                                options={
+                                                                    availableServices
+                                                                }
+                                                                resource="services"
+                                                            />
+                                                        ) : (
+                                                            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                                                Nenhum serviço
+                                                                disponível nesta
+                                                                unidade ainda.
+                                                            </p>
+                                                        )}
                                                         <p className="text-xs text-muted-foreground">
                                                             Selecione os
                                                             serviços que esta

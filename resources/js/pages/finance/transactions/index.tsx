@@ -35,6 +35,8 @@ import {
 import type { CreatedEntity } from '@/components/operational/quick-create-dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CustomerPicker } from '@/components/customer-picker';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Dialog,
@@ -62,6 +64,7 @@ import type {
 type Option = {
     id: string;
     name: string;
+    phone?: string | null;
 };
 
 type Props = {
@@ -166,6 +169,7 @@ export default function FinancialTransactionsIndex({
     const [editingObligation, setEditingObligation] =
         useState<FinancialObligation | null>(null);
     const [editAmount, setEditAmount] = useState('');
+    const [editCustomerId, setEditCustomerId] = useState('');
 
     const [settlingObligation, setSettlingObligation] =
         useState<FinancialObligation | null>(null);
@@ -217,8 +221,34 @@ export default function FinancialTransactionsIndex({
     };
 
     const openEdit = (item: FinancialObligation) => {
+        const category = item.category;
+        const supplier = item.supplier;
+        const customer = item.customer;
+
+        if (category) {
+            setCategories((current) => [
+                ...current.filter((option) => option.id !== category.id),
+                category,
+            ]);
+        }
+
+        if (supplier) {
+            setSuppliers((current) => [
+                ...current.filter((option) => option.id !== supplier.id),
+                supplier,
+            ]);
+        }
+
+        if (customer) {
+            setCustomersList((current) => [
+                ...current.filter((option) => option.id !== customer.id),
+                customer,
+            ]);
+        }
+
         setEditingObligation(item);
         setEditAmount((item.amount_cents / 100).toFixed(2));
+        setEditCustomerId(item.customer_id ?? '');
     };
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -438,43 +468,21 @@ export default function FinancialTransactionsIndex({
                                                                 </button>
                                                             }
                                                         >
-                                                            <select
+                                                            <RemoteOptionPicker
                                                                 id="category_id"
                                                                 name="category_id"
+                                                                options={
+                                                                    categories
+                                                                }
+                                                                placeholder="Selecione uma categoria (opcional)"
+                                                                resource="categories"
                                                                 value={
                                                                     selectedCategoryId
                                                                 }
-                                                                onChange={(e) =>
-                                                                    setSelectedCategoryId(
-                                                                        e.target
-                                                                            .value,
-                                                                    )
+                                                                onChange={
+                                                                    setSelectedCategoryId
                                                                 }
-                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                            >
-                                                                <option value="">
-                                                                    Selecione
-                                                                    uma
-                                                                    categoria
-                                                                    (opcional)
-                                                                </option>
-                                                                {categories.map(
-                                                                    (cat) => (
-                                                                        <option
-                                                                            key={
-                                                                                cat.id
-                                                                            }
-                                                                            value={
-                                                                                cat.id
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                cat.name
-                                                                            }
-                                                                        </option>
-                                                                    ),
-                                                                )}
-                                                            </select>
+                                                            />
                                                         </FormField>
                                                     </div>
 
@@ -502,58 +510,42 @@ export default function FinancialTransactionsIndex({
                                                                     </button>
                                                                 }
                                                             >
-                                                                <select
+                                                                <RemoteOptionPicker
                                                                     id="supplier_id"
                                                                     name="supplier_id"
+                                                                    options={
+                                                                        suppliers
+                                                                    }
+                                                                    placeholder="Selecione o fornecedor (opcional)"
+                                                                    resource="suppliers"
                                                                     value={
                                                                         selectedSupplierId
                                                                     }
-                                                                    onChange={(
-                                                                        e,
-                                                                    ) =>
-                                                                        setSelectedSupplierId(
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        )
+                                                                    onChange={
+                                                                        setSelectedSupplierId
                                                                     }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                                >
-                                                                    <option value="">
-                                                                        Selecione
-                                                                        o
-                                                                        fornecedor
-                                                                        (opcional)
-                                                                    </option>
-                                                                    {suppliers.map(
-                                                                        (
-                                                                            sup,
-                                                                        ) => (
-                                                                            <option
-                                                                                key={
-                                                                                    sup.id
-                                                                                }
-                                                                                value={
-                                                                                    sup.id
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    sup.name
-                                                                                }
-                                                                            </option>
-                                                                        ),
-                                                                    )}
-                                                                </select>
+                                                                />
                                                             </FormField>
                                                         </div>
                                                     ) : (
                                                         <div>
-                                                            <FormField
+                                                            <CustomerPicker
                                                                 label="Cliente"
                                                                 name="customer_id"
+                                                                id="customer_id"
+                                                                value={
+                                                                    selectedCustomerId
+                                                                }
+                                                                options={
+                                                                    customersList
+                                                                }
+                                                                onChange={
+                                                                    setSelectedCustomerId
+                                                                }
                                                                 error={
                                                                     errors.customer_id
                                                                 }
+                                                                helper="Opcional — pesquise por nome ou telefone"
                                                                 action={
                                                                     <button
                                                                         type="button"
@@ -568,50 +560,7 @@ export default function FinancialTransactionsIndex({
                                                                         Cliente
                                                                     </button>
                                                                 }
-                                                            >
-                                                                <select
-                                                                    id="customer_id"
-                                                                    name="customer_id"
-                                                                    value={
-                                                                        selectedCustomerId
-                                                                    }
-                                                                    onChange={(
-                                                                        e,
-                                                                    ) =>
-                                                                        setSelectedCustomerId(
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                                >
-                                                                    <option value="">
-                                                                        Selecione
-                                                                        o
-                                                                        cliente
-                                                                        (opcional)
-                                                                    </option>
-                                                                    {customersList.map(
-                                                                        (
-                                                                            cus,
-                                                                        ) => (
-                                                                            <option
-                                                                                key={
-                                                                                    cus.id
-                                                                                }
-                                                                                value={
-                                                                                    cus.id
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    cus.name
-                                                                                }
-                                                                            </option>
-                                                                        ),
-                                                                    )}
-                                                                </select>
-                                                            </FormField>
+                                                            />
                                                         </div>
                                                     )}
 
@@ -879,30 +828,19 @@ export default function FinancialTransactionsIndex({
 
                     <div className="grid grid-cols-1 gap-3 border-t pt-2 text-xs sm:grid-cols-3">
                         <div>
-                            <label
-                                htmlFor="filter-category"
-                                className="mb-1 block font-medium text-muted-foreground"
-                            >
-                                Categoria
-                            </label>
-                            <select
+                            <RemoteOptionPicker
                                 id="filter-category"
+                                label="Categoria"
+                                name="category_id"
                                 value={categoryIdFilter}
-                                onChange={(e) => {
-                                    setCategoryIdFilter(e.target.value);
-                                    applyFilters({
-                                        category_id: e.target.value,
-                                    });
+                                onChange={(value) => {
+                                    setCategoryIdFilter(value);
+                                    applyFilters({ category_id: value });
                                 }}
-                                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-xs focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                            >
-                                <option value="">Todas as categorias</option>
-                                {categories.map((cat) => (
-                                    <option key={cat.id} value={cat.id}>
-                                        {cat.name}
-                                    </option>
-                                ))}
-                            </select>
+                                options={categories}
+                                placeholder="Todas as categorias"
+                                resource="categories"
+                            />
                         </div>
                         <div>
                             <label
@@ -1357,32 +1295,31 @@ export default function FinancialTransactionsIndex({
                                                     name="category_id"
                                                     error={errors.category_id}
                                                 >
-                                                    <select
+                                                    <RemoteOptionPicker
                                                         id="edit_category_id"
                                                         name="category_id"
-                                                        defaultValue={
+                                                        options={categories}
+                                                        selectedOption={
+                                                            editingObligation.category ??
+                                                            undefined
+                                                        }
+                                                        placeholder="Selecione uma categoria (opcional)"
+                                                        resource="categories"
+                                                        value={
                                                             editingObligation.category_id ||
                                                             ''
                                                         }
-                                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                    >
-                                                        <option value="">
-                                                            Selecione uma
-                                                            categoria (opcional)
-                                                        </option>
-                                                        {categories.map(
-                                                            (cat) => (
-                                                                <option
-                                                                    key={cat.id}
-                                                                    value={
-                                                                        cat.id
-                                                                    }
-                                                                >
-                                                                    {cat.name}
-                                                                </option>
-                                                            ),
-                                                        )}
-                                                    </select>
+                                                        onChange={(value) =>
+                                                            setEditingObligation(
+                                                                {
+                                                                    ...editingObligation,
+                                                                    category_id:
+                                                                        value ||
+                                                                        null,
+                                                                },
+                                                            )
+                                                        }
+                                                    />
                                                 </FormField>
                                             </div>
 
@@ -1396,80 +1333,53 @@ export default function FinancialTransactionsIndex({
                                                             errors.supplier_id
                                                         }
                                                     >
-                                                        <select
+                                                        <RemoteOptionPicker
                                                             id="edit_supplier_id"
                                                             name="supplier_id"
-                                                            defaultValue={
+                                                            options={suppliers}
+                                                            selectedOption={
+                                                                editingObligation.supplier ??
+                                                                undefined
+                                                            }
+                                                            placeholder="Selecione o fornecedor (opcional)"
+                                                            resource="suppliers"
+                                                            value={
                                                                 editingObligation.supplier_id ||
                                                                 ''
                                                             }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                        >
-                                                            <option value="">
-                                                                Selecione o
-                                                                fornecedor
-                                                                (opcional)
-                                                            </option>
-                                                            {suppliers.map(
-                                                                (sup) => (
-                                                                    <option
-                                                                        key={
-                                                                            sup.id
-                                                                        }
-                                                                        value={
-                                                                            sup.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            sup.name
-                                                                        }
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </select>
+                                                            onChange={(value) =>
+                                                                setEditingObligation(
+                                                                    {
+                                                                        ...editingObligation,
+                                                                        supplier_id:
+                                                                            value ||
+                                                                            null,
+                                                                    },
+                                                                )
+                                                            }
+                                                        />
                                                     </FormField>
                                                 </div>
                                             ) : (
                                                 <div>
-                                                    <FormField
+                                                    <CustomerPicker
                                                         label="Cliente"
                                                         name="customer_id"
+                                                        id="edit_customer_id"
+                                                        value={editCustomerId}
+                                                        options={customersList}
+                                                        selectedOption={
+                                                            editingObligation?.customer ??
+                                                            null
+                                                        }
+                                                        onChange={
+                                                            setEditCustomerId
+                                                        }
                                                         error={
                                                             errors.customer_id
                                                         }
-                                                    >
-                                                        <select
-                                                            id="edit_customer_id"
-                                                            name="customer_id"
-                                                            defaultValue={
-                                                                editingObligation.customer_id ||
-                                                                ''
-                                                            }
-                                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                                                        >
-                                                            <option value="">
-                                                                Selecione o
-                                                                cliente
-                                                                (opcional)
-                                                            </option>
-                                                            {customersList.map(
-                                                                (cus) => (
-                                                                    <option
-                                                                        key={
-                                                                            cus.id
-                                                                        }
-                                                                        value={
-                                                                            cus.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            cus.name
-                                                                        }
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </select>
-                                                    </FormField>
+                                                        helper="Opcional — pesquise por nome ou telefone"
+                                                    />
                                                 </div>
                                             )}
 

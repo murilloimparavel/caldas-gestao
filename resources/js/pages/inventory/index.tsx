@@ -9,6 +9,7 @@ import {
 import { useState } from 'react';
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
 import type { StockAdjustableProduct } from '@/components/inventory/stock-adjustment-dialog';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     EmptyState,
     formatMoney,
@@ -19,6 +20,13 @@ import {
 import type { Paginated } from '@/components/operational';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Table,
     TableBody,
@@ -119,6 +127,10 @@ export default function InventoryIndex({
         props.auth.permissions.includes('product.manage');
     const [adjustingProduct, setAdjustingProduct] =
         useState<StockAdjustableProduct | null>(null);
+    const [selectingProduct, setSelectingProduct] = useState(false);
+    const [filterProductId, setFilterProductId] = useState(
+        filters.product_id ?? '',
+    );
 
     return (
         <>
@@ -131,7 +143,7 @@ export default function InventoryIndex({
                     action={
                         canManage && products.length > 0 ? (
                             <Button
-                                onClick={() => setAdjustingProduct(products[0])}
+                                onClick={() => setSelectingProduct(true)}
                                 className="w-full sm:w-auto"
                             >
                                 <SlidersHorizontal aria-hidden="true" />
@@ -153,19 +165,15 @@ export default function InventoryIndex({
                         >
                             Produto
                         </label>
-                        <select
+                        <RemoteOptionPicker
                             id="product_id"
                             name="product_id"
-                            defaultValue={filters.product_id ?? ''}
-                            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                        >
-                            <option value="">Todos os produtos</option>
-                            {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name}
-                                </option>
-                            ))}
-                        </select>
+                            options={products}
+                            placeholder="Todos os produtos"
+                            resource="inventory-products"
+                            value={filterProductId}
+                            onChange={(value) => setFilterProductId(value)}
+                        />
                     </div>
 
                     <div>
@@ -379,6 +387,38 @@ export default function InventoryIndex({
                 )}
 
                 <Pagination links={paginator.links} />
+
+                <Dialog
+                    open={selectingProduct}
+                    onOpenChange={setSelectingProduct}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Selecionar produto</DialogTitle>
+                            <DialogDescription>
+                                Pesquise o produto que receberá a movimentação.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <RemoteOptionPicker
+                            id="adjustment_product_id"
+                            name="adjustment_product_id"
+                            options={products}
+                            placeholder="Selecione um produto"
+                            resource="inventory-products"
+                            value={adjustingProduct?.id ?? ''}
+                            onChange={(_, option) => {
+                                if (!option) {
+                                    return;
+                                }
+
+                                setAdjustingProduct(
+                                    option as StockAdjustableProduct,
+                                );
+                                setSelectingProduct(false);
+                            }}
+                        />
+                    </DialogContent>
+                </Dialog>
 
                 {adjustingProduct ? (
                     <StockAdjustmentDialog

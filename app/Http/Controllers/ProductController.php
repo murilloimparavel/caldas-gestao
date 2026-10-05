@@ -49,16 +49,21 @@ final class ProductController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $categoryOptions = Category::query()
-            ->where('tenant_id', $context->tenant->getKey())
-            ->where('unit_id', $context->unit?->getKey())
-            ->where('is_active', true)
-            ->whereIn('type', ['product', 'general'])
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn (Category $cat) => ['id' => $cat->id, 'name' => $cat->name])
-            ->values()
-            ->all();
+        $categoryOptions = $categoryId === ''
+            ? []
+            : Category::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $context->unit?->getKey())
+                ->where('is_active', true)
+                ->whereIn('type', ['product', 'general'])
+                ->whereKey($categoryId)
+                ->get(['id', 'name'])
+                ->map(fn (Category $category): array => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                ])
+                ->values()
+                ->all();
 
         $inventoryByCategory = Product::query()
             ->where('tenant_id', $context->tenant->getKey())
@@ -110,15 +115,10 @@ final class ProductController extends Controller
     {
         Gate::authorize('view', $product);
 
-        $categoryOptions = Category::query()
-            ->where('tenant_id', $context->tenant->getKey())
-            ->where('unit_id', $context->unit?->getKey())
-            ->whereIn('type', ['product', 'general'])
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn (Category $cat) => ['id' => $cat->id, 'name' => $cat->name])
-            ->values()
-            ->all();
+        $product = $product->load('category:id,name');
+        $categoryOptions = $product->category
+            ? [['id' => $product->category->id, 'name' => $product->category->name]]
+            : [];
 
         $movements = $product->inventoryMovements()
             ->with('user:id,name')
@@ -127,7 +127,7 @@ final class ProductController extends Controller
             ->withQueryString();
 
         return Inertia::render('products/show', [
-            'product' => $product->load('category:id,name'),
+            'product' => $product,
             'categoryOptions' => $categoryOptions,
             'movements' => $movements,
         ]);

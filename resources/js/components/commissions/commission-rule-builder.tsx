@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import type { CommissionRule } from '@/types';
 import { CommissionRuleSummary } from './commission-rule-summary';
 import type {
@@ -320,28 +321,22 @@ export function CommissionRuleBuilder({
                                     label="Profissional"
                                     error={errors.professional_id}
                                 >
-                                    <select
+                                    <RemoteOptionPicker
+                                        id="commission-professional"
                                         name="professional_id"
+                                        resource="professionals"
+                                        options={professionals}
                                         value={professionalId}
-                                        onChange={(event) =>
-                                            setProfessionalId(
-                                                event.target.value,
-                                            )
+                                        selectedOption={professionals.find(
+                                            (professional) =>
+                                                professional.id ===
+                                                professionalId,
+                                        )}
+                                        placeholder="Todos os profissionais (regra geral)"
+                                        onChange={(value) =>
+                                            setProfessionalId(value)
                                         }
-                                        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                    >
-                                        <option value="">
-                                            Todos os profissionais (regra geral)
-                                        </option>
-                                        {professionals.map((professional) => (
-                                            <option
-                                                key={professional.id}
-                                                value={professional.id}
-                                            >
-                                                {professional.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </FormField>
                             </section>
                             <section className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
@@ -723,6 +718,19 @@ function CategoryList({
     onSelect: (id: string) => void;
     emptyLabel: string;
 }) {
+    const [query, setQuery] = useState('');
+    const normalizedQuery = query
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('pt-BR');
+    const filteredCategories = categories.filter((category) =>
+        category.name
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLocaleLowerCase('pt-BR')
+            .includes(normalizedQuery),
+    );
+
     return (
         <div className="mt-4 rounded-2xl border border-border/80 bg-muted/20 p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -741,30 +749,45 @@ function CategoryList({
                     {emptyLabel}
                 </p>
             ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                    {categories.map((category) => (
-                        <label
-                            key={category.id}
-                            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${selectedId === category.id ? 'border-primary/50 bg-primary/8' : 'border-transparent bg-background/50 hover:border-border'}`}
-                        >
-                            <input
-                                type="radio"
-                                name="category_picker"
-                                checked={selectedId === category.id}
-                                onChange={() => onSelect(category.id)}
-                                className="h-4 w-4 accent-primary"
-                            />
-                            <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                                {category.name}
-                            </span>
-                            {category.items_count !== undefined && (
-                                <span className="text-xs text-muted-foreground">
-                                    {category.items_count}
+                <>
+                    <Input
+                        type="search"
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder="Buscar categoria"
+                        aria-label="Buscar categoria"
+                        className="mb-3 h-10"
+                    />
+                    <div className="grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                        {filteredCategories.map((category) => (
+                            <label
+                                key={category.id}
+                                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${selectedId === category.id ? 'border-primary/50 bg-primary/8' : 'border-transparent bg-background/50 hover:border-border'}`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="category_picker"
+                                    checked={selectedId === category.id}
+                                    onChange={() => onSelect(category.id)}
+                                    className="h-4 w-4 accent-primary"
+                                />
+                                <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                                    {category.name}
                                 </span>
-                            )}
-                        </label>
-                    ))}
-                </div>
+                                {category.items_count !== undefined && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {category.items_count}
+                                    </span>
+                                )}
+                            </label>
+                        ))}
+                    </div>
+                    {filteredCategories.length === 0 && (
+                        <p className="mt-3 rounded-xl border border-dashed border-border px-3 py-4 text-center text-xs leading-5 text-muted-foreground">
+                            Nenhuma categoria encontrada.
+                        </p>
+                    )}
+                </>
             )}
         </div>
     );

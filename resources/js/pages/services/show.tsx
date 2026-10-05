@@ -1,12 +1,5 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    Clock3,
-    Plus,
-    Search,
-    Scissors,
-    UsersRound,
-} from 'lucide-react';
+import { ArrowLeft, Clock3, Plus, Scissors, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import {
     createIdempotencyKey,
@@ -56,6 +49,7 @@ type Service = {
 };
 
 type Props = {
+    hasProfessionalOptions?: boolean;
     options?: {
         professionals?: RelationOption[];
     };
@@ -98,6 +92,7 @@ export default function ServiceShow({
     service,
     options,
     professionalOptions,
+    hasProfessionalOptions = false,
 }: Props) {
     const [updateKey] = useState(() => createIdempotencyKey('service-update'));
     const [destroyKey] = useState(() =>
@@ -111,7 +106,6 @@ export default function ServiceShow({
     const [hasImageError, setHasImageError] = useState(false);
     const [professionalsDialogOpen, setProfessionalsDialogOpen] =
         useState(false);
-    const [professionalSearch, setProfessionalSearch] = useState('');
     const [selectedProfessionalIds, setSelectedProfessionalIds] = useState(() =>
         service.professionals.map((professional) => professional.id),
     );
@@ -125,15 +119,6 @@ export default function ServiceShow({
     const canManage = props.auth.permissions.includes('service.manage');
     const availableProfessionals =
         professionalOptions ?? options?.professionals ?? service.professionals;
-    const hasProfessionalOptions =
-        professionalOptions !== undefined ||
-        options?.professionals !== undefined;
-    const filteredProfessionals = availableProfessionals.filter(
-        (professional) =>
-            professional.name
-                .toLocaleLowerCase()
-                .includes(professionalSearch.toLocaleLowerCase()),
-    );
     const displayedProfessionals = hasProfessionalOptions
         ? availableProfessionals.filter((professional) =>
               selectedProfessionalIds.includes(professional.id),
@@ -142,20 +127,17 @@ export default function ServiceShow({
 
     function openProfessionalsDialog(): void {
         setDraftProfessionalIds(selectedProfessionalIds);
-        setProfessionalSearch('');
         setProfessionalsDialogOpen(true);
     }
 
     function cancelProfessionalsDialog(): void {
         setDraftProfessionalIds(selectedProfessionalIds);
-        setProfessionalSearch('');
         setProfessionalsDialogOpen(false);
     }
 
     function applyProfessionalSelection(): void {
         setSelectedProfessionalIds(draftProfessionalIds);
         setProfessionalsDialogOpen(false);
-        setProfessionalSearch('');
     }
 
     return (
@@ -466,27 +448,6 @@ export default function ServiceShow({
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <div className="space-y-4">
-                                                <div className="relative">
-                                                    <Search
-                                                        aria-hidden="true"
-                                                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                                                    />
-                                                    <Input
-                                                        aria-label="Pesquisar profissionais"
-                                                        placeholder="Pesquisar profissional"
-                                                        value={
-                                                            professionalSearch
-                                                        }
-                                                        onChange={(event) =>
-                                                            setProfessionalSearch(
-                                                                event.target
-                                                                    .value,
-                                                            )
-                                                        }
-                                                        className="pl-9"
-                                                        autoFocus
-                                                    />
-                                                </div>
                                                 <p className="text-xs text-muted-foreground">
                                                     {
                                                         draftProfessionalIds.length
@@ -497,29 +458,20 @@ export default function ServiceShow({
                                                         ? ''
                                                         : 's'}
                                                 </p>
-                                                {filteredProfessionals.length >
-                                                0 ? (
-                                                    <RelationCheckboxes
-                                                        name="professional_ids"
-                                                        options={
-                                                            filteredProfessionals
-                                                        }
-                                                        selectedIds={
-                                                            draftProfessionalIds
-                                                        }
-                                                        onSelectionChange={
-                                                            setDraftProfessionalIds
-                                                        }
-                                                        disabled={!canManage}
-                                                    />
-                                                ) : (
-                                                    <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                                                        <p className="text-sm text-muted-foreground">
-                                                            Nenhum profissional
-                                                            encontrado.
-                                                        </p>
-                                                    </div>
-                                                )}
+                                                <RelationCheckboxes
+                                                    name="professional_ids"
+                                                    options={
+                                                        availableProfessionals
+                                                    }
+                                                    resource="professionals"
+                                                    selectedIds={
+                                                        draftProfessionalIds
+                                                    }
+                                                    onSelectionChange={
+                                                        setDraftProfessionalIds
+                                                    }
+                                                    disabled={!canManage}
+                                                />
                                             </div>
                                             <DialogFooter className="sticky bottom-0 -mx-4 -mb-4 flex-col gap-2 border-t border-border bg-background/95 p-4 backdrop-blur sm:static sm:m-0 sm:flex-row sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
                                                 <Button

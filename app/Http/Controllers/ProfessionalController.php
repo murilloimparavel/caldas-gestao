@@ -40,7 +40,7 @@ final class ProfessionalController extends Controller
 
         return Inertia::render('professionals/index', [
             'professionals' => $professionals,
-            'serviceOptions' => $this->serviceOptions($context),
+            'hasServices' => $this->hasServices($context),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -52,33 +52,36 @@ final class ProfessionalController extends Controller
     {
         Gate::authorize('view', $professional);
 
+        $professional->load([
+            'services:id,name',
+            'availabilityRules' => fn ($query) => $query->orderBy('weekday')->orderBy('starts_at'),
+            'scheduleBlocks' => fn ($query) => $query->where('status', 'active')->orderBy('starts_at'),
+        ]);
+        $serviceOptions = $professional->services
+            ->map(fn (Service $service): array => [
+                'id' => (string) $service->getKey(),
+                'name' => $service->name,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('professionals/show', [
-            'professional' => $professional->load([
-                'services:id,name',
-                'availabilityRules' => fn ($query) => $query->orderBy('weekday')->orderBy('starts_at'),
-                'scheduleBlocks' => fn ($query) => $query->where('status', 'active')->orderBy('starts_at'),
-            ]),
-            'serviceOptions' => $this->serviceOptions($context),
+            'professional' => $professional,
+            'serviceOptions' => $serviceOptions,
+            'hasServiceOptions' => $this->hasServices($context) || $serviceOptions !== [],
         ]);
     }
 
     /** @return array<int, array{id:string,name:string}> */
-    private function serviceOptions(TenantContext $context): array
+    private function hasServices(TenantContext $context): bool
     {
         return $context->unit === null
-            ? []
+            ? false
             : Service::query()
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $context->unit->getKey())
                 ->where('status', 'active')
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn (Service $service): array => [
-                    'id' => (string) $service->getKey(),
-                    'name' => $service->name,
-                ])
-                ->values()
-                ->all();
+                ->exists();
     }
 
     public function store(ProfessionalRequest $request, TenantContext $context, CreateProfessional $createProfessional): RedirectResponse|JsonResponse

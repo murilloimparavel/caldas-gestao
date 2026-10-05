@@ -8,7 +8,6 @@ import {
     Mail,
     Phone,
     Plus,
-    Search,
     Trash2,
     UserRound,
 } from 'lucide-react';
@@ -367,6 +366,7 @@ function AvailabilityEditor({
 }
 
 type Props = {
+    hasServiceOptions?: boolean;
     options?: {
         services?: RelationOption[];
     };
@@ -378,6 +378,7 @@ export default function ProfessionalShow({
     professional,
     options,
     serviceOptions,
+    hasServiceOptions = false,
 }: Props) {
     const [selectedAvatar, setSelectedAvatar] = useState<File | string | null>(
         professional.avatar_url ?? null,
@@ -395,7 +396,6 @@ export default function ProfessionalShow({
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [servicesDialogOpen, setServicesDialogOpen] = useState(false);
-    const [serviceSearch, setServiceSearch] = useState('');
     const [availabilityDay, setAvailabilityDay] = useState<
         (typeof weekdays)[number] | null
     >(null);
@@ -430,13 +430,6 @@ export default function ProfessionalShow({
     }, [activeAvailabilityRules]);
     const availableServices =
         serviceOptions ?? options?.services ?? professional.services;
-    const hasServiceOptions =
-        serviceOptions !== undefined || options?.services !== undefined;
-    const filteredServices = availableServices.filter((service) =>
-        service.name
-            .toLocaleLowerCase()
-            .includes(serviceSearch.toLocaleLowerCase()),
-    );
 
     return (
         <>
@@ -882,13 +875,7 @@ export default function ProfessionalShow({
                                 {canManage && hasServiceOptions ? (
                                     <Dialog
                                         open={servicesDialogOpen}
-                                        onOpenChange={(open) => {
-                                            setServicesDialogOpen(open);
-
-                                            if (!open) {
-                                                setServiceSearch('');
-                                            }
-                                        }}
+                                        onOpenChange={setServicesDialogOpen}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -913,31 +900,13 @@ export default function ProfessionalShow({
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <div className="space-y-4">
-                                                <div className="relative">
-                                                    <Search
-                                                        aria-hidden="true"
-                                                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                                                    />
-                                                    <Input
-                                                        aria-label="Pesquisar serviços"
-                                                        placeholder="Pesquisar serviço"
-                                                        value={serviceSearch}
-                                                        onChange={(event) =>
-                                                            setServiceSearch(
-                                                                event.target
-                                                                    .value,
-                                                            )
-                                                        }
-                                                        className="pl-9"
-                                                        autoFocus
-                                                    />
-                                                </div>
                                                 <RelationCheckboxes
                                                     name="service_ids"
-                                                    options={filteredServices}
+                                                    options={availableServices}
                                                     selectedIds={professional.services.map(
                                                         (service) => service.id,
                                                     )}
+                                                    resource="services"
                                                     disabled={!canManage}
                                                     form="professional-update-form"
                                                 />

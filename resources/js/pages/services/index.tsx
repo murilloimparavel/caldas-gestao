@@ -61,6 +61,7 @@ type Service = {
 
 type Props = {
     filters: ResourceFilters;
+    hasProfessionals?: boolean;
     options?: {
         professionals?: RelationOption[];
     };
@@ -104,6 +105,7 @@ export default function ServicesIndex({
     filters,
     options,
     professionalOptions: initialProfessionalOptions,
+    hasProfessionals,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
     const { view, setView } = useResourceView('caldas-gestao:services-view');
@@ -284,12 +286,22 @@ export default function ServicesIndex({
                                                                 Profissional
                                                             </button>
                                                         </div>
-                                                        <RelationCheckboxes
-                                                            name="professional_ids"
-                                                            options={
-                                                                professionalOptions
-                                                            }
-                                                        />
+                                                        {hasProfessionals ? (
+                                                            <RelationCheckboxes
+                                                                name="professional_ids"
+                                                                options={
+                                                                    professionalOptions
+                                                                }
+                                                                resource="professionals"
+                                                            />
+                                                        ) : (
+                                                            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                                                Nenhum
+                                                                profissional
+                                                                disponível nesta
+                                                                unidade ainda.
+                                                            </p>
+                                                        )}
                                                         <p className="text-xs text-muted-foreground">
                                                             Selecione quem
                                                             poderá receber este

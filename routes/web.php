@@ -32,6 +32,7 @@ use App\Http\Controllers\RetentionCampaignController;
 use App\Http\Controllers\SaleCategoryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleItemController;
+use App\Http\Controllers\SelectorOptionsController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
@@ -253,6 +254,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('customers/{customer}/retention/mark', [CustomerController::class, 'markAtRisk'])->name('customers.retention.mark');
         Route::post('customers/{customer}/retention/reactivate', [CustomerController::class, 'reactivateRetention'])->name('customers.retention.reactivate');
         Route::get('retention/campaigns', [RetentionCampaignController::class, 'index'])->name('retention.campaigns.index');
+        Route::get('selector-options/{resource}', SelectorOptionsController::class)->name('selector-options.index');
         Route::post('retention/campaigns', [RetentionCampaignController::class, 'store'])->name('retention.campaigns.store');
         Route::patch('retention/campaigns/{retention_campaign}/status', [RetentionCampaignController::class, 'status'])->name('retention.campaigns.status');
         Route::post('retention/campaigns/{retention_campaign}/audience', [RetentionCampaignController::class, 'audience'])->name('retention.campaigns.audience');
