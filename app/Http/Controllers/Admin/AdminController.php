@@ -16,11 +16,23 @@ use App\Support\AuditEventWriter;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Fortify\Features;
 
 final class AdminController extends Controller
 {
+    public function login(Request $request): Response
+    {
+        $request->session()->put('admin_login_intent', true);
+
+        return Inertia::render('auth/admin-login', [
+            'canResetPassword' => Features::enabled(Features::resetPasswords()),
+            'status' => $request->session()->get('status'),
+        ]);
+    }
+
     public function dashboard(): Response
     {
         $tenants = Tenant::query()->with([
@@ -128,8 +140,7 @@ final class AdminController extends Controller
 
     public function storeTenant(CreateTenantRequest $request, CreatePlatformTenant $create): RedirectResponse
     {
-        $tenant = $create->handle($request->validated());
-        app(AuditEventWriter::class)->record(['actor_user_id' => $request->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.created', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey()]);
+        $tenant = $create->handle($request->user(), $request->validated());
 
         return to_route('admin.tenants')->with('success', "Cliente {$tenant->name} criado com sucesso.");
     }
@@ -143,9 +154,12 @@ final class AdminController extends Controller
 
     public function updateTenantStatus(UpdateTenantStatusRequest $request, Tenant $tenant): RedirectResponse
     {
-        $before = $tenant->status->value;
-        $tenant->update(['status' => $request->validated('status'), 'lock_version' => $tenant->lock_version + 1]);
-        app(AuditEventWriter::class)->record(['actor_user_id' => $request->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.status_updated', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey(), 'metadata' => ['from_status' => $before, 'to_status' => $tenant->status->value]]);
+        DB::transaction(function () use ($request, $tenant): void {
+            $tenant = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->firstOrFail();
+            $before = $tenant->status->value;
+            $tenant->update(['status' => $request->validated('status'), 'lock_version' => $tenant->lock_version + 1]);
+            app(AuditEventWriter::class)->record(['actor_user_id' => $request->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.status_updated', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey(), 'metadata' => ['from_status' => $before, 'to_status' => $tenant->status->value]]);
+        });
 
         return back()->with('success', 'Status do cliente atualizado.');
     }
@@ -155,18 +169,24 @@ final class AdminController extends Controller
         return Inertia::render('admin/audit', ['events' => AuditEvent::query()->with('actor:id,name,email')->latest('occurred_at')->paginate(50)->withQueryString()]);
     }
 
-    public function suspend(Tenant $tenant): RedirectResponse
+    public function suspend(Request $request, Tenant $tenant): RedirectResponse
     {
-        $tenant->update(['status' => 'suspended', 'lock_version' => $tenant->lock_version + 1]);
-        app(AuditEventWriter::class)->record(['actor_user_id' => request()->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.suspended', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey()]);
+        DB::transaction(function () use ($request, $tenant): void {
+            $tenant = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->firstOrFail();
+            $tenant->update(['status' => 'suspended', 'lock_version' => $tenant->lock_version + 1]);
+            app(AuditEventWriter::class)->record(['actor_user_id' => $request->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.suspended', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey()]);
+        });
 
         return back()->with('success', 'Cliente suspenso.');
     }
 
-    public function activate(Tenant $tenant): RedirectResponse
+    public function activate(Request $request, Tenant $tenant): RedirectResponse
     {
-        $tenant->update(['status' => 'active', 'lock_version' => $tenant->lock_version + 1]);
-        app(AuditEventWriter::class)->record(['actor_user_id' => request()->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.activated', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey()]);
+        DB::transaction(function () use ($request, $tenant): void {
+            $tenant = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->firstOrFail();
+            $tenant->update(['status' => 'active', 'lock_version' => $tenant->lock_version + 1]);
+            app(AuditEventWriter::class)->record(['actor_user_id' => $request->user()?->getKey(), 'tenant_id' => $tenant->getKey(), 'action' => 'platform.tenant.activated', 'resource_type' => 'tenant', 'resource_id' => $tenant->getKey()]);
+        });
 
         return back()->with('success', 'Cliente reativado.');
     }

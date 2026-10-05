@@ -2,6 +2,7 @@
 
 use App\Actions\Identity\OnboardTenant;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -43,6 +44,15 @@ it('renders the password setup screen for a first-time user', function (): void 
 
 it('updates the password and completes the first login state', function (): void {
     $user = firstLoginUser();
+    $user->forceFill(['remember_token' => 'old-token'])->saveQuietly();
+    $rememberToken = $user->remember_token;
+    config(['session.driver' => 'database']);
+    DB::table('sessions')->insert([
+        'id' => 'first-login-password-session',
+        'user_id' => $user->getKey(),
+        'payload' => 'payload',
+        'last_activity' => now()->timestamp,
+    ]);
 
     $response = $this->actingAs($user)->put(route('first-login-password.update'), [
         'password' => 'New-password-123!',
@@ -56,6 +66,8 @@ it('updates the password and completes the first login state', function (): void
         ->and($user->temporary_password_expires_at)->toBeNull()
         ->and($user->first_login_at)->not->toBeNull();
     expect(Hash::check('New-password-123!', $user->password))->toBeTrue();
+    expect($user->remember_token)->not->toBe($rememberToken)
+        ->and(DB::table('sessions')->where('id', 'first-login-password-session')->exists())->toBeFalse();
 });
 
 it('blocks access when the temporary password has expired', function (): void {

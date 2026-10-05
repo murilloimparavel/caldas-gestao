@@ -51,3 +51,19 @@ it('forbids non-super administrators from mutating platform resources', function
         'name' => 'Blocked', 'email' => 'blocked@example.test', 'role' => 'staff',
     ])->assertForbidden();
 });
+
+it('does not allow mass assignment to grant super administrator access', function (): void {
+    $user = User::factory()->create();
+
+    $user->fill(['is_super_admin' => true]);
+
+    expect($user->is_super_admin)->not->toBeTrue()
+        ->and($user->isSuperAdmin())->toBeFalse();
+});
+
+it('keeps the configured super administrator email fallback normalized', function (): void {
+    config(['admin.super_admin_emails' => ['owner@example.com']]);
+    $user = User::factory()->create(['email' => 'OWNER@example.com']);
+
+    expect($user->isSuperAdmin())->toBeTrue();
+});

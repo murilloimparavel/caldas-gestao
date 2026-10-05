@@ -21,8 +21,51 @@ class AuthenticationTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('auth/login'),
         );
+    }
 
-        $this->get(route('admin.login'))->assertRedirect(route('login'));
+    public function test_admin_login_screen_has_a_distinct_inertia_entry()
+    {
+        $response = $this->get(route('admin.login'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('auth/admin-login')
+            ->where('canResetPassword', true),
+        );
+    }
+
+    public function test_admin_login_redirects_super_administrators_to_the_admin_dashboard()
+    {
+        $user = User::factory()->create(['is_super_admin' => true]);
+
+        $this->get(route('admin.login'));
+        $response = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('admin.dashboard', absolute: false));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_admin_login_rejects_regular_users()
+    {
+        $user = User::factory()->create();
+
+        $this->get(route('admin.login'));
+        $response = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect(route('admin.login', absolute: false));
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_admin_guests_are_sent_to_the_dedicated_login_entry()
+    {
+        $this->get(route('admin.dashboard'))->assertRedirect(route('admin.login'));
     }
 
     public function test_users_can_authenticate_using_the_login_screen()

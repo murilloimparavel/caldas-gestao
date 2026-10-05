@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\FirstLoginPasswordRequest;
+use App\Support\PasswordSessionRevoker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -18,7 +19,7 @@ class FirstLoginPasswordController extends Controller
         return Inertia::render('auth/first-login-password', ['passwordRules' => Password::defaults()->toPasswordRulesString()]);
     }
 
-    public function update(FirstLoginPasswordRequest $request): RedirectResponse
+    public function update(FirstLoginPasswordRequest $request, PasswordSessionRevoker $sessions): RedirectResponse
     {
         $request->user()->forceFill([
             'password' => $request->validated('password'),
@@ -26,6 +27,7 @@ class FirstLoginPasswordController extends Controller
             'temporary_password_expires_at' => null,
             'first_login_at' => now(),
         ])->save();
+        $sessions->revoke($request->user());
 
         return to_route('dashboard');
     }

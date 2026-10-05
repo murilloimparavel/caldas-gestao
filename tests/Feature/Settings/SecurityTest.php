@@ -3,6 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -81,6 +82,15 @@ class SecurityTest extends TestCase
     public function test_password_can_be_updated()
     {
         $user = User::factory()->create();
+        $user->forceFill(['remember_token' => 'old-token'])->saveQuietly();
+        $rememberToken = $user->remember_token;
+        config(['session.driver' => 'database']);
+        DB::table('sessions')->insert([
+            'id' => 'password-update-session',
+            'user_id' => $user->getKey(),
+            'payload' => 'payload',
+            'last_activity' => now()->timestamp,
+        ]);
 
         $response = $this
             ->actingAs($user)
@@ -95,7 +105,10 @@ class SecurityTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('security.edit'));
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        $user->refresh();
+        $this->assertTrue(Hash::check('new-password', $user->password));
+        $this->assertNotSame($rememberToken, $user->remember_token);
+        $this->assertDatabaseMissing('sessions', ['id' => 'password-update-session']);
     }
 
     public function test_correct_password_must_be_provided_to_update_password()

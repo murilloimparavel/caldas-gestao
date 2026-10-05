@@ -142,7 +142,7 @@ Route::get('/', function () {
 
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
-Route::redirect('/admin/login', '/login')->name('admin.login');
+Route::get('/admin/login', [AdminController::class, 'login'])->name('admin.login');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
