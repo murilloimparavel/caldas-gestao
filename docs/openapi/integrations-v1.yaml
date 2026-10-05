@@ -1,0 +1,987 @@
+openapi: 3.1.0
+info:
+  title: Caldas Gestão Integration API
+  version: 1.1.0
+  description: >-
+    Versioned contract for the currently implemented integration endpoints.
+    This API supports minimal bound-context reads, capability discovery,
+    tenant and unit-scoped catalog and setup reads, and administrator-reviewable
+    proposals for the 7 operations advertised by the capability catalog. It
+    does not define an OAuth authorization-server workflow or an MCP
+    transport/server.
+servers:
+  - url: /
+    description: Same origin as the Caldas Gestão deployment
+security:
+  - integrationBearer: []
+tags:
+  - name: Context
+  - name: Capabilities
+  - name: Catalog
+  - name: Setup
+  - name: Operations
+paths:
+  /api/v1/context:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Context]
+      operationId: getIntegrationContext
+      x-required-capability: 'context:read'
+      summary: Read the integration's minimal bound context
+      description: >-
+        Returns only booleans for the authenticated actor, tenant and unit,
+        together with the credential's granted capabilities. No actor, tenant,
+        unit, service, category, or professional names or identifiers are
+        returned. Requires the context:read capability.
+      responses:
+        '200':
+          description: Minimal context for the credential-bound administrator.
+          headers:
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextResponse'
+              example:
+                data:
+                  actor: {authenticated: true}
+                  tenant: {bound: true}
+                  unit: {bound: true}
+                  capabilities: ['context:read']
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/capabilities:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Capabilities]
+      operationId: getIntegrationCapabilities
+      x-required-capability: null
+      summary: Discover advertised capabilities and supported proposal operations
+      description: >-
+        Returns the capability catalog and input schemas for all 7 currently
+        advertised proposal operations. This is the server's advertised
+        catalog, not a credential-specific grant list. Requires a valid
+        integration credential but no particular capability. Schemas describe
+        proposals and do not imply writes without administrator confirmation.
+        The operation names are category.create, category.update, professional.create,
+        professional.update, service.create, service.update, and unit.update.
+        Limited to 60 requests per minute per API throttle bucket.
+      responses:
+        '200':
+          description: Capability and supported-operation metadata.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/categories:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Catalog]
+      operationId: listIntegrationCategories
+      x-required-capability: 'catalog:read'
+      summary: List categories for the bound unit
+      description: >-
+        Returns category names only for the credential-bound tenant and unit. Results are ordered by name and
+        paginated. No customer, contact, note, sale, email, phone, or image
+        data is returned.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Paginated categories for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CategoryCollectionResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/categories/{category}:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Catalog]
+      operationId: getIntegrationCategory
+      x-required-capability: 'catalog:read'
+      summary: Read one category for the bound unit
+      description: >-
+        Returns the minimized category representation only when the UUID
+        belongs to the credential-bound tenant and unit.
+      parameters:
+        - name: category
+          in: path
+          required: true
+          description: Category UUID.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Category for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CategoryResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/services:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Catalog]
+      operationId: listIntegrationServices
+      x-required-capability: 'catalog:read'
+      summary: List services for the bound unit
+      description: >-
+        Returns service names, duration in minutes, and price in cents for the credential-bound tenant and unit.
+        Results are ordered by name and paginated. Descriptions, customers,
+        contacts, notes, sales, email, phone, and image data are excluded.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Paginated services for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ServiceCollectionResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/services/{service}:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Catalog]
+      operationId: getIntegrationService
+      x-required-capability: 'catalog:read'
+      summary: Read one service for the bound unit
+      description: >-
+        Returns the minimized service representation only when the UUID belongs
+        to the credential-bound tenant and unit.
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Service UUID.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Service for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ServiceResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/professionals:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Catalog]
+      operationId: listIntegrationProfessionals
+      x-required-capability: 'catalog:read'
+      summary: List professionals for the bound unit
+      description: >-
+        Returns professional names only for the
+        credential-bound tenant and unit. Results are ordered by name and
+        paginated. Contact, email, phone, image, customer, note, and sale data
+        are excluded.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Paginated professionals for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProfessionalCollectionResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/professionals/{professional}:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Catalog]
+      operationId: getIntegrationProfessional
+      x-required-capability: 'catalog:read'
+      summary: Read one professional for the bound unit
+      description: >-
+        Returns the minimized professional representation only when the UUID
+        belongs to the credential-bound tenant and unit.
+      parameters:
+        - name: professional
+          in: path
+          required: true
+          description: Professional UUID.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Professional for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProfessionalResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/setup/status:
+    x-rate-limit:
+      requests: 60
+      window: 1 minute
+    get:
+      tags: [Setup]
+      operationId: getIntegrationSetupStatus
+      x-required-capability: 'setup:read'
+      summary: Read minimized setup and booking readiness indicators
+      description: >-
+        Returns aggregate setup indicators for the credential-bound unit. This
+        read is side-effect free and does not provision a booking site or draft.
+        It returns no customer, contact, note, sale, email, phone, or image data.
+        The booking.publishable predicate matches the server's publication
+        readiness check.
+      responses:
+        '200':
+          description: Minimized setup indicators for the bound unit.
+          headers:
+            Cache-Control: {$ref: '#/components/headers/NoStore'}
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SetupStatusResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/operations:
+    x-rate-limit:
+      requests: 20
+      window: 1 minute
+    post:
+      tags: [Operations]
+      operationId: proposeIntegrationOperation
+      x-required-capability: 'operations:propose'
+      summary: Submit an idempotent operation proposal
+      description: >-
+        Accepts any of the 7 advertised operation names and stores a pending
+        proposal; it does not create the business record at submission time.
+        The advertised names are category.create, category.update,
+        professional.create, professional.update, service.create, service.update, and unit.update.
+        An authenticated administrator must review and confirm it in the
+        application with a recent, proposal-bound passkey step-up. The
+        credential must have operations:propose and be bound to a tenant and
+        unit. Reusing an idempotency key with identical canonical input returns
+        the existing proposal; using the key with different input returns 409.
+        The key is hashed at rest. Limited to 20 requests per minute per API
+        throttle bucket.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CategoryCreateCommand'
+                - $ref: '#/components/schemas/CategoryUpdateCommand'
+                - $ref: '#/components/schemas/ProfessionalCreateCommand'
+                - $ref: '#/components/schemas/ProfessionalUpdateCommand'
+                - $ref: '#/components/schemas/ServiceCreateCommand'
+                - $ref: '#/components/schemas/ServiceUpdateCommand'
+                - $ref: '#/components/schemas/UnitUpdateCommand'
+              discriminator:
+                propertyName: operation
+                mapping:
+                  category.create: '#/components/schemas/CategoryCreateCommand'
+                  category.update: '#/components/schemas/CategoryUpdateCommand'
+                  professional.create: '#/components/schemas/ProfessionalCreateCommand'
+                  professional.update: '#/components/schemas/ProfessionalUpdateCommand'
+                  service.create: '#/components/schemas/ServiceCreateCommand'
+                  service.update: '#/components/schemas/ServiceUpdateCommand'
+                  unit.update: '#/components/schemas/UnitUpdateCommand'
+            examples:
+              categoryCreate:
+                summary: Propose a service category
+                value:
+                  operation: category.create
+                  input:
+                    name: Barba
+                    type: service
+                    is_active: true
+              categoryUpdate:
+                summary: Propose category field changes by exact name; omitted values remain unchanged
+                value:
+                  operation: category.update
+                  input:
+                    category_name: Barba
+                    name: Categoria de barba
+                    type: service
+                    is_active: true
+              professionalCreate:
+                summary: Propose a professional with service assignments
+                value:
+                  operation: professional.create
+                  input:
+                    name: Profissional inicial
+                    status: active
+                    service_names: []
+              professionalUpdate:
+                summary: Propose professional changes by exact name
+                value:
+                  operation: professional.update
+                  input:
+                    professional_name: Joao
+                    name: Profissional atualizado
+                    status: active
+                    service_names: []
+              serviceCreate:
+                summary: Propose a service
+                value:
+                  operation: service.create
+                  input:
+                    name: Corte clássico
+                    duration_minutes: 30
+                    price_cents: 4500
+                    status: active
+                    category_name: Barba
+                    professional_names: []
+              serviceUpdate:
+                summary: Propose service changes by exact name; omitted relations are preserved
+                value:
+                  operation: service.update
+                  input:
+                    service_name: Corte clássico
+                    name: Corte clássico
+                    duration_minutes: 30
+                    price_cents: 4500
+                    status: active
+                    category_name: null
+                    professional_names: []
+              unitUpdate:
+                summary: Patch editable unit settings; the server supplies the current expected version
+                value:
+                  operation: unit.update
+                  input:
+                    name: Unidade Centro
+                    timezone: America/Sao_Paulo
+                    online_booking_enabled: true
+                    appointment_sales_automation_enabled: true
+      responses:
+        '202':
+          description: Proposal accepted for human review; no record has been created.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationProposalResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: Idempotency key reused with a different input.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+  /api/v1/operations/{operation}:
+    x-rate-limit:
+      requests: 20
+      window: 1 minute
+    get:
+      tags: [Operations]
+      operationId: getIntegrationOperationProposal
+      x-required-capability: 'operations:propose'
+      summary: Read the status of an operation proposal
+      description: >-
+        Returns a proposal only to its originating administrator in the same
+        tenant and unit, while the integration credential remains valid.
+        Expired pending proposals transition to expired when read. The API
+        representation contains no result resource ID. confirmation_url is
+        the authenticated application review page, not an API confirmation
+        endpoint. Limited to 20 requests per minute per API throttle bucket.
+      parameters:
+        - name: operation
+          in: path
+          required: true
+          description: UUID of the proposal returned by POST /api/v1/operations.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Current state of the proposal.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+            X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationProposalStatusResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404':
+          description: Proposal does not exist or is outside the caller's authorized context.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '409':
+          description: Proposal could not be read due to a current state conflict.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        default: {$ref: '#/components/responses/Error'}
+components:
+  securitySchemes:
+    integrationBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: >-
+        Personal access token associated with an administrator-managed
+        integration credential. Issue and revoke credentials through the
+        application's integration settings. This contract does not define an
+        OAuth authorization or token endpoint.
+  headers:
+    NoStore:
+      description: Prevents caching of credential-bound data.
+      schema: {type: string, const: 'no-store, private'}
+    RateLimitLimit:
+      description: Maximum request count in the active throttle window.
+      schema: {type: integer}
+    RateLimitRemaining:
+      description: Remaining requests in the active throttle window.
+      schema: {type: integer, minimum: 0}
+    RetryAfter:
+      description: Seconds until the throttle window permits another request.
+      schema: {type: integer, minimum: 0}
+    RateLimitReset:
+      description: Unix timestamp when the throttle window resets.
+      schema: {type: integer}
+  parameters:
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated key, 1 to 200 characters. The server stores its hash.
+      schema: {type: string, minLength: 1, maxLength: 200}
+    Page:
+      name: page
+      in: query
+      required: false
+      description: One-based page number, capped at 10000.
+      schema: {type: integer, minimum: 1, maximum: 10000, default: 1}
+    PerPage:
+      name: per_page
+      in: query
+      required: false
+      description: Number of records per page, capped at 100.
+      schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+    Search:
+      name: search
+      in: query
+      required: false
+      description: Case-insensitive name fragment, limited to 160 characters.
+      schema: {type: string, maxLength: 160}
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, revoked, or unrecognized integration bearer token.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: Credential, capability, administrator, subscription, tenant, or unit context is not authorized.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    NotFound:
+      description: The resource does not exist in the credential-bound tenant and unit.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    UnprocessableEntity:
+      description: Request validation failed or a required header is missing or invalid.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ValidationError'}
+    RateLimited:
+      description: Request rate limit exceeded.
+      headers:
+        X-RateLimit-Limit: {$ref: '#/components/headers/RateLimitLimit'}
+        X-RateLimit-Remaining: {$ref: '#/components/headers/RateLimitRemaining'}
+        Retry-After: {$ref: '#/components/headers/RetryAfter'}
+        X-RateLimit-Reset: {$ref: '#/components/headers/RateLimitReset'}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Error:
+      description: Request could not be completed.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    ContextResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [actor, tenant, unit, capabilities]
+          properties:
+            actor:
+              type: object
+              additionalProperties: false
+              required: [authenticated]
+              properties:
+                authenticated: {type: boolean, const: true}
+            tenant:
+              type: object
+              additionalProperties: false
+              required: [bound]
+              properties:
+                bound: {type: boolean, const: true}
+            unit:
+              type: object
+              additionalProperties: false
+              required: [bound]
+              properties:
+                bound: {type: boolean}
+            capabilities:
+              type: array
+              items: {type: string, enum: ['context:read', 'operations:propose', 'catalog:read', 'setup:read']}
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [capabilities, operations]
+          properties:
+            capabilities:
+              type: array
+              items: {$ref: '#/components/schemas/Capability'}
+            operations:
+              type: array
+              items: {$ref: '#/components/schemas/OperationDescriptor'}
+    Capability:
+      type: object
+      additionalProperties: false
+      required: [id, description, access, confirmation_required, endpoint]
+      properties:
+        id: {type: string, enum: ['context:read', 'operations:propose', 'catalog:read', 'setup:read']}
+        description:
+          type: string
+          description: Human-readable description of the granted capability's boundary.
+        access: {type: string, enum: [read, write_proposal]}
+        confirmation_required: {type: boolean}
+        endpoint:
+          type: [string, 'null']
+          pattern: '^/api/v1/'
+          description: Primary REST endpoint associated with this capability.
+    OperationDescriptor:
+      type: object
+      additionalProperties: false
+      required: [operation, description, method, path, capability, input_schema]
+      properties:
+        operation: {type: string, enum: [category.create, category.update, professional.create, professional.update, service.create, service.update, unit.update]}
+        description: {type: string}
+        method: {type: string, const: POST}
+        path: {type: string, const: /api/v1/operations}
+        capability: {type: string, const: 'operations:propose'}
+        input_schema:
+          type: object
+          description: JSON Schema describing the operation input object.
+          additionalProperties: true
+          required: [type, additionalProperties, required, properties]
+          properties:
+            type: {type: string, const: object}
+            additionalProperties: {type: boolean, const: false}
+            required:
+              type: array
+              items: {type: string}
+            properties:
+              type: object
+              additionalProperties: true
+    PaginationMeta:
+      type: object
+      additionalProperties: false
+      required: [current_page, per_page, has_more]
+      properties:
+        current_page: {type: integer, minimum: 1}
+        per_page: {type: integer, minimum: 1, maximum: 100}
+        has_more: {type: boolean, description: Whether the current filter has additional records on a later page.}
+    Category:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string}
+    CategoryResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/Category'}
+    CategoryCollectionResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Category'}
+        meta: {$ref: '#/components/schemas/PaginationMeta'}
+    Service:
+      type: object
+      additionalProperties: false
+      required: [name, duration_minutes, price_cents]
+      properties:
+        name: {type: string}
+        duration_minutes: {type: integer, minimum: 1}
+        price_cents: {type: integer, minimum: 0}
+    ServiceResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/Service'}
+    ServiceCollectionResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Service'}
+        meta: {$ref: '#/components/schemas/PaginationMeta'}
+    Professional:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string}
+    ProfessionalResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/Professional'}
+    ProfessionalCollectionResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Professional'}
+        meta: {$ref: '#/components/schemas/PaginationMeta'}
+    SetupStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [unit, catalog, availability, booking]
+          properties:
+            unit:
+              type: object
+              additionalProperties: false
+              required: [active, timezone_configured, online_booking_enabled]
+              properties:
+                active: {type: boolean}
+                timezone_configured: {type: boolean}
+                online_booking_enabled: {type: boolean}
+            catalog:
+              type: object
+              additionalProperties: false
+              required: [active_services, active_professionals, active_service_professional_pair]
+              properties:
+                active_services: {type: integer, minimum: 0}
+                active_professionals: {type: integer, minimum: 0}
+                active_service_professional_pair: {type: boolean}
+            availability:
+              type: object
+              additionalProperties: false
+              required: [active_rules]
+              properties:
+                active_rules: {type: integer, minimum: 0}
+            booking:
+              type: object
+              additionalProperties: false
+              required: [site_exists, draft_exists, published, publishable, blockers]
+              properties:
+                site_exists: {type: boolean}
+                draft_exists: {type: boolean}
+                published: {type: boolean}
+                publishable: {type: boolean}
+                blockers:
+                  type: array
+                  items:
+                    type: string
+                    enum: [unit_online_booking_disabled, booking_draft_missing, active_service_missing, active_professional_missing, service_professional_pair_missing, public_domain_unavailable]
+    CategoryCreateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: category.create}
+        input:
+          type: object
+          additionalProperties: false
+          required: [name, type]
+          properties:
+            name: {type: string, maxLength: 160}
+            type: {type: string, enum: [service, product, general]}
+            is_active: {type: boolean, default: true}
+    CategoryUpdateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: category.update}
+        input:
+          type: object
+          additionalProperties: false
+          minProperties: 2
+          required: [category_name]
+          properties:
+            category_name: {type: string, maxLength: 160, description: Exact category name in the credential-bound unit; it must resolve to one row. IDs and lock versions are resolved privately by the server.}
+            name: {type: string, maxLength: 160}
+            type: {type: string, enum: [service, product, general]}
+            is_active: {type: boolean}
+    ProfessionalCreateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: professional.create}
+        input:
+          type: object
+          additionalProperties: false
+          required: [name, status]
+          properties:
+            name: {type: string, maxLength: 160}
+            status: {type: string, enum: [active, inactive]}
+            service_names:
+              type: array
+              maxItems: 100
+              description: Exact service names in the bound unit to assign to the professional. Every name must resolve to one row.
+              items: {type: string, maxLength: 160}
+    ProfessionalUpdateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: professional.update}
+        input:
+          type: object
+          additionalProperties: false
+          minProperties: 2
+          required: [professional_name]
+          properties:
+            professional_name: {type: string, maxLength: 160, description: Exact professional name in the credential-bound unit; it must resolve to one row. IDs and lock versions are resolved privately by the server.}
+            name: {type: string, maxLength: 160, description: Optional name update; omitted values are preserved from the current server-side record.}
+            status: {type: string, enum: [active, inactive], description: Optional status update; omitted values are preserved from the current server-side record.}
+            service_names:
+              type: array
+              maxItems: 100
+              description: Optional exact-name relationship replacement; omitted values preserve current links.
+              items: {type: string, maxLength: 160}
+    ServiceCreateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: service.create}
+        input:
+          type: object
+          additionalProperties: false
+          required: [name, duration_minutes, price_cents]
+          properties:
+            name: {type: string, maxLength: 160}
+            duration_minutes: {type: integer, minimum: 1, maximum: 1440}
+            price_cents: {type: integer, minimum: 0, maximum: 4294967295}
+            status: {type: string, enum: [active, inactive], default: active}
+            category_name: {type: [string, 'null'], maxLength: 160, description: Exact service category name in the bound unit; null leaves the service uncategorized.}
+            professional_names:
+              type: array
+              maxItems: 100
+              description: Exact professional names in the bound unit to assign to the service.
+              items: {type: string, maxLength: 160}
+    ServiceUpdateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: service.update}
+        input:
+          type: object
+          additionalProperties: false
+          minProperties: 2
+          required: [service_name]
+          properties:
+            service_name: {type: string, maxLength: 160, description: Exact service name in the credential-bound unit; it must resolve to one row. IDs and lock versions are resolved privately by the server.}
+            name: {type: string, maxLength: 160}
+            duration_minutes: {type: integer, minimum: 1, maximum: 1440}
+            price_cents: {type: integer, minimum: 0, maximum: 4294967295}
+            status: {type: string, enum: [active, inactive]}
+            category_name:
+              type: [string, 'null']
+              maxLength: 160
+              description: If omitted the category is preserved; otherwise the exact category name changes it, and null clears it.
+            professional_names:
+              type: array
+              maxItems: 100
+              description: If present, replaces the full professional assignment set by exact names; an empty array removes every assignment. If omitted, assignments are preserved.
+              items: {type: string, maxLength: 160}
+    UnitUpdateCommand:
+      type: object
+      additionalProperties: false
+      required: [operation, input]
+      properties:
+        operation: {type: string, const: unit.update}
+        input:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            name: {type: string, maxLength: 160}
+            timezone: {type: [string, 'null'], description: IANA timezone identifier}
+            online_booking_enabled: {type: boolean}
+            appointment_sales_automation_enabled: {type: boolean}
+    OperationProposalResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/OperationProposal'}
+    OperationProposalStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          allOf:
+            - {$ref: '#/components/schemas/OperationProposal'}
+            - type: object
+              not:
+                required: [changes]
+    OperationProposal:
+      type: object
+      additionalProperties: false
+      required: [id, operation, status, confirmation_url, expires_at, summary]
+      properties:
+        id: {type: string, format: uuid}
+        operation: {type: string, enum: [category.create, category.update, professional.create, professional.update, service.create, service.update, unit.update]}
+        status:
+          type: string
+          enum: [pending_confirmation, executing, succeeded, failed, needs_refresh, rejected, expired]
+        confirmation_url: {type: string, format: uri}
+        expires_at: {type: string, format: date-time}
+        summary:
+          $ref: '#/components/schemas/ExternalOperationSummary'
+        changes:
+          description: Present in POST response and omitted from GET response.
+          $ref: '#/components/schemas/ExternalOperationSummary'
+    ExternalOperationSummary:
+      type: object
+      additionalProperties: false
+      required: [changed_fields]
+      description: >-
+        Names of fields proposed for change. Values, resource identifiers,
+        relationship identifiers, booking content, and internal command
+        metadata are never returned by REST proposal endpoints.
+      properties:
+        changed_fields:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    Error:
+      type: object
+      description: Laravel JSON error response; fields vary by exception type.
+      properties:
+        message: {type: string}
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: {type: string}
+      additionalProperties: true
+    ValidationError:
+      allOf:
+        - {$ref: '#/components/schemas/Error'}
+        - type: object
+          required: [message, errors]

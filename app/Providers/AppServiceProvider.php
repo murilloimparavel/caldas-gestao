@@ -27,6 +27,7 @@ use App\Policies\AppointmentPolicy;
 use App\Policies\AvailabilityRulePolicy;
 use App\Policies\CustomerCommunicationPreferencePolicy;
 use App\Policies\CustomerPolicy;
+use App\Policies\IntegrationAdminPolicy;
 use App\Policies\MembershipPolicy;
 use App\Policies\PackageUsagePolicy;
 use App\Policies\ProfessionalPolicy;
@@ -38,9 +39,11 @@ use App\Policies\ScheduleBlockPolicy;
 use App\Policies\ServicePolicy;
 use App\Policies\TenantPolicy;
 use App\Policies\UnitPolicy;
+use App\Support\Assistant\GroqChatClient;
 use App\Support\CoolifyCustomDomainProvisioner;
 use App\Support\NativeDnsResolver;
 use App\Support\NativeTlsCertificateVerifier;
+use App\Support\Performance\QueryMetricsCollector;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Verified;
@@ -50,6 +53,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Auth;
@@ -69,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->scoped(QueryMetricsCollector::class);
+
+        $this->app->bind(GroqChatClient::class, GroqChatClient::class);
         $this->app->bind(DnsResolver::class, NativeDnsResolver::class);
         $this->app->bind(TlsCertificateVerifier::class, NativeTlsCertificateVerifier::class);
         $this->app->bind(CustomDomainProvisioner::class, CoolifyCustomDomainProvisioner::class);
@@ -90,6 +97,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (app()->environment('testing') && config('performance.http_metrics_enabled', false)) {
+            DB::listen(static function (QueryExecuted $query): void {
+                app(QueryMetricsCollector::class)->record($query->time);
+            });
+        }
+
         Vite::createAssetPathsUsing(static fn (string $path): string => '/'.ltrim($path, '/'));
 
         Event::listen(Verified::class, ActivateVerifiedOwnerMemberships::class);
@@ -100,6 +113,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('public-booking-create', fn (Request $request): Limit => Limit::perMinute(8)->by($request->ip()));
         Gate::policy(Tenant::class, TenantPolicy::class);
         Gate::policy(Unit::class, UnitPolicy::class);
+        Gate::define('manage-integrations', fn (User $user): bool => $this->app
+            ->make(IntegrationAdminPolicy::class)
+            ->manageCurrentTenant($user, request()));
         Gate::policy(Membership::class, MembershipPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);

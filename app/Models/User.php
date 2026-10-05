@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Laravel\Passport\HasApiTokens;
 
 /**
  * @property string $id
@@ -39,10 +41,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  */
 #[Fillable(['name', 'email', 'password', 'must_change_password', 'temporary_password_expires_at', 'first_login_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
+class User extends Authenticatable implements MustVerifyEmail, OAuthenticatable, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, MustVerifyEmailTrait, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasUuids, MustVerifyEmailTrait, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -89,5 +91,18 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function memberships(): HasMany
     {
         return $this->hasMany(Membership::class);
+    }
+
+    public function getProviderName(): string
+    {
+        foreach (config('auth.guards') as $guard) {
+            $provider = $guard['driver'] === 'passport' ? $guard['provider'] : null;
+
+            if ($provider !== null && is_a($this, config('auth.providers.'.$provider.'.model'))) {
+                return $provider;
+            }
+        }
+
+        throw new \LogicException('Unable to determine the Passport provider for the user model.');
     }
 }

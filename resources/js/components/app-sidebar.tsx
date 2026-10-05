@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeftRight,
     Banknote,
+    Bot,
     Boxes,
     CalendarDays,
     ClipboardList,
@@ -49,6 +50,7 @@ import sales from '@/routes/sales';
 import services from '@/routes/services';
 import subscriptions from '@/routes/subscriptions';
 import suppliers from '@/routes/suppliers';
+import assistant from '@/routes/assistant';
 import type { SharedPageProps, SidebarNavGroup } from '@/types';
 
 const mainNavGroups: SidebarNavGroup[] = [
@@ -167,6 +169,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 icon: Globe2,
                 permission: 'unit.view',
             },
+            {
+                title: 'Assistente IA',
+                href: assistant.index(),
+                icon: Bot,
+                adminOnly: true,
+            },
         ],
     },
     {
@@ -203,7 +211,10 @@ export function AppSidebar() {
         .map((group) => ({
             ...group,
             items: group.items.filter(
-                (item) => !item.permission || permissions.has(item.permission),
+                (item) =>
+                    (!item.permission || permissions.has(item.permission)) &&
+                    (!item.adminOnly ||
+                        props.auth.canManageIntegrations === true),
             ),
         }))
         .filter((group) => group.items.length > 0);

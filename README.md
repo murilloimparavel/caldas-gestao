@@ -91,6 +91,10 @@ npm run build
 
 # Gate completo usado no CI
 composer ci:check
+
+# Jornada E2E do assistente (requer o servidor local, o fixture PostgreSQL
+# E2E e o provider fake local descritos no workflow)
+npm run test:e2e -- tests/e2e/assistant-admin.spec.ts
 ```
 
 O workflow em `.github/workflows/tests.yml` sobe PostgreSQL efêmero, usa uma
@@ -98,6 +102,10 @@ role runtime de privilégios mínimos e uma conexão administrativa separada par
 migrations. Cache em memória, sessão em memória e fila síncrona mantêm o gate
 reprodutível. Assim, um checkout limpo executa setup, qualidade, build
 frontend, PHPStan e Pest sem depender de serviços persistentes externos.
+O job `e2e-assistant` usa PostgreSQL 17, sessão em arquivo por job e um provider
+Groq fake limitado a `127.0.0.1`; a suíte falha explicitamente quando a base
+URL, o fixture ou o provider não estão configurados e nunca aceita uma chave
+Groq real.
 
 ## Configuração de produção
 
@@ -183,7 +191,7 @@ DB_DATABASE=postgres
 DB_USERNAME=caldas_runtime.your-project
 DB_PASSWORD=<runtime-secret-do-deployment>
 DB_SCHEMA=app
-DB_SEARCH_PATH=app,public
+DB_SEARCH_PATH=app
 DB_RUNTIME_ROLE=caldas_runtime
 DB_PROVISION_STRICT=true
 DB_SSLMODE=require

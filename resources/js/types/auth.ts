@@ -10,6 +10,7 @@ export type Auth = {
     user: User | null;
     permissions: string[];
     entitlements: Entitlement[];
+    canManageIntegrations?: boolean;
 };
 
 export type Entitlement = {
