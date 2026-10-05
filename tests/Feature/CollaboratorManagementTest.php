@@ -4,6 +4,7 @@ use App\Actions\Identity\OnboardTenant;
 use App\Models\AuditEvent;
 use App\Models\Membership;
 use App\Models\MembershipUnit;
+use App\Models\OutboxEvent;
 use App\Models\Permission;
 use App\Models\Professional;
 use App\Models\Role;
@@ -56,6 +57,25 @@ it('links a membership to at most one professional', function () {
 
     $this->actingAs($owner)->patch(route('settings.collaborators.professional.update', $membership), ['professional_id' => $professional->getKey()])->assertRedirect();
     expect($membership->fresh()->professional_id)->toBe($professional->getKey());
+
+    $linkedAudit = AuditEvent::query()->where('action', 'membership.professional_linked')->where('resource_id', $membership->getKey())->sole();
+    expect($linkedAudit->metadata['membership_id'])->toBe($membership->getKey())
+        ->and($linkedAudit->metadata['professional_id'])->toBe($professional->getKey())
+        ->and($linkedAudit->metadata['previous_professional_id'])->toBeNull();
+    $linkedOutbox = OutboxEvent::query()->where('event_type', 'membership.professional_linked')->where('aggregate_id', $membership->getKey())->sole();
+    expect($linkedOutbox->payload['membership_id'])->toBe($membership->getKey())
+        ->and($linkedOutbox->payload['professional_id'])->toBe($professional->getKey())
+        ->and($linkedOutbox->payload['previous_professional_id'])->toBeNull();
+
+    $this->actingAs($owner)->patch(route('settings.collaborators.professional.update', $membership), ['professional_id' => null])->assertRedirect();
+    expect($membership->fresh()->professional_id)->toBeNull();
+
+    $unlinkedAudit = AuditEvent::query()->where('action', 'membership.professional_unlinked')->where('resource_id', $membership->getKey())->sole();
+    expect($unlinkedAudit->metadata['professional_id'])->toBeNull()
+        ->and($unlinkedAudit->metadata['previous_professional_id'])->toBe($professional->getKey());
+    $unlinkedOutbox = OutboxEvent::query()->where('event_type', 'membership.professional_unlinked')->where('aggregate_id', $membership->getKey())->sole();
+    expect($unlinkedOutbox->payload['professional_id'])->toBeNull()
+        ->and($unlinkedOutbox->payload['previous_professional_id'])->toBe($professional->getKey());
 });
 
 it('adds a verified existing user and activates the membership', function () {

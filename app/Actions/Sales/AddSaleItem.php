@@ -52,6 +52,7 @@ final class AddSaleItem extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $sale, $data, $itemType, $sourceId, $tenantId, $unitId): SaleItem {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if (isset($data['lock_version']) && $lockedSale->lock_version !== (int) $data['lock_version']) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');

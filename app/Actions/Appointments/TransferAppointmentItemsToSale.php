@@ -59,6 +59,7 @@ final class TransferAppointmentItemsToSale extends OperationalAction
             }
 
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
             $existingItems = $lockedSale->items()->get();
 
             foreach ($appointmentItems as $appointmentItem) {

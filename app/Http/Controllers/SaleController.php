@@ -71,11 +71,11 @@ final class SaleController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'type', 'uniqueness_scope']);
 
-        $customers = Customer::query()
+        $customers = $this->professionalScope->constrainCustomers(Customer::query()
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('status', 'active')
-            ->orderBy('name')
+            ->orderBy('name'), $context)
             ->get(['id', 'name', 'phone']);
 
         $todayStart = now($unitTimezone)->startOfDay();

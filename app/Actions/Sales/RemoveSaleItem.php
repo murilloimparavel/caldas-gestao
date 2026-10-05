@@ -33,6 +33,7 @@ final class RemoveSaleItem extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $sale, $item, $expectedVersion): Sale {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if ($expectedVersion !== null && $lockedSale->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');

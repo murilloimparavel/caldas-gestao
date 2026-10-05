@@ -64,6 +64,7 @@ final class AdjustSale extends OperationalAction
                 ->whereKey($sale->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if ($expectedVersion !== null && $lockedSale->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');

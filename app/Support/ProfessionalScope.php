@@ -229,11 +229,41 @@ final class ProfessionalScope
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereHas('appointments', function (Builder $appointmentQuery) use ($context, $professional): void {
-            $appointmentQuery
-                ->where('tenant_id', $context->tenant->getKey())
-                ->where('unit_id', $context->unit?->getKey())
-                ->where('professional_id', $professional->getKey());
+        $professionalId = $professional->getKey();
+
+        return $query->where(function (Builder $customerQuery) use ($context, $professionalId): void {
+            $customerQuery
+                ->whereHas('appointments', function (Builder $appointmentQuery) use ($context, $professionalId): void {
+                    $appointmentQuery
+                        ->where('tenant_id', $context->tenant->getKey())
+                        ->where('unit_id', $context->unit?->getKey())
+                        ->where('professional_id', $professionalId);
+                })
+                ->orWhereHas('sales', function (Builder $saleQuery) use ($context, $professionalId): void {
+                    $saleQuery
+                        ->where('tenant_id', $context->tenant->getKey())
+                        ->where('unit_id', $context->unit?->getKey())
+                        ->whereDoesntHave('items', function (Builder $itemsQuery) use ($professionalId): void {
+                            $itemsQuery->where(function (Builder $query) use ($professionalId): void {
+                                $query->where(function (Builder $professionalQuery) use ($professionalId): void {
+                                    $professionalQuery->whereNotNull('professional_id')
+                                        ->where('professional_id', '!=', $professionalId);
+                                })->orWhere(function (Builder $sellerQuery) use ($professionalId): void {
+                                    $sellerQuery->whereNotNull('seller_professional_id')
+                                        ->where('seller_professional_id', '!=', $professionalId);
+                                });
+                            });
+                        })
+                        ->where(function (Builder $ownedSaleQuery) use ($professionalId): void {
+                            $ownedSaleQuery
+                                ->where('professional_id', $professionalId)
+                                ->orWhereHas('items', function (Builder $itemsQuery) use ($professionalId): void {
+                                    $itemsQuery->where('professional_id', $professionalId)
+                                        ->orWhere('seller_professional_id', $professionalId);
+                                })
+                                ->orWhereHas('appointmentLink.appointment', fn (Builder $appointmentQuery) => $appointmentQuery->where('professional_id', $professionalId));
+                        });
+                });
         });
     }
 

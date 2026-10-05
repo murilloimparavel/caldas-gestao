@@ -114,6 +114,7 @@ it('opens comandas for the linked professional, scopes the index, and blocks cro
         'uniqueness_scope' => 'none',
     ]);
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $unrelatedCustomer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
 
     $ownResponse = $this->actingAs($collaborator)->post(route('sales.store'), [
         'sale_category_id' => $category->getKey(),
@@ -137,11 +138,17 @@ it('opens comandas for the linked professional, scopes the index, and blocks cro
     $this->actingAs($collaborator)
         ->get(route('sales.index'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('sales.data', function ($sales) use ($ownSale, $foreignSale): bool {
-            $ids = collect($sales)->pluck('id')->all();
+        ->assertInertia(fn ($page) => $page
+            ->where('sales.data', function ($sales) use ($ownSale, $foreignSale): bool {
+                $ids = collect($sales)->pluck('id')->all();
 
-            return in_array($ownSale->getKey(), $ids, true) && ! in_array($foreignSale->getKey(), $ids, true);
-        }));
+                return in_array($ownSale->getKey(), $ids, true) && ! in_array($foreignSale->getKey(), $ids, true);
+            })
+            ->where('customers', function ($customers) use ($customer, $unrelatedCustomer): bool {
+                $ids = collect($customers)->pluck('id')->all();
+
+                return $ids === [$customer->getKey()] && ! in_array($unrelatedCustomer->getKey(), $ids, true);
+            }));
 
     $this->actingAs($collaborator)->get(route('sales.show', $foreignSale))->assertForbidden();
     $this->actingAs($collaborator)->post(route('sales.transition', $foreignSale), [

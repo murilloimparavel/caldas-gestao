@@ -169,7 +169,29 @@ final class CollaboratorController extends Controller
         if ($professional !== null) {
             abort_unless($membership->membershipUnits()->where('unit_id', $professional->unit_id)->exists(), 422, 'O profissional precisa pertencer a uma unidade liberada para o colaborador.');
         }
-        $membership->forceFill(['professional_id' => $professional?->getKey(), 'lock_version' => $membership->lock_version + 1])->save();
+        DB::transaction(function () use ($context, $membership, $professional, $request): void {
+            $lockedMembership = Membership::query()->whereKey($membership->getKey())->lockForUpdate()->firstOrFail();
+            $previousProfessionalId = $lockedMembership->professional_id;
+            $professionalId = $professional?->getKey();
+
+            $lockedMembership->forceFill([
+                'professional_id' => $professionalId,
+                'lock_version' => $lockedMembership->lock_version + 1,
+            ])->save();
+
+            $this->events->record(
+                $request->user(),
+                $context,
+                $professionalId === null ? 'membership.professional_unlinked' : 'membership.professional_linked',
+                $lockedMembership,
+                [
+                    'membership_id' => $lockedMembership->getKey(),
+                    'professional_id' => $professionalId,
+                    'previous_professional_id' => $previousProfessionalId,
+                    'lock_version' => $lockedMembership->lock_version,
+                ],
+            );
+        });
 
         return back()->with('success', 'Profissional vinculado.');
     }
