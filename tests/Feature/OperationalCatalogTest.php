@@ -98,8 +98,8 @@ it('creates professionals and services with a tenant-unit scoped relationship', 
         ->get(route('professionals.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('professionals/index')
-            ->where('serviceOptions.0.id', $service->getKey())
-            ->where('serviceOptions.0.name', 'Corte feminino'),
+            ->where('hasServices', true)
+            ->missing('serviceOptions'),
         );
 
     $this->actingAs($owner)
