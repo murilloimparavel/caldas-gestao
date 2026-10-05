@@ -64,7 +64,10 @@ export default function AdminLogin({ status, canResetPassword }: Props) {
 
                             <div className="grid gap-5">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email" className="text-[#c8d9d2]">
+                                    <Label
+                                        htmlFor="email"
+                                        className="text-[#c8d9d2]"
+                                    >
                                         E-mail de administrador
                                     </Label>
                                     <Input
@@ -82,7 +85,10 @@ export default function AdminLogin({ status, canResetPassword }: Props) {
 
                                 <div className="grid gap-2">
                                     <div className="flex items-center justify-between">
-                                        <Label htmlFor="password" className="text-[#c8d9d2]">
+                                        <Label
+                                            htmlFor="password"
+                                            className="text-[#c8d9d2]"
+                                        >
                                             Senha
                                         </Label>
                                         {canResetPassword && (
@@ -111,7 +117,10 @@ export default function AdminLogin({ status, canResetPassword }: Props) {
                                         name="remember"
                                         className="border-[#55756b] data-[state=checked]:border-[#f1b451] data-[state=checked]:bg-[#f1b451] data-[state=checked]:text-[#071417]"
                                     />
-                                    <Label htmlFor="remember" className="text-sm text-[#a9c0b7]">
+                                    <Label
+                                        htmlFor="remember"
+                                        className="text-sm text-[#a9c0b7]"
+                                    >
                                         Manter sessão neste dispositivo
                                     </Label>
                                 </div>
@@ -129,7 +138,10 @@ export default function AdminLogin({ status, canResetPassword }: Props) {
 
                             <div className="text-center text-sm text-[#89a59b]">
                                 Acesso de cliente?{' '}
-                                <TextLink href={login()} className="text-[#f1b451]">
+                                <TextLink
+                                    href={login()}
+                                    className="text-[#f1b451]"
+                                >
                                     Entrar no produto
                                 </TextLink>
                             </div>
