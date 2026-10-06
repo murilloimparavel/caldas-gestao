@@ -223,6 +223,14 @@ it('sells a package to a customer and calculates validity', function () {
         'tenant_id' => $tenant->getKey(),
         'action' => 'customer_package.sold',
     ]);
+
+    $this->actingAs($owner)->get(route('packages.show', $template))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('packages/show')
+            ->has('customerPackages.data', 1)
+            ->where('customerPackages.data.0.customer.id', $customer->getKey())
+        );
 });
 
 it('assigns a free package without creating a payment obligation', function (): void {
