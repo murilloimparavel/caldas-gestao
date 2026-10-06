@@ -1195,6 +1195,9 @@ export default function CustomerShow({
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => {
+                                                                        setSelectedPackageServiceId(
+                                                                            '',
+                                                                        );
                                                                         setSelectedPackageForConsume(
                                                                             cp,
                                                                         );
@@ -1979,9 +1982,16 @@ export default function CustomerShow({
                 {selectedPackageForConsume && (
                     <Dialog
                         open={consumePackageOpen}
-                        onOpenChange={setConsumePackageOpen}
+                        onOpenChange={(open) => {
+                            setConsumePackageOpen(open);
+
+                            if (!open) {
+                                setSelectedPackageForConsume(null);
+                                setSelectedPackageServiceId('');
+                            }
+                        }}
                     >
-                        <DialogContent>
+                        <DialogContent className="max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>
                                     Consumir Sessão do Pacote
@@ -2072,9 +2082,12 @@ export default function CustomerShow({
                                                         id: balance.service_id,
                                                         name: `${balance.service?.name ?? 'Serviço'} — ${balance.remaining_quantity} restantes`,
                                                     }))}
-                                                placeholder="Saldo geral do pacote"
+                                                placeholder="Selecione um serviço"
                                                 resource="services"
                                                 localOptionsOnly
+                                                allowClear={false}
+                                                preferBelow
+                                                required
                                                 value={selectedPackageServiceId}
                                                 onChange={(value) =>
                                                     setSelectedPackageServiceId(
