@@ -59,6 +59,9 @@ final class CustomerController extends Controller
     {
         Gate::authorize('view', $customer);
 
+        $canLoadPackageFinancialObligations = Gate::allows('viewAny', FinancialObligation::class)
+            && FinancialObligation::hasCustomerPackageLink();
+
         $customer->load([
             'appointments' => fn ($query) => $query
                 ->with('professional:id,name')
@@ -76,7 +79,7 @@ final class CustomerController extends Controller
                     'serviceBalances.service:id,name',
                     'usages.user:id,name',
                 ])
-                ->when(Gate::allows('viewAny', FinancialObligation::class), fn ($query) => $query->with('financialObligation:id,customer_package_id,amount_cents,status,paid_date,payment_method'))
+                ->when($canLoadPackageFinancialObligations, fn ($query) => $query->with('financialObligation:id,customer_package_id,amount_cents,status,paid_date,payment_method'))
                 ->orderBy('created_at', 'desc'),
             'subscriptions' => fn ($query) => $query
                 ->with('plan:id,name,price_cents,billing_cycle')
