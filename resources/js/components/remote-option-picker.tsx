@@ -46,6 +46,8 @@ type RemoteOptionPickerProps = {
     disabled?: boolean;
     required?: boolean;
     localOptionsOnly?: boolean;
+    allowClear?: boolean;
+    preferBelow?: boolean;
 };
 
 type PickerPosition = {
@@ -68,6 +70,8 @@ export function RemoteOptionPicker({
     disabled = false,
     required = false,
     localOptionsOnly = false,
+    allowClear = true,
+    preferBelow = false,
 }: RemoteOptionPickerProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const listboxRef = useRef<HTMLDivElement>(null);
@@ -238,7 +242,9 @@ export function RemoteOptionPicker({
         );
         const spaceBelow = Math.max(0, boundsBottom - rect.bottom - 4);
         const spaceAbove = Math.max(0, rect.top - boundsTop - 4);
-        const opensBelow = spaceBelow >= 180 || spaceBelow >= spaceAbove;
+        const opensBelow = preferBelow
+            ? spaceBelow > 0
+            : spaceBelow >= 180 || spaceBelow >= spaceAbove;
         const availableSpace = opensBelow ? spaceBelow : spaceAbove;
         const width = Math.min(
             rect.width,
@@ -269,7 +275,7 @@ export function RemoteOptionPicker({
                 ? current
                 : nextPosition,
         );
-    }, [portalContainer]);
+    }, [portalContainer, preferBelow]);
 
     useEffect(() => {
         if (!open) {
@@ -441,22 +447,24 @@ export function RemoteOptionPicker({
                       }
                   }}
               >
-                  <button
-                      type="button"
-                      role="option"
-                      id={`${listboxId}-placeholder`}
-                      aria-selected={value === ''}
-                      ref={(element) => {
-                          optionRefs.current.placeholder = element;
-                      }}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                          clearSelection();
-                      }}
-                      className={`w-full rounded-sm px-2 py-1.5 text-left text-muted-foreground hover:bg-accent ${safeActiveIndex === -1 ? 'bg-accent' : ''}`}
-                  >
-                      {placeholder}
-                  </button>
+                  {allowClear && (
+                      <button
+                          type="button"
+                          role="option"
+                          id={`${listboxId}-placeholder`}
+                          aria-selected={value === ''}
+                          ref={(element) => {
+                              optionRefs.current.placeholder = element;
+                          }}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                              clearSelection();
+                          }}
+                          className={`w-full rounded-sm px-2 py-1.5 text-left text-muted-foreground hover:bg-accent ${safeActiveIndex === -1 ? 'bg-accent' : ''}`}
+                      >
+                          {placeholder}
+                      </button>
+                  )}
                   {visibleOptions.map((option, index) => (
                       <button
                           key={option.id}
@@ -536,7 +544,7 @@ export function RemoteOptionPicker({
                 aria-controls={listboxId}
                 aria-autocomplete="list"
                 aria-activedescendant={
-                    open && safeActiveIndex === -1
+                    open && safeActiveIndex === -1 && allowClear
                         ? `${listboxId}-placeholder`
                         : open && visibleOptions[safeActiveIndex]
                           ? `${listboxId}-${visibleOptions[safeActiveIndex].id}`
@@ -609,7 +617,7 @@ export function RemoteOptionPicker({
 
                         if (option) {
                             selectOption(option);
-                        } else if (safeActiveIndex === -1) {
+                        } else if (safeActiveIndex === -1 && allowClear) {
                             clearSelection();
                         }
                     }
