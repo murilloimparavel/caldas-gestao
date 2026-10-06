@@ -9,19 +9,23 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class GetDashboardSnapshot
 {
+    private ?string $professionalId = null;
+
     /**
      * Execute the snapshot aggregation action.
      *
      * @param  array{preset?: string, start_date?: string, end_date?: string}  $filters
      * @return array<string, mixed>
      */
-    public function handle(Tenant $tenant, ?Unit $unit = null, array $filters = []): array
+    public function handle(Tenant $tenant, ?Unit $unit = null, array $filters = [], ?string $professionalId = null): array
     {
+        $this->professionalId = $professionalId;
         $preset = $filters['preset'] ?? '30d';
 
         $timezone = $unit?->timezone ?: $tenant->timezone ?: config('app.timezone');
@@ -33,22 +37,22 @@ class GetDashboardSnapshot
         $prevStartDate = $prevEndDate->subDays($daysCount - 1)->startOfDay();
 
         // Query builders base
-        $currentSalesQuery = Sale::query()
+        $currentSalesQuery = $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('created_at', $this->utcDateRange($startDate, $endDate));
 
-        $prevSalesQuery = Sale::query()
+        $prevSalesQuery = $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('created_at', $this->utcDateRange($prevStartDate, $prevEndDate));
 
-        $currentAppointmentsQuery = Appointment::query()
+        $currentAppointmentsQuery = $this->constrainAppointments(Appointment::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('starts_at', $this->utcDateRange($startDate, $endDate));
 
-        $prevAppointmentsQuery = Appointment::query()
+        $prevAppointmentsQuery = $this->constrainAppointments(Appointment::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->whereBetween('starts_at', $this->utcDateRange($prevStartDate, $prevEndDate));
@@ -70,7 +74,7 @@ class GetDashboardSnapshot
 
         $todayStart = CarbonImmutable::now($timezone)->startOfDay();
         $todayEnd = CarbonImmutable::now($timezone)->endOfDay();
-        $todaySalesCents = (int) Sale::query()
+        $todaySalesCents = (int) $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
@@ -186,6 +190,42 @@ class GetDashboardSnapshot
         };
     }
 
+    /**
+     * @param  Builder<Sale>  $query
+     * @return Builder<Sale>
+     */
+    private function constrainSales(Builder $query): Builder
+    {
+        if ($this->professionalId === null) {
+            return $query;
+        }
+
+        $professionalId = $this->professionalId;
+
+        return $query->where(function (Builder $saleQuery) use ($professionalId): void {
+            $saleQuery
+                ->where('professional_id', $professionalId)
+                ->orWhereHas('items', function (Builder $itemsQuery) use ($professionalId): void {
+                    $itemsQuery->where(function (Builder $query) use ($professionalId): void {
+                        $query->where('professional_id', $professionalId)
+                            ->orWhere('seller_professional_id', $professionalId);
+                    });
+                })
+                ->orWhereHas('appointmentLink.appointment', fn (Builder $appointmentQuery) => $appointmentQuery->where('professional_id', $professionalId));
+        });
+    }
+
+    /**
+     * @param  Builder<Appointment>  $query
+     * @return Builder<Appointment>
+     */
+    private function constrainAppointments(Builder $query): Builder
+    {
+        return $this->professionalId === null
+            ? $query
+            : $query->where('professional_id', $this->professionalId);
+    }
+
     private function calculateVariation(float|int $current, float|int $previous): float
     {
         if ($previous == 0) {
@@ -223,7 +263,7 @@ class GetDashboardSnapshot
      */
     private function calculateSalesSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $sales = Sale::query()
+        $sales = $this->constrainSales(Sale::query())
             ->select(['created_at', 'final_amount_cents'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -249,7 +289,7 @@ class GetDashboardSnapshot
      */
     private function calculateAppointmentsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $appointments = Appointment::query()
+        $appointments = $this->constrainAppointments(Appointment::query())
             ->select(['starts_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -274,7 +314,7 @@ class GetDashboardSnapshot
      */
     private function calculateTicketsSparkline(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $tickets = Sale::query()
+        $tickets = $this->constrainSales(Sale::query())
             ->select(['created_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -300,7 +340,7 @@ class GetDashboardSnapshot
      */
     private function calculateVisitsTrend(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate, string $timezone): array
     {
-        $appointments = Appointment::query()
+        $appointments = $this->constrainAppointments(Appointment::query())
             ->select(['starts_at'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -310,7 +350,7 @@ class GetDashboardSnapshot
             ->groupBy(fn (Appointment $appointment): string => CarbonImmutable::parse($appointment->starts_at)->setTimezone($timezone)->toDateString())
             ->map->count();
 
-        $sales = Sale::query()
+        $sales = $this->constrainSales(Sale::query())
             ->select(['created_at', 'final_amount_cents'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -387,9 +427,10 @@ class GetDashboardSnapshot
         $professionals = Professional::query()
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
+            ->when($this->professionalId !== null, fn ($q) => $q->whereKey($this->professionalId))
             ->get();
 
-        $currentAppointmentsCount = Appointment::query()
+        $currentAppointmentsCount = $this->constrainAppointments(Appointment::query())
             ->selectRaw('professional_id, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -397,7 +438,7 @@ class GetDashboardSnapshot
             ->groupBy('professional_id')
             ->pluck('aggregate', 'professional_id');
 
-        $prevAppointmentsCount = Appointment::query()
+        $prevAppointmentsCount = $this->constrainAppointments(Appointment::query())
             ->selectRaw('professional_id, COUNT(*) as aggregate')
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -413,6 +454,11 @@ class GetDashboardSnapshot
             ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
+            ->when($this->professionalId !== null, fn ($q) => $q->where(function ($query): void {
+                $query->where('sales.professional_id', $this->professionalId)
+                    ->orWhere('sale_items.professional_id', $this->professionalId)
+                    ->orWhere('sale_items.seller_professional_id', $this->professionalId);
+            }))
             ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
             ->whereNotNull('sale_items.professional_id')
             ->groupBy('sale_items.professional_id')
@@ -459,6 +505,11 @@ class GetDashboardSnapshot
             ->where('sales.status', 'finalized')
             ->whereNull('sale_items.deleted_at')
             ->whereNull('sales.deleted_at')
+            ->when($this->professionalId !== null, fn ($q) => $q->where(function ($query): void {
+                $query->where('sales.professional_id', $this->professionalId)
+                    ->orWhere('sale_items.professional_id', $this->professionalId)
+                    ->orWhere('sale_items.seller_professional_id', $this->professionalId);
+            }))
             ->whereBetween('sales.created_at', $this->utcDateRange($startDate, $endDate))
             ->get();
 
@@ -583,7 +634,7 @@ class GetDashboardSnapshot
     {
         $now = CarbonImmutable::now($timezone);
 
-        $appointments = Appointment::query()
+        $appointments = $this->constrainAppointments(Appointment::query())
             ->with(['customer', 'professional', 'items.service'])
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
@@ -625,6 +676,10 @@ class GetDashboardSnapshot
             ->where('due_date', '<', CarbonImmutable::now()->toDateString())
             ->count();
 
+        if ($this->professionalId !== null) {
+            $overdueCount = 0;
+        }
+
         if ($overdueCount > 0) {
             $items[] = [
                 'id' => 'overdue_bills',
@@ -636,7 +691,7 @@ class GetDashboardSnapshot
 
         // 2. Open draft sales created more than 4 hours ago
         $fourHoursAgo = CarbonImmutable::now()->subHours(4);
-        $openSalesCount = Sale::query()
+        $openSalesCount = $this->constrainSales(Sale::query())
             ->where('tenant_id', $tenant->id)
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'draft')

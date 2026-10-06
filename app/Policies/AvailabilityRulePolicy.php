@@ -5,12 +5,16 @@ namespace App\Policies;
 use App\Models\AvailabilityRule;
 use App\Models\User;
 use App\Support\AuthorizationService;
+use App\Support\ProfessionalScope;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 
 final class AvailabilityRulePolicy
 {
-    public function __construct(private readonly AuthorizationService $authorization) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization,
+        private readonly ProfessionalScope $professionalScope,
+    ) {}
 
     public function viewAny(User $user): bool
     {
@@ -46,6 +50,7 @@ final class AvailabilityRulePolicy
 
             return $context->user->is($user)
                 && ($availabilityRule === null || $context->unit?->is($availabilityRule->unit))
+                && ($availabilityRule === null || $this->professionalScope->ownsAvailabilityRule($context, $availabilityRule))
                 && $this->authorization->can($user, $context, $permission, $context->unit);
         } catch (AuthorizationException|\LogicException) {
             return false;
