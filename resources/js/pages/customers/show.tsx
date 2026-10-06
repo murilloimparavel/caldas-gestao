@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     Calendar,
@@ -17,7 +17,7 @@ import {
     TrendingUp,
     UserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { statusLabels } from '@/components/calendar';
 import {
@@ -178,7 +178,7 @@ type Customer = {
     appointments?: CustomerAppointment[];
     birth_date: string | null;
     created_at?: string;
-    customerPackages?: CustomerPackageItem[];
+    customer_packages?: CustomerPackageItem[];
     email: string | null;
     id: string;
     lock_version: number;
@@ -326,6 +326,43 @@ export default function CustomerShow({
     subscription_history = [],
     planOptions = [],
 }: Props) {
+    useEffect(() => {
+        let lastRefreshAt = 0;
+
+        const refreshCustomerData = () => {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+
+            const now = Date.now();
+
+            if (now - lastRefreshAt < 1000) {
+                return;
+            }
+
+            lastRefreshAt = now;
+            router.reload({
+                only: [
+                    'customer',
+                    'metrics',
+                    'active_subscription',
+                    'subscription_history',
+                ],
+            });
+        };
+
+        window.addEventListener('focus', refreshCustomerData);
+        document.addEventListener('visibilitychange', refreshCustomerData);
+
+        return () => {
+            window.removeEventListener('focus', refreshCustomerData);
+            document.removeEventListener(
+                'visibilitychange',
+                refreshCustomerData,
+            );
+        };
+    }, []);
+
     const [activeTab, setActiveTab] = useState<
         'sales' | 'appointments' | 'packages' | 'details' | 'subscriptions'
     >('sales');
@@ -377,7 +414,7 @@ export default function CustomerShow({
     );
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
-    const customerPackages = customer.customerPackages ?? [];
+    const customerPackages = customer.customer_packages ?? [];
 
     const totalSpentCents =
         metrics?.total_spent_cents ??

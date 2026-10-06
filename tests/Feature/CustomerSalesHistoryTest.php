@@ -3,6 +3,8 @@
 use App\Actions\Identity\OnboardTenant;
 use App\Models\Appointment;
 use App\Models\Customer;
+use App\Models\CustomerPackage;
+use App\Models\PackageTemplate;
 use App\Models\Professional;
 use App\Models\Sale;
 use App\Models\SaleCategory;
@@ -156,4 +158,51 @@ it('loads customer sales history with items, category and calculates accumulated
         ->where('customer.sales.2.reference_label', 'Comanda #001')
         ->where('customer.sales.2.items.0.name_snapshot', 'Corte Feminino')
     );
+});
+
+it('includes packages sold to the customer in a fresh profile response', function () {
+    [$owner, $tenant, $unit] = customerHistoryTestWorkspace();
+
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Edson Larosa',
+    ]);
+    $otherCustomer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Pacote Edson',
+    ]);
+
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'name_snapshot' => 'Pacote Edson',
+        'total_sessions' => 5,
+        'remaining_sessions' => 5,
+        'status' => 'active',
+    ]);
+    CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $otherCustomer->getKey(),
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('customers.show', $customer))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('customers/show')
+            ->where('customer.id', $customer->getKey())
+            ->has('customer.customer_packages', 1)
+            ->where('customer.customer_packages.0.id', $package->getKey())
+            ->where('customer.customer_packages.0.package_template.name', 'Pacote Edson')
+            ->where('customer.customer_packages.0.remaining_sessions', 5)
+        );
 });
