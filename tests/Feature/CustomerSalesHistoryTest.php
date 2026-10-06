@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -204,5 +205,38 @@ it('includes packages sold to the customer in a fresh profile response', functio
             ->where('customer.customer_packages.0.id', $package->getKey())
             ->where('customer.customer_packages.0.package_template.name', 'Pacote Edson')
             ->where('customer.customer_packages.0.remaining_sessions', 5)
+        );
+});
+
+it('keeps the customer package history available before the finance link migration is applied', function () {
+    [$owner, $tenant, $unit] = customerHistoryTestWorkspace();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'status' => 'active',
+    ]);
+
+    Schema::shouldReceive('hasColumn')
+        ->once()
+        ->with('financial_obligations', 'customer_package_id')
+        ->andReturnFalse();
+
+    $this->actingAs($owner)
+        ->get(route('customers.show', $customer))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('customers/show')
+            ->where('customer.customer_packages.0.id', $package->getKey())
+            ->where('customer.customer_packages.0.status', 'active')
         );
 });

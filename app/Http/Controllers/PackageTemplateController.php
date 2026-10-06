@@ -96,7 +96,10 @@ final class PackageTemplateController extends Controller
                 'usages.service:id,name',
             ]);
 
-        if (Gate::allows('viewAny', FinancialObligation::class)) {
+        $canLoadPackageFinancialObligations = Gate::allows('viewAny', FinancialObligation::class)
+            && FinancialObligation::hasCustomerPackageLink();
+
+        if ($canLoadPackageFinancialObligations) {
             $customerPackagesQuery->with('financialObligation:id,customer_package_id,amount_cents,status,paid_date,payment_method');
         }
 
@@ -110,6 +113,7 @@ final class PackageTemplateController extends Controller
             'serviceOptions' => $serviceOptions,
             'customerPackages' => $customerPackages,
             'can_view_finance' => Gate::allows('viewAny', FinancialObligation::class),
+            'package_finance_available' => $canLoadPackageFinancialObligations,
         ]);
     }
 

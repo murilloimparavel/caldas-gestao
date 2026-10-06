@@ -115,6 +115,7 @@ type Props = {
     can_view_finance?: boolean;
     customerPackages: Paginated<CustomerPackageRecord>;
     package: PackageTemplate;
+    package_finance_available?: boolean;
     serviceOptions?: RelationOption[];
 };
 
@@ -250,6 +251,7 @@ export default function PackageShow({
     serviceOptions = [],
     customerPackages,
     can_view_finance = false,
+    package_finance_available = false,
 }: Props) {
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -258,6 +260,8 @@ export default function PackageShow({
         customerPackageId: string;
         usage: PackageUsageRecord;
     } | null>(null);
+    const showPackageFinancialObligations =
+        can_view_finance && package_finance_available;
 
     const [updateKey] = useState(() => createIdempotencyKey('package-update'));
     const [deactivateKey] = useState(() =>
@@ -687,6 +691,16 @@ export default function PackageShow({
             </div>
 
             <div className="mt-8 space-y-4">
+                {can_view_finance && !package_finance_available && (
+                    <div
+                        role="status"
+                        className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                    >
+                        Os dados de pagamento dos pacotes estão temporariamente
+                        indisponíveis. O histórico e o saldo de sessões seguem
+                        disponíveis.
+                    </div>
+                )}
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold tracking-tight">
                         Pacotes Vendidos ({customerPackages.total})
@@ -768,7 +782,7 @@ export default function PackageShow({
                                                     </span>
                                                 )}
                                             </div>
-                                            {can_view_finance && (
+                                            {showPackageFinancialObligations && (
                                                 <p className="text-xs text-muted-foreground">
                                                     {cp.financial_obligation ? (
                                                         <>

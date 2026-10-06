@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @property string $id
@@ -61,6 +62,11 @@ class FinancialObligation extends Model
 {
     /** @use HasFactory<FinancialObligationFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    public static function hasCustomerPackageLink(): bool
+    {
+        return Schema::hasColumn((new self)->getTable(), 'customer_package_id');
+    }
 
     protected $attributes = [
         'status' => 'pending',

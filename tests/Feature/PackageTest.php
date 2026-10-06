@@ -19,6 +19,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -148,6 +149,39 @@ it('prevents optimistic concurrency conflicts on package template update', funct
     ]);
 
     $response->assertStatus(409);
+});
+
+it('keeps package details available when the finance link migration is pending', function () {
+    [$owner, $tenant, $unit] = packageTestWorkspace();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'status' => 'active',
+    ]);
+
+    Schema::shouldReceive('hasColumn')
+        ->once()
+        ->with('financial_obligations', 'customer_package_id')
+        ->andReturnFalse();
+
+    $this->actingAs($owner)
+        ->get(route('packages.show', $template))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('packages/show')
+            ->where('package_finance_available', false)
+            ->has('customerPackages.data', 1)
+        );
 });
 
 it('sells a package to a customer and calculates validity', function () {
