@@ -46,6 +46,12 @@ export default function AdminLogin({ status, canResetPassword }: Props) {
 
                     return (
                         <>
+                            <input
+                                type="hidden"
+                                name="admin_login_intent"
+                                value="1"
+                            />
+
                             {isRateLimited && canResetPassword && (
                                 <div
                                     role="alert"
