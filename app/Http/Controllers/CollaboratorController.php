@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,7 +60,8 @@ final class CollaboratorController extends Controller
                 ])->values()->all(),
             'roles' => Role::query()->with('permissions:id,key')->where('tenant_id', $tenantId)->where('is_system', false)->orderBy('name')->get()->map(fn (Role $role): array => [
                 'id' => $role->getKey(), 'name' => $role->name, 'description' => $role->description,
-                'is_system' => $role->is_system, 'permission_ids' => $role->permissions->pluck('id')->values()->all(),
+                'is_system' => $role->is_system, 'lock_version' => $role->lock_version,
+                'permission_ids' => $role->permissions->pluck('id')->values()->all(),
             ])->values()->all(),
             'permissions' => Permission::query()->whereIn('key', $this->delegablePermissionKeys($request->user(), $context))->orderBy('key')->get(['id', 'key', 'description'])->map(fn (Permission $permission): array => [
                 'id' => $permission->getKey(), 'key' => $permission->key, 'description' => $permission->description,
@@ -105,6 +107,7 @@ final class CollaboratorController extends Controller
         abort_unless($role->tenant_id === $context->tenant->getKey() && ! $role->is_system, 404);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'], 'description' => ['nullable', 'string', 'max:500'],
+            'lock_version' => ['required', 'integer', 'min:0'],
             'permission_ids' => ['array'], 'permission_ids.*' => ['uuid', Rule::exists('permissions', 'id')],
         ]);
         $allowedKeys = $this->delegablePermissionKeys($request->user(), $context);
@@ -114,13 +117,29 @@ final class CollaboratorController extends Controller
             abort(422, 'O perfil contém uma permissão que o usuário atual não pode delegar.');
         }
         DB::transaction(function () use ($context, $data, $permissionIds, $role, $request): void {
-            $role->forceFill(['name' => $data['name'], 'description' => $data['description'] ?? null, 'lock_version' => $role->lock_version + 1])->save();
-            RolePermission::query()->where('tenant_id', $context->tenant->getKey())->where('role_id', $role->getKey())->delete();
-            foreach (array_unique($permissionIds) as $permissionId) {
-                RolePermission::query()->create(['tenant_id' => $context->tenant->getKey(), 'role_id' => $role->getKey(), 'permission_id' => $permissionId]);
+            $lockedRole = Role::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->whereKey($role->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedRole->lock_version !== (int) $data['lock_version']) {
+                throw ValidationException::withMessages([
+                    'role' => 'Este perfil foi alterado por outra pessoa. Atualize a página antes de salvar novamente.',
+                ]);
             }
-            $this->events->record($request->user(), $context, 'role.updated', $role, ['permission_ids' => $permissionIds]);
-            $this->events->record($request->user(), $context, 'role.permissions.updated', $role, ['permission_ids' => $permissionIds]);
+
+            $lockedRole->forceFill([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'lock_version' => $lockedRole->lock_version + 1,
+            ])->save();
+            RolePermission::query()->where('tenant_id', $context->tenant->getKey())->where('role_id', $lockedRole->getKey())->delete();
+            foreach (array_unique($permissionIds) as $permissionId) {
+                RolePermission::query()->create(['tenant_id' => $context->tenant->getKey(), 'role_id' => $lockedRole->getKey(), 'permission_id' => $permissionId]);
+            }
+            $this->events->record($request->user(), $context, 'role.updated', $lockedRole, ['permission_ids' => $permissionIds]);
+            $this->events->record($request->user(), $context, 'role.permissions.updated', $lockedRole, ['permission_ids' => $permissionIds]);
         });
 
         return to_route('settings.collaborators')->with('success', 'Perfil atualizado.');
@@ -150,7 +169,7 @@ final class CollaboratorController extends Controller
                 ],
             );
             $created = $user->wasRecentlyCreated;
-            $membership = $invite->handle($request->user(), $context, $context->tenant, $user);
+            $membership = $invite->handle($request->user(), $context, $context->tenant, $user, sendInvitation: false);
             if ($membership->status->value === 'invited' && $context->unit !== null) {
                 MembershipUnit::query()->firstOrCreate([
                     'tenant_id' => $context->tenant->getKey(), 'membership_id' => $membership->getKey(), 'unit_id' => $context->unit->getKey(),

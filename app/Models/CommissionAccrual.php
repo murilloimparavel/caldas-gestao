@@ -19,6 +19,9 @@ use Illuminate\Support\Carbon;
  * @property string $sale_item_id
  * @property string $item_name_snapshot
  * @property int $gross_amount_cents
+ * @property int|null $quantity
+ * @property int|null $covered_quantity
+ * @property int|null $commissionable_quantity
  * @property string $rate_type
  * @property int $rate_value
  * @property int $commission_amount_cents
@@ -35,6 +38,9 @@ use Illuminate\Support\Carbon;
     'sale_item_id',
     'item_name_snapshot',
     'gross_amount_cents',
+    'quantity',
+    'covered_quantity',
+    'commissionable_quantity',
     'rate_type',
     'rate_value',
     'commission_amount_cents',
@@ -57,6 +63,9 @@ class CommissionAccrual extends Model
     {
         return [
             'gross_amount_cents' => 'integer',
+            'quantity' => 'integer',
+            'covered_quantity' => 'integer',
+            'commissionable_quantity' => 'integer',
             'rate_value' => 'integer',
             'commission_amount_cents' => 'integer',
             'settled_at' => 'datetime',

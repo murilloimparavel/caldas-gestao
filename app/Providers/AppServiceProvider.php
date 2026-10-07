@@ -111,6 +111,13 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('public-booking', fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
         RateLimiter::for('public-booking-create', fn (Request $request): Limit => Limit::perMinute(8)->by($request->ip()));
+        RateLimiter::for('collaborator-access', static function (Request $request): Limit {
+            $context = $request->attributes->get(TenantContext::class);
+            $tenantId = $context instanceof TenantContext ? (string) $context->tenant->getKey() : 'unresolved';
+            $userId = (string) ($request->user()?->getAuthIdentifier() ?? $request->ip());
+
+            return Limit::perMinute(5)->by($userId.':'.$tenantId);
+        });
         Gate::policy(Tenant::class, TenantPolicy::class);
         Gate::policy(Unit::class, UnitPolicy::class);
         Gate::define('manage-integrations', fn (User $user): bool => $this->app

@@ -7,6 +7,7 @@ use App\Actions\Marketing\Packages\DeactivatePackageTemplate;
 use App\Actions\Marketing\Packages\ReactivatePackageTemplate;
 use App\Actions\Marketing\Packages\UpdatePackageTemplate;
 use App\Http\Requests\PackageTemplateRequest;
+use App\Models\FinancialObligation;
 use App\Models\PackageTemplate;
 use App\Models\Service;
 use App\Support\OperationalMutation;
@@ -87,13 +88,22 @@ final class PackageTemplateController extends Controller
             ->values()
             ->all();
 
-        $customerPackages = $packageTemplate->customerPackages()
+        $customerPackagesQuery = $packageTemplate->customerPackages()
             ->with([
                 'customer:id,name,phone,email',
                 'serviceBalances.service:id,name',
                 'usages.user:id,name',
                 'usages.service:id,name',
-            ])
+            ]);
+
+        $canLoadPackageFinancialObligations = Gate::allows('viewAny', FinancialObligation::class)
+            && FinancialObligation::hasCustomerPackageLink();
+
+        if ($canLoadPackageFinancialObligations) {
+            $customerPackagesQuery->with('financialObligation:id,customer_package_id,amount_cents,status,paid_date,payment_method');
+        }
+
+        $customerPackages = $customerPackagesQuery
             ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
@@ -102,6 +112,8 @@ final class PackageTemplateController extends Controller
             'package' => $packageTemplate,
             'serviceOptions' => $serviceOptions,
             'customerPackages' => $customerPackages,
+            'can_view_finance' => Gate::allows('viewAny', FinancialObligation::class),
+            'package_finance_available' => $canLoadPackageFinancialObligations,
         ]);
     }
 

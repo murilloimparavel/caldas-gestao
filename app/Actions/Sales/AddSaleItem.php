@@ -3,6 +3,9 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
+use App\Models\PackageUsageReservation;
 use App\Models\Product;
 use App\Models\Professional;
 use App\Models\Sale;
@@ -25,6 +28,12 @@ final class AddSaleItem extends OperationalAction
         $unit = $this->unit($actor, $context, $permission);
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
+
+        if (! empty($data['customer_package_id'])
+            && ! $this->authorization->can($actor, $context, 'package.consume', $unit)
+            && ! $this->authorization->can($actor, $context, 'package.manage', $unit)) {
+            throw new AuthorizationException('O ator não pode consumir saldo de pacotes nesta unidade.');
+        }
 
         if ($sale->tenant_id !== $tenantId || $sale->unit_id !== $unitId) {
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
@@ -223,8 +232,77 @@ final class AddSaleItem extends OperationalAction
             }
 
             $quantity = max(1, (int) ($data['quantity'] ?? 1));
+            $coveredQuantity = 0;
+            $customerPackage = null;
+
+            if (! empty($data['customer_package_id'])) {
+                if ($itemType !== 'service' || $lockedSale->customer_id === null) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'Pacotes só podem cobrir serviços de uma comanda vinculada a um cliente.',
+                    ]);
+                }
+
+                /** @var CustomerPackage|null $customerPackage */
+                $customerPackage = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('customer_id', $lockedSale->customer_id)
+                    ->whereKey((string) $data['customer_package_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($customerPackage === null || $customerPackage->status !== 'active' || ($customerPackage->expires_at !== null && $customerPackage->expires_at->endOfDay()->isPast())) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'O pacote não está ativo, venceu ou não pertence ao cliente da comanda.',
+                    ]);
+                }
+
+                $eligibleServiceIds = collect($customerPackage->eligible_services_snapshot ?? [])
+                    ->pluck('id')
+                    ->map(static fn (mixed $eligibleServiceId): string => (string) $eligibleServiceId)
+                    ->all();
+
+                if (! in_array($serviceId, $eligibleServiceIds, true)) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'Este pacote não inclui o serviço selecionado.',
+                    ]);
+                }
+
+                /** @var CustomerPackageService|null $serviceBalance */
+                $serviceBalance = CustomerPackageService::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('customer_package_id', $customerPackage->getKey())
+                    ->where('service_id', $serviceId)
+                    ->lockForUpdate()
+                    ->first();
+
+                $reservedServiceQuantity = (int) PackageUsageReservation::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('customer_package_id', $customerPackage->getKey())
+                    ->where('service_id', $serviceId)
+                    ->where('status', 'reserved')
+                    ->sum('sessions_reserved');
+                $reservedPackageQuantity = (int) PackageUsageReservation::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('customer_package_id', $customerPackage->getKey())
+                    ->where('status', 'reserved')
+                    ->sum('sessions_reserved');
+                $serviceAvailable = max(0, (int) ($serviceBalance->remaining_quantity ?? 0) - $reservedServiceQuantity);
+                $packageAvailable = max(0, $customerPackage->remaining_sessions - $reservedPackageQuantity);
+                $coveredQuantity = min($quantity, $serviceAvailable, $packageAvailable);
+
+                if ($coveredQuantity < 1) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'Este pacote não tem saldo disponível para o serviço selecionado.',
+                    ]);
+                }
+            }
+
             $discountCents = max(0, (int) ($data['discount_cents'] ?? 0));
-            $grossCents = $unitPriceCents * $quantity;
+            $grossCents = $unitPriceCents * ($quantity - $coveredQuantity);
 
             if ($discountCents > $grossCents) {
                 throw ValidationException::withMessages([
@@ -249,10 +327,26 @@ final class AddSaleItem extends OperationalAction
                 'name_snapshot' => $nameSnapshot,
                 'unit_price_cents' => $unitPriceCents,
                 'quantity' => $quantity,
+                'covered_quantity' => $coveredQuantity,
                 'discount_cents' => $discountCents,
                 'total_cents' => $totalCents,
                 'source_metadata' => $data['source_metadata'] ?? null,
             ]);
+
+            if ($customerPackage !== null) {
+                PackageUsageReservation::query()->create([
+                    'id' => (string) Str::uuid7(),
+                    'tenant_id' => $tenantId,
+                    'unit_id' => $unitId,
+                    'customer_package_id' => $customerPackage->getKey(),
+                    'service_id' => $serviceId,
+                    'sale_id' => $lockedSale->getKey(),
+                    'sale_item_id' => $item->getKey(),
+                    'sessions_reserved' => $coveredQuantity,
+                    'status' => 'reserved',
+                    'user_id' => $actor->getKey(),
+                ]);
+            }
 
             $totalAmountCents = (int) $lockedSale->items()->sum('total_cents');
             $finalAmountCents = max(0, $totalAmountCents - (int) $lockedSale->discount_amount_cents);

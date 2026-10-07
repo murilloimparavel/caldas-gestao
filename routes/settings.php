@@ -41,13 +41,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('tenant.context')->group(function (): void {
         Route::get('settings/collaborators', [CollaboratorController::class, 'index'])->name('settings.collaborators');
-        Route::post('settings/collaborators', [CollaboratorController::class, 'store'])->name('settings.collaborators.store');
+        Route::post('settings/collaborators', [CollaboratorController::class, 'store'])->middleware('throttle:collaborator-access')->name('settings.collaborators.store');
         Route::post('settings/collaborators/roles', [CollaboratorController::class, 'storeRole'])->name('settings.collaborators.roles.store');
         Route::patch('settings/collaborators/roles/{role}', [CollaboratorController::class, 'updateRole'])->name('settings.collaborators.roles.update');
         Route::post('settings/collaborators/{membership}/role', [CollaboratorController::class, 'assignRole'])->name('settings.collaborators.role.assign');
         Route::patch('settings/collaborators/{membership}/professional', [CollaboratorController::class, 'linkProfessional'])->name('settings.collaborators.professional.update');
         Route::delete('settings/collaborators/{membership}', [CollaboratorController::class, 'revoke'])->name('settings.collaborators.revoke');
-        Route::post('settings/collaborators/{membership}/resend-access', [CollaboratorController::class, 'resendAccess'])->name('settings.collaborators.access.resend');
+        Route::post('settings/collaborators/{membership}/resend-access', [CollaboratorController::class, 'resendAccess'])->middleware('throttle:collaborator-access')->name('settings.collaborators.access.resend');
     });
 });
 

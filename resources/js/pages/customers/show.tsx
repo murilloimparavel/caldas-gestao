@@ -1,4 +1,4 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     Calendar,
@@ -17,7 +17,7 @@ import {
     TrendingUp,
     UserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { statusLabels } from '@/components/calendar';
 import {
@@ -140,6 +140,16 @@ type PackageTemplateOption = {
     validity_days: number;
 };
 
+const PACKAGE_PAYMENT_METHODS = [
+    { value: 'pix', label: 'PIX' },
+    { value: 'dinheiro', label: 'Dinheiro' },
+    { value: 'cartao_credito', label: 'Cartão de Crédito' },
+    { value: 'cartao_debito', label: 'Cartão de Débito' },
+    { value: 'boleto', label: 'Boleto Bancário' },
+    { value: 'transferencia', label: 'Transferência Bancária' },
+    { value: 'outros', label: 'Outro' },
+];
+
 type ActiveSubscription = {
     billing_cycle?: string;
     cancelled_at: string | null;
@@ -168,7 +178,7 @@ type Customer = {
     appointments?: CustomerAppointment[];
     birth_date: string | null;
     created_at?: string;
-    customerPackages?: CustomerPackageItem[];
+    customer_packages?: CustomerPackageItem[];
     email: string | null;
     id: string;
     lock_version: number;
@@ -316,6 +326,43 @@ export default function CustomerShow({
     subscription_history = [],
     planOptions = [],
 }: Props) {
+    useEffect(() => {
+        let lastRefreshAt = 0;
+
+        const refreshCustomerData = () => {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+
+            const now = Date.now();
+
+            if (now - lastRefreshAt < 1000) {
+                return;
+            }
+
+            lastRefreshAt = now;
+            router.reload({
+                only: [
+                    'customer',
+                    'metrics',
+                    'active_subscription',
+                    'subscription_history',
+                ],
+            });
+        };
+
+        window.addEventListener('focus', refreshCustomerData);
+        document.addEventListener('visibilitychange', refreshCustomerData);
+
+        return () => {
+            window.removeEventListener('focus', refreshCustomerData);
+            document.removeEventListener(
+                'visibilitychange',
+                refreshCustomerData,
+            );
+        };
+    }, []);
+
     const [activeTab, setActiveTab] = useState<
         'sales' | 'appointments' | 'packages' | 'details' | 'subscriptions'
     >('sales');
@@ -367,7 +414,7 @@ export default function CustomerShow({
     );
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
-    const customerPackages = customer.customerPackages ?? [];
+    const customerPackages = customer.customer_packages ?? [];
 
     const totalSpentCents =
         metrics?.total_spent_cents ??
@@ -959,6 +1006,60 @@ export default function CustomerShow({
                                                                 </FormField>
                                                             </div>
 
+                                                            {(packageTemplates.find(
+                                                                (template) =>
+                                                                    template.id ===
+                                                                    selectedPackageTemplateId,
+                                                            )?.price_cents ??
+                                                                0) > 0 && (
+                                                                <FormField
+                                                                    id="payment_method"
+                                                                    label="Forma de pagamento informada"
+                                                                    required
+                                                                    error={
+                                                                        errors.payment_method
+                                                                    }
+                                                                >
+                                                                    <select
+                                                                        id="payment_method"
+                                                                        name="payment_method"
+                                                                        required
+                                                                        defaultValue="pix"
+                                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                                                    >
+                                                                        {PACKAGE_PAYMENT_METHODS.map(
+                                                                            (
+                                                                                method,
+                                                                            ) => (
+                                                                                <option
+                                                                                    key={
+                                                                                        method.value
+                                                                                    }
+                                                                                    value={
+                                                                                        method.value
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        method.label
+                                                                                    }
+                                                                                </option>
+                                                                            ),
+                                                                        )}
+                                                                    </select>
+                                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                                        Informe
+                                                                        como o
+                                                                        cliente
+                                                                        pagou. O
+                                                                        sistema
+                                                                        registra
+                                                                        essa
+                                                                        confirmação
+                                                                        manual.
+                                                                    </p>
+                                                                </FormField>
+                                                            )}
+
                                                             <FormActions
                                                                 cancelLabel="Cancelar"
                                                                 onCancel={() =>
@@ -966,7 +1067,23 @@ export default function CustomerShow({
                                                                         false,
                                                                     )
                                                                 }
-                                                                submitLabel="Confirmar Venda"
+                                                                submitLabel={
+                                                                    selectedPackageTemplateId ===
+                                                                    ''
+                                                                        ? 'Selecionar pacote'
+                                                                        : (packageTemplates.find(
+                                                                                (
+                                                                                    template,
+                                                                                ) =>
+                                                                                    template.id ===
+                                                                                    selectedPackageTemplateId,
+                                                                            )
+                                                                                ?.price_cents ??
+                                                                                0) >
+                                                                            0
+                                                                          ? 'Confirmar venda e recebimento'
+                                                                          : 'Atribuir pacote gratuito'
+                                                                }
                                                                 submitting={
                                                                     processing
                                                                 }
@@ -1078,6 +1195,9 @@ export default function CustomerShow({
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => {
+                                                                        setSelectedPackageServiceId(
+                                                                            '',
+                                                                        );
                                                                         setSelectedPackageForConsume(
                                                                             cp,
                                                                         );
@@ -1862,9 +1982,16 @@ export default function CustomerShow({
                 {selectedPackageForConsume && (
                     <Dialog
                         open={consumePackageOpen}
-                        onOpenChange={setConsumePackageOpen}
+                        onOpenChange={(open) => {
+                            setConsumePackageOpen(open);
+
+                            if (!open) {
+                                setSelectedPackageForConsume(null);
+                                setSelectedPackageServiceId('');
+                            }
+                        }}
                     >
-                        <DialogContent>
+                        <DialogContent className="max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>
                                     Consumir Sessão do Pacote
@@ -1955,9 +2082,12 @@ export default function CustomerShow({
                                                         id: balance.service_id,
                                                         name: `${balance.service?.name ?? 'Serviço'} — ${balance.remaining_quantity} restantes`,
                                                     }))}
-                                                placeholder="Saldo geral do pacote"
+                                                placeholder="Selecione um serviço"
                                                 resource="services"
                                                 localOptionsOnly
+                                                allowClear={false}
+                                                preferBelow
+                                                required
                                                 value={selectedPackageServiceId}
                                                 onChange={(value) =>
                                                     setSelectedPackageServiceId(

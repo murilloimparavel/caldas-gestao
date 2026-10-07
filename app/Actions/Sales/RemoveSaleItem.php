@@ -3,6 +3,10 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
+use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
@@ -30,7 +34,7 @@ final class RemoveSaleItem extends OperationalAction
             throw new AuthorizationException('O item não pertence a esta comanda.');
         }
 
-        return DB::transaction(function () use ($actor, $context, $sale, $item, $expectedVersion): Sale {
+        return DB::transaction(function () use ($actor, $context, $sale, $item, $expectedVersion, $tenantId, $unitId): Sale {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
             $this->assertOwnSale($context, $lockedSale);
@@ -50,6 +54,81 @@ final class RemoveSaleItem extends OperationalAction
                 ->whereKey($item->getKey())
                 ->where('sale_id', $lockedSale->getKey())
                 ->firstOrFail();
+
+            /** @var PackageUsageReservation|null $reservation */
+            $reservation = PackageUsageReservation::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('sale_item_id', $lockedItem->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($reservation !== null && $reservation->status === 'reserved') {
+                $reservation->forceFill([
+                    'status' => 'released',
+                    'released_at' => now(),
+                    'release_reason' => 'Item removido da comanda '.$lockedSale->getKey(),
+                ])->save();
+
+                $this->events->record($actor, $context, 'package_usage.reservation_released', $reservation, [
+                    'package_usage_id' => $reservation->getKey(),
+                    'quantity' => $reservation->sessions_reserved,
+                    'reason_code' => 'sale_item_removed',
+                ]);
+            } elseif ($reservation !== null && $reservation->status === 'consumed') {
+                /** @var PackageUsage|null $packageUsage */
+                $packageUsage = PackageUsage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($reservation->package_usage_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($packageUsage !== null && $packageUsage->reversed_at === null) {
+                    /** @var CustomerPackage $package */
+                    $package = CustomerPackage::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->whereKey($packageUsage->customer_package_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $restoredSessions = $package->remaining_sessions + $packageUsage->sessions_consumed;
+                    if ($restoredSessions > $package->total_sessions) {
+                        throw ValidationException::withMessages([
+                            'item' => 'O saldo do pacote está inconsistente; não foi possível remover este item.',
+                        ]);
+                    }
+
+                    $package->forceFill([
+                        'remaining_sessions' => $restoredSessions,
+                        'status' => 'active',
+                        'lock_version' => $package->lock_version + 1,
+                    ])->save();
+
+                    if ($packageUsage->service_id !== null) {
+                        CustomerPackageService::query()
+                            ->where('tenant_id', $tenantId)
+                            ->where('unit_id', $unitId)
+                            ->where('customer_package_id', $package->getKey())
+                            ->where('service_id', $packageUsage->service_id)
+                            ->increment('remaining_quantity', $packageUsage->sessions_consumed);
+                    }
+
+                    $packageUsage->forceFill([
+                        'reversed_at' => now(),
+                        'reversed_by_user_id' => $actor->getKey(),
+                        'reversal_reason' => 'Item removido da comanda '.$lockedSale->getKey(),
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'package_usage.reversed', $packageUsage, [
+                        'customer_package_id' => $package->getKey(),
+                        'package_usage_id' => $packageUsage->getKey(),
+                        'sessions_consumed' => $packageUsage->sessions_consumed,
+                        'reason_code' => 'sale_item_removed',
+                    ]);
+                }
+            }
 
             $lockedItem->delete();
 

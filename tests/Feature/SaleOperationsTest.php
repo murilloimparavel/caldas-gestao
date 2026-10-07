@@ -6,10 +6,13 @@ use App\Models\AppointmentSaleLink;
 use App\Models\AuditEvent;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\IdempotencyKey;
 use App\Models\Membership;
 use App\Models\MembershipRole;
 use App\Models\MembershipUnit;
+use App\Models\PackageUsageReservation;
 use App\Models\Permission;
 use App\Models\Product;
 use App\Models\Professional;
@@ -362,7 +365,7 @@ it('handles uniqueness scopes and returns existing active sale idempotently', fu
     expect(Sale::query()->where('sale_category_id', $noneCategory->getKey())->count())->toBe(2);
 });
 
-it('adds service, product and custom items with immutable snapshots and computes totals', function () {
+it('allows regular service items without a package and adds product and custom items with snapshots', function () {
     [$owner, $tenant, $unit] = saleTestWorkspace();
 
     $category = SaleCategory::factory()->create([
@@ -890,7 +893,87 @@ it('renders sale show with auxiliary services, products, professionals and categ
         );
 });
 
-it('includes sale links in calendar payload and loads sale categories through selector options', function () {
+it('shows package reservations by current and other sales on the sale page', function (): void {
+    [$owner, $tenant, $unit] = saleTestWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+    $otherSale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'open',
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'remaining_sessions' => 3,
+        'total_sessions' => 4,
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 4,
+        'remaining_quantity' => 3,
+    ]);
+    $currentItem = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'service_id' => $service->getKey(),
+        'covered_quantity' => 1,
+    ]);
+    $otherItem = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $otherSale->getKey(),
+        'service_id' => $service->getKey(),
+        'covered_quantity' => 1,
+    ]);
+    foreach ([[$sale, $currentItem], [$otherSale, $otherItem]] as [$reservedSale, $item]) {
+        PackageUsageReservation::query()->create([
+            'tenant_id' => $tenant->getKey(),
+            'unit_id' => $unit->getKey(),
+            'customer_package_id' => $package->getKey(),
+            'service_id' => $service->getKey(),
+            'sale_id' => $reservedSale->getKey(),
+            'sale_item_id' => $item->getKey(),
+            'sessions_reserved' => 1,
+            'status' => 'reserved',
+            'user_id' => $owner->getKey(),
+        ]);
+    }
+
+    $this->actingAs($owner)->get(route('sales.show', $sale))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('sales/show')
+            ->where('customerPackages.0.remaining_sessions', 3)
+            ->where('customerPackages.0.other_reserved_sessions', 1)
+            ->where('customerPackages.0.current_sale_reserved_sessions', 1)
+            ->where('customerPackages.0.available_sessions', 1)
+            ->where('customerPackages.0.services.0.other_reserved', 1)
+            ->where('customerPackages.0.services.0.current_sale_reserved', 1)
+            ->where('customerPackages.0.services.0.available', 1)
+        );
+});
+
+it('includes sale links and sale categories in calendar index payload', function () {
     [$owner, $tenant, $unit] = saleTestWorkspace();
 
     $category = SaleCategory::factory()->create([

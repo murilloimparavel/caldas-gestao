@@ -12,6 +12,8 @@ use App\Http\Requests\SaleDiscountRequest;
 use App\Http\Requests\SaleStatusTransitionRequest;
 use App\Models\CashShift;
 use App\Models\Customer;
+use App\Models\CustomerPackage;
+use App\Models\PackageUsageReservation;
 use App\Models\Product;
 use App\Models\Professional;
 use App\Models\Sale;
@@ -121,6 +123,7 @@ final class SaleController extends Controller
 
         $unitId = $context->unit?->getKey() ?? $sale->unit_id;
         $tenantId = $context->tenant->getKey();
+        $currentSaleId = $sale->getKey();
 
         $sale->load([
             'items.service',
@@ -133,6 +136,64 @@ final class SaleController extends Controller
             'statusHistories.user',
             'closingSessions',
         ]);
+
+        $customerPackages = collect();
+        if ($sale->customer_id !== null) {
+            $packages = CustomerPackage::query()
+                ->with(['serviceBalances.service', 'packageTemplate'])
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('customer_id', $sale->customer_id)
+                ->where('status', 'active')
+                ->where(function ($query): void {
+                    $query->whereNull('expires_at')->orWhereDate('expires_at', '>=', today());
+                })
+                ->where('remaining_sessions', '>', 0)
+                ->orderBy('expires_at')
+                ->get();
+            $reservationsByPackage = PackageUsageReservation::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->whereIn('customer_package_id', $packages->modelKeys())
+                ->where('status', 'reserved')
+                ->get(['customer_package_id', 'sale_id', 'service_id', 'sessions_reserved'])
+                ->groupBy('customer_package_id');
+
+            $customerPackages = $packages
+                ->map(function (CustomerPackage $package) use ($currentSaleId, $reservationsByPackage): array {
+                    $packageReservations = $reservationsByPackage->get($package->getKey(), collect());
+                    $serviceReservations = $packageReservations->groupBy('service_id');
+                    $currentSaleReservations = $packageReservations->where('sale_id', $currentSaleId);
+                    $currentSaleServiceReservations = $currentSaleReservations->groupBy('service_id');
+                    $packageReserved = (int) $packageReservations->sum('sessions_reserved');
+                    $currentSaleReserved = (int) $currentSaleReservations->sum('sessions_reserved');
+                    $currentSaleReservedByService = $currentSaleServiceReservations
+                        ->map(static fn ($reservations): int => (int) $reservations->sum('sessions_reserved'));
+                    $otherSaleReserved = max(0, $packageReserved - $currentSaleReserved);
+
+                    return [
+                        'id' => $package->getKey(),
+                        'name' => $package->name_snapshot ?? $package->packageTemplate->name ?? 'Pacote de serviços',
+                        'remaining_sessions' => (int) $package->remaining_sessions,
+                        'reserved_sessions' => $packageReserved,
+                        'other_reserved_sessions' => $otherSaleReserved,
+                        'current_sale_reserved_sessions' => $currentSaleReserved,
+                        'available_sessions' => max(0, (int) $package->remaining_sessions - $packageReserved),
+                        'expires_at' => $package->expires_at?->toDateString(),
+                        'services' => $package->serviceBalances->map(fn ($balance): array => [
+                            'id' => $balance->service_id,
+                            'name' => $balance->service->name ?? 'Serviço',
+                            'allocated' => (int) $balance->allocated_quantity,
+                            'remaining' => (int) $balance->remaining_quantity,
+                            'reserved' => (int) $serviceReservations->get($balance->service_id, collect())->sum('sessions_reserved'),
+                            'other_reserved' => max(0, (int) $serviceReservations->get($balance->service_id, collect())->sum('sessions_reserved') - (int) ($currentSaleReservedByService[$balance->service_id] ?? 0)),
+                            'current_sale_reserved' => (int) ($currentSaleReservedByService[$balance->service_id] ?? 0),
+                            'available' => max(0, (int) $balance->remaining_quantity - (int) $serviceReservations->get($balance->service_id, collect())->sum('sessions_reserved')),
+                        ])->values(),
+                    ];
+                })
+                ->values();
+        }
 
         $services = Service::query()
             ->where('tenant_id', $tenantId)
@@ -177,6 +238,7 @@ final class SaleController extends Controller
             'products' => $products,
             'professionals' => $professionals,
             'categories' => $categories,
+            'customerPackages' => $customerPackages,
         ]);
     }
 

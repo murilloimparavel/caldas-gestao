@@ -23,7 +23,7 @@ ENV APP_ENV=production \
     PORT=8080
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libicu-dev libpq-dev libzip-dev unzip \
+    && apt-get install -y --no-install-recommends curl libicu-dev libpq-dev libzip-dev unzip \
     && docker-php-ext-install -j"$(nproc)" bcmath intl pcntl pdo_pgsql zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
@@ -47,4 +47,4 @@ EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD kill -0 1 || exit 1
 
-CMD ["sh", "-c", "if [ \"${CALDAS_PROCESS:-web}\" = web ]; then php artisan migrate --database=migration --force --no-interaction; fi && php artisan config:cache && php artisan route:cache && php artisan view:cache && case \"${CALDAS_PROCESS:-web}\" in web) exec php artisan serve --host=0.0.0.0 --port=${PORT} ;; worker) exec php artisan queue:work --sleep=1 --tries=3 --max-time=3600 ;; scheduler) exec php artisan schedule:work ;; *) echo \"Unknown CALDAS_PROCESS: ${CALDAS_PROCESS}\" >&2; exit 1 ;; esac"]
+CMD ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && case \"${CALDAS_PROCESS:-web}\" in web) exec php artisan serve --host=0.0.0.0 --port=${PORT} ;; worker) exec php artisan queue:work --sleep=1 --tries=3 --max-time=3600 ;; scheduler) exec php artisan schedule:work ;; *) echo \"Unknown CALDAS_PROCESS: ${CALDAS_PROCESS}\" >&2; exit 1 ;; esac"]

@@ -16,6 +16,7 @@ type Role = {
     name: string;
     description: string | null;
     is_system: boolean;
+    lock_version: number;
     permission_ids: string[];
 };
 type Membership = {
@@ -234,6 +235,11 @@ export default function Collaborators({
                                     )}
                                     className="space-y-3 rounded-lg border p-3"
                                 >
+                                    <input
+                                        type="hidden"
+                                        name="lock_version"
+                                        value={role.lock_version}
+                                    />
                                     <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                                         <Input
                                             name="name"

@@ -42,9 +42,11 @@ Um agendamento pode originar zero ou várias comandas; cada comanda pode ter zer
 
 ### 4. Fechamento consolidado não funde comandas nem processa pagamento
 
-O operador pode selecionar várias comandas abertas da mesma unidade e moeda para um fechamento consolidado, por cliente, mesa ou referência. O Caldas revisa os totais, finaliza as comandas selecionadas e gera recibo interno/auditoria; cada comanda mantém itens, histórico, categoria e auditoria próprios. O pagamento, se existir, acontece fora do Caldas.
+O operador pode selecionar várias comandas abertas da mesma unidade e moeda para um fechamento consolidado, por cliente, mesa ou referência. O Caldas revisa os totais, finaliza as comandas selecionadas e gera recibo interno/auditoria; cada comanda mantém itens, histórico, categoria e auditoria próprios. O pagamento da comanda, se existir, acontece fora do Caldas.
 
-`ClosingSession` é o agregado da operação de fechamento: agrupa a seleção, fixa `closing_subject`, versões e totais esperados, e possui estados `draft → ready → processing → completed`, com `cancelled`/`failed` como terminais da tentativa. Não há gateway, link de cobrança, token/cartão, Pix API, PaymentIntent, Payment, PaymentAllocation, refund externo ou conciliação automática nesta wave/MVP. Registro de meio/valor de recebimento externo fica para uma decisão futura de Caixa.
+`ClosingSession` é o agregado da operação de fechamento: agrupa a seleção, fixa `closing_subject`, versões e totais esperados, e possui estados `draft → ready → processing → completed`, com `cancelled`/`failed` como terminais da tentativa. Não há gateway, link de cobrança, token/cartão, Pix API, PaymentIntent, Payment, PaymentAllocation, refund externo ou conciliação automática no fechamento. O fechamento da comanda não recebe novamente por serviços cobertos por pacote.
+
+Venda de pacote é um fluxo separado: cria uma obrigação a receber vinculada unicamente ao pacote e registra como quitado o método informado pelo operador. Esse registro é uma confirmação manual, não prova de processamento externo. Pagamentos não monetários não criam movimento de caixa; dinheiro cria movimento no caixa aberto conforme as regras de Caixa existentes. Reembolso externo do pacote segue fora do escopo.
 
 `closing_subject` deve ser igual para todas as sales selecionadas: mesmo `customer_id` não nulo ou mesma `reference_context` normalizada. Nunca se misturam clientes ou referências diferentes. Uma sessão não atravessa unidade, tenant ou moeda.
 
@@ -66,8 +68,10 @@ Estas são a fonte única para esta decisão; PRD, modelo, banco e fluxos devem 
 4. Categoria ativa, `open_context_key` e unique parcial governam uma comanda ativa por categoria/contexto; `none` não impõe limite.
 5. `category_key_snapshot` e `category_name_snapshot` são obrigatórios em `sales`.
 6. `ClosingSession` seleciona sales da mesma unidade/moeda e do mesmo `closing_subject`: mesmo cliente ou mesma referência, nunca mistura ambos.
-7. O fechamento consolida totais sem fundir comandas, libera o slot e não apaga histórico; recebimento externo não é modelado nesta wave.
+7. O fechamento consolida totais sem fundir comandas, libera o slot e não apaga histórico; sessões cobertas não são cobradas nem recebidas outra vez no fechamento.
 8. Idempotência, locks, Policies, auditoria e outbox pós-commit protegem toda mutação.
+9. Reservas de sessões vinculadas a itens são consumidas apenas no fechamento e liberadas ao remover item/cancelar comanda; o estorno da comanda reverte o uso e preserva validade/status do pacote.
+10. Comissão percentual usa valor efetivamente cobrado; comissão fixa é aplicada à quantidade não coberta pelo pacote. A quantidade coberta e a quantidade comissionável ficam capturadas no lançamento.
 
 ## Consequências
 
@@ -75,7 +79,7 @@ Estas são a fonte única para esta decisão; PRD, modelo, banco e fluxos devem 
 - Categorias e regras aumentam a necessidade de uma tela de configuração e de validação de políticas.
 - O fechamento consolidado exige locks determinísticos, idempotência e uma UX clara para revisão e confirmação.
 - Relatórios precisam preservar dimensões de categoria, unidade, origem e vínculo com agenda.
-- Financeiro, estoque, comissão e fiscal consomem eventos; não entram como uma transação longa do fechamento.
+- Estoque e comissão são apurados no fechamento; recebimento de venda de pacote é uma transação financeira própria, não um efeito financeiro duplicado da comanda.
 
 ## Alternativas rejeitadas
 
@@ -104,6 +108,8 @@ Estas são a fonte única para esta decisão; PRD, modelo, banco e fluxos devem 
 - se cliente anônimo é permitido para todas as categorias ou somente categorias configuradas;
 - se `closing_subject` por cliente exigirá cliente obrigatório para a categoria;
 - futura decisão de Caixa sobre registrar meio/valor recebido externamente;
+- regra de compensação/clawback para comissão já liquidada quando a comanda for estornada;
+- reembolso/cancelamento financeiro do valor de compra do pacote e conciliação com o meio externo informado.
 - regras de desconto, crédito, cashback e valor zero;
 - retenção/anonymização de observações e referências livres conforme LGPD.
 

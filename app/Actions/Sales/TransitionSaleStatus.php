@@ -3,6 +3,7 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\PackageUsageReservation;
 use App\Models\Sale;
 use App\Models\SaleStatusHistory;
 use App\Models\User;
@@ -27,7 +28,7 @@ final class TransitionSaleStatus extends OperationalAction
 
         $this->assertOwnSale($context, $sale);
 
-        return DB::transaction(function () use ($actor, $context, $sale, $toStatus, $reason, $expectedVersion): Sale {
+        return DB::transaction(function () use ($actor, $context, $sale, $toStatus, $reason, $expectedVersion, $tenantId, $unitId): Sale {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
             $this->assertOwnSale($context, $lockedSale);
@@ -48,6 +49,30 @@ final class TransitionSaleStatus extends OperationalAction
                 throw ValidationException::withMessages([
                     'status' => "Transição de status inválida de '{$fromStatus}' para '{$toStatus}'.",
                 ]);
+            }
+
+            if ($toStatus === 'cancelled') {
+                $reservations = PackageUsageReservation::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('sale_id', $lockedSale->getKey())
+                    ->where('status', 'reserved')
+                    ->lockForUpdate()
+                    ->get();
+
+                foreach ($reservations as $reservation) {
+                    $reservation->forceFill([
+                        'status' => 'released',
+                        'released_at' => now(),
+                        'release_reason' => 'Comanda cancelada',
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'package_usage.reservation_released', $reservation, [
+                        'package_usage_id' => $reservation->getKey(),
+                        'quantity' => $reservation->sessions_reserved,
+                        'reason_code' => 'sale_cancelled',
+                    ]);
+                }
             }
 
             SaleStatusHistory::query()->create([

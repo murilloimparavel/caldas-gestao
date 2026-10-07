@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -105,6 +106,12 @@ class CustomerPackage extends Model
         return $this->belongsTo(Sale::class);
     }
 
+    /** @return HasOne<FinancialObligation, $this> */
+    public function financialObligation(): HasOne
+    {
+        return $this->hasOne(FinancialObligation::class);
+    }
+
     /** @return HasMany<PackageUsage, $this> */
     public function usages(): HasMany
     {
@@ -115,6 +122,12 @@ class CustomerPackage extends Model
     public function packageUsages(): HasMany
     {
         return $this->hasMany(PackageUsage::class);
+    }
+
+    /** @return HasMany<PackageUsageReservation, $this> */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(PackageUsageReservation::class);
     }
 
     /** @return HasMany<CustomerPackageService, $this> */

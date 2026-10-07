@@ -23,6 +23,7 @@ final class SaleItemRequest extends FormRequest
         return [
             'item_type' => ['required', Rule::in(['service', 'product', 'custom'])],
             'service_id' => ['nullable', 'required_if:item_type,service', 'uuid'],
+            'customer_package_id' => ['nullable', 'uuid', Rule::prohibitedIf($this->input('item_type') !== 'service')],
             'product_id' => ['nullable', 'required_if:item_type,product', 'uuid'],
             'professional_id' => ['nullable', 'uuid'],
             'seller_professional_id' => ['nullable', 'uuid'],

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class ClosingSessionRequest extends FormRequest
 {
@@ -19,8 +20,8 @@ final class ClosingSessionRequest extends FormRequest
             'sale_ids' => ['required', 'array', 'min:1'],
             'sale_ids.*' => ['required', 'uuid'],
             'expected_total_cents' => ['nullable', 'integer', 'min:0'],
-            'payment_method' => ['required_without:payment_allocations', 'nullable', 'string', 'in:pix,debit_card,credit_card,cash,permuta'],
-            'payment_allocations' => ['required_without:payment_method', 'array', 'min:1'],
+            'payment_method' => ['nullable', 'string', 'in:pix,debit_card,credit_card,cash,permuta'],
+            'payment_allocations' => ['nullable', 'array', 'min:1'],
             'payment_allocations.*.method' => ['required', 'string', 'in:pix,debit_card,credit_card,cash,permuta'],
             'payment_allocations.*.amount_cents' => ['required', 'integer', 'min:1'],
             'payment_allocations.*.tendered_cents' => ['required_if:payment_allocations.*.method,cash', 'nullable', 'integer', 'min:1'],
@@ -35,6 +36,18 @@ final class ClosingSessionRequest extends FormRequest
             'lock_versions' => ['nullable', 'array'],
             'lock_versions.*' => ['integer', 'min:1'],
         ];
+    }
+
+    /** @return array<int, \Closure(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $totalIsZero = (int) $this->input('expected_total_cents', -1) === 0;
+
+            if (! $totalIsZero && ! $this->filled('payment_method') && ! $this->filled('payment_allocations')) {
+                $validator->errors()->add('payment_method', 'Informe como a comanda foi paga.');
+            }
+        }];
     }
 
     /**

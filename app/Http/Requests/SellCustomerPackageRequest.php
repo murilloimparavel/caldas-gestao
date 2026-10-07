@@ -47,6 +47,7 @@ final class SellCustomerPackageRequest extends FormRequest
             'sale_id' => ['nullable', 'uuid', $saleExists],
             'total_sessions' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'expires_at' => ['nullable', 'date'],
+            'payment_method' => ['nullable', 'string', Rule::in(['pix', 'dinheiro', 'cartao_credito', 'cartao_debito', 'boleto', 'transferencia', 'outros'])],
         ];
     }
 
@@ -64,6 +65,25 @@ final class SellCustomerPackageRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            if ($this->filled('package_template_id')) {
+                $templateQuery = PackageTemplate::query()
+                    ->whereKey($this->string('package_template_id')->toString());
+
+                $context = $this->attributes->get(TenantContext::class);
+                if ($context instanceof TenantContext) {
+                    $templateQuery->where('tenant_id', $context->tenant->getKey());
+
+                    if ($context->unit !== null) {
+                        $templateQuery->where('unit_id', $context->unit->getKey());
+                    }
+                }
+
+                $template = $templateQuery->first();
+                if ($template !== null && $template->price_cents > 0 && ! $this->filled('payment_method')) {
+                    $validator->errors()->add('payment_method', 'Informe a forma de pagamento para pacotes com valor.');
+                }
+            }
+
             if (! $this->filled('sale_id') || ! $this->filled('customer_id')) {
                 return;
             }

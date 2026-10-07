@@ -315,6 +315,30 @@ it('records split payments and adds only the applied cash amount to the open dra
         ->and($shift->fresh()->expected_amount_cents)->toBe(5400);
 });
 
+it('closes a fully package-covered sale without recording a payment', function (): void {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 0,
+        'discount_amount_cents' => 0,
+        'final_amount_cents' => 0,
+    ]);
+
+    $this->actingAs($owner)->post(route('closing-sessions.store'), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 0,
+    ])->assertSessionHasNoErrors();
+
+    $session = ClosingSession::query()->firstOrFail();
+
+    expect($session->final_total_cents)->toBe(0)
+        ->and(ClosingSessionPayment::query()->exists())->toBeFalse()
+        ->and(CashMovement::query()->exists())->toBeFalse()
+        ->and($sale->fresh()->status)->toBe('finalized');
+});
+
 it('rejects cash payments without an open shift and rejects allocation totals that do not match', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);

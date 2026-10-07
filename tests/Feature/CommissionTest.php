@@ -240,6 +240,51 @@ it('accrues a product commission to the seller instead of the executor', functio
         ->and($accruals->first()->commission_amount_cents)->toBe(1000);
 });
 
+it('calculates commission only on paid quantities when a service is covered by a package', function (): void {
+    [$owner, $tenant, $unit, $context] = commissionTestWorkspace();
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $service = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    CommissionRule::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $professional->getKey(),
+        'service_id' => $service->getKey(),
+        'type' => 'fixed',
+        'value_rate' => 1200,
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'unit_price_cents' => 5000,
+        'quantity' => 3,
+        'covered_quantity' => 2,
+        'total_cents' => 5000,
+    ]);
+
+    $accrual = (new AccrueCommissionsForSale)->handle($owner, $context, $sale)->firstOrFail();
+
+    expect($accrual->sale_item_id)->toBe($item->getKey())
+        ->and($accrual->gross_amount_cents)->toBe(5000)
+        ->and($accrual->quantity)->toBe(3)
+        ->and($accrual->covered_quantity)->toBe(2)
+        ->and($accrual->commissionable_quantity)->toBe(1)
+        ->and($accrual->commission_amount_cents)->toBe(1200);
+});
+
 it('prioritizes specific rule over generic rule during commission accrual', function () {
     [$owner, $tenant, $unit] = commissionTestWorkspace();
 

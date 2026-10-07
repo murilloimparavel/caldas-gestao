@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @property string $id
@@ -21,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $category_id
  * @property string|null $supplier_id
  * @property string|null $customer_id
+ * @property string|null $customer_package_id
  * @property string $description
  * @property int $amount_cents
  * @property Carbon $due_date
@@ -45,6 +47,7 @@ use Illuminate\Support\Carbon;
     'category_id',
     'supplier_id',
     'customer_id',
+    'customer_package_id',
     'description',
     'amount_cents',
     'due_date',
@@ -59,6 +62,11 @@ class FinancialObligation extends Model
 {
     /** @use HasFactory<FinancialObligationFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    public static function hasCustomerPackageLink(): bool
+    {
+        return Schema::hasColumn((new self)->getTable(), 'customer_package_id');
+    }
 
     protected $attributes = [
         'status' => 'pending',
@@ -103,5 +111,11 @@ class FinancialObligation extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /** @return BelongsTo<CustomerPackage, $this> */
+    public function customerPackage(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPackage::class);
     }
 }

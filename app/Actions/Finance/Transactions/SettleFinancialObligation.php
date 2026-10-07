@@ -68,7 +68,7 @@ final class SettleFinancialObligation extends OperationalAction
                 'lock_version' => $locked->lock_version + 1,
             ])->save();
 
-            if ($paymentMethod === 'cash') {
+            if (in_array($paymentMethod, ['cash', 'dinheiro'], true)) {
                 /** @var CashShift|null $openCashShift */
                 $openCashShift = CashShift::query()
                     ->where('tenant_id', $tenantId)

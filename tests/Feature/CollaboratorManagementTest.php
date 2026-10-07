@@ -13,6 +13,7 @@ use App\Models\RolePermission;
 use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\CollaboratorAccessNotification;
+use App\Notifications\MembershipInvitation;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -100,6 +101,7 @@ it('adds a verified existing user and activates the membership', function () {
         ->and($membership->membershipUnits()->where('unit_id', $unit->getKey())->exists())->toBeTrue();
     Notification::assertSentTo($user, CollaboratorAccessNotification::class);
     Notification::assertNotSentTo($user, ResetPassword::class);
+    Notification::assertNotSentTo($user, MembershipInvitation::class);
 });
 
 it('shows a warning when the access email is throttled', function () {
@@ -147,6 +149,7 @@ it('creates a new collaborator identity without granting access before inbox ver
     $membership = Membership::query()->where('tenant_id', $tenant->getKey())->where('user_id', $user->getKey())->firstOrFail();
     Notification::assertSentTo($user, ResetPassword::class);
     Notification::assertSentTo($user, VerifyEmail::class);
+    Notification::assertNotSentTo($user, MembershipInvitation::class);
     expect($membership->status->value)->toBe('invited')
         ->and($user->email_verified_at)->toBeNull()
         ->and($user->must_change_password)->toBeTrue()
@@ -242,6 +245,67 @@ it('rejects administrative permissions from custom profiles', function () {
         ->assertStatus(422);
 
     expect(Role::query()->where('tenant_id', $tenant->getKey())->where('name', 'Escalador')->exists())->toBeFalse();
+});
+
+it('rejects stale profile edits without overwriting newer profile state', function () {
+    [$owner, $tenant] = collaboratorWorkspace();
+    $role = Role::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Perfil atual', 'lock_version' => 2]);
+    $permission = Permission::query()->where('key', 'calendar.view')->firstOrFail();
+
+    $this->actingAs($owner)
+        ->patch(route('settings.collaborators.roles.update', $role), [
+            'name' => 'Edição antiga',
+            'description' => 'Dados desatualizados',
+            'lock_version' => 1,
+            'permission_ids' => [$permission->getKey()],
+        ])
+        ->assertSessionHasErrors('role');
+
+    expect($role->fresh()->name)->toBe('Perfil atual')
+        ->and($role->fresh()->lock_version)->toBe(2)
+        ->and(RolePermission::query()->where('role_id', $role->getKey())->exists())->toBeFalse();
+});
+
+it('rate limits collaborator invitations and access resends per tenant and manager', function () {
+    Notification::fake();
+    [$owner] = collaboratorWorkspace();
+
+    foreach (range(1, 5) as $index) {
+        $this->actingAs($owner)
+            ->post(route('settings.collaborators.store'), [
+                'name' => 'Colaborador '.$index,
+                'email' => 'collaborator'.$index.'@example.test',
+            ])
+            ->assertRedirect(route('settings.collaborators'));
+    }
+
+    $this->actingAs($owner)
+        ->post(route('settings.collaborators.store'), [
+            'name' => 'Colaborador extra',
+            'email' => 'collaborator-extra@example.test',
+        ])
+        ->assertTooManyRequests();
+});
+
+it('applies the collaborator access rate limit to resends as well', function () {
+    Notification::fake();
+    [$owner, $tenant] = collaboratorWorkspace();
+    $user = User::factory()->unverified()->create();
+    $membership = Membership::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'user_id' => $user->getKey(),
+        'status' => 'invited',
+    ]);
+
+    foreach (range(1, 5) as $_) {
+        $this->actingAs($owner)
+            ->post(route('settings.collaborators.access.resend', $membership))
+            ->assertRedirect();
+    }
+
+    $this->actingAs($owner)
+        ->post(route('settings.collaborators.access.resend', $membership))
+        ->assertTooManyRequests();
 });
 
 it('rejects a professional outside the membership unit or tenant', function () {

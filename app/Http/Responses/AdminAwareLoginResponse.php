@@ -14,7 +14,8 @@ final class AdminAwareLoginResponse implements LoginResponseContract, PasskeyLog
 {
     public function toResponse($request): Response
     {
-        $adminLogin = (bool) $request->session()->pull('admin_login_intent', false);
+        $adminLogin = $request->boolean('admin_login_intent')
+            || (bool) $request->session()->pull('admin_login_intent', false);
 
         if ($adminLogin && ! $request->user()?->isSuperAdmin()) {
             $this->logout($request);

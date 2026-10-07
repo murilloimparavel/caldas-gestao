@@ -5,6 +5,10 @@ namespace App\Actions\Sales;
 use App\Actions\Inventory\RecordInventoryMovement;
 use App\Actions\Operational\OperationalAction;
 use App\Models\CommissionAccrual;
+use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
+use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleStatusHistory;
@@ -123,6 +127,97 @@ final class AdjustSale extends OperationalAction
                     'commission_amount_cents' => $accrual->commission_amount_cents,
                     'status' => 'cancelled',
                     'lock_version' => $accrual->lock_version,
+                ]);
+            }
+
+            $reservations = PackageUsageReservation::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('sale_id', $lockedSale->getKey())
+                ->where('status', 'consumed')
+                ->orderBy('customer_package_id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($reservations as $reservation) {
+                if ($reservation->package_usage_id === null) {
+                    throw ValidationException::withMessages([
+                        'sale' => 'A reserva consumida não possui lançamento de uso associado.',
+                    ]);
+                }
+
+                $usage = PackageUsage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($reservation->package_usage_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($usage->reversed_at !== null) {
+                    $reservation->forceFill([
+                        'status' => 'released',
+                        'released_at' => now(),
+                        'release_reason' => 'Comanda estornada: '.$reason,
+                    ])->save();
+
+                    continue;
+                }
+
+                $package = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($reservation->customer_package_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $restoredSessions = $package->remaining_sessions + $usage->sessions_consumed;
+
+                if ($restoredSessions > $package->total_sessions) {
+                    throw ValidationException::withMessages([
+                        'sale' => 'O saldo do pacote está inconsistente; não foi possível estornar o consumo.',
+                    ]);
+                }
+
+                if ($usage->service_id !== null) {
+                    $serviceBalance = CustomerPackageService::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->where('customer_package_id', $package->getKey())
+                        ->where('service_id', $usage->service_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($serviceBalance === null || $serviceBalance->remaining_quantity + $usage->sessions_consumed > $serviceBalance->allocated_quantity) {
+                        throw ValidationException::withMessages([
+                            'sale' => 'O saldo do serviço no pacote está inconsistente; não foi possível estornar o consumo.',
+                        ]);
+                    }
+
+                    $serviceBalance->increment('remaining_quantity', $usage->sessions_consumed);
+                }
+                $package->forceFill([
+                    'remaining_sessions' => $restoredSessions,
+                    'status' => $package->status === 'cancelled'
+                        ? 'cancelled'
+                        : ($package->expires_at?->endOfDay()->isPast() === true ? 'expired' : 'active'),
+                    'lock_version' => $package->lock_version + 1,
+                ])->save();
+                $usage->forceFill([
+                    'reversed_at' => now(),
+                    'reversed_by_user_id' => $actor->getKey(),
+                    'reversal_reason' => 'Estorno da comanda '.$lockedSale->getKey().': '.$reason,
+                ])->save();
+                $reservation->forceFill([
+                    'status' => 'released',
+                    'released_at' => now(),
+                    'release_reason' => 'Comanda estornada: '.$reason,
+                ])->save();
+
+                $this->events->record($actor, $context, 'package_usage.reversed', $usage, [
+                    'customer_package_id' => $package->getKey(),
+                    'package_usage_id' => $usage->getKey(),
+                    'sessions_consumed' => $usage->sessions_consumed,
+                    'reason_code' => 'sale_adjusted',
+                    'sale_id' => $lockedSale->getKey(),
                 ]);
             }
 

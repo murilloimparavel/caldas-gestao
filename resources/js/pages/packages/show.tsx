@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
+import { CustomerPicker } from '@/components/customer-picker';
 import {
     createIdempotencyKey,
     FormActions,
@@ -91,6 +92,12 @@ type CustomerPackageRecord = {
         remaining_quantity: number;
         service?: { id: string; name: string } | null;
     }>;
+    financial_obligation?: {
+        amount_cents: number;
+        paid_date: string | null;
+        payment_method: string | null;
+        status: string;
+    } | null;
 };
 
 type PackageTemplate = {
@@ -106,10 +113,36 @@ type PackageTemplate = {
 };
 
 type Props = {
+    can_view_finance?: boolean;
     customerPackages: Paginated<CustomerPackageRecord>;
     package: PackageTemplate;
+    package_finance_available?: boolean;
     serviceOptions?: RelationOption[];
 };
+
+const PAYMENT_METHODS = [
+    'pix',
+    'dinheiro',
+    'cartao_credito',
+    'cartao_debito',
+    'boleto',
+    'transferencia',
+    'outros',
+] as const;
+
+function paymentMethodLabel(method: string | null): string {
+    const labels: Record<string, string> = {
+        boleto: 'Boleto Bancário',
+        cartao_credito: 'Cartão de Crédito',
+        cartao_debito: 'Cartão de Débito',
+        dinheiro: 'Dinheiro',
+        pix: 'PIX',
+        transferencia: 'Transferência Bancária',
+        outros: 'Outro',
+    };
+
+    return method ? (labels[method] ?? method) : 'Não informado';
+}
 
 function ServiceQuantityFields({
     options,
@@ -228,14 +261,20 @@ export default function PackageShow({
     package: pkg,
     serviceOptions = [],
     customerPackages,
+    can_view_finance = false,
+    package_finance_available = false,
 }: Props) {
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deactivateOpen, setDeactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
+    const [sellOpen, setSellOpen] = useState(false);
+    const [sellCustomerId, setSellCustomerId] = useState('');
     const [usageToReverse, setUsageToReverse] = useState<{
         customerPackageId: string;
         usage: PackageUsageRecord;
     } | null>(null);
+    const showPackageFinancialObligations =
+        can_view_finance && package_finance_available;
 
     const [updateKey] = useState(() => createIdempotencyKey('package-update'));
     const [deactivateKey] = useState(() =>
@@ -249,6 +288,7 @@ export default function PackageShow({
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('package.manage');
     const canConsume = canManage || permissions.has('package.consume');
+    const canSell = canManage || permissions.has('package.sell');
 
     const unitPriceCents =
         pkg.total_sessions > 0
@@ -665,10 +705,136 @@ export default function PackageShow({
             </div>
 
             <div className="mt-8 space-y-4">
+                {can_view_finance && !package_finance_available && (
+                    <div
+                        role="status"
+                        className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                    >
+                        Os dados de pagamento dos pacotes estão temporariamente
+                        indisponíveis. O histórico e o saldo de sessões seguem
+                        disponíveis.
+                    </div>
+                )}
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold tracking-tight">
                         Pacotes Vendidos ({customerPackages.total})
                     </h3>
+                    {canSell && pkg.is_active && (
+                        <Dialog
+                            open={sellOpen}
+                            onOpenChange={(open) => {
+                                setSellOpen(open);
+
+                                if (!open) {
+                                    setSellCustomerId('');
+                                }
+                            }}
+                        >
+                            <DialogTrigger asChild>
+                                <Button>Vender para Cliente</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>
+                                        Vender pacote para cliente
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        O cliente receberá {pkg.total_sessions}{' '}
+                                        {pkg.total_sessions === 1
+                                            ? 'sessão'
+                                            : 'sessões'}{' '}
+                                        por {formatMoney(pkg.price_cents)}, com
+                                        validade de {pkg.validity_days} dias.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <Form
+                                    method="post"
+                                    action={customerPackageActions.store().url}
+                                    headers={{
+                                        'X-Idempotency-Key':
+                                            createIdempotencyKey(
+                                                'customer-package-sell',
+                                                pkg.id,
+                                            ),
+                                    }}
+                                    onSuccess={() => {
+                                        setSellOpen(false);
+                                        setSellCustomerId('');
+                                    }}
+                                >
+                                    {({ processing, errors }) => (
+                                        <>
+                                            <FormErrorSummary errors={errors} />
+                                            <input
+                                                type="hidden"
+                                                name="package_template_id"
+                                                value={pkg.id}
+                                            />
+                                            <CustomerPicker
+                                                label="Cliente"
+                                                required
+                                                value={sellCustomerId}
+                                                onChange={setSellCustomerId}
+                                                options={[]}
+                                                error={errors.customer_id}
+                                            />
+                                            <FormField
+                                                label="Forma de pagamento"
+                                                id="sell-payment-method"
+                                                error={errors.payment_method}
+                                            >
+                                                <select
+                                                    id="sell-payment-method"
+                                                    name="payment_method"
+                                                    defaultValue=""
+                                                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                                                >
+                                                    <option value="">
+                                                        Não informar agora
+                                                    </option>
+                                                    {PAYMENT_METHODS.map(
+                                                        (method) => (
+                                                            <option
+                                                                key={method}
+                                                                value={method}
+                                                            >
+                                                                {paymentMethodLabel(
+                                                                    method,
+                                                                )}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                            </FormField>
+                                            <DialogFooter className="mt-4">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setSellOpen(false)
+                                                    }
+                                                >
+                                                    Cancelar
+                                                </Button>
+                                                <Button
+                                                    type="submit"
+                                                    disabled={
+                                                        processing ||
+                                                        sellCustomerId === ''
+                                                    }
+                                                >
+                                                    {processing
+                                                        ? 'Vendendo…'
+                                                        : 'Confirmar venda'}
+                                                </Button>
+                                            </DialogFooter>
+                                        </>
+                                    )}
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
 
                 {customerPackages.data.length === 0 ? (
@@ -746,6 +912,45 @@ export default function PackageShow({
                                                     </span>
                                                 )}
                                             </div>
+                                            {showPackageFinancialObligations && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {cp.financial_obligation ? (
+                                                        <>
+                                                            Pagamento
+                                                            registrado:{' '}
+                                                            {paymentMethodLabel(
+                                                                cp
+                                                                    .financial_obligation
+                                                                    .payment_method,
+                                                            )}
+                                                            {' · '}
+                                                            {formatMoney(
+                                                                cp
+                                                                    .financial_obligation
+                                                                    .amount_cents,
+                                                            )}
+                                                            {cp
+                                                                .financial_obligation
+                                                                .paid_date && (
+                                                                <>
+                                                                    {
+                                                                        ' · recebido em '
+                                                                    }
+                                                                    {new Date(
+                                                                        cp
+                                                                            .financial_obligation
+                                                                            .paid_date,
+                                                                    ).toLocaleDateString(
+                                                                        'pt-BR',
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        'Sem lançamento financeiro associado.'
+                                                    )}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-3">

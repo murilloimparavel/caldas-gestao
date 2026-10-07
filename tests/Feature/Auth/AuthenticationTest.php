@@ -48,6 +48,20 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_admin_login_redirects_super_administrators_when_the_session_intent_is_missing()
+    {
+        $user = User::factory()->create(['is_super_admin' => true]);
+
+        $response = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'admin_login_intent' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.dashboard', absolute: false));
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_admin_login_rejects_regular_users()
     {
         $user = User::factory()->create();

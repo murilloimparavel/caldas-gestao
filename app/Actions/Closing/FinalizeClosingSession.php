@@ -9,7 +9,11 @@ use App\Models\CashMovement;
 use App\Models\CashShift;
 use App\Models\ClosingSession;
 use App\Models\ClosingSessionPayment;
+use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\InventoryMovement;
+use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -44,6 +48,10 @@ final class FinalizeClosingSession extends OperationalAction
      */
     private function paymentAllocations(array $data, int $totalCents): array
     {
+        if ($totalCents === 0) {
+            return [];
+        }
+
         if (isset($data['payment_allocations'])) {
             return $data['payment_allocations'];
         }
@@ -116,6 +124,118 @@ final class FinalizeClosingSession extends OperationalAction
                 }
             }
 
+            $saleItemIds = $sales->flatMap(fn (Sale $sale) => $sale->items->pluck('id'))->all();
+            $reservedUsages = PackageUsageReservation::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->whereIn('sale_item_id', $saleItemIds)
+                ->where('status', 'reserved')
+                ->orderBy('customer_package_id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($reservedUsages as $usage) {
+                $item = $sales->flatMap(fn (Sale $sale) => $sale->items)->firstWhere('id', $usage->sale_item_id);
+                if ($item === null || $item->covered_quantity !== $usage->sessions_reserved || $item->service_id !== $usage->service_id) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => 'A reserva do pacote não corresponde ao serviço da comanda.',
+                    ]);
+                }
+            }
+
+            $reservedItemIds = $reservedUsages->pluck('sale_item_id')->all();
+            foreach ($sales->flatMap(fn (Sale $sale) => $sale->items) as $item) {
+                if ($item->covered_quantity > 0 && ! in_array($item->getKey(), $reservedItemIds, true)) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => 'Um serviço marcado como coberto não possui reserva de saldo válida.',
+                    ]);
+                }
+            }
+
+            foreach ($reservedUsages->groupBy('customer_package_id') as $customerPackageId => $usages) {
+                /** @var CustomerPackage $package */
+                $package = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($customerPackageId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($package->status !== 'active' || ($package->expires_at !== null && $package->expires_at->endOfDay()->isPast())) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => "O pacote {$package->name_snapshot} não está ativo ou venceu; atualize a comanda antes de fechar.",
+                    ]);
+                }
+
+                $sessionsToConsume = (int) $usages->sum('sessions_reserved');
+                if ($package->remaining_sessions < $sessionsToConsume) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => "O saldo do pacote {$package->name_snapshot} mudou e não cobre mais os serviços reservados.",
+                    ]);
+                }
+
+                foreach ($usages->groupBy('service_id') as $serviceId => $serviceUsages) {
+                    $serviceBalance = CustomerPackageService::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->where('customer_package_id', $package->getKey())
+                        ->where('service_id', $serviceId)
+                        ->lockForUpdate()
+                        ->first();
+                    $serviceQuantity = (int) $serviceUsages->sum('sessions_reserved');
+
+                    if ($serviceBalance === null || $serviceBalance->remaining_quantity < $serviceQuantity) {
+                        throw ValidationException::withMessages([
+                            'sale_ids' => "O saldo do serviço no pacote {$package->name_snapshot} mudou e não cobre mais os serviços reservados.",
+                        ]);
+                    }
+
+                    $serviceBalance->forceFill([
+                        'remaining_quantity' => $serviceBalance->remaining_quantity - $serviceQuantity,
+                    ])->save();
+                }
+
+                $newRemaining = $package->remaining_sessions - $sessionsToConsume;
+                $package->forceFill([
+                    'remaining_sessions' => $newRemaining,
+                    'status' => $newRemaining === 0 ? 'exhausted' : 'active',
+                    'lock_version' => $package->lock_version + 1,
+                ])->save();
+
+                foreach ($usages as $reservation) {
+                    /** @var PackageUsage $consumption */
+                    $consumption = PackageUsage::query()->create([
+                        'id' => (string) Str::uuid7(),
+                        'tenant_id' => $tenantId,
+                        'unit_id' => $unitId,
+                        'customer_package_id' => $package->getKey(),
+                        'service_id' => $reservation->service_id,
+                        'sale_id' => $reservation->sale_id,
+                        'sale_item_id' => $reservation->sale_item_id,
+                        'sessions_consumed' => $reservation->sessions_reserved,
+                        'user_id' => $actor->getKey(),
+                    ]);
+
+                    $reservation->forceFill([
+                        'status' => 'consumed',
+                        'package_usage_id' => $consumption->getKey(),
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'package_usage.consumed', $consumption, [
+                        'customer_package_id' => $package->getKey(),
+                        'package_usage_id' => $consumption->getKey(),
+                        'sessions_consumed' => $consumption->sessions_consumed,
+                    ]);
+                }
+
+                $this->events->record($actor, $context, 'customer_package.consumed', $package, [
+                    'customer_package_id' => $package->getKey(),
+                    'sessions_consumed' => $sessionsToConsume,
+                    'remaining_sessions' => $newRemaining,
+                    'status' => $newRemaining === 0 ? 'exhausted' : 'active',
+                ]);
+            }
+
             // Status check: only draft, open, ready_to_bill
             foreach ($sales as $sale) {
                 if (! in_array($sale->status, ['draft', 'open', 'ready_to_bill'], true)) {
@@ -173,6 +293,9 @@ final class FinalizeClosingSession extends OperationalAction
                 ->lockForUpdate()->first();
             if ($hasCash && $cashShift === null) {
                 throw ValidationException::withMessages(['payment_allocations' => 'Abra um novo turno de caixa para receber parcelas em dinheiro.']);
+            }
+            if ($calculatedFinalTotalCents === 0 && $allocations !== []) {
+                throw ValidationException::withMessages(['payment_allocations' => 'Uma comanda sem valor a receber não pode registrar pagamento.']);
             }
             foreach ($allocations as $index => $allocation) {
                 $method = $allocation['method'];
@@ -273,6 +396,7 @@ final class FinalizeClosingSession extends OperationalAction
                         'item_type' => $item->item_type,
                         'name' => $item->name_snapshot,
                         'quantity' => $item->quantity,
+                        'covered_quantity' => $item->covered_quantity,
                         'unit_price_cents' => $item->unit_price_cents,
                         'discount_cents' => $item->discount_cents,
                         'total_cents' => $item->total_cents,

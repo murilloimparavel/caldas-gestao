@@ -6,6 +6,7 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -50,6 +51,17 @@ final class ReversePackageUsage extends OperationalAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $reservation = PackageUsageReservation::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $unit->getKey())
+                ->where('package_usage_id', $usage->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($reservation !== null && $reservation->status !== 'consumed') {
+                throw new ConflictHttpException('The reservation is not in a consumable state.');
+            }
+
             if (in_array($package->status, ['cancelled', 'expired'], true)) {
                 throw new ConflictHttpException("Package cannot be reactivated from {$package->status} status.");
             }
@@ -71,13 +83,21 @@ final class ReversePackageUsage extends OperationalAction
             ])->save();
 
             if ($usage->service_id !== null) {
-                CustomerPackageService::query()
+                $serviceBalance = CustomerPackageService::query()
                     ->where('tenant_id', $context->tenant->getKey())
                     ->where('unit_id', $unit->getKey())
                     ->where('customer_package_id', $package->getKey())
                     ->where('service_id', $usage->service_id)
                     ->lockForUpdate()
-                    ->increment('remaining_quantity', $usage->sessions_consumed);
+                    ->first();
+
+                if ($serviceBalance !== null) {
+                    if ($serviceBalance->remaining_quantity + $usage->sessions_consumed > $serviceBalance->allocated_quantity) {
+                        throw new ConflictHttpException('Package service balance is inconsistent.');
+                    }
+
+                    $serviceBalance->increment('remaining_quantity', $usage->sessions_consumed);
+                }
             }
 
             $usage->forceFill([
@@ -85,6 +105,14 @@ final class ReversePackageUsage extends OperationalAction
                 'reversed_by_user_id' => $actor->getKey(),
                 'reversal_reason' => $reason,
             ])->save();
+
+            if ($reservation !== null) {
+                $reservation->forceFill([
+                    'status' => 'released',
+                    'released_at' => now(),
+                    'release_reason' => $reason,
+                ])->save();
+            }
 
             $metadata = [
                 'customer_package_id' => $package->getKey(),

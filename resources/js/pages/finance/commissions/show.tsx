@@ -361,6 +361,22 @@ export default function ProfessionalCommissionShow({
                                                             accrual.item_name_snapshot
                                                         }
                                                     </div>
+                                                    {(accrual.covered_quantity ??
+                                                        0) > 0 && (
+                                                        <div className="text-xs font-normal text-muted-foreground">
+                                                            {
+                                                                accrual.covered_quantity
+                                                            }{' '}
+                                                            de{' '}
+                                                            {accrual.quantity ??
+                                                                '—'}{' '}
+                                                            sessões cobertas ·
+                                                            comissão sobre{' '}
+                                                            {accrual.commissionable_quantity ??
+                                                                '—'}{' '}
+                                                            sessão(ões) paga(s)
+                                                        </div>
+                                                    )}
                                                     {accrual.sale
                                                         ?.reference_label && (
                                                         <div className="text-xs text-muted-foreground">

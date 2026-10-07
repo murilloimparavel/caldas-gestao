@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $name_snapshot
  * @property int $unit_price_cents
  * @property int $quantity
+ * @property int $covered_quantity
  * @property int $discount_cents
  * @property int $total_cents
  * @property array<string, mixed>|null $source_metadata
@@ -42,6 +43,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'name_snapshot',
     'unit_price_cents',
     'quantity',
+    'covered_quantity',
     'discount_cents',
     'total_cents',
     'source_metadata',
@@ -54,6 +56,7 @@ class SaleItem extends Model
     protected $attributes = [
         'item_type' => 'custom',
         'quantity' => 1,
+        'covered_quantity' => 0,
         'discount_cents' => 0,
     ];
 
@@ -62,6 +65,7 @@ class SaleItem extends Model
         return [
             'unit_price_cents' => 'integer',
             'quantity' => 'integer',
+            'covered_quantity' => 'integer',
             'discount_cents' => 'integer',
             'total_cents' => 'integer',
             'source_metadata' => 'array',
@@ -114,5 +118,11 @@ class SaleItem extends Model
     public function packageUsages(): HasMany
     {
         return $this->hasMany(PackageUsage::class);
+    }
+
+    /** @return HasMany<PackageUsageReservation, $this> */
+    public function packageReservations(): HasMany
+    {
+        return $this->hasMany(PackageUsageReservation::class);
     }
 }

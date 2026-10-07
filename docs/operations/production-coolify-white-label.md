@@ -27,9 +27,16 @@ Coolify ou no arquivo de ambiente operacional fora do repositório.
 2. O GitHub Actions executa lint, formatação, TypeScript, build e Pest.
 3. O workflow publica `ghcr.io/...:sha-<commit>`.
 4. O workflow atualiza a tag da aplicação no Coolify e dispara o deploy.
-5. O Coolify reinicia a aplicação, aplica as migrations configuradas para a
-   release e atualiza as rotas do Traefik.
+5. O Coolify inicia a nova imagem e atualiza as rotas do Traefik. O boot da
+   aplicação não executa migrations.
 6. Validar o status `running:healthy` e os endpoints públicos.
+
+Quando uma release incluir migrations, executá-las como etapa única e
+controlada, usando a conexão administrativa `MIGRATION_DB_*`, antes de
+direcionar o tráfego para a nova versão. Validar o schema e o `search_path`
+configurados antes da execução. Releases sem alterações de schema, como uma
+mudança apenas de front-end, não precisam conectar ao banco com privilégios de
+migration durante a inicialização.
 
 Tags por commit são obrigatórias para rollback. Não usar `latest` como única
 referência de produção.

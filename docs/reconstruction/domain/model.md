@@ -122,18 +122,28 @@ Não derivar status operacional de status financeiro. Faturamento, conclusão, c
 
 - `Sale`: cliente, unidade, moeda, estado e totais capturados;
 - `SaleItem`: tipo, item de catálogo, profissional, quantidade, preço, desconto e origem;
-- `SaleBenefitAllocation`: pacote, assinatura, crédito ou cashback consumido (onda posterior, fora do MVP de fechamento de comandas);
+- `PackageUsageReservation`/`PackageUsage`: sessões do pacote reservadas por item de comanda e consumo confirmado no fechamento; outras formas de `SaleBenefitAllocation` (assinatura, crédito ou cashback) seguem fora do escopo;
 - `ClosingSession`: seleção versionada de comandas para fechamento consolidado;
 - `Adjustment`: correção auditada sem apagar o original, em wave posterior;
 - `FiscalDocumentIntent`: emissão fiscal desacoplada (onda posterior, fora do MVP de fechamento de comandas);
-- `CommissionAccrual`: competência por item/profissional (onda posterior, fora do MVP de fechamento de comandas);
+- `CommissionAccrual`: competência por item/profissional, com base e quantidades cobertas/pagas capturadas no fechamento;
 - `SaleAuditEvent`: trilha de alterações e transições.
 
-Venda, fechamento, fiscalidade, comissão e estoque são contextos relacionados por IDs e eventos; não devem compartilhar uma única transação longa ou um único status genérico. Recebimento externo não é processado nem registrado nesta wave.
+Venda, fechamento, fiscalidade, comissão e estoque são contextos relacionados por IDs e eventos; não devem compartilhar um único status genérico. A venda do pacote registra uma obrigação financeira recebida conforme confirmação manual do operador; não há processamento por gateway nem confirmação automática do pagamento externo. O fechamento da comanda não cria um segundo recebimento pelas sessões cobertas.
 
-## Ledger financeiro proposto — evolução posterior
+## Pacotes de serviço implementados
 
-Esta seção é uma proposta de arquitetura futura, fora do MVP de fechamento de comandas. O MVP não processa nem registra pagamento/recebimento, estorno ou conciliação; esses conceitos só devem ser implementados em uma wave financeira própria, com ADR e migrações específicas.
+- `PackageTemplate` define preço, validade e quantidades por serviço; `CustomerPackage` captura snapshots e mantém saldo total e saldo por serviço.
+- A venda cria um `FinancialObligation` único por pacote e o liquida com o meio informado pelo operador. Dinheiro gera movimento no caixa aberto do operador; os demais meios ficam como recebimentos informados, sem integração externa.
+- `SaleItem.covered_quantity` e `PackageUsageReservation` representam as sessões comprometidas em comandas abertas. A remoção do item ou cancelamento libera a reserva. O fechamento consome a reserva, reduz o saldo e cria `PackageUsage`.
+- Consumo manual exige serviço e não aceita associação a uma comanda; sessões de comanda só são baixadas no fechamento. Consumo manual respeita o saldo livre após reservas.
+- Estorno de comanda reverte usos vinculados ao item e libera reservas, mantendo o pacote expirado/cancelado no mesmo estado. Reversão manual de um uso segue a validade vigente do pacote.
+- Quantidades cobertas têm valor a pagar e base de comissão iguais a zero. Comissão percentual usa o total efetivamente cobrado; comissão fixa é multiplicada apenas pela quantidade não coberta. A apuração captura quantidade total, coberta e comissionável para auditoria.
+- Política ainda pendente: tratamento de comissão já liquidada quando uma comanda é estornada, pois o sistema não tem lançamento compensatório/clawback de comissão.
+
+## Ledger financeiro e integrações externas
+
+Esta seção descreve capacidades futuras além do recebível atual da venda de pacote. O MVP não processa gateway, reembolso externo nem conciliação automática. Recebimentos da venda de pacote são registros operacionais de confirmação manual, com uma obrigação financeira quitada; estorno/reembolso de pagamento e conciliação dependem de regra e fluxo próprios.
 
 - `FinancialObligation`: pagar/receber, competência, vencimento e titular;
 - `Settlement`: liquidação parcial/total por pagamento;
