@@ -26,9 +26,12 @@ final class TransitionSaleStatus extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         return DB::transaction(function () use ($actor, $context, $sale, $toStatus, $reason, $expectedVersion, $tenantId, $unitId): Sale {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if ($expectedVersion !== null && $lockedSale->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');

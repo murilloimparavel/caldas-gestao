@@ -20,6 +20,7 @@ use App\Models\Sale;
 use App\Models\SaleCategory;
 use App\Models\Service;
 use App\Support\OperationalMutation;
+use App\Support\ProfessionalScope;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,10 @@ use Inertia\Response;
 
 final class SaleController extends Controller
 {
-    public function __construct(private readonly OperationalMutation $mutation) {}
+    public function __construct(
+        private readonly OperationalMutation $mutation,
+        private readonly ProfessionalScope $professionalScope,
+    ) {}
 
     public function index(Request $request, TenantContext $context): Response
     {
@@ -44,7 +48,7 @@ final class SaleController extends Controller
         $customerId = trim((string) $request->string('customer_id'));
         $saleCategoryId = trim((string) $request->string('sale_category_id'));
 
-        $sales = Sale::query()
+        $salesQuery = Sale::query()
             ->with(['customer', 'category', 'appointmentLink.appointment'])
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
@@ -58,7 +62,8 @@ final class SaleController extends Controller
             ->when($status !== '', fn ($query) => $query->where('status', $status))
             ->when($customerId !== '', fn ($query) => $query->where('customer_id', $customerId))
             ->when($saleCategoryId !== '', fn ($query) => $query->where('sale_category_id', $saleCategoryId))
-            ->orderByDesc('created_at')
+            ->orderByDesc('created_at');
+        $sales = $this->professionalScope->constrainSales($salesQuery, $context)
             ->paginate(25)
             ->withQueryString();
 
@@ -69,27 +74,27 @@ final class SaleController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'type', 'uniqueness_scope']);
 
-        $customers = Customer::query()
+        $customers = $this->professionalScope->constrainCustomers(Customer::query()
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('status', 'active')
-            ->orderBy('name')
+            ->orderBy('name'), $context)
             ->get(['id', 'name', 'phone']);
 
         $todayStart = now($unitTimezone)->startOfDay();
 
         $metrics = [
-            'open_count' => Sale::query()
+            'open_count' => $this->professionalScope->constrainSales(Sale::query(), $context)
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)
                 ->where('status', 'open')
                 ->count(),
-            'ready_count' => Sale::query()
+            'ready_count' => $this->professionalScope->constrainSales(Sale::query(), $context)
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)
                 ->where('status', 'ready_to_bill')
                 ->count(),
-            'today_total_cents' => (int) Sale::query()
+            'today_total_cents' => (int) $this->professionalScope->constrainSales(Sale::query(), $context)
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)
                 ->whereIn('status', ['open', 'ready_to_bill'])
@@ -212,11 +217,11 @@ final class SaleController extends Controller
             ])
             ->values();
 
-        $professionals = Professional::query()
+        $professionals = $this->professionalScope->constrainProfessionals(Professional::query()
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('status', 'active')
-            ->orderBy('name')
+            ->orderBy('name'), $context)
             ->get(['id', 'name']);
 
         $categories = SaleCategory::query()

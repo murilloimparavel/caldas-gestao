@@ -29,6 +29,7 @@ final class CancelAppointment extends OperationalAction
         if ($appointment->tenant_id !== $context->tenant->getKey() || $appointment->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The appointment belongs to another workspace.');
         }
+        $this->assertOwnAppointment($context, $appointment);
         $tenantId = (string) $context->tenant->getKey();
         $unitId = (string) $unit->getKey();
         $expectedVersion = (int) ($data['lock_version'] ?? -1);

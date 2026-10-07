@@ -90,6 +90,7 @@ final class GoogleCalendarController extends Controller
     private function authorizeConfiguration(TenantContext $context): void
     {
         abort_unless($context->unit !== null, 403, 'É necessário selecionar uma unidade ativa para usar o Google Agenda.');
+        abort_if($context->membership->professional_id !== null, 403, 'O Google Agenda é gerenciado pelo administrador do tenant para colaboradores vinculados a profissionais.');
         abort_unless($this->authorization->can($context->user, $context, 'calendar.configure', $context->unit), 403, 'Você não tem permissão para configurar o Google Agenda.');
     }
 

@@ -21,11 +21,11 @@ final class InviteMembership
         private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
     ) {}
 
-    public function handle(User $actor, TenantContext $context, Tenant $tenant, User $user): Membership
+    public function handle(User $actor, TenantContext $context, Tenant $tenant, User $user, bool $sendInvitation = true): Membership
     {
         $this->authorization->assertTenantManager($actor, $context, $tenant);
 
-        return DB::transaction(function () use ($actor, $context, $tenant, $user): Membership {
+        [$membership, $shouldNotify] = DB::transaction(function () use ($actor, $context, $tenant, $user, $sendInvitation): array {
             $tenant = Tenant::query()->whereKey($tenant->getKey())->lockForUpdate()->firstOrFail();
             $membership = Membership::query()
                 ->where('tenant_id', $tenant->getKey())
@@ -42,11 +42,10 @@ final class InviteMembership
 
                 $this->events->record($actor, $context, 'membership.invited', $membership);
 
-                $user->notify(new MembershipInvitation($tenant->name, route('login')));
-
-                return $membership;
+                return [$membership, $sendInvitation];
             }
 
+            $shouldNotify = false;
             if ($membership->status === MembershipStatus::Revoked) {
                 $membership->forceFill([
                     'status' => MembershipStatus::Invited,
@@ -55,10 +54,16 @@ final class InviteMembership
                     'lock_version' => $membership->lock_version + 1,
                 ])->save();
                 $this->events->record($actor, $context, 'membership.reinvited', $membership);
-                $user->notify(new MembershipInvitation($tenant->name, route('login')));
+                $shouldNotify = $sendInvitation;
             }
 
-            return $membership->fresh();
+            return [$membership->fresh(), $shouldNotify];
         }, 5);
+
+        if ($shouldNotify) {
+            $user->notify(new MembershipInvitation($tenant->name, route('login')));
+        }
+
+        return $membership;
     }
 }
