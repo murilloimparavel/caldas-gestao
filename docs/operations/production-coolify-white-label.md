@@ -29,8 +29,10 @@ Coolify ou no arquivo de ambiente operacional fora do repositório.
 4. O workflow sincroniza as variáveis operacionais e atualiza a tag imutável
    `sha-<commit>` nas aplicações web, worker e scheduler do Coolify, depois
    dispara o deploy das três aplicações.
-5. O Coolify inicia a nova imagem e atualiza as rotas do Traefik. O boot da
-   aplicação não executa migrations.
+5. O Coolify inicia a nova imagem e atualiza as rotas do Traefik. O boot não
+   executa migrations; quando houver alteração de schema, a migration é uma
+   operação única e separada usando `MIGRATION_DB_*`, antes de direcionar o
+   tráfego para a nova versão.
 6. Validar o status `running:healthy` e os endpoints públicos.
 
 Quando uma release incluir migrations, executá-las como etapa única e

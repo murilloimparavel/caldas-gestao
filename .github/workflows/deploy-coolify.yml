@@ -104,6 +104,7 @@ jobs:
           set -euo pipefail
           for application_uuid in $APPLICATION_UUIDS; do
             curl --fail-with-body --silent --show-error --request PATCH \
+              --output /dev/null \
             --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
             --header "Content-Type: application/json" \
             --data "{\"docker_registry_image_tag\":\"$IMAGE_TAG\"}" \
@@ -113,11 +114,12 @@ jobs:
       - name: Disparar deploy
         env:
           COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
-          APPLICATION_UUIDS: svurav3cvfovuz8adtv1fuwv nbhjuwa4qhs5brnwnbqg1ea2 ni3lxtnuyk26jh3pwpfzbdiu
+          APPLICATION_UUIDS: nbhjuwa4qhs5brnwnbqg1ea2 ni3lxtnuyk26jh3pwpfzbdiu svurav3cvfovuz8adtv1fuwv
         run: |
           set -euo pipefail
           for application_uuid in $APPLICATION_UUIDS; do
             curl --fail-with-body --silent --show-error --request POST \
+              --output /dev/null \
               --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
               "https://cy.caldasindica.com/api/v1/deploy?uuid=${application_uuid}&force=true"
           done
