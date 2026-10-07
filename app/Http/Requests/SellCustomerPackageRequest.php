@@ -79,9 +79,8 @@ final class SellCustomerPackageRequest extends FormRequest
                 }
 
                 $template = $templateQuery->first();
-                if ($template !== null && $template->price_cents > 0 && ! $this->filled('payment_method')) {
-                    $validator->errors()->add('payment_method', 'Informe a forma de pagamento para pacotes com valor.');
-                }
+                // Assignment only creates a pending package. Payment is confirmed by
+                // the closing that contains the package item.
             }
 
             if (! $this->filled('sale_id') || ! $this->filled('customer_id')) {

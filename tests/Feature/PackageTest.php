@@ -184,7 +184,7 @@ it('keeps package details available when the finance link migration is pending',
         );
 });
 
-it('sells a package to a customer and calculates validity', function () {
+it('assigns a package to a customer without activating validity', function () {
     [$owner, $tenant, $unit] = packageTestWorkspace();
 
     $customer = Customer::factory()->create([
@@ -213,11 +213,10 @@ it('sells a package to a customer and calculates validity', function () {
 
     expect($customerPackage->total_sessions)->toBe(10)
         ->and($customerPackage->remaining_sessions)->toBe(10)
-        ->and($customerPackage->status)->toBe('active')
-        ->and($customerPackage->expires_at?->toDateString())->toBe(now()->addDays(60)->toDateString())
-        ->and($customerPackage->financialObligation->status)->toBe('paid')
-        ->and($customerPackage->financialObligation->amount_cents)->toBe($template->price_cents)
-        ->and($customerPackage->financialObligation->payment_method)->toBe('pix');
+        ->and($customerPackage->status)->toBe('pending')
+        ->and($customerPackage->expires_at)->toBeNull()
+        ->and($customerPackage->activated_at)->toBeNull()
+        ->and($customerPackage->financialObligation)->toBeNull();
 
     $this->assertDatabaseHas('audit_events', [
         'tenant_id' => $tenant->getKey(),
@@ -256,7 +255,7 @@ it('assigns a free package without creating a payment obligation', function (): 
         ->and(FinancialObligation::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
 });
 
-it('requires payment method for a package that has a price', function (): void {
+it('allows assigning a priced package before its comanda is paid', function (): void {
     [$owner, $tenant, $unit] = packageTestWorkspace();
     $customer = Customer::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -271,10 +270,12 @@ it('requires payment method for a package that has a price', function (): void {
     $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
-    ])->assertSessionHasErrors('payment_method');
+    ])->assertSessionHasNoErrors();
+
+    expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->value('status'))->toBe('pending');
 });
 
-it('records one paid financial obligation and one cash movement for an idempotent package purchase', function () {
+it('keeps an idempotent direct package assignment pending without a payment record', function () {
     [$owner, $tenant, $unit, $context] = packageTestWorkspace();
     $customer = Customer::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -303,25 +304,14 @@ it('records one paid financial obligation and one cash movement for an idempoten
         ->assertSessionHasNoErrors();
 
     $customerPackage = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
-    $obligation = FinancialObligation::query()->where('customer_package_id', $customerPackage->getKey())->firstOrFail();
-    $movement = CashMovement::query()
-        ->where('reference_type', 'financial_obligation')
-        ->where('reference_id', $obligation->getKey())
-        ->firstOrFail();
-
     expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->count())->toBe(1)
-        ->and(FinancialObligation::query()->where('customer_package_id', $customerPackage->getKey())->count())->toBe(1)
-        ->and($obligation->type)->toBe('receivable')
-        ->and($obligation->status)->toBe('paid')
-        ->and($obligation->amount_cents)->toBe(27500)
-        ->and($obligation->payment_method)->toBe('dinheiro')
-        ->and($movement->cash_shift_id)->toBe($shift->getKey())
-        ->and($movement->type)->toBe('supply')
-        ->and($movement->amount_cents)->toBe(27500)
-        ->and($shift->fresh()->expected_amount_cents)->toBe(37500);
+        ->and($customerPackage->status)->toBe('pending')
+        ->and(FinancialObligation::query()->where('customer_package_id', $customerPackage->getKey())->exists())->toBeFalse()
+        ->and(CashMovement::query()->where('cash_shift_id', $shift->getKey())->count())->toBe(0)
+        ->and($shift->fresh()->expected_amount_cents)->toBe(10000);
 });
 
-it('requires finance permissions before a package purchase can create a payment record', function () {
+it('requires package sell permission before assigning a package', function () {
     [, $tenant, $unit] = packageTestWorkspace();
     $staff = User::factory()->create();
     $membership = Membership::factory()->create([
@@ -346,9 +336,9 @@ it('requires finance permissions before a package purchase can create a payment 
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
         'payment_method' => 'pix',
-    ])->assertForbidden();
+    ])->assertSessionHasNoErrors();
 
-    expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse()
+    expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->value('status'))->toBe('pending')
         ->and(FinancialObligation::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse();
 });
 
@@ -415,7 +405,7 @@ it('consumes package sessions atomically, records usage and exhausts package on 
 
     $customerPackage->refresh();
     expect($customerPackage->remaining_sessions)->toBe(0)
-        ->and($customerPackage->status)->toBe('exhausted');
+        ->and($customerPackage->status)->toBe('completed');
 
     // 3rd consumption attempt should fail with 409
     $consume3 = $this->actingAs($owner)->post(route('customer-packages.consume', $customerPackage), [

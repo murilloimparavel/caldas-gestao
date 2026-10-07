@@ -33,7 +33,7 @@ final class PayloadGovernance
         'commission_rule_id', 'commission_settlement_id', 'commission_accrual_id', 'rate_type', 'rate_value', 'value_rate',
         'commission_amount_cents', 'gross_amount_cents', 'quantity', 'covered_quantity', 'commissionable_quantity', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
         'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
-        'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at',
+        'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at', 'activated_at',
         'subscription_plan_id', 'customer_subscription_id', 'billing_cycle', 'start_date', 'next_billing_date', 'cancelled_at',
         'channel', 'opted_in', 'event_type', 'retention_status', 'days', 'legal_hold_id', 'anonymization_version',
     ];
@@ -58,7 +58,7 @@ final class PayloadGovernance
         'commission_rule_id', 'commission_settlement_id', 'commission_accrual_id', 'rate_type', 'rate_value', 'value_rate',
         'commission_amount_cents', 'gross_amount_cents', 'quantity', 'covered_quantity', 'commissionable_quantity', 'settlement_id', 'settled_at', 'paid_at', 'period_start', 'period_end', 'notes', 'accrual_ids',
         'financial_obligation_id', 'supplier_id', 'due_date', 'paid_date', 'payment_method',
-        'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at',
+        'package_template_id', 'customer_package_id', 'package_usage_id', 'sessions_consumed', 'remaining_sessions', 'total_sessions', 'validity_days', 'expires_at', 'activated_at',
         'subscription_plan_id', 'customer_subscription_id', 'billing_cycle', 'start_date', 'next_billing_date', 'cancelled_at',
         'legal_hold_id', 'anonymization_version',
     ];

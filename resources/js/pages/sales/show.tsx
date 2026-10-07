@@ -4,6 +4,7 @@ import {
     ArrowLeft,
     Calendar,
     CheckCircle2,
+    Gift,
     History,
     Package,
     Percent,
@@ -72,6 +73,7 @@ type Props = {
     categories: SaleCategoryOption[];
     active_cash_shift?: CashShift | null;
     customerPackages: CustomerPackageOption[];
+    pendingCustomerPackages: PendingCustomerPackageOption[];
 };
 
 type CustomerPackageOption = {
@@ -95,6 +97,15 @@ type CustomerPackageOption = {
     }>;
 };
 
+type PendingCustomerPackageOption = {
+    id: string;
+    package_template_id: string;
+    name: string;
+    price_cents: number;
+    total_sessions: number;
+    validity_days: number;
+};
+
 function formatDateTime(iso: string | null | undefined): string {
     if (!iso) {
         return '—';
@@ -112,7 +123,11 @@ function formatDateTime(iso: string | null | undefined): string {
     }).format(date);
 }
 
-function ItemTypeBadge({ type }: { type: 'service' | 'product' | 'custom' }) {
+function ItemTypeBadge({
+    type,
+}: {
+    type: 'service' | 'product' | 'package' | 'custom';
+}) {
     switch (type) {
         case 'service':
             return (
@@ -130,6 +145,15 @@ function ItemTypeBadge({ type }: { type: 'service' | 'product' | 'custom' }) {
                     className="gap-1 border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
                 >
                     <Package className="size-3" /> Produto
+                </Badge>
+            );
+        case 'package':
+            return (
+                <Badge
+                    variant="outline"
+                    className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                >
+                    <Gift className="size-3" /> Pacote
                 </Badge>
             );
         case 'custom':
@@ -152,6 +176,7 @@ export default function SalesShow({
     professionals,
     active_cash_shift,
     customerPackages,
+    pendingCustomerPackages,
 }: Props) {
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
@@ -161,6 +186,19 @@ export default function SalesShow({
     const canClosePermission =
         permissions.has('sale.close') || permissions.has('sale.manage');
     const canDiscount = permissions.has('sale.discount');
+    const canSellPackage =
+        permissions.has('package.sell') || permissions.has('package.manage');
+    const availableItemTypes: Array<
+        'service' | 'product' | 'package' | 'custom'
+    > = ['service', 'product', 'custom'];
+
+    if (
+        canSellPackage &&
+        sale.customer_id !== null &&
+        sale.category?.type === 'mixed'
+    ) {
+        availableItemTypes.splice(2, 0, 'package');
+    }
 
     const [addItemOpen, setAddItemOpen] = useState(false);
     const [discountOpen, setDiscountOpen] = useState(false);
@@ -178,9 +216,9 @@ export default function SalesShow({
     const [quickProductOpen, setQuickProductOpen] = useState(false);
 
     // Add item form state
-    const [itemType, setItemType] = useState<'service' | 'product' | 'custom'>(
-        sale.category?.type === 'product' ? 'product' : 'service',
-    );
+    const [itemType, setItemType] = useState<
+        'service' | 'product' | 'package' | 'custom'
+    >(sale.category?.type === 'product' ? 'product' : 'service');
     const [selectedServiceId, setSelectedServiceId] = useState('');
     const [selectedProductId, setSelectedProductId] = useState('');
     const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
@@ -191,6 +229,14 @@ export default function SalesShow({
     const [itemDiscountStr, setItemDiscountStr] = useState('');
     const [selectedCustomerPackageId, setSelectedCustomerPackageId] =
         useState('');
+    const [selectedPackageTemplateId, setSelectedPackageTemplateId] =
+        useState('');
+    const [selectedPackageTemplate, setSelectedPackageTemplate] = useState<{
+        name: string;
+        price_cents: number;
+        total_sessions: number;
+        validity_days: number;
+    } | null>(null);
 
     const handleServiceCreated = (created: CreatedEntity) => {
         const newOpt: ServiceOption = {
@@ -258,7 +304,9 @@ export default function SalesShow({
             ? (selectedService?.price_cents ?? 0)
             : itemType === 'product'
               ? (selectedProduct?.price_cents ?? 0)
-              : parseBrazilianCurrency(customPriceStr);
+              : itemType === 'package'
+                ? (selectedPackageTemplate?.price_cents ?? 0)
+                : parseBrazilianCurrency(customPriceStr);
 
     const selectedPackage = customerPackages.find(
         (customerPackage) => customerPackage.id === selectedCustomerPackageId,
@@ -314,6 +362,8 @@ export default function SalesShow({
         setQuantity(1);
         setItemDiscountStr('');
         setSelectedCustomerPackageId('');
+        setSelectedPackageTemplateId('');
+        setSelectedPackageTemplate(null);
     };
 
     const latestAdjustment = (sale.status_histories ?? [])
@@ -1026,8 +1076,8 @@ export default function SalesShow({
                                         Itens da Comanda
                                     </h2>
                                     <p className="text-xs text-muted-foreground">
-                                        Serviços, produtos consumidos e itens
-                                        avulsos.
+                                        Serviços, produtos, pacotes vendidos e
+                                        itens avulsos.
                                     </p>
                                 </div>
 
@@ -1103,53 +1153,58 @@ export default function SalesShow({
                                                             <span className="text-sm font-medium text-foreground">
                                                                 Tipo de Item
                                                             </span>
-                                                            <div className="grid grid-cols-3 gap-2">
-                                                                {(
-                                                                    [
-                                                                        'service',
-                                                                        'product',
-                                                                        'custom',
-                                                                    ] as const
-                                                                ).map((t) => (
-                                                                    <button
-                                                                        key={t}
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setItemType(
-                                                                                t,
-                                                                            );
-                                                                            resetItemForm();
-                                                                        }}
-                                                                        className={`flex flex-col items-center justify-center gap-1 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
-                                                                            itemType ===
-                                                                            t
-                                                                                ? 'border-primary bg-primary/10 text-primary'
-                                                                                : 'border-border bg-card text-muted-foreground hover:border-border/80'
-                                                                        }`}
-                                                                    >
-                                                                        {t ===
-                                                                            'service' && (
-                                                                            <Scissors className="size-4" />
-                                                                        )}
-                                                                        {t ===
-                                                                            'product' && (
-                                                                            <Package className="size-4" />
-                                                                        )}
-                                                                        {t ===
-                                                                            'custom' && (
-                                                                            <Sparkles className="size-4" />
-                                                                        )}
-                                                                        <span>
+                                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                                {availableItemTypes.map(
+                                                                    (t) => (
+                                                                        <button
+                                                                            key={
+                                                                                t
+                                                                            }
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setItemType(
+                                                                                    t,
+                                                                                );
+                                                                                resetItemForm();
+                                                                            }}
+                                                                            className={`flex flex-col items-center justify-center gap-1 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
+                                                                                itemType ===
+                                                                                t
+                                                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                                                    : 'border-border bg-card text-muted-foreground hover:border-border/80'
+                                                                            }`}
+                                                                        >
                                                                             {t ===
-                                                                            'service'
-                                                                                ? 'Serviço'
-                                                                                : t ===
-                                                                                    'product'
-                                                                                  ? 'Produto'
-                                                                                  : 'Avulso'}
-                                                                        </span>
-                                                                    </button>
-                                                                ))}
+                                                                                'service' && (
+                                                                                <Scissors className="size-4" />
+                                                                            )}
+                                                                            {t ===
+                                                                                'product' && (
+                                                                                <Package className="size-4" />
+                                                                            )}
+                                                                            {t ===
+                                                                                'package' && (
+                                                                                <Gift className="size-4" />
+                                                                            )}
+                                                                            {t ===
+                                                                                'custom' && (
+                                                                                <Sparkles className="size-4" />
+                                                                            )}
+                                                                            <span>
+                                                                                {t ===
+                                                                                'service'
+                                                                                    ? 'Serviço'
+                                                                                    : t ===
+                                                                                        'product'
+                                                                                      ? 'Produto'
+                                                                                      : t ===
+                                                                                          'package'
+                                                                                        ? 'Pacote'
+                                                                                        : 'Avulso'}
+                                                                            </span>
+                                                                        </button>
+                                                                    ),
+                                                                )}
                                                             </div>
                                                             <input
                                                                 type="hidden"
@@ -1160,7 +1215,148 @@ export default function SalesShow({
 
                                                         {/* Dynamic Fields based on Type */}
                                                         {itemType ===
-                                                        'service' ? (
+                                                        'package' ? (
+                                                            <div className="space-y-3">
+                                                                <FormField
+                                                                    label="Pacote de serviços"
+                                                                    name="package_template_id"
+                                                                    required
+                                                                    error={
+                                                                        errors.package_template_id
+                                                                    }
+                                                                >
+                                                                    <RemoteOptionPicker
+                                                                        id="package_template_id"
+                                                                        name="package_template_id"
+                                                                        options={[]}
+                                                                        placeholder="Selecione um pacote"
+                                                                        resource="packages"
+                                                                        value={
+                                                                            selectedPackageTemplateId
+                                                                        }
+                                                                        onChange={(
+                                                                            value,
+                                                                            option,
+                                                                        ) => {
+                                                                            setSelectedPackageTemplateId(
+                                                                                value,
+                                                                            );
+                                                                            setSelectedPackageTemplate(
+                                                                                option
+                                                                                    ? {
+                                                                                          name: option.name,
+                                                                                          price_cents:
+                                                                                              option.price_cents ??
+                                                                                              0,
+                                                                                          total_sessions:
+                                                                                              option.total_sessions ??
+                                                                                              0,
+                                                                                          validity_days:
+                                                                                              option.validity_days ??
+                                                                                              0,
+                                                                                      }
+                                                                                    : null,
+                                                                            );
+                                                                            setSelectedCustomerPackageId(
+                                                                                '',
+                                                                            );
+                                                                        }}
+                                                                        required
+                                                                    />
+                                                                </FormField>
+                                                                {pendingCustomerPackages.length >
+                                                                0 ? (
+                                                                    <FormField
+                                                                        label="Instância pendente (opcional)"
+                                                                        name="customer_package_id"
+                                                                    >
+                                                                        <select
+                                                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                                            value={
+                                                                                selectedCustomerPackageId
+                                                                            }
+                                                                            onChange={(
+                                                                                event,
+                                                                            ) => {
+                                                                                const packageId =
+                                                                                    event
+                                                                                        .target
+                                                                                        .value;
+                                                                                setSelectedCustomerPackageId(
+                                                                                    packageId,
+                                                                                );
+                                                                                const pending =
+                                                                                    pendingCustomerPackages.find(
+                                                                                        (
+                                                                                            item,
+                                                                                        ) =>
+                                                                                            item.id ===
+                                                                                            packageId,
+                                                                                    );
+
+                                                                                if (
+                                                                                    pending
+                                                                                ) {
+                                                                                    setSelectedPackageTemplateId(
+                                                                                        pending.package_template_id,
+                                                                                    );
+                                                                                    setSelectedPackageTemplate(
+                                                                                        {
+                                                                                            name: pending.name,
+                                                                                            price_cents:
+                                                                                                pending.price_cents,
+                                                                                            total_sessions:
+                                                                                                pending.total_sessions,
+                                                                                            validity_days:
+                                                                                                pending.validity_days,
+                                                                                        },
+                                                                                    );
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <option value="">
+                                                                                Criar
+                                                                                nova
+                                                                                instância
+                                                                                ao
+                                                                                adicionar
+                                                                            </option>
+                                                                            {pendingCustomerPackages.map(
+                                                                                (
+                                                                                    pending,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            pending.id
+                                                                                        }
+                                                                                        value={
+                                                                                            pending.id
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            pending.name
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+                                                                    </FormField>
+                                                                ) : null}
+                                                                <p className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                                                                    O valor
+                                                                    entra no
+                                                                    fechamento e
+                                                                    o pacote só
+                                                                    fica ativo
+                                                                    após o
+                                                                    pagamento. A
+                                                                    validade
+                                                                    começa nessa
+                                                                    ativação.
+                                                                </p>
+                                                            </div>
+                                                        ) : itemType ===
+                                                          'service' ? (
                                                             <div className="space-y-3">
                                                                 <FormField
                                                                     label="Serviço"

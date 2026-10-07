@@ -22,11 +22,7 @@ import {
     ResourceHeader,
     StatusBadge,
 } from '@/components/operational';
-import type {
-    Paginated,
-    RelationOption,
-    ResourceStatus,
-} from '@/components/operational';
+import type { Paginated, RelationOption } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,10 +78,11 @@ type CustomerPackageRecord = {
     eligible_services_snapshot?: Array<{ id: string; name: string }> | null;
     price_cents_snapshot?: number | null;
     remaining_sessions: number;
-    status: ResourceStatus;
+    status: string;
     total_sessions: number;
     total_sessions_snapshot?: number | null;
     validity_days_snapshot?: number | null;
+    activated_at?: string | null;
     usages: PackageUsageRecord[];
     service_balances?: Array<{
         allocated_quantity: number;
@@ -119,6 +116,19 @@ type Props = {
     package_finance_available?: boolean;
     serviceOptions?: RelationOption[];
 };
+
+function PackageLifecycleBadge({ status }: { status: string }) {
+    const labels: Record<string, string> = {
+        pending: 'Pendente',
+        active: 'Ativo',
+        completed: 'Concluído',
+        exhausted: 'Concluído',
+        expired: 'Expirado',
+        cancelled: 'Cancelado',
+    };
+
+    return <Badge variant="outline">{labels[status] ?? status}</Badge>;
+}
 
 const PAYMENT_METHODS = [
     'pix',
@@ -674,8 +684,7 @@ export default function PackageShow({
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="text-xs text-muted-foreground">
-                        Prazo padrão contado a partir do momento da venda ao
-                        cliente.
+                        A validade começa quando a comanda do pacote é paga.
                     </CardContent>
                 </Card>
 
@@ -743,8 +752,9 @@ export default function PackageShow({
                                         {pkg.total_sessions === 1
                                             ? 'sessão'
                                             : 'sessões'}{' '}
-                                        por {formatMoney(pkg.price_cents)}, com
-                                        validade de {pkg.validity_days} dias.
+                                        por {formatMoney(pkg.price_cents)}. A
+                                        validade de {pkg.validity_days} dias
+                                        começa após o pagamento.
                                     </DialogDescription>
                                 </DialogHeader>
 
@@ -862,7 +872,7 @@ export default function PackageShow({
                                                 >
                                                     {cp.customer.name}
                                                 </Link>
-                                                <StatusBadge
+                                                <PackageLifecycleBadge
                                                     status={cp.status}
                                                 />
                                             </div>
@@ -885,6 +895,16 @@ export default function PackageShow({
                                                         Validade até{' '}
                                                         {new Date(
                                                             cp.expires_at,
+                                                        ).toLocaleDateString(
+                                                            'pt-BR',
+                                                        )}
+                                                    </span>
+                                                )}
+                                                {cp.activated_at && (
+                                                    <span>
+                                                        Ativado em{' '}
+                                                        {new Date(
+                                                            cp.activated_at,
                                                         ).toLocaleDateString(
                                                             'pt-BR',
                                                         )}
@@ -965,6 +985,40 @@ export default function PackageShow({
                                                     consumidas
                                                 </div>
                                             </div>
+                                            {canSell &&
+                                                cp.status === 'pending' && (
+                                                    <Form
+                                                        method="post"
+                                                        action={
+                                                            customerPackageActions.cancel(
+                                                                cp.id,
+                                                            ).url
+                                                        }
+                                                        onSubmit={(event) => {
+                                                            if (
+                                                                !window.confirm(
+                                                                    'Cancelar este pacote pendente?',
+                                                                )
+                                                            ) {
+                                                                event.preventDefault();
+                                                            }
+                                                        }}
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="reason"
+                                                            value="Cancelamento manual de pacote pendente"
+                                                        />
+                                                        <Button
+                                                            type="submit"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-destructive"
+                                                        >
+                                                            Cancelar
+                                                        </Button>
+                                                    </Form>
+                                                )}
                                         </div>
                                     </div>
 

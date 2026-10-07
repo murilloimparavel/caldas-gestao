@@ -98,7 +98,7 @@ final class FinalizeClosingSession extends OperationalAction
 
             /** @var Collection<int, Sale> $sales */
             $sales = Sale::query()
-                ->with(['customer', 'category', 'items.service', 'items.product', 'items.professional', 'appointmentLink.appointment'])
+                ->with(['customer', 'category', 'items.service', 'items.product', 'items.professional', 'items.customerPackage', 'appointmentLink.appointment'])
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)
                 ->whereIn('id', $saleIds)
@@ -198,7 +198,7 @@ final class FinalizeClosingSession extends OperationalAction
                 $newRemaining = $package->remaining_sessions - $sessionsToConsume;
                 $package->forceFill([
                     'remaining_sessions' => $newRemaining,
-                    'status' => $newRemaining === 0 ? 'exhausted' : 'active',
+                    'status' => $newRemaining === 0 ? 'completed' : 'active',
                     'lock_version' => $package->lock_version + 1,
                 ])->save();
 
@@ -232,7 +232,7 @@ final class FinalizeClosingSession extends OperationalAction
                     'customer_package_id' => $package->getKey(),
                     'sessions_consumed' => $sessionsToConsume,
                     'remaining_sessions' => $newRemaining,
-                    'status' => $newRemaining === 0 ? 'exhausted' : 'active',
+                    'status' => $newRemaining === 0 ? 'completed' : 'active',
                 ]);
             }
 
@@ -480,6 +480,58 @@ final class FinalizeClosingSession extends OperationalAction
                 $this->recordCustomerActivity->handle($actor, $context, $lockedSale->customer_id, 'sale.finalized');
 
                 $this->accrueCommissions->handle($actor, $context, $lockedSale);
+            }
+
+            // Keep the invariant explicit: a package is usable only after its sale
+            // is finalized in the same completed closing transaction.
+            foreach ($sales as $sale) {
+                foreach ($sale->items as $item) {
+                    if ($item->item_type !== 'package' || $item->customer_package_id === null) {
+                        continue;
+                    }
+
+                    /** @var CustomerPackage $package */
+                    $package = CustomerPackage::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->whereKey($item->customer_package_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($sale->status !== 'finalized' || $package->customer_id !== $sale->customer_id || $package->package_template_id !== $item->package_template_id) {
+                        throw ValidationException::withMessages([
+                            'sale_ids' => 'A instância do pacote exige uma comanda finalizada do mesmo cliente e modelo.',
+                        ]);
+                    }
+
+                    if ($package->status !== 'pending') {
+                        throw ValidationException::withMessages([
+                            'sale_ids' => "O pacote {$package->name_snapshot} não está pendente e não pode ser ativado novamente.",
+                        ]);
+                    }
+
+                    $activatedAt = now();
+                    $expiresAt = $package->validity_days_snapshot !== null && $package->validity_days_snapshot > 0
+                        ? $activatedAt->copy()->addDays($package->validity_days_snapshot)->toDateString()
+                        : null;
+
+                    $package->forceFill([
+                        'status' => $package->remaining_sessions === 0 ? 'completed' : 'active',
+                        'activated_at' => $activatedAt,
+                        'expires_at' => $expiresAt,
+                        'sale_id' => $sale->getKey(),
+                        'lock_version' => $package->lock_version + 1,
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'customer_package.activated', $package, [
+                        'customer_package_id' => $package->getKey(),
+                        'sale_id' => $sale->getKey(),
+                        'sale_item_id' => $item->getKey(),
+                        'activated_at' => $activatedAt->toISOString(),
+                        'expires_at' => $expiresAt,
+                        'status' => $package->status,
+                    ]);
+                }
             }
 
             $productQuantities = [];

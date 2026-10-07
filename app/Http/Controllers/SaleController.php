@@ -133,7 +133,28 @@ final class SaleController extends Controller
         ]);
 
         $customerPackages = collect();
+        $pendingCustomerPackages = collect();
         if ($sale->customer_id !== null) {
+            $pendingCustomerPackages = CustomerPackage::query()
+                ->with('packageTemplate:id,name,price_cents,total_sessions,validity_days')
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('customer_id', $sale->customer_id)
+                ->where('status', 'pending')
+                ->where(function ($query) use ($currentSaleId): void {
+                    $query->whereNull('sale_id')->orWhere('sale_id', $currentSaleId);
+                })
+                ->orderBy('created_at')
+                ->get()
+                ->map(fn (CustomerPackage $package): array => [
+                    'id' => $package->getKey(),
+                    'package_template_id' => $package->package_template_id,
+                    'name' => $package->name_snapshot ?? $package->packageTemplate->name ?? 'Pacote de serviços',
+                    'price_cents' => (int) ($package->price_cents_snapshot ?? $package->packageTemplate->price_cents ?? 0),
+                    'total_sessions' => (int) ($package->total_sessions_snapshot ?? $package->packageTemplate->total_sessions ?? 0),
+                    'validity_days' => (int) ($package->validity_days_snapshot ?? $package->packageTemplate->validity_days ?? 0),
+                ])->values();
+
             $packages = CustomerPackage::query()
                 ->with(['serviceBalances.service', 'packageTemplate'])
                 ->where('tenant_id', $tenantId)
@@ -234,6 +255,7 @@ final class SaleController extends Controller
             'professionals' => $professionals,
             'categories' => $categories,
             'customerPackages' => $customerPackages,
+            'pendingCustomerPackages' => $pendingCustomerPackages,
         ]);
     }
 

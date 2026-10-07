@@ -44,9 +44,11 @@ export type SaleItem = {
     tenant_id: string;
     unit_id: string;
     sale_id: string;
-    item_type: 'service' | 'product' | 'custom';
+    item_type: 'service' | 'product' | 'package' | 'custom';
     service_id: string | null;
     product_id: string | null;
+    package_template_id?: string | null;
+    customer_package_id?: string | null;
     professional_id: string | null;
     seller_professional_id: string | null;
     name_snapshot: string;
@@ -172,7 +174,7 @@ export type ReceiptPayload = {
         final_amount_cents: number;
         items: Array<{
             id: string;
-            item_type: 'service' | 'product' | 'custom';
+            item_type: 'service' | 'product' | 'package' | 'custom';
             name: string;
             quantity: number;
             unit_price_cents: number;

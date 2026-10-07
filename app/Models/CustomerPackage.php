@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $total_sessions
  * @property int $remaining_sessions
  * @property CarbonImmutable|Carbon|null $expires_at
+ * @property CarbonImmutable|Carbon|null $activated_at
  * @property string $status
  * @property int $lock_version
  */
@@ -48,6 +49,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'total_sessions',
     'remaining_sessions',
     'expires_at',
+    'activated_at',
     'status',
     'lock_version',
 ])]
@@ -58,7 +60,7 @@ class CustomerPackage extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $attributes = [
-        'status' => 'active',
+        'status' => 'pending',
         'lock_version' => 0,
     ];
 
@@ -72,6 +74,7 @@ class CustomerPackage extends Model
             'validity_days_snapshot' => 'integer',
             'eligible_services_snapshot' => 'array',
             'expires_at' => 'date',
+            'activated_at' => 'datetime',
             'lock_version' => 'integer',
         ];
     }
