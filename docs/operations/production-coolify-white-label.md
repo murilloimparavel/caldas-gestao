@@ -26,7 +26,9 @@ Coolify ou no arquivo de ambiente operacional fora do repositório.
 1. Fazer push na branch `production`.
 2. O GitHub Actions executa lint, formatação, TypeScript, build e Pest.
 3. O workflow publica `ghcr.io/...:sha-<commit>`.
-4. O workflow atualiza a tag da aplicação no Coolify e dispara o deploy.
+4. O workflow sincroniza as variáveis operacionais e atualiza a tag imutável
+   `sha-<commit>` nas aplicações web, worker e scheduler do Coolify, depois
+   dispara o deploy das três aplicações.
 5. O Coolify inicia a nova imagem e atualiza as rotas do Traefik. O boot da
    aplicação não executa migrations.
 6. Validar o status `running:healthy` e os endpoints públicos.
