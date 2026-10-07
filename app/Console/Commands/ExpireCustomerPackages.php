@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 #[Signature('app:expire-customer-packages
     {--limit=500 : Maximum packages to expire in one run}')]
-#[Description('Expire active or exhausted customer packages that reached their expiry date')]
+#[Description('Expire active customer packages that reached their expiry date')]
 final class ExpireCustomerPackages extends Command
 {
     public function handle(AuditEventWriter $audit, OutboxEventStore $outbox): int

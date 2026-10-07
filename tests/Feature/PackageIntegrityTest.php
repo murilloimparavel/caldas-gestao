@@ -206,7 +206,7 @@ it('reserves package sessions on service items, splits uncovered quantity, and c
     ]);
 
     expect($package->fresh()->remaining_sessions)->toBe(0)
-        ->and($package->fresh()->status)->toBe('exhausted')
+        ->and($package->fresh()->status)->toBe('completed')
         ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(0)
         ->and(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('consumed')
         ->and(PackageUsage::query()->where('sale_item_id', $item->getKey())->value('sessions_consumed'))->toBe(2);
@@ -449,11 +449,27 @@ it('tracks quantities and consumption independently for each package service', f
 
     $template = PackageTemplate::query()->where('name', 'Combo personalizado')->firstOrFail();
 
-    $this->actingAs($owner)->post(route('customer-packages.store'), [
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
         'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+    (new AddSaleItem)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), $sale, [
+        'item_type' => 'package',
         'package_template_id' => $template->getKey(),
+    ]);
+    (new FinalizeClosingSession)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), [
+        'sale_ids' => [$sale->getKey()],
+        'expected_total_cents' => 30000,
         'payment_method' => 'pix',
-    ])->assertSessionHasNoErrors();
+    ]);
 
     $package = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
     expect($package->serviceBalances()->where('service_id', $beard->getKey())->value('allocated_quantity'))->toBe(3)

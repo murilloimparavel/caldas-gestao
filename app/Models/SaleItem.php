@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $item_type
  * @property string|null $service_id
  * @property string|null $product_id
+ * @property string|null $package_template_id
+ * @property string|null $customer_package_id
  * @property string|null $professional_id
  * @property string|null $seller_professional_id
  * @property string $name_snapshot
@@ -38,6 +40,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'item_type',
     'service_id',
     'product_id',
+    'package_template_id',
+    'customer_package_id',
     'professional_id',
     'seller_professional_id',
     'name_snapshot',
@@ -100,6 +104,18 @@ class SaleItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /** @return BelongsTo<PackageTemplate, $this> */
+    public function packageTemplate(): BelongsTo
+    {
+        return $this->belongsTo(PackageTemplate::class);
+    }
+
+    /** @return BelongsTo<CustomerPackage, $this> */
+    public function customerPackage(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPackage::class);
     }
 
     /** @return BelongsTo<Professional, $this> */

@@ -122,7 +122,7 @@ final class ConsumePackageSession extends OperationalAction
             }
 
             $newRemaining = $locked->remaining_sessions - $sessionsToConsume;
-            $newStatus = $newRemaining === 0 ? 'exhausted' : 'active';
+            $newStatus = $newRemaining === 0 ? 'completed' : 'active';
 
             $locked->forceFill([
                 'remaining_sessions' => $newRemaining,

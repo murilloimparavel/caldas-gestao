@@ -3,8 +3,10 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\CustomerPackage;
 use App\Models\PackageUsageReservation;
 use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\SaleStatusHistory;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -68,6 +70,49 @@ final class TransitionSaleStatus extends OperationalAction
                         'package_usage_id' => $reservation->getKey(),
                         'quantity' => $reservation->sessions_reserved,
                         'reason_code' => 'sale_cancelled',
+                    ]);
+                }
+
+                $packageItems = SaleItem::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('sale_id', $lockedSale->getKey())
+                    ->where('item_type', 'package')
+                    ->whereNotNull('customer_package_id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $packageIds = $packageItems->pluck('customer_package_id');
+                $directPackageIds = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('sale_id', $lockedSale->getKey())
+                    ->where('status', 'pending')
+                    ->lockForUpdate()
+                    ->pluck('id');
+
+                foreach ($packageIds->merge($directPackageIds)->unique() as $packageId) {
+                    $package = CustomerPackage::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->whereKey($packageId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($package?->status !== 'pending') {
+                        continue;
+                    }
+
+                    $package->forceFill([
+                        'status' => 'cancelled',
+                        'lock_version' => $package->lock_version + 1,
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'customer_package.cancelled', $package, [
+                        'customer_package_id' => $package->getKey(),
+                        'sale_id' => $lockedSale->getKey(),
+                        'sale_item_id' => $packageItems->firstWhere('customer_package_id', $package->getKey())?->getKey(),
+                        'reason' => 'Comanda cancelada',
                     ]);
                 }
             }

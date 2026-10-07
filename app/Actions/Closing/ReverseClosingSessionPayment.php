@@ -6,6 +6,10 @@ use App\Actions\Operational\OperationalAction;
 use App\Models\CashMovement;
 use App\Models\CashShift;
 use App\Models\ClosingSessionPayment;
+use App\Models\CustomerPackage;
+use App\Models\PackageUsage;
+use App\Models\PackageUsageReservation;
+use App\Models\SaleItem;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -42,6 +46,64 @@ final class ReverseClosingSessionPayment extends OperationalAction
                 $shift = CashShift::query()->where('tenant_id', $original->tenant_id)->where('unit_id', $original->unit_id)->whereKey($original->cash_shift_id)->lockForUpdate()->first();
                 if ($shift?->status === 'open' && $shift->expected_amount_cents < $original->amount_cents) {
                     throw ValidationException::withMessages(['payment' => 'O saldo esperado do turno não comporta o estorno.']);
+                }
+            }
+
+            $closingSession = $original->closingSession()->with('sales.items')->lockForUpdate()->firstOrFail();
+            $sessionPayments = ClosingSessionPayment::query()
+                ->where('tenant_id', $original->tenant_id)
+                ->where('unit_id', $original->unit_id)
+                ->where('closing_session_id', $original->closing_session_id)
+                ->get(['amount_cents', 'is_reversal']);
+            $netReceivedAfterReversal = $sessionPayments->sum(
+                static fn (ClosingSessionPayment $sessionPayment): int => $sessionPayment->is_reversal
+                    ? -$sessionPayment->amount_cents
+                    : $sessionPayment->amount_cents,
+            ) - $original->amount_cents;
+            $packageItems = $closingSession->sales
+                ->flatMap(fn ($sale) => $sale->items)
+                ->filter(fn (SaleItem $item): bool => $item->item_type === 'package' && $item->customer_package_id !== null);
+
+            foreach ($packageItems as $packageItem) {
+                /** @var CustomerPackage $package */
+                $package = CustomerPackage::query()
+                    ->where('tenant_id', $original->tenant_id)
+                    ->where('unit_id', $original->unit_id)
+                    ->whereKey($packageItem->customer_package_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $hasIrreversibleUsage = PackageUsage::query()
+                    ->where('tenant_id', $original->tenant_id)
+                    ->where('unit_id', $original->unit_id)
+                    ->where('customer_package_id', $package->getKey())
+                    ->whereNull('reversed_at')
+                    ->exists();
+                $hasReservation = PackageUsageReservation::query()
+                    ->where('tenant_id', $original->tenant_id)
+                    ->where('unit_id', $original->unit_id)
+                    ->where('customer_package_id', $package->getKey())
+                    ->whereIn('status', ['reserved', 'consumed'])
+                    ->exists();
+
+                if ($hasIrreversibleUsage || $hasReservation || $package->remaining_sessions < $package->total_sessions) {
+                    throw ValidationException::withMessages([
+                        'payment' => 'O recebimento não pode ser estornado porque o pacote já possui consumo ou reserva registrada.',
+                    ]);
+                }
+
+                if ($package->status === 'active' && $netReceivedAfterReversal <= 0) {
+                    $package->forceFill([
+                        'status' => 'cancelled',
+                        'lock_version' => $package->lock_version + 1,
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'customer_package.cancelled', $package, [
+                        'customer_package_id' => $package->getKey(),
+                        'closing_session_id' => $closingSession->getKey(),
+                        'original_payment_id' => $original->getKey(),
+                        'reason' => $reason,
+                    ]);
                 }
             }
 

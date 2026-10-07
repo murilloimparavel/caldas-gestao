@@ -2,8 +2,6 @@
 
 namespace App\Actions\Marketing\Packages;
 
-use App\Actions\Finance\Transactions\CreateFinancialObligation;
-use App\Actions\Finance\Transactions\SettleFinancialObligation;
 use App\Actions\Operational\OperationalAction;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
@@ -13,25 +11,15 @@ use App\Models\Sale;
 use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class SellCustomerPackage extends OperationalAction
 {
-    public function __construct(
-        private readonly CreateFinancialObligation $createFinancialObligation,
-        private readonly SettleFinancialObligation $settleFinancialObligation,
-    ) {
-        parent::__construct();
-    }
-
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, array $data): CustomerPackage
     {
         $unit = $this->unit($actor, $context, 'package.sell');
-        $this->unit($actor, $context, 'financial.manage');
-        $this->unit($actor, $context, 'financial.settle');
 
         $customerId = (string) ($data['customer_id'] ?? '');
         $templateId = (string) ($data['package_template_id'] ?? '');
@@ -79,13 +67,6 @@ final class SellCustomerPackage extends OperationalAction
             ? (int) $data['total_sessions']
             : $template->total_sessions;
 
-        $expiresAt = null;
-        if (! empty($data['expires_at'])) {
-            $expiresAt = Carbon::parse($data['expires_at'])->toDateString();
-        } elseif ($template->validity_days > 0) {
-            $expiresAt = now()->addDays($template->validity_days)->toDateString();
-        }
-
         $serviceAllocations = $template->services
             ->map(static fn (Service $service): array => [
                 'id' => (string) $service->getKey(),
@@ -95,9 +76,7 @@ final class SellCustomerPackage extends OperationalAction
             ->values()
             ->all();
 
-        $paymentMethod = trim((string) ($data['payment_method'] ?? ''));
-
-        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $expiresAt, $serviceAllocations, $paymentMethod): CustomerPackage {
+        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $serviceAllocations): CustomerPackage {
             $customerPackage = CustomerPackage::query()->create([
                 'id' => (string) Str::uuid7(),
                 'tenant_id' => $context->tenant->getKey(),
@@ -112,8 +91,10 @@ final class SellCustomerPackage extends OperationalAction
                 'eligible_services_snapshot' => $serviceAllocations,
                 'total_sessions' => $totalSessions,
                 'remaining_sessions' => $totalSessions,
-                'expires_at' => $expiresAt,
-                'status' => 'active',
+                // The validity window starts only when the package is paid in a closing.
+                'expires_at' => null,
+                'status' => 'pending',
+                'activated_at' => null,
                 'lock_version' => 0,
             ]);
 
@@ -128,27 +109,6 @@ final class SellCustomerPackage extends OperationalAction
                 ]);
             }
 
-            $financialObligation = null;
-            $priceCents = (int) ($customerPackage->price_cents_snapshot ?? 0);
-
-            if ($priceCents > 0) {
-                $financialObligation = $this->createFinancialObligation->handle($actor, $context, [
-                    'type' => 'receivable',
-                    'customer_id' => $customer->getKey(),
-                    'customer_package_id' => $customerPackage->getKey(),
-                    'description' => 'Venda de pacote: '.($customerPackage->name_snapshot ?? $template->name),
-                    'amount_cents' => $priceCents,
-                    'due_date' => now()->toDateString(),
-                    'notes' => 'Pagamento informado pelo operador na atribuição do pacote.',
-                ]);
-
-                $financialObligation = $this->settleFinancialObligation->handle($actor, $context, $financialObligation, [
-                    'paid_date' => now()->toDateString(),
-                    'payment_method' => $paymentMethod,
-                    'lock_version' => $financialObligation->lock_version,
-                ]);
-            }
-
             $this->events->record($actor, $context, 'customer_package.sold', $customerPackage, [
                 'customer_id' => $customer->getKey(),
                 'package_template_id' => $template->getKey(),
@@ -158,13 +118,11 @@ final class SellCustomerPackage extends OperationalAction
                 'total_sessions' => $totalSessions,
                 'validity_days' => $template->validity_days,
                 'remaining_sessions' => $totalSessions,
-                'expires_at' => $expiresAt,
-                'status' => 'active',
-                'financial_obligation_id' => $financialObligation?->getKey(),
-                'payment_method' => $financialObligation?->payment_method,
+                'expires_at' => null,
+                'status' => 'pending',
             ]);
 
-            return $customerPackage->load(['packageTemplate.services', 'customer', 'financialObligation']);
+            return $customerPackage->load(['packageTemplate.services', 'customer']);
         }, 5);
     }
 }

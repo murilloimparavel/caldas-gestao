@@ -127,6 +127,29 @@ final class RemoveSaleItem extends OperationalAction
                 }
             }
 
+            if ($lockedItem->item_type === 'package' && $lockedItem->customer_package_id !== null) {
+                /** @var CustomerPackage|null $pendingPackage */
+                $pendingPackage = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($lockedItem->customer_package_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($pendingPackage?->status === 'pending') {
+                    $pendingPackage->forceFill([
+                        'sale_id' => null,
+                        'lock_version' => $pendingPackage->lock_version + 1,
+                    ])->save();
+
+                    $this->events->record($actor, $context, 'customer_package.sale_unlinked', $pendingPackage, [
+                        'customer_package_id' => $pendingPackage->getKey(),
+                        'sale_id' => $lockedSale->getKey(),
+                        'sale_item_id' => $lockedItem->getKey(),
+                    ]);
+                }
+            }
+
             $lockedItem->delete();
 
             $totalAmountCents = (int) $lockedSale->items()->sum('total_cents');

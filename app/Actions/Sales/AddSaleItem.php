@@ -5,6 +5,7 @@ namespace App\Actions\Sales;
 use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
+use App\Models\PackageTemplate;
 use App\Models\PackageUsageReservation;
 use App\Models\Product;
 use App\Models\Professional;
@@ -29,10 +30,16 @@ final class AddSaleItem extends OperationalAction
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
 
-        if (! empty($data['customer_package_id'])
+        if (($data['item_type'] ?? null) === 'service' && ! empty($data['customer_package_id'])
             && ! $this->authorization->can($actor, $context, 'package.consume', $unit)
             && ! $this->authorization->can($actor, $context, 'package.manage', $unit)) {
             throw new AuthorizationException('O ator não pode consumir saldo de pacotes nesta unidade.');
+        }
+
+        if (($data['item_type'] ?? null) === 'package'
+            && ! $this->authorization->can($actor, $context, 'package.sell', $unit)
+            && ! $this->authorization->can($actor, $context, 'package.manage', $unit)) {
+            throw new AuthorizationException('O ator não pode vender pacotes nesta unidade.');
         }
 
         if ($sale->tenant_id !== $tenantId || $sale->unit_id !== $unitId) {
@@ -46,7 +53,7 @@ final class AddSaleItem extends OperationalAction
         }
 
         $itemType = (string) ($data['item_type'] ?? 'custom');
-        if (! in_array($itemType, ['service', 'product', 'custom'], true)) {
+        if (! in_array($itemType, ['service', 'product', 'package', 'custom'], true)) {
             throw ValidationException::withMessages([
                 'item_type' => 'Tipo de item inválido.',
             ]);
@@ -109,8 +116,17 @@ final class AddSaleItem extends OperationalAction
                 ]);
             }
 
+            if ($itemType === 'package' && ($category->type !== 'mixed' || $lockedSale->customer_id === null)) {
+                throw ValidationException::withMessages([
+                    'item_type' => 'Pacotes só podem ser vendidos em comandas mistas vinculadas a um cliente.',
+                ]);
+            }
+
             $serviceId = null;
             $productId = null;
+            $packageTemplateId = null;
+            $customerPackageId = null;
+            $packageTemplate = null;
             $nameSnapshot = null;
             $unitPriceCents = null;
 
@@ -158,6 +174,26 @@ final class AddSaleItem extends OperationalAction
                 $unitPriceCents = isset($data['unit_price_cents'])
                     ? (int) $data['unit_price_cents']
                     : (int) $product->sale_price_cents;
+            } elseif ($itemType === 'package') {
+                $packageTemplateId = (string) ($data['package_template_id'] ?? '');
+                /** @var PackageTemplate|null $packageTemplate */
+                $packageTemplate = PackageTemplate::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('is_active', true)
+                    ->whereKey($packageTemplateId)
+                    ->with('services:id,name')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($packageTemplate === null) {
+                    throw ValidationException::withMessages([
+                        'package_template_id' => 'O pacote selecionado não foi encontrado ou está inativo.',
+                    ]);
+                }
+
+                $nameSnapshot = $packageTemplate->name;
+                $unitPriceCents = (int) $packageTemplate->price_cents;
             } else {
                 if (! isset($data['name_snapshot']) || trim((string) $data['name_snapshot']) === '') {
                     throw ValidationException::withMessages([
@@ -218,11 +254,94 @@ final class AddSaleItem extends OperationalAction
             }
 
             $quantity = max(1, (int) ($data['quantity'] ?? 1));
+            if ($itemType === 'package' && $quantity !== 1) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Cada pacote deve ser lançado em uma linha própria.',
+                ]);
+            }
             $coveredQuantity = 0;
             $customerPackage = null;
 
-            if (! empty($data['customer_package_id'])) {
-                if ($itemType !== 'service' || $lockedSale->customer_id === null) {
+            if ($itemType === 'package') {
+                $requestedPackageId = trim((string) ($data['customer_package_id'] ?? ''));
+                if ($requestedPackageId !== '') {
+                    /** @var CustomerPackage|null $customerPackage */
+                    $customerPackage = CustomerPackage::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->where('customer_id', $lockedSale->customer_id)
+                        ->whereKey($requestedPackageId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($customerPackage === null || $customerPackage->status !== 'pending' || $customerPackage->package_template_id !== $packageTemplate->getKey()) {
+                        throw ValidationException::withMessages([
+                            'customer_package_id' => 'O pacote pendente não pertence ao cliente, já foi faturado ou não corresponde ao modelo selecionado.',
+                        ]);
+                    }
+                    if ($customerPackage->sale_id !== null && $customerPackage->sale_id !== $lockedSale->getKey()) {
+                        throw ValidationException::withMessages([
+                            'customer_package_id' => 'Este pacote pendente já está vinculado a outra comanda.',
+                        ]);
+                    }
+                } else {
+                    $serviceAllocations = $packageTemplate->services
+                        ->map(static fn (Service $service): array => [
+                            'id' => (string) $service->getKey(),
+                            'name' => (string) $service->name,
+                            'quantity' => (int) ($service->pivot->included_quantity ?? 1),
+                        ])
+                        ->values()
+                        ->all();
+                    $customerPackage = CustomerPackage::query()->create([
+                        'id' => (string) Str::uuid7(),
+                        'tenant_id' => $tenantId,
+                        'unit_id' => $unitId,
+                        'customer_id' => $lockedSale->customer_id,
+                        'package_template_id' => $packageTemplate->getKey(),
+                        'sale_id' => $lockedSale->getKey(),
+                        'name_snapshot' => $packageTemplate->name,
+                        'price_cents_snapshot' => $packageTemplate->price_cents,
+                        'total_sessions_snapshot' => $packageTemplate->total_sessions,
+                        'validity_days_snapshot' => $packageTemplate->validity_days,
+                        'eligible_services_snapshot' => $serviceAllocations,
+                        'total_sessions' => $packageTemplate->total_sessions,
+                        'remaining_sessions' => $packageTemplate->total_sessions,
+                        'expires_at' => null,
+                        'activated_at' => null,
+                        'status' => 'pending',
+                        'lock_version' => 0,
+                    ]);
+                    foreach ($serviceAllocations as $allocation) {
+                        CustomerPackageService::query()->create([
+                            'tenant_id' => $tenantId,
+                            'unit_id' => $unitId,
+                            'customer_package_id' => $customerPackage->getKey(),
+                            'service_id' => $allocation['id'],
+                            'allocated_quantity' => $allocation['quantity'],
+                            'remaining_quantity' => $allocation['quantity'],
+                        ]);
+                    }
+                }
+                $customerPackageId = $customerPackage->getKey();
+                if ($customerPackage->sale_id === null) {
+                    $customerPackage->forceFill(['sale_id' => $lockedSale->getKey()])->save();
+                }
+
+                if (SaleItem::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('sale_id', $lockedSale->getKey())
+                    ->where('customer_package_id', $customerPackageId)
+                    ->exists()) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'Este pacote já possui uma linha nesta comanda.',
+                    ]);
+                }
+            }
+
+            if ($itemType === 'service' && ! empty($data['customer_package_id'])) {
+                if ($lockedSale->customer_id === null) {
                     throw ValidationException::withMessages([
                         'customer_package_id' => 'Pacotes só podem cobrir serviços de uma comanda vinculada a um cliente.',
                     ]);
@@ -308,6 +427,8 @@ final class AddSaleItem extends OperationalAction
                 'item_type' => $itemType,
                 'service_id' => $serviceId,
                 'product_id' => $productId,
+                'package_template_id' => $packageTemplateId,
+                'customer_package_id' => $customerPackageId,
                 'professional_id' => $professionalId,
                 'seller_professional_id' => $sellerProfessionalId,
                 'name_snapshot' => $nameSnapshot,
@@ -316,10 +437,12 @@ final class AddSaleItem extends OperationalAction
                 'covered_quantity' => $coveredQuantity,
                 'discount_cents' => $discountCents,
                 'total_cents' => $totalCents,
-                'source_metadata' => $data['source_metadata'] ?? null,
+                'source_metadata' => $itemType === 'package'
+                    ? ['package_template_lock_version' => $packageTemplate->lock_version]
+                    : ($data['source_metadata'] ?? null),
             ]);
 
-            if ($customerPackage !== null) {
+            if ($customerPackage !== null && $itemType === 'service') {
                 PackageUsageReservation::query()->create([
                     'id' => (string) Str::uuid7(),
                     'tenant_id' => $tenantId,

@@ -283,6 +283,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('packages/{package_template}/reactivate', [PackageTemplateController::class, 'reactivate'])->name('packages.reactivate');
         Route::post('customer-packages', [CustomerPackageController::class, 'store'])->name('customer-packages.store');
         Route::post('customer-packages/{customer_package}/consume', [CustomerPackageController::class, 'consume'])->name('customer-packages.consume');
+        Route::post('customer-packages/{customer_package}/cancel', [CustomerPackageController::class, 'cancel'])->name('customer-packages.cancel');
         Route::post('customer-packages/{customer_package}/usages/{package_usage}/reverse', [CustomerPackageController::class, 'reverseUsage'])
             ->scopeBindings()
             ->name('customer-packages.usages.reverse');
