@@ -5,6 +5,7 @@ namespace App\Actions\Marketing\Packages;
 use App\Actions\Operational\OperationalAction;
 use App\Actions\Sales\AddSaleItem;
 use App\Actions\Sales\OpenSale;
+use App\Models\Professional;
 use App\Models\Sale;
 use App\Models\SaleCategory;
 use App\Models\User;
@@ -33,6 +34,26 @@ final class StartCustomerPackageSale extends OperationalAction
             throw new AuthorizationException('O operador não pode abrir e visualizar comandas nesta unidade.');
         }
 
+        $professionalId = trim((string) ($data['professional_id'] ?? ''));
+        if ($professionalId === '') {
+            throw ValidationException::withMessages([
+                'professional_id' => 'Selecione o profissional que executará os serviços do pacote.',
+            ]);
+        }
+
+        $professionalExists = Professional::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unit->getKey())
+            ->where('status', 'active')
+            ->whereKey($professionalId)
+            ->exists();
+
+        if (! $professionalExists) {
+            throw ValidationException::withMessages([
+                'professional_id' => 'O profissional selecionado não pertence a esta unidade ou está inativo.',
+            ]);
+        }
+
         /** @var SaleCategory|null $category */
         $category = SaleCategory::query()
             ->where('tenant_id', $tenantId)
@@ -50,7 +71,7 @@ final class StartCustomerPackageSale extends OperationalAction
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $context, $category, $data): Sale {
+        return DB::transaction(function () use ($actor, $context, $category, $data, $professionalId): Sale {
             $sale = $this->openSale->handle($actor, $context, [
                 'sale_category_id' => $category->getKey(),
                 'customer_id' => $data['customer_id'],
@@ -61,6 +82,7 @@ final class StartCustomerPackageSale extends OperationalAction
             $this->addSaleItem->handle($actor, $context, $sale, [
                 'item_type' => 'package',
                 'package_template_id' => $data['package_template_id'],
+                'professional_id' => $professionalId,
                 'source_id' => $data['item_source_id'] ?? null,
             ]);
 

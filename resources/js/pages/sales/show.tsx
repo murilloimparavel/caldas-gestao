@@ -1218,6 +1218,32 @@ export default function SalesShow({
                                                         'package' ? (
                                                             <div className="space-y-3">
                                                                 <FormField
+                                                                    label="Profissional Executor"
+                                                                    name="professional_id"
+                                                                    required
+                                                                    error={
+                                                                        errors.professional_id
+                                                                    }
+                                                                >
+                                                                    <RemoteOptionPicker
+                                                                        id="professional_id"
+                                                                        name="professional_id"
+                                                                        options={
+                                                                            professionals
+                                                                        }
+                                                                        placeholder="Selecione um profissional"
+                                                                        resource="professionals"
+                                                                        value={
+                                                                            selectedProfessionalId
+                                                                        }
+                                                                        onChange={
+                                                                            setSelectedProfessionalId
+                                                                        }
+                                                                        required
+                                                                        localOptionsOnly
+                                                                    />
+                                                                </FormField>
+                                                                <FormField
                                                                     label="Pacote de serviços"
                                                                     name="package_template_id"
                                                                     required

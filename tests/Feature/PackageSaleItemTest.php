@@ -19,6 +19,7 @@ use App\Models\PackageTemplate;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
 use App\Models\Permission;
+use App\Models\Professional;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\Sale;
@@ -51,10 +52,10 @@ it('fatura pacote pela comanda e cobre usos futuros sem nova cobrança', functio
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
     ]);
-    $packageItem = (new AddSaleItem)->handle($owner, $context, $packageSale, [
+    $packageItem = addPackageSaleItem($owner, $context, $packageSale, [
         'item_type' => 'package', 'package_template_id' => $template->getKey(), 'quantity' => 1, 'discount_cents' => 5000,
     ]);
-    (new AddSaleItem)->handle($owner, $context, $packageSale, [
+    addPackageSaleItem($owner, $context, $packageSale, [
         'item_type' => 'custom', 'name_snapshot' => 'Serviço adicional', 'unit_price_cents' => 7000,
     ]);
     (new ApplySaleDiscount)->handle($owner, $context, $packageSale->fresh(), ['discount_amount_cents' => 2000]);
@@ -75,7 +76,7 @@ it('fatura pacote pela comanda e cobre usos futuros sem nova cobrança', functio
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
     ]);
-    $serviceItem = (new AddSaleItem)->handle($owner, $context, $usageSale, [
+    $serviceItem = addPackageSaleItem($owner, $context, $usageSale, [
         'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
     ]);
 
@@ -105,13 +106,13 @@ it('não ativa pacote gratuito ou totalmente descontado mesmo quando há outro i
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
     ]);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+    $item = addPackageSaleItem($owner, $context, $sale, [
         'item_type' => 'package', 'package_template_id' => $template->getKey(), 'discount_cents' => 10000,
     ]);
-    $freeItem = (new AddSaleItem)->handle($owner, $context, $sale, [
+    $freeItem = addPackageSaleItem($owner, $context, $sale, [
         'item_type' => 'package', 'package_template_id' => $freeTemplate->getKey(),
     ]);
-    (new AddSaleItem)->handle($owner, $context, $sale, [
+    addPackageSaleItem($owner, $context, $sale, [
         'item_type' => 'custom', 'name_snapshot' => 'Serviço pago', 'unit_price_cents' => 5000,
     ]);
     $package = CustomerPackage::query()->findOrFail($item->customer_package_id);
@@ -145,7 +146,7 @@ it('não ativa pacote quando desconto da comanda zera o recebimento líquido', f
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
     ]);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+    $item = addPackageSaleItem($owner, $context, $sale, [
         'item_type' => 'package', 'package_template_id' => $template->getKey(),
     ]);
     (new ApplySaleDiscount)->handle($owner, $context, $sale->fresh(), ['discount_amount_cents' => 10000]);
@@ -172,13 +173,14 @@ it('não ativa pacote quando o fechamento não cobre o total devido', function (
     $unit = $tenant->units()->firstOrFail();
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 20000]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
     ]);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+    $item = addPackageSaleItem($owner, $context, $sale, [
         'item_type' => 'package', 'package_template_id' => $template->getKey(),
     ]);
     $package = CustomerPackage::query()->findOrFail($item->customer_package_id);
@@ -212,7 +214,7 @@ it('não ativa pacote se ele não estiver vinculado à comanda que contém o ite
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
     ]);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+    $item = addPackageSaleItem($owner, $context, $sale, [
         'item_type' => 'package', 'package_template_id' => $template->getKey(),
     ]);
     $package = CustomerPackage::query()->findOrFail($item->customer_package_id);
@@ -235,12 +237,14 @@ it('inicia a venda de pacote em uma comanda mista e permanece pendente até o fe
     ]);
     $unit = $tenant->units()->firstOrFail();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 20000]);
     SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed', 'uniqueness_scope' => 'none', 'name' => 'Pacotes']);
 
     $payload = [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         // This is the value submitted by the HTML hidden input.
         'start_sale' => '1',
     ];
@@ -258,6 +262,7 @@ it('inicia a venda de pacote em uma comanda mista e permanece pendente até o fe
 
     expect($sale->status)->toBe('open')
         ->and($item->item_type)->toBe('package')
+        ->and($item->professional_id)->toBe($professional->getKey())
         ->and($item->total_cents)->toBe(20000)
         ->and($package->sale_id)->toBe($sale->getKey())
         ->and($package->status)->toBe('pending');
@@ -269,6 +274,81 @@ it('inicia a venda de pacote em uma comanda mista e permanece pendente até o fe
 
     expect(Sale::query()->where('customer_id', $customer->getKey())->count())->toBe(1)
         ->and(SaleItem::query()->where('sale_id', $sale->getKey())->count())->toBe(1);
+});
+
+it('exige profissional executor ao adicionar pacote diretamente à comanda', function (): void {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, [
+        'name' => 'Package executor '.Str::random(8),
+        'slug' => 'package-executor-'.Str::lower(Str::random(8)),
+    ]);
+    $unit = $tenant->units()->firstOrFail();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+
+    expect(fn () => (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+    ]))->toThrow(ValidationException::class);
+
+    $foreignProfessional = Professional::factory()->create();
+    expect(fn () => (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+        'professional_id' => $foreignProfessional->getKey(),
+    ]))->toThrow(ValidationException::class);
+
+    $this->actingAs($owner)->post(route('customer-packages.store'), [
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'start_sale' => '1',
+    ])->assertSessionHasErrors('professional_id');
+
+    expect(Sale::query()->where('customer_id', $customer->getKey())->count())->toBe(1);
+});
+
+it('não abre comanda nem cria pacote quando a venda automática não tem executor válido', function (): void {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, [
+        'name' => 'Missing package executor '.Str::random(8),
+        'slug' => 'missing-package-executor-'.Str::lower(Str::random(8)),
+    ]);
+    $unit = $tenant->units()->firstOrFail();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
+    $foreignProfessional = Professional::factory()->create();
+    $payload = [
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'start_sale' => '1',
+    ];
+
+    $this->actingAs($owner)
+        ->post(route('customer-packages.store'), $payload)
+        ->assertSessionHasErrors('professional_id');
+
+    $this->actingAs($owner)
+        ->post(route('customer-packages.store'), [...$payload, 'professional_id' => $foreignProfessional->getKey()])
+        ->assertSessionHasErrors('professional_id');
+
+    expect(Sale::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse()
+        ->and(CustomerPackage::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse();
 });
 
 it('rejeita iniciar a comanda quando o operador só tem permissão de vender pacotes', function (): void {
@@ -287,12 +367,14 @@ it('rejeita iniciar a comanda quando o operador só tem permissão de vender pac
     MembershipRole::factory()->forMembership($membership)->forRole($role)->create();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed', 'uniqueness_scope' => 'none']);
 
     $this->actingAs($staff)
         ->post(route('customer-packages.store'), [
             'customer_id' => $customer->getKey(),
             'package_template_id' => $template->getKey(),
+            'professional_id' => $professional->getKey(),
             'start_sale' => '1',
         ])
         ->assertForbidden();
@@ -364,8 +446,8 @@ it('cancela o pacote quando qualquer estorno deixa o fechamento abaixo do valor 
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 30000]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
-    (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'custom', 'name_snapshot' => 'Serviço extra', 'unit_price_cents' => 7000]);
+    $item = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
+    addPackageSaleItem($owner, $context, $sale, ['item_type' => 'custom', 'name_snapshot' => 'Serviço extra', 'unit_price_cents' => 7000]);
     $session = (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$sale->getKey()], 'payment_allocations' => [
         ['method' => 'pix', 'amount_cents' => 30000], ['method' => 'debit_card', 'amount_cents' => 7000],
     ]]);
@@ -390,7 +472,7 @@ it('impede ajustar a comanda de venda de pacote até cancelar pacote e estornar 
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 30000]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
+    $item = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
     $session = (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$sale->getKey()], 'payment_method' => 'pix']);
     $package = CustomerPackage::query()->findOrFail($item->customer_package_id);
     $payment = ClosingSessionPayment::query()->where('closing_session_id', $session->getKey())->where('is_reversal', false)->firstOrFail();
@@ -421,13 +503,13 @@ it('impede estornar o recebimento após reservar um uso do pacote e preserva os 
     $template->services()->attach($service, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'included_quantity' => 2]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $packageItem = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
+    $packageItem = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
     $session = (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$sale->getKey()], 'payment_method' => 'pix']);
     $package = CustomerPackage::query()->findOrFail($packageItem->customer_package_id);
     $payment = ClosingSessionPayment::query()->where('closing_session_id', $session->getKey())->where('is_reversal', false)->firstOrFail();
 
     $usageSale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $serviceItem = (new AddSaleItem)->handle($owner, $context, $usageSale, [
+    $serviceItem = addPackageSaleItem($owner, $context, $usageSale, [
         'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
     ]);
     $reservation = PackageUsageReservation::query()->where('sale_item_id', $serviceItem->getKey())->firstOrFail();
@@ -457,13 +539,13 @@ it('impede estornar o recebimento após consumir uma sessão e preserva os estad
     $template->services()->attach($service, ['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'included_quantity' => 2]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $packageItem = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
+    $packageItem = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
     $session = (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$sale->getKey()], 'payment_method' => 'pix']);
     $package = CustomerPackage::query()->findOrFail($packageItem->customer_package_id);
     $payment = ClosingSessionPayment::query()->where('closing_session_id', $session->getKey())->where('is_reversal', false)->firstOrFail();
 
     $usageSale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $serviceItem = (new AddSaleItem)->handle($owner, $context, $usageSale, [
+    $serviceItem = addPackageSaleItem($owner, $context, $usageSale, [
         'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
     ]);
     (new FinalizeClosingSession)->handle($owner, $context, ['sale_ids' => [$usageSale->getKey()], 'expected_total_cents' => 0]);
@@ -493,7 +575,7 @@ it('cancela pacote pendente lançado quando a comanda é cancelada', function ()
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $item = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
+    $item = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
 
     (new TransitionSaleStatus)->handle($owner, $context, $sale, 'cancelled');
 
@@ -516,11 +598,13 @@ it('permite ao vendedor de pacotes lançar pela comanda sem permissão de consum
     }
     MembershipRole::factory()->forMembership($membership)->forRole($role)->create();
     $context = TenantContext::forUser($staff, $tenant->getKey(), $unit->getKey());
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
     $package = (new SellCustomerPackage)->handle($staff, $context, [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'sale_id' => $sale->getKey(),
     ]);
     $item = SaleItem::query()->where('customer_package_id', $package->getKey())->firstOrFail();
@@ -543,11 +627,24 @@ it('permite relançar a mesma instância depois de remover o item da comanda', f
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed']);
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(), 'sale_category_id' => $category->getKey(), 'status' => 'open']);
-    $firstItem = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
+    $firstItem = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey()]);
 
     (new RemoveSaleItem)->handle($owner, $context, $sale, $firstItem);
-    $secondItem = (new AddSaleItem)->handle($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey(), 'customer_package_id' => $firstItem->customer_package_id]);
+    $secondItem = addPackageSaleItem($owner, $context, $sale, ['item_type' => 'package', 'package_template_id' => $template->getKey(), 'customer_package_id' => $firstItem->customer_package_id]);
 
     expect($secondItem->getKey())->not->toBe($firstItem->getKey())
         ->and(Sale::findOrFail($sale->getKey())->items()->where('customer_package_id', $firstItem->customer_package_id)->count())->toBe(1);
 });
+
+/** @param array<string, mixed> $data */
+function addPackageSaleItem(User $actor, TenantContext $context, Sale $sale, array $data): SaleItem
+{
+    if (($data['item_type'] ?? null) === 'package' && empty($data['professional_id'])) {
+        $data['professional_id'] = Professional::factory()->create([
+            'tenant_id' => $context->tenant->getKey(),
+            'unit_id' => $context->unit?->getKey(),
+        ])->getKey();
+    }
+
+    return (new AddSaleItem)->handle($actor, $context, $sale, $data);
+}

@@ -11,6 +11,7 @@ use App\Models\MembershipRole;
 use App\Models\MembershipUnit;
 use App\Models\PackageTemplate;
 use App\Models\Permission;
+use App\Models\Professional;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\Sale;
@@ -36,6 +37,14 @@ function packageTestWorkspace(): array
     $unit = $tenant->units()->firstOrFail();
 
     return [$owner, $tenant, $unit, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey())];
+}
+
+function packageTestExecutor(Tenant $tenant, Unit $unit): Professional
+{
+    return Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
 }
 
 it('allows creating, updating, viewing, and deactivating package templates', function () {
@@ -201,6 +210,7 @@ it('opens a comanda for a package and keeps it pending until payment', function 
         'validity_days' => 60,
         'is_active' => true,
     ]);
+    $professional = packageTestExecutor($tenant, $unit);
     SaleCategory::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -211,6 +221,7 @@ it('opens a comanda for a package and keeps it pending until payment', function 
     $response = $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'start_sale' => '1',
     ]);
 
@@ -256,6 +267,7 @@ it('opens a comanda for a free package without creating a payment obligation', f
         'unit_id' => $unit->getKey(),
         'price_cents' => 0,
     ]);
+    $professional = packageTestExecutor($tenant, $unit);
     SaleCategory::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -266,6 +278,7 @@ it('opens a comanda for a free package without creating a payment obligation', f
     $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'start_sale' => '1',
     ])->assertSessionHasNoErrors();
 
@@ -286,6 +299,7 @@ it('leaves a priced package pending before its comanda is closed', function (): 
         'unit_id' => $unit->getKey(),
         'price_cents' => 10000,
     ]);
+    $professional = packageTestExecutor($tenant, $unit);
     SaleCategory::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -296,6 +310,7 @@ it('leaves a priced package pending before its comanda is closed', function (): 
     $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'start_sale' => '1',
     ])->assertSessionHasNoErrors();
 
@@ -316,6 +331,7 @@ it('keeps an idempotent package sale pending without a payment record before com
         'unit_id' => $unit->getKey(),
         'price_cents' => 27500,
     ]);
+    $professional = packageTestExecutor($tenant, $unit);
     SaleCategory::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -325,6 +341,7 @@ it('keeps an idempotent package sale pending without a payment record before com
     $payload = [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'start_sale' => '1',
     ];
 
@@ -367,6 +384,7 @@ it('requires package sell permission before starting a package comanda', functio
     MembershipRole::factory()->forMembership($membership)->forRole($role)->create();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = packageTestExecutor($tenant, $unit);
     SaleCategory::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -377,6 +395,7 @@ it('requires package sell permission before starting a package comanda', functio
     $this->actingAs($staff)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'start_sale' => '1',
     ])->assertForbidden();
 

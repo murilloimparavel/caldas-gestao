@@ -16,6 +16,7 @@ use App\Models\Customer;
 use App\Models\CustomerCommunicationPreference;
 use App\Models\FinancialObligation;
 use App\Models\PackageTemplate;
+use App\Models\Professional;
 use App\Models\SubscriptionPlan;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
@@ -99,6 +100,19 @@ final class CustomerController extends Controller
             ->where('is_active', true)
             ->exists();
 
+        $professionals = Professional::query()
+            ->where('tenant_id', $customer->tenant_id)
+            ->where('unit_id', $customer->unit_id)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Professional $professional): array => [
+                'id' => $professional->id,
+                'name' => $professional->name,
+            ])
+            ->values()
+            ->all();
+
         $subscriptions = $customer->subscriptions;
         $activeSubscription = $subscriptions->first(fn ($subscription): bool => in_array($subscription->status, ['active', 'paused'], true));
 
@@ -113,6 +127,7 @@ final class CustomerController extends Controller
         return Inertia::render('customers/show', [
             'customer' => $customer,
             'hasPackageTemplates' => $hasPackageTemplates,
+            'professionals' => $professionals,
             'active_subscription' => $activeSubscription,
             'subscription_history' => $subscriptions,
             'hasPlanOptions' => $hasPlanOptions,

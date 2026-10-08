@@ -21,6 +21,7 @@ use App\Models\PackageTemplate;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
 use App\Models\Permission;
+use App\Models\Professional;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\Sale;
@@ -51,6 +52,7 @@ function packageIntegrityWorkspace(): array
 it('snapshots package terms and rejects a source sale for another customer', function (): void {
     [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $otherCustomer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Corte']);
     $template = PackageTemplate::factory()->create([
@@ -77,6 +79,7 @@ it('snapshots package terms and rejects a source sale for another customer', fun
     expect(fn () => (new SellCustomerPackage)->handle($owner, $context, [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
         'sale_id' => $foreignCustomerSale->getKey(),
     ]))->toThrow(ValidationException::class);
 
@@ -84,6 +87,7 @@ it('snapshots package terms and rejects a source sale for another customer', fun
         ->post(route('customer-packages.store'), [
             'customer_id' => $customer->getKey(),
             'package_template_id' => $template->getKey(),
+            'professional_id' => $professional->getKey(),
             'start_sale' => '1',
         ])
         ->assertSessionHasNoErrors();
@@ -468,9 +472,11 @@ it('tracks quantities and consumption independently for each package service', f
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
     ]);
+    $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     (new AddSaleItem)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), $sale, [
         'item_type' => 'package',
         'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
     ]);
     (new FinalizeClosingSession)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), [
         'sale_ids' => [$sale->getKey()],

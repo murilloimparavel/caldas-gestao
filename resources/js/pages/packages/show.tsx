@@ -10,6 +10,7 @@ import {
 import { useState } from 'react';
 import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { CustomerPicker } from '@/components/customer-picker';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     createIdempotencyKey,
     FormActions,
@@ -115,6 +116,7 @@ type Props = {
     customerPackages: Paginated<CustomerPackageRecord>;
     package: PackageTemplate;
     package_finance_available?: boolean;
+    professionals?: RelationOption[];
     serviceOptions?: RelationOption[];
 };
 
@@ -285,12 +287,14 @@ export default function PackageShow({
     customerPackages,
     can_view_finance = false,
     package_finance_available = false,
+    professionals = [],
 }: Props) {
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deactivateOpen, setDeactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [sellOpen, setSellOpen] = useState(false);
     const [sellCustomerId, setSellCustomerId] = useState('');
+    const [sellProfessionalId, setSellProfessionalId] = useState('');
     const [usageToReverse, setUsageToReverse] = useState<{
         customerPackageId: string;
         usage: PackageUsageRecord;
@@ -759,6 +763,7 @@ export default function PackageShow({
 
                                 if (!open) {
                                     setSellCustomerId('');
+                                    setSellProfessionalId('');
                                 }
                             }}
                         >
@@ -794,6 +799,7 @@ export default function PackageShow({
                                     onSuccess={() => {
                                         setSellOpen(false);
                                         setSellCustomerId('');
+                                        setSellProfessionalId('');
                                     }}
                                 >
                                     {({ processing, errors }) => (
@@ -817,6 +823,25 @@ export default function PackageShow({
                                                 options={[]}
                                                 error={errors.customer_id}
                                             />
+                                            <FormField
+                                                id="professional_id"
+                                                label="Profissional Executor"
+                                                required
+                                                error={errors.professional_id}
+                                            >
+                                                <RemoteOptionPicker
+                                                    id="professional_id"
+                                                    name="professional_id"
+                                                    options={professionals}
+                                                    placeholder="Selecione um profissional..."
+                                                    resource="professionals"
+                                                    value={sellProfessionalId}
+                                                    onChange={
+                                                        setSellProfessionalId
+                                                    }
+                                                    required
+                                                />
+                                            </FormField>
                                             <DialogFooter className="mt-4">
                                                 <Button
                                                     type="button"
@@ -831,7 +856,9 @@ export default function PackageShow({
                                                     type="submit"
                                                     disabled={
                                                         processing ||
-                                                        sellCustomerId === ''
+                                                        sellCustomerId === '' ||
+                                                        sellProfessionalId ===
+                                                            ''
                                                     }
                                                 >
                                                     {processing

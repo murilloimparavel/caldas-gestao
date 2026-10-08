@@ -219,6 +219,12 @@ final class AddSaleItem extends OperationalAction
                 ? (string) $data['professional_id']
                 : null;
 
+            if ($itemType === 'package' && $professionalId === null) {
+                throw ValidationException::withMessages([
+                    'professional_id' => 'Selecione o profissional que executará os serviços do pacote.',
+                ]);
+            }
+
             if ($professionalId !== null) {
                 $professionalExists = Professional::query()
                     ->where('tenant_id', $tenantId)
@@ -237,6 +243,12 @@ final class AddSaleItem extends OperationalAction
             $sellerProfessionalId = isset($data['seller_professional_id']) && ! empty($data['seller_professional_id'])
                 ? (string) $data['seller_professional_id']
                 : null;
+
+            if ($itemType === 'package' && $sellerProfessionalId !== null) {
+                throw ValidationException::withMessages([
+                    'seller_professional_id' => 'Pacotes usam o profissional executor, não o profissional vendedor.',
+                ]);
+            }
 
             if ($sellerProfessionalId !== null) {
                 $sellerProfessionalExists = Professional::query()

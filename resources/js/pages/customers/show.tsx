@@ -30,7 +30,7 @@ import {
     ResourceHeader,
     StatusBadge,
 } from '@/components/operational';
-import type { ResourceStatus } from '@/components/operational';
+import type { RelationOption, ResourceStatus } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RemoteOptionPicker } from '@/components/remote-option-picker';
@@ -197,6 +197,7 @@ type Props = {
     hasPackageTemplates?: boolean;
     hasPlanOptions?: boolean;
     packageTemplates?: PackageTemplateOption[];
+    professionals?: RelationOption[];
     planOptions?: SubscriptionPlanOption[];
     subscription_history?: ActiveSubscription[];
 };
@@ -359,6 +360,7 @@ export default function CustomerShow({
     customer,
     metrics,
     packageTemplates = [],
+    professionals = [],
     hasPackageTemplates = false,
     hasPlanOptions = false,
     active_subscription = null,
@@ -422,6 +424,8 @@ export default function CustomerShow({
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [sellPackageOpen, setSellPackageOpen] = useState(false);
     const [selectedPackageTemplateId, setSelectedPackageTemplateId] =
+        useState('');
+    const [selectedPackageProfessionalId, setSelectedPackageProfessionalId] =
         useState('');
     const [selectedPlanId, setSelectedPlanId] = useState('');
     const [consumePackageOpen, setConsumePackageOpen] = useState(false);
@@ -936,9 +940,18 @@ export default function CustomerShow({
                                         hasPackageTemplates && (
                                             <Dialog
                                                 open={sellPackageOpen}
-                                                onOpenChange={
-                                                    setSellPackageOpen
-                                                }
+                                                onOpenChange={(open) => {
+                                                    setSellPackageOpen(open);
+
+                                                    if (!open) {
+                                                        setSelectedPackageTemplateId(
+                                                            '',
+                                                        );
+                                                        setSelectedPackageProfessionalId(
+                                                            '',
+                                                        );
+                                                    }
+                                                }}
                                             >
                                                 <DialogTrigger asChild>
                                                     <Button size="sm">
@@ -973,11 +986,17 @@ export default function CustomerShow({
                                                             'X-Idempotency-Key':
                                                                 sellKey,
                                                         }}
-                                                        onSuccess={() =>
+                                                        onSuccess={() => {
                                                             setSellPackageOpen(
                                                                 false,
-                                                            )
-                                                        }
+                                                            );
+                                                            setSelectedPackageTemplateId(
+                                                                '',
+                                                            );
+                                                            setSelectedPackageProfessionalId(
+                                                                '',
+                                                            );
+                                                        }}
                                                         className="space-y-4"
                                                     >
                                                         {({
@@ -1028,6 +1047,32 @@ export default function CustomerShow({
                                                                             setSelectedPackageTemplateId(
                                                                                 value,
                                                                             )
+                                                                        }
+                                                                        required
+                                                                    />
+                                                                </FormField>
+
+                                                                <FormField
+                                                                    id="professional_id"
+                                                                    label="Profissional Executor"
+                                                                    required
+                                                                    error={
+                                                                        errors.professional_id
+                                                                    }
+                                                                >
+                                                                    <RemoteOptionPicker
+                                                                        id="professional_id"
+                                                                        name="professional_id"
+                                                                        options={
+                                                                            professionals
+                                                                        }
+                                                                        placeholder="Selecione um profissional..."
+                                                                        resource="professionals"
+                                                                        value={
+                                                                            selectedPackageProfessionalId
+                                                                        }
+                                                                        onChange={
+                                                                            setSelectedPackageProfessionalId
                                                                         }
                                                                         required
                                                                     />

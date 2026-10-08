@@ -17,7 +17,7 @@ final class SellCustomerPackage extends OperationalAction
         parent::__construct();
     }
 
-    /** @param array{customer_id: string, package_template_id: string, sale_id?: string|null, source_id?: string|null} $data */
+    /** @param array{customer_id: string, package_template_id: string, professional_id: string, sale_id?: string|null, source_id?: string|null} $data */
     public function handle(User $actor, TenantContext $context, array $data): CustomerPackage
     {
         $unit = $this->unit($actor, $context, 'package.sell');
@@ -45,6 +45,7 @@ final class SellCustomerPackage extends OperationalAction
         $item = $this->addSaleItem->handle($actor, $context, $sale, [
             'item_type' => 'package',
             'package_template_id' => $data['package_template_id'],
+            'professional_id' => $data['professional_id'],
             'source_id' => $data['source_id'] ?? null,
         ]);
 

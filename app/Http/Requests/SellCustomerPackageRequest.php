@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
 use App\Models\PackageTemplate;
+use App\Models\Professional;
 use App\Support\TenantContext;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,19 +26,24 @@ final class SellCustomerPackageRequest extends FormRequest
 
         $customerExists = Rule::exists(Customer::class, 'id');
         $templateExists = Rule::exists(PackageTemplate::class, 'id');
+        $professionalExists = Rule::exists(Professional::class, 'id');
         if ($context instanceof TenantContext) {
             $customerExists->where('tenant_id', $context->tenant->getKey());
             $templateExists->where('tenant_id', $context->tenant->getKey());
+            $professionalExists->where('tenant_id', $context->tenant->getKey())
+                ->where('status', 'active');
 
             if ($context->unit !== null) {
                 $customerExists->where('unit_id', $context->unit->getKey());
                 $templateExists->where('unit_id', $context->unit->getKey());
+                $professionalExists->where('unit_id', $context->unit->getKey());
             }
         }
 
         return [
             'customer_id' => ['required', 'uuid', $customerExists],
             'package_template_id' => ['required', 'uuid', $templateExists],
+            'professional_id' => ['required', 'uuid', $professionalExists],
             'start_sale' => ['required', 'accepted'],
         ];
     }
