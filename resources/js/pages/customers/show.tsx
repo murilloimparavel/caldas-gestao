@@ -130,6 +130,7 @@ type CustomerPackageItem = {
         | 'exhausted'
         | 'expired'
         | 'cancelled'
+        | 'review_required'
         | 'archived';
     total_sessions: number;
     total_sessions_snapshot?: number | null;
@@ -243,6 +244,7 @@ const customerPackageStatusLabels: Record<
     exhausted: 'Concluído',
     expired: 'Expirado',
     cancelled: 'Cancelado',
+    review_required: 'Precisa de revisão',
     archived: 'Arquivado',
 };
 
@@ -258,6 +260,8 @@ const customerPackageStatusDescriptions: Record<
     expired:
         'A validade terminou. Este pacote não está disponível para consumo.',
     cancelled: 'Este pacote foi cancelado e não pode mais ser usado.',
+    review_required:
+        'Os dados deste pacote precisam ser conferidos. Ele não pode ser consumido até a revisão.',
     archived:
         'Este pacote está arquivado e pode ser consultado na tela de pacotes arquivados.',
 };

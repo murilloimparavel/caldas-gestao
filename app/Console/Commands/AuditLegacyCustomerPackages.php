@@ -6,6 +6,7 @@ use App\Models\ClosingSession;
 use App\Models\ClosingSessionPayment;
 use App\Models\CustomerPackage;
 use App\Models\SaleItem;
+use App\Support\LegacyPackageReconciliation;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -36,10 +37,11 @@ final class AuditLegacyCustomerPackages extends Command
         'active_without_closing' => 'Ativo com venda finalizada, sem fechamento',
         'active_with_incomplete_closing' => 'Ativo com fechamento não concluído',
         'active_with_insufficient_payment' => 'Ativo com fechamento sem pagamento suficiente',
+        'active_with_inconsistent_evidence' => 'Ativo com evidências inconsistentes; precisa de revisão',
         'inactive_status' => 'Pacote fora do status ativo',
     ];
 
-    public function handle(): int
+    public function handle(LegacyPackageReconciliation $reconciliation): int
     {
         $format = strtolower((string) $this->option('format'));
         if (! in_array($format, ['table', 'json', 'csv'], true)) {
@@ -66,6 +68,9 @@ final class AuditLegacyCustomerPackages extends Command
                 'packageTemplate:id,name',
                 'sale:id,tenant_id,unit_id,customer_id,status,final_amount_cents',
                 'sale.closingSessions.payments',
+                'usages',
+                'serviceBalances',
+                'reservations',
             ])
             ->withSum([
                 'usages as consumed_sessions' => static function (Builder $query): void {
@@ -84,10 +89,9 @@ final class AuditLegacyCustomerPackages extends Command
         }
 
         $rows = [];
-        $query->chunkById(100, function ($packages) use (&$rows, $includeFinancialObligation): void {
+        $query->chunkById(100, function ($packages) use (&$rows, $includeFinancialObligation, $reconciliation): void {
             $candidateItems = SaleItem::query()
                 ->whereIn('customer_package_id', $packages->modelKeys())
-                ->where('item_type', 'package')
                 ->with('sale.closingSessions.payments')
                 ->get()
                 ->groupBy('customer_package_id');
@@ -96,6 +100,7 @@ final class AuditLegacyCustomerPackages extends Command
                 $rows[] = $this->auditPackage(
                     $package,
                     $includeFinancialObligation,
+                    $reconciliation,
                     $candidateItems->get($package->getKey(), collect()),
                 );
             }
@@ -145,9 +150,11 @@ final class AuditLegacyCustomerPackages extends Command
      * @param  Collection<int, SaleItem>  $candidateItems
      * @return array<string, mixed>
      */
-    private function auditPackage(CustomerPackage $package, bool $includeFinancialObligation, Collection $candidateItems): array
+    private function auditPackage(CustomerPackage $package, bool $includeFinancialObligation, LegacyPackageReconciliation $reconciliation, Collection $candidateItems): array
     {
         $sale = $package->sale;
+        $allLinkedItems = $candidateItems;
+        $candidateItems = $allLinkedItems->where('item_type', 'package')->values();
         $linkedPackageItems = $candidateItems->where('sale_id', $package->sale_id);
         $differentSaleItems = $candidateItems->where('sale_id', '!=', $package->sale_id);
         $closingSessions = $sale->closingSessions ?? collect();
@@ -177,6 +184,12 @@ final class AuditLegacyCustomerPackages extends Command
             $obligation?->type,
             $obligation?->status,
         );
+        $assessment = $package->status === 'active'
+            ? $reconciliation->assess($package, $allLinkedItems, $includeFinancialObligation)
+            : null;
+        if ($classification === 'active_with_paid_closing' && $assessment !== null && $assessment['target_status'] !== 'active') {
+            $classification = 'active_with_inconsistent_evidence';
+        }
 
         return [
             'customer_package_id' => $package->getKey(),
@@ -188,6 +201,8 @@ final class AuditLegacyCustomerPackages extends Command
             'status' => $package->status,
             'classification' => $classification,
             'classification_label' => self::CLASSIFICATION_LABELS[$classification],
+            'reconciliation_target_status' => $assessment['target_status'] ?? null,
+            'reconciliation_reasons' => $assessment['reasons'] ?? [],
             'sale_id' => $package->sale_id,
             'sale_status' => $sale?->status,
             'sale_final_amount_cents' => $sale?->final_amount_cents,

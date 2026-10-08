@@ -51,7 +51,7 @@ it('audits package command and payment evidence without changing database record
         'sale_id' => $sale->getKey(),
         'status' => 'active',
         'total_sessions' => 4,
-        'remaining_sessions' => 3,
+        'remaining_sessions' => 4,
     ]);
     SaleItem::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -175,7 +175,7 @@ it('audits package command and payment evidence without changing database record
         ->and($report['totals']['packages'])->toBe(4)
         ->and($report['totals']['active_packages'])->toBe(4)
         ->and($report['totals']['active_without_paid_closing_evidence'])->toBe(3)
-        ->and($report['totals']['active_remaining_sessions'])->toBe(11)
+        ->and($report['totals']['active_remaining_sessions'])->toBe(12)
         ->and(collect($report['packages'])->firstWhere('customer_package_id', $packageWithPaidClosing->getKey())['classification'])
         ->toBe('active_with_paid_closing')
         ->and(collect($report['packages'])->firstWhere('customer_package_id', $packageWithoutSale->getKey())['classification'])

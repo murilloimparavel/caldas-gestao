@@ -49,26 +49,24 @@ final class ConsumePackageSession extends OperationalAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($locked->expires_at !== null && $locked->expires_at->endOfDay()->isPast()) {
-                if ($locked->status !== 'expired') {
-                    $locked->forceFill([
-                        'status' => 'expired',
-                        'lock_version' => $locked->lock_version + 1,
-                    ])->save();
-
-                    $this->events->record($actor, $context, 'customer_package.expired', $locked, [
-                        'customer_package_id' => $locked->getKey(),
-                        'remaining_sessions' => $locked->remaining_sessions,
-                        'expires_at' => $locked->expires_at?->toDateString(),
-                        'status' => 'expired',
-                    ]);
-                }
-
-                return null;
-            }
-
             if ($locked->status !== 'active') {
                 throw new ConflictHttpException("Package is not active (current status: {$locked->status}).");
+            }
+
+            if ($locked->expires_at !== null && $locked->expires_at->endOfDay()->isPast()) {
+                $locked->forceFill([
+                    'status' => 'expired',
+                    'lock_version' => $locked->lock_version + 1,
+                ])->save();
+
+                $this->events->record($actor, $context, 'customer_package.expired', $locked, [
+                    'customer_package_id' => $locked->getKey(),
+                    'remaining_sessions' => $locked->remaining_sessions,
+                    'expires_at' => $locked->expires_at?->toDateString(),
+                    'status' => 'expired',
+                ]);
+
+                return null;
             }
 
             $eligibleServiceIds = collect($locked->eligible_services_snapshot ?? [])

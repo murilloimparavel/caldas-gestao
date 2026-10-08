@@ -128,6 +128,7 @@ function PackageLifecycleBadge({ status }: { status: string }) {
         exhausted: 'Concluído',
         expired: 'Expirado',
         cancelled: 'Cancelado',
+        review_required: 'Precisa de revisão',
         archived: 'Arquivado',
     };
 
@@ -144,6 +145,8 @@ function packageLifecycleDescription(status: string): string {
         expired:
             'A validade terminou. Este pacote não está disponível para consumo.',
         cancelled: 'Este pacote foi cancelado e não pode mais ser usado.',
+        review_required:
+            'Os dados deste pacote precisam ser conferidos. Ele não pode ser consumido até a revisão.',
         archived:
             'Este pacote está arquivado e pode ser consultado na tela de pacotes arquivados.',
     };

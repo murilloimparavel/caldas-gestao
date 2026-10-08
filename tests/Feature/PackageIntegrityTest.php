@@ -9,6 +9,7 @@ use App\Actions\Sales\AdjustSale;
 use App\Actions\Sales\RemoveSaleItem;
 use App\Actions\Sales\TransitionSaleStatus;
 use App\Models\CashMovement;
+use App\Models\ClosingSession;
 use App\Models\ClosingSessionPayment;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
@@ -47,6 +48,50 @@ function packageIntegrityWorkspace(): array
     $unit = $tenant->units()->firstOrFail();
 
     return [$owner, $tenant, $unit, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey())];
+}
+
+function createPaidPackageForIntegrity(User $owner, Tenant $tenant, Unit $unit, Customer $customer, Service $service, int $sessions = 2): CustomerPackage
+{
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'price_cents' => 10000,
+        'total_sessions' => $sessions,
+        'validity_days' => 45,
+    ]);
+    $template->services()->attach($service->getKey(), [
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'included_quantity' => $sessions,
+    ]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+        'professional_id' => $professional->getKey(),
+    ]);
+    (new FinalizeClosingSession)->handle($owner, $context, [
+        'sale_ids' => [$sale->getKey()],
+        'payment_method' => 'pix',
+    ]);
+
+    return CustomerPackage::query()->where('sale_id', $sale->getKey())->firstOrFail();
 }
 
 it('snapshots package terms and rejects a source sale for another customer', function (): void {
@@ -171,22 +216,7 @@ it('reserves package sessions on service items, splits uncovered quantity, and c
         'total_amount_cents' => 0,
         'final_amount_cents' => 0,
     ]);
-    $package = CustomerPackage::factory()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'customer_id' => $customer->getKey(),
-        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 2]],
-        'total_sessions' => 2,
-        'remaining_sessions' => 2,
-    ]);
-    CustomerPackageService::query()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'customer_package_id' => $package->getKey(),
-        'service_id' => $service->getKey(),
-        'allocated_quantity' => 2,
-        'remaining_quantity' => 2,
-    ]);
+    $package = createPaidPackageForIntegrity($owner, $tenant, $unit, $customer, $service, 2);
 
     $this->actingAs($owner)->post(route('sales.items.store', $sale), [
         'item_type' => 'service',
@@ -223,6 +253,72 @@ it('reserves package sessions on service items, splits uncovered quantity, and c
         ->and(PackageUsage::query()->where('sale_item_id', $item->getKey())->value('sessions_consumed'))->toBe(2);
 });
 
+it('does not consume or reactivate a package marked for review during closing', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $package = createPaidPackageForIntegrity($owner, $tenant, $unit, $customer, $service);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(), 'status' => 'open',
+    ]);
+    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
+    ]);
+    $package->forceFill(['status' => 'review_required'])->save();
+    $closingCount = ClosingSession::query()->count();
+
+    expect(fn () => (new FinalizeClosingSession)->handle($owner, $context, [
+        'sale_ids' => [$sale->getKey()], 'expected_total_cents' => 0,
+    ]))->toThrow(ValidationException::class, 'não está ativo');
+
+    expect($package->fresh()->status)->toBe('review_required')
+        ->and($package->fresh()->remaining_sessions)->toBe(2)
+        ->and($sale->fresh()->status)->toBe('open')
+        ->and(PackageUsage::query()->where('sale_item_id', $item->getKey())->exists())->toBeFalse()
+        ->and(PackageUsageReservation::query()->where('sale_item_id', $item->getKey())->value('status'))->toBe('reserved')
+        ->and(ClosingSession::query()->count())->toBe($closingCount);
+});
+
+it('blocks legacy active package consumption at closing without strict paid sale evidence', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'status' => 'active', 'total_sessions' => 2, 'remaining_sessions' => 2,
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 2]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(), 'allocated_quantity' => 2, 'remaining_quantity' => 2,
+    ]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(), 'status' => 'open',
+    ]);
+    $item = (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
+    ]);
+    $closingCount = ClosingSession::query()->count();
+
+    expect(fn () => (new FinalizeClosingSession)->handle($owner, $context, [
+        'sale_ids' => [$sale->getKey()], 'expected_total_cents' => 0,
+    ]))->toThrow(ValidationException::class, 'não tem comprovação válida de pagamento');
+
+    expect($package->fresh()->status)->toBe('active')
+        ->and($package->fresh()->remaining_sessions)->toBe(2)
+        ->and($sale->fresh()->status)->toBe('open')
+        ->and(PackageUsage::query()->where('sale_item_id', $item->getKey())->exists())->toBeFalse()
+        ->and(ClosingSession::query()->count())->toBe($closingCount);
+});
+
 it('closes a fully package-covered service without a payment allocation', function (): void {
     [$owner, $tenant, $unit] = packageIntegrityWorkspace();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
@@ -241,28 +337,14 @@ it('closes a fully package-covered service without a payment allocation', functi
         'total_amount_cents' => 0,
         'final_amount_cents' => 0,
     ]);
-    $package = CustomerPackage::factory()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'customer_id' => $customer->getKey(),
-        'remaining_sessions' => 1,
-        'total_sessions' => 1,
-        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
-    ]);
-    CustomerPackageService::query()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'customer_package_id' => $package->getKey(),
-        'service_id' => $service->getKey(),
-        'allocated_quantity' => 1,
-        'remaining_quantity' => 1,
-    ]);
+    $package = createPaidPackageForIntegrity($owner, $tenant, $unit, $customer, $service, 1);
 
     $this->actingAs($owner)->post(route('sales.items.store', $sale), [
         'item_type' => 'service',
         'service_id' => $service->getKey(),
         'customer_package_id' => $package->getKey(),
     ])->assertSessionHasNoErrors();
+    $paymentCount = ClosingSessionPayment::query()->count();
 
     $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -271,7 +353,7 @@ it('closes a fully package-covered service without a payment allocation', functi
 
     expect($sale->fresh()->status)->toBe('finalized')
         ->and($package->fresh()->remaining_sessions)->toBe(0)
-        ->and(ClosingSessionPayment::query()->exists())->toBeFalse()
+        ->and(ClosingSessionPayment::query()->count())->toBe($paymentCount)
         ->and(CashMovement::query()->exists())->toBeFalse();
 });
 
