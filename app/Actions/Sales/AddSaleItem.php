@@ -316,6 +316,7 @@ final class AddSaleItem extends OperationalAction
                             'id' => (string) $service->getKey(),
                             'name' => (string) $service->name,
                             'quantity' => (int) ($service->pivot->included_quantity ?? 1),
+                            'price_cents' => (int) $service->price_cents,
                         ])
                         ->values()
                         ->all();

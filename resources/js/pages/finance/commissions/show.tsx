@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import type {
     CommissionAccrual,
     CommissionSettlement,
+    PackageCommissionSummary,
     SharedPageProps,
 } from '@/types';
 
@@ -48,6 +49,7 @@ type Professional = {
 type Props = {
     professional: Professional;
     accruals: Paginated<CommissionAccrual>;
+    package_summaries: PackageCommissionSummary[];
     settlements: CommissionSettlement[];
     filters: {
         status: string;
@@ -102,6 +104,7 @@ function formatDate(iso: string | null | undefined): string {
 export default function ProfessionalCommissionShow({
     professional,
     accruals,
+    package_summaries,
     settlements,
     filters,
     metrics,
@@ -208,6 +211,68 @@ export default function ProfessionalCommissionShow({
                         </p>
                     </div>
                 </div>
+
+                {package_summaries.length > 0 && (
+                    <section className="space-y-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-foreground">
+                                Resumo por pacote
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                Base comissionável e comissão dos serviços de
+                                cada pacote.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {package_summaries.map((summary) => (
+                                <div
+                                    key={summary.id}
+                                    className="rounded-xl border bg-card p-5 shadow-sm"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h3 className="font-semibold text-foreground">
+                                                {summary.name}
+                                            </h3>
+                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                {summary.service_count}{' '}
+                                                {summary.service_count === 1
+                                                    ? 'serviço com comissão'
+                                                    : 'serviços com comissão'}
+                                            </p>
+                                        </div>
+                                        <Badge variant="secondary">
+                                            Pacote
+                                        </Badge>
+                                    </div>
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                        <div className="rounded-lg bg-muted/40 p-3">
+                                            <p className="text-xs text-muted-foreground">
+                                                Base comissionável
+                                            </p>
+                                            <p className="mt-1 font-semibold text-foreground">
+                                                {formatMoney(
+                                                    summary.gross_amount_cents,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg bg-emerald-500/10 p-3">
+                                            <p className="text-xs text-muted-foreground">
+                                                Comissão do pacote
+                                            </p>
+                                            <p className="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                                                {formatMoney(
+                                                    summary.commission_amount_cents,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* Filtros */}
                 <div className="rounded-xl border bg-card p-4 shadow-sm">
@@ -361,6 +426,15 @@ export default function ProfessionalCommissionShow({
                                                             accrual.item_name_snapshot
                                                         }
                                                     </div>
+                                                    {accrual.source_type ===
+                                                        'package_service' && (
+                                                        <div className="text-xs font-normal text-muted-foreground">
+                                                            Serviço do pacote
+                                                            {accrual.package_name_snapshot
+                                                                ? ` “${accrual.package_name_snapshot}”`
+                                                                : ''}
+                                                        </div>
+                                                    )}
                                                     {(accrual.covered_quantity ??
                                                         0) > 0 && (
                                                         <div className="text-xs font-normal text-muted-foreground">
