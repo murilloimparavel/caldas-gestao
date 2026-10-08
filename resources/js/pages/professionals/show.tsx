@@ -1,4 +1,4 @@
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     BriefcaseBusiness,
@@ -126,10 +126,6 @@ function AvailabilityEditor({
         createIdempotencyKey(`availability-rule-${day.day}`),
     );
 
-    const goBackToProfessional = () => {
-        router.visit(professionals.show(professional.id));
-    };
-
     return (
         <div className="space-y-4">
             <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
@@ -150,7 +146,6 @@ function AvailabilityEditor({
                     {...updateAvailabilityRule.form(rule.id)}
                     headers={{ 'X-Idempotency-Key': mutationKey }}
                     className="rounded-xl border border-border bg-card p-4"
-                    onSuccess={goBackToProfessional}
                 >
                     {({ errors, processing }) => (
                         <>
@@ -229,7 +224,6 @@ function AvailabilityEditor({
                                         headers={{
                                             'X-Idempotency-Key': mutationKey,
                                         }}
-                                        onSuccess={goBackToProfessional}
                                     >
                                         {({ processing: deleting }) => (
                                             <>
@@ -270,7 +264,6 @@ function AvailabilityEditor({
                     {...storeAvailabilityRule.form()}
                     headers={{ 'X-Idempotency-Key': `${mutationKey}-${index}` }}
                     className="rounded-xl border border-dashed border-primary/35 bg-primary/[0.03] p-4"
-                    onSuccess={goBackToProfessional}
                 >
                     {({ errors, processing }) => (
                         <>
