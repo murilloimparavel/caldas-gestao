@@ -441,7 +441,7 @@ it('blocks manual consumption of a legacy active package without paid sale evide
 
     expect(fn () => (new ConsumePackageSession)->handle($owner, $context, $package, [
         'service_id' => $service->getKey(),
-    ]))->toThrow(ConflictHttpException::class, 'verified paid sale evidence');
+    ]))->toThrow(ConflictHttpException::class, 'O pacote não tem uma comanda paga válida e precisa de revisão.');
 
     expect($package->fresh()->status)->toBe('active')
         ->and($package->fresh()->remaining_sessions)->toBe(4)
