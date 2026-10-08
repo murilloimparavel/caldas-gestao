@@ -78,7 +78,7 @@ final class ReversePackageUsage extends OperationalAction
 
             $package->forceFill([
                 'remaining_sessions' => $newRemaining,
-                'status' => 'active',
+                'status' => $package->status === 'review_required' ? 'review_required' : 'active',
                 'lock_version' => $package->lock_version + 1,
             ])->save();
 
@@ -119,7 +119,7 @@ final class ReversePackageUsage extends OperationalAction
                 'package_usage_id' => $usage->getKey(),
                 'sessions_consumed' => $usage->sessions_consumed,
                 'remaining_sessions' => $newRemaining,
-                'status' => 'active',
+                'status' => $package->status,
                 'reason' => $reason,
             ];
 

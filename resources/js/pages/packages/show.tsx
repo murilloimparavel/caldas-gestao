@@ -10,6 +10,7 @@ import {
 import { useState } from 'react';
 import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
 import { CustomerPicker } from '@/components/customer-picker';
+import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     createIdempotencyKey,
     FormActions,
@@ -79,6 +80,7 @@ type CustomerPackageRecord = {
     price_cents_snapshot?: number | null;
     remaining_sessions: number;
     status: string;
+    archived_at?: string | null;
     total_sessions: number;
     total_sessions_snapshot?: number | null;
     validity_days_snapshot?: number | null;
@@ -114,31 +116,46 @@ type Props = {
     customerPackages: Paginated<CustomerPackageRecord>;
     package: PackageTemplate;
     package_finance_available?: boolean;
+    professionals?: RelationOption[];
     serviceOptions?: RelationOption[];
 };
 
 function PackageLifecycleBadge({ status }: { status: string }) {
     const labels: Record<string, string> = {
-        pending: 'Pendente',
+        pending: 'Pendente de pagamento',
         active: 'Ativo',
         completed: 'Concluído',
         exhausted: 'Concluído',
         expired: 'Expirado',
         cancelled: 'Cancelado',
+        review_required: 'Precisa de revisão',
+        archived: 'Arquivado',
     };
 
     return <Badge variant="outline">{labels[status] ?? status}</Badge>;
 }
 
-const PAYMENT_METHODS = [
-    'pix',
-    'dinheiro',
-    'cartao_credito',
-    'cartao_debito',
-    'boleto',
-    'transferencia',
-    'outros',
-] as const;
+function packageLifecycleDescription(status: string): string {
+    const descriptions: Record<string, string> = {
+        pending:
+            'Aguardando o fechamento e a confirmação do pagamento da comanda. As sessões ainda não estão disponíveis.',
+        active: 'Pacote liberado para consumo. Use as sessões ainda disponíveis.',
+        completed: 'Todas as sessões deste pacote já foram utilizadas.',
+        exhausted: 'Todas as sessões deste pacote já foram utilizadas.',
+        expired:
+            'A validade terminou. Este pacote não está disponível para consumo.',
+        cancelled: 'Este pacote foi cancelado e não pode mais ser usado.',
+        review_required:
+            'Os dados deste pacote precisam ser conferidos. Ele não pode ser consumido até a revisão.',
+        archived:
+            'Este pacote está arquivado e pode ser consultado na tela de pacotes arquivados.',
+    };
+
+    return (
+        descriptions[status] ??
+        'Consulte o histórico para ver a situação deste pacote.'
+    );
+}
 
 function paymentMethodLabel(method: string | null): string {
     const labels: Record<string, string> = {
@@ -273,12 +290,14 @@ export default function PackageShow({
     customerPackages,
     can_view_finance = false,
     package_finance_available = false,
+    professionals = [],
 }: Props) {
     const [updateOpen, setUpdateOpen] = useState(false);
     const [deactivateOpen, setDeactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [sellOpen, setSellOpen] = useState(false);
     const [sellCustomerId, setSellCustomerId] = useState('');
+    const [sellProfessionalId, setSellProfessionalId] = useState('');
     const [usageToReverse, setUsageToReverse] = useState<{
         customerPackageId: string;
         usage: PackageUsageRecord;
@@ -299,6 +318,10 @@ export default function PackageShow({
     const canManage = permissions.has('package.manage');
     const canConsume = canManage || permissions.has('package.consume');
     const canSell = canManage || permissions.has('package.sell');
+    const canStartSale =
+        canSell &&
+        permissions.has('sale.manage') &&
+        permissions.has('sale.view');
 
     const unitPriceCents =
         pkg.total_sessions > 0
@@ -331,9 +354,14 @@ export default function PackageShow({
                     'Detalhes e histórico de vendas do pacote.'
                 }
                 status={
-                    <StatusBadge
-                        status={pkg.is_active ? 'active' : 'inactive'}
-                    />
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                            Modelo para novas vendas
+                        </p>
+                        <StatusBadge
+                            status={pkg.is_active ? 'active' : 'inactive'}
+                        />
+                    </div>
                 }
                 actions={
                     canManage && (
@@ -514,19 +542,19 @@ export default function PackageShow({
                                             variant="outline"
                                             className="text-destructive hover:text-destructive"
                                         >
-                                            Desativar
+                                            Desativar para novas vendas
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
                                             <DialogTitle>
-                                                Desativar Pacote
+                                                Desativar modelo de pacote
                                             </DialogTitle>
                                             <DialogDescription>
-                                                Tem certeza de que deseja
-                                                desativar este pacote? Novos
-                                                pacotes não poderão ser vendidos
-                                                com este modelo.
+                                                Isso impede novas vendas com
+                                                este modelo. Os pacotes já
+                                                vendidos aos clientes mantêm seu
+                                                status e saldo atuais.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <Form
@@ -571,7 +599,7 @@ export default function PackageShow({
                                                         >
                                                             {processing
                                                                 ? 'Desativando...'
-                                                                : 'Confirmar Desativação'}
+                                                                : 'Desativar modelo'}
                                                         </Button>
                                                     </DialogFooter>
                                                 </>
@@ -586,17 +614,19 @@ export default function PackageShow({
                                 >
                                     <DialogTrigger asChild>
                                         <Button variant="outline">
-                                            Reativar
+                                            Reativar para novas vendas
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
                                             <DialogTitle>
-                                                Reativar Pacote
+                                                Reativar modelo de pacote
                                             </DialogTitle>
                                             <DialogDescription>
-                                                Deseja reativar este pacote para
-                                                permitir novas vendas?
+                                                Isso permite abrir novas
+                                                comandas com este modelo. Os
+                                                pacotes já vendidos aos clientes
+                                                não terão o status alterado.
                                             </DialogDescription>
                                         </DialogHeader>
                                         <Form
@@ -641,7 +671,7 @@ export default function PackageShow({
                                                         >
                                                             {processing
                                                                 ? 'Reativando...'
-                                                                : 'Confirmar Reativação'}
+                                                                : 'Reativar modelo'}
                                                         </Button>
                                                     </DialogFooter>
                                                 </>
@@ -726,9 +756,9 @@ export default function PackageShow({
                 )}
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold tracking-tight">
-                        Pacotes Vendidos ({customerPackages.total})
+                        Vendas deste modelo ({customerPackages.total})
                     </h3>
-                    {canSell && pkg.is_active && (
+                    {canStartSale && pkg.is_active && (
                         <Dialog
                             open={sellOpen}
                             onOpenChange={(open) => {
@@ -736,6 +766,7 @@ export default function PackageShow({
 
                                 if (!open) {
                                     setSellCustomerId('');
+                                    setSellProfessionalId('');
                                 }
                             }}
                         >
@@ -771,6 +802,7 @@ export default function PackageShow({
                                     onSuccess={() => {
                                         setSellOpen(false);
                                         setSellCustomerId('');
+                                        setSellProfessionalId('');
                                     }}
                                 >
                                     {({ processing, errors }) => (
@@ -781,6 +813,11 @@ export default function PackageShow({
                                                 name="package_template_id"
                                                 value={pkg.id}
                                             />
+                                            <input
+                                                type="hidden"
+                                                name="start_sale"
+                                                value="1"
+                                            />
                                             <CustomerPicker
                                                 label="Cliente"
                                                 required
@@ -790,32 +827,23 @@ export default function PackageShow({
                                                 error={errors.customer_id}
                                             />
                                             <FormField
-                                                label="Forma de pagamento"
-                                                id="sell-payment-method"
-                                                error={errors.payment_method}
+                                                id="professional_id"
+                                                label="Profissional Executor"
+                                                required
+                                                error={errors.professional_id}
                                             >
-                                                <select
-                                                    id="sell-payment-method"
-                                                    name="payment_method"
-                                                    defaultValue=""
-                                                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
-                                                >
-                                                    <option value="">
-                                                        Não informar agora
-                                                    </option>
-                                                    {PAYMENT_METHODS.map(
-                                                        (method) => (
-                                                            <option
-                                                                key={method}
-                                                                value={method}
-                                                            >
-                                                                {paymentMethodLabel(
-                                                                    method,
-                                                                )}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </select>
+                                                <RemoteOptionPicker
+                                                    id="professional_id"
+                                                    name="professional_id"
+                                                    options={professionals}
+                                                    placeholder="Selecione um profissional..."
+                                                    resource="professionals"
+                                                    value={sellProfessionalId}
+                                                    onChange={
+                                                        setSellProfessionalId
+                                                    }
+                                                    required
+                                                />
                                             </FormField>
                                             <DialogFooter className="mt-4">
                                                 <Button
@@ -831,7 +859,9 @@ export default function PackageShow({
                                                     type="submit"
                                                     disabled={
                                                         processing ||
-                                                        sellCustomerId === ''
+                                                        sellCustomerId === '' ||
+                                                        sellProfessionalId ===
+                                                            ''
                                                     }
                                                 >
                                                     {processing
@@ -844,6 +874,12 @@ export default function PackageShow({
                                 </Form>
                             </DialogContent>
                         </Dialog>
+                    )}
+                    {canSell && !canStartSale && pkg.is_active && (
+                        <p className="max-w-sm text-right text-sm text-muted-foreground">
+                            Para vender este pacote, seu usuário precisa também
+                            poder gerenciar e visualizar comandas.
+                        </p>
                     )}
                 </div>
 
@@ -883,7 +919,7 @@ export default function PackageShow({
                                                     </span>
                                                 )}
                                                 <span>
-                                                    Vendido em{' '}
+                                                    Registrado em{' '}
                                                     {new Date(
                                                         cp.created_at,
                                                     ).toLocaleDateString(
@@ -911,9 +947,14 @@ export default function PackageShow({
                                                     </span>
                                                 )}
                                             </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {packageLifecycleDescription(
+                                                    cp.status,
+                                                )}
+                                            </p>
                                             <div className="flex flex-wrap gap-2 text-3xs text-muted-foreground">
                                                 <span className="rounded-md bg-muted px-2 py-1">
-                                                    Snapshot:{' '}
+                                                    Pacote:{' '}
                                                     {cp.name_snapshot ??
                                                         pkg.name}
                                                 </span>
@@ -936,8 +977,17 @@ export default function PackageShow({
                                                 <p className="text-xs text-muted-foreground">
                                                     {cp.financial_obligation ? (
                                                         <>
-                                                            Pagamento
-                                                            registrado:{' '}
+                                                            {cp
+                                                                .financial_obligation
+                                                                .status ===
+                                                            'paid'
+                                                                ? 'Pagamento recebido: '
+                                                                : cp
+                                                                        .financial_obligation
+                                                                        .status ===
+                                                                    'cancelled'
+                                                                  ? 'Cobrança cancelada: '
+                                                                  : 'Pagamento pendente: '}
                                                             {paymentMethodLabel(
                                                                 cp
                                                                     .financial_obligation
@@ -978,11 +1028,12 @@ export default function PackageShow({
                                                 <div className="text-sm font-semibold">
                                                     {cp.remaining_sessions} de{' '}
                                                     {cp.total_sessions} sessões
+                                                    disponíveis
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
                                                     {cp.total_sessions -
                                                         cp.remaining_sessions}{' '}
-                                                    consumidas
+                                                    utilizadas
                                                 </div>
                                             </div>
                                             {canSell &&
@@ -1015,7 +1066,40 @@ export default function PackageShow({
                                                             variant="outline"
                                                             className="text-destructive"
                                                         >
-                                                            Cancelar
+                                                            Cancelar pendente
+                                                        </Button>
+                                                    </Form>
+                                                )}
+                                            {canManage &&
+                                                [
+                                                    'completed',
+                                                    'exhausted',
+                                                    'cancelled',
+                                                    'expired',
+                                                ].includes(cp.status) && (
+                                                    <Form
+                                                        method="post"
+                                                        action={
+                                                            customerPackageActions.archive(
+                                                                cp.id,
+                                                            ).url
+                                                        }
+                                                        onSubmit={(event) => {
+                                                            if (
+                                                                !window.confirm(
+                                                                    'Arquivar este pacote? Ele sairá desta lista e continuará disponível em Pacotes arquivados.',
+                                                                )
+                                                            ) {
+                                                                event.preventDefault();
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            type="submit"
+                                                            size="sm"
+                                                            variant="outline"
+                                                        >
+                                                            Arquivar
                                                         </Button>
                                                     </Form>
                                                 )}
@@ -1026,7 +1110,7 @@ export default function PackageShow({
                                         <div className="mt-4 border-t pt-3">
                                             <p className="mb-2 flex items-center gap-1 text-xs font-medium text-muted-foreground">
                                                 <History className="h-3 w-3" />{' '}
-                                                Histórico de consumo recente:
+                                                Histórico de uso:
                                             </p>
                                             <div className="space-y-1">
                                                 {cp.usages.map((usage) => (
@@ -1040,8 +1124,8 @@ export default function PackageShow({
                                                             }{' '}
                                                             {usage.sessions_consumed ===
                                                             1
-                                                                ? 'sessão consumida'
-                                                                : 'sessões consumidas'}
+                                                                ? '1 sessão utilizada'
+                                                                : `${usage.sessions_consumed} sessões utilizadas`}
                                                             {usage.user
                                                                 ? ` por ${usage.user.name}`
                                                                 : ''}

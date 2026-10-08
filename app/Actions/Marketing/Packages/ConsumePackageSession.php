@@ -7,15 +7,30 @@ use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
+use App\Models\SaleItem;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\LegacyPackageReconciliation;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class ConsumePackageSession extends OperationalAction
 {
+    public function __construct(
+        AuthorizationService $authorization = new AuthorizationService,
+        IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly LegacyPackageReconciliation $packageEvidence = new LegacyPackageReconciliation,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, CustomerPackage $customerPackage, array $data = []): CustomerPackage
     {
@@ -49,26 +64,36 @@ final class ConsumePackageSession extends OperationalAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($locked->expires_at !== null && $locked->expires_at->endOfDay()->isPast()) {
-                if ($locked->status !== 'expired') {
-                    $locked->forceFill([
-                        'status' => 'expired',
-                        'lock_version' => $locked->lock_version + 1,
-                    ])->save();
+            if ($locked->status !== 'active') {
+                throw new ConflictHttpException("Package is not active (current status: {$locked->status}).");
+            }
 
-                    $this->events->record($actor, $context, 'customer_package.expired', $locked, [
-                        'customer_package_id' => $locked->getKey(),
-                        'remaining_sessions' => $locked->remaining_sessions,
-                        'expires_at' => $locked->expires_at?->toDateString(),
-                        'status' => 'expired',
-                    ]);
-                }
+            if ($locked->expires_at !== null && $locked->expires_at->endOfDay()->isPast()) {
+                $locked->forceFill([
+                    'status' => 'expired',
+                    'lock_version' => $locked->lock_version + 1,
+                ])->save();
+
+                $this->events->record($actor, $context, 'customer_package.expired', $locked, [
+                    'customer_package_id' => $locked->getKey(),
+                    'remaining_sessions' => $locked->remaining_sessions,
+                    'expires_at' => $locked->expires_at?->toDateString(),
+                    'status' => 'expired',
+                ]);
 
                 return null;
             }
 
-            if ($locked->status !== 'active') {
-                throw new ConflictHttpException("Package is not active (current status: {$locked->status}).");
+            $linkedItems = SaleItem::query()
+                ->where('customer_package_id', $locked->getKey())
+                ->with('sale.closingSessions.payments')
+                ->get();
+            if (! $this->packageEvidence->hasStrictPaidSaleEvidence(
+                $locked,
+                $linkedItems,
+                Schema::hasColumn('financial_obligations', 'customer_package_id'),
+            )) {
+                throw new ConflictHttpException('O pacote não tem uma comanda paga válida e precisa de revisão.');
             }
 
             $eligibleServiceIds = collect($locked->eligible_services_snapshot ?? [])

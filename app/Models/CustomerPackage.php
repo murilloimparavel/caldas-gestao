@@ -26,13 +26,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $price_cents_snapshot
  * @property int|null $total_sessions_snapshot
  * @property int|null $validity_days_snapshot
- * @property array<int, array{id:string,name:string}>|null $eligible_services_snapshot
+ * @property array<int, array{id:string,name:string,quantity?:int}>|null $eligible_services_snapshot
  * @property string|null $sale_id
  * @property int $total_sessions
  * @property int $remaining_sessions
  * @property CarbonImmutable|Carbon|null $expires_at
  * @property CarbonImmutable|Carbon|null $activated_at
  * @property string $status
+ * @property string|null $archived_from_status
+ * @property CarbonImmutable|Carbon|null $archived_at
  * @property int $lock_version
  */
 #[Fillable([
@@ -51,6 +53,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'expires_at',
     'activated_at',
     'status',
+    'archived_from_status',
+    'archived_at',
     'lock_version',
 ])]
 #[UsePolicy(CustomerPackagePolicy::class)]
@@ -75,6 +79,7 @@ class CustomerPackage extends Model
             'eligible_services_snapshot' => 'array',
             'expires_at' => 'date',
             'activated_at' => 'datetime',
+            'archived_at' => 'datetime',
             'lock_version' => 'integer',
         ];
     }

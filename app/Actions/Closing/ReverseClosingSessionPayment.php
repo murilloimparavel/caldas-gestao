@@ -92,7 +92,7 @@ final class ReverseClosingSessionPayment extends OperationalAction
                     ]);
                 }
 
-                if ($package->status === 'active' && $netReceivedAfterReversal <= 0) {
+                if ($package->status === 'active' && $netReceivedAfterReversal < $closingSession->final_total_cents) {
                     $package->forceFill([
                         'status' => 'cancelled',
                         'lock_version' => $package->lock_version + 1,

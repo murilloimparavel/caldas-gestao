@@ -9,6 +9,7 @@ use App\Actions\Marketing\Packages\UpdatePackageTemplate;
 use App\Http\Requests\PackageTemplateRequest;
 use App\Models\FinancialObligation;
 use App\Models\PackageTemplate;
+use App\Models\Professional;
 use App\Models\Service;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
@@ -31,7 +32,7 @@ final class PackageTemplateController extends Controller
 
         $packages = PackageTemplate::query()
             ->with(['services:id,name,price_cents'])
-            ->withCount(['customerPackages'])
+            ->withCount(['customerPackages' => fn ($query) => $query->where('status', '!=', 'archived')])
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit?->getKey())
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
@@ -88,7 +89,21 @@ final class PackageTemplateController extends Controller
             ->values()
             ->all();
 
+        $professionals = Professional::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $context->unit?->getKey())
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Professional $professional): array => [
+                'id' => $professional->id,
+                'name' => $professional->name,
+            ])
+            ->values()
+            ->all();
+
         $customerPackagesQuery = $packageTemplate->customerPackages()
+            ->where('status', '!=', 'archived')
             ->with([
                 'customer:id,name,phone,email',
                 'serviceBalances.service:id,name',
@@ -111,6 +126,7 @@ final class PackageTemplateController extends Controller
         return Inertia::render('packages/show', [
             'package' => $packageTemplate,
             'serviceOptions' => $serviceOptions,
+            'professionals' => $professionals,
             'customerPackages' => $customerPackages,
             'can_view_finance' => Gate::allows('viewAny', FinancialObligation::class),
             'package_finance_available' => $canLoadPackageFinancialObligations,

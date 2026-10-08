@@ -319,6 +319,13 @@ export default function PackagesIndex({
             />
 
             <div className="space-y-4">
+                <div className="flex justify-end">
+                    <Button asChild variant="outline" size="sm">
+                        <Link href={packagesRoutes.archived().url}>
+                            Ver pacotes arquivados
+                        </Link>
+                    </Button>
+                </div>
                 <SearchToolbar
                     searchPlaceholder="Buscar pacotes..."
                     initialSearch={filters.search ?? ''}

@@ -6,11 +6,8 @@ use App\Models\CustomerPackage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 
-final class CancelCustomerPackageRequest extends FormRequest
+final class RestoreCustomerPackageRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         $package = $this->route('customer_package') ?? $this->route('customerPackage');
@@ -18,12 +15,12 @@ final class CancelCustomerPackageRequest extends FormRequest
             $package = CustomerPackage::query()->find($package);
         }
 
-        return $package instanceof CustomerPackage && Gate::allows('sell', $package);
+        return $package instanceof CustomerPackage && Gate::allows('restore', $package);
     }
 
     /** @return array<string, array<int, string>> */
     public function rules(): array
     {
-        return ['reason' => ['required', 'string', 'max:500']];
+        return [];
     }
 }

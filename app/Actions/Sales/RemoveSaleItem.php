@@ -99,7 +99,7 @@ final class RemoveSaleItem extends OperationalAction
 
                     $package->forceFill([
                         'remaining_sessions' => $restoredSessions,
-                        'status' => 'active',
+                        'status' => $package->status === 'review_required' ? 'review_required' : 'active',
                         'lock_version' => $package->lock_version + 1,
                     ])->save();
 

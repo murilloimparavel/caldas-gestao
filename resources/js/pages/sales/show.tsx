@@ -1218,6 +1218,32 @@ export default function SalesShow({
                                                         'package' ? (
                                                             <div className="space-y-3">
                                                                 <FormField
+                                                                    label="Profissional Executor"
+                                                                    name="professional_id"
+                                                                    required
+                                                                    error={
+                                                                        errors.professional_id
+                                                                    }
+                                                                >
+                                                                    <RemoteOptionPicker
+                                                                        id="professional_id"
+                                                                        name="professional_id"
+                                                                        options={
+                                                                            professionals
+                                                                        }
+                                                                        placeholder="Selecione um profissional"
+                                                                        resource="professionals"
+                                                                        value={
+                                                                            selectedProfessionalId
+                                                                        }
+                                                                        onChange={
+                                                                            setSelectedProfessionalId
+                                                                        }
+                                                                        required
+                                                                        localOptionsOnly
+                                                                    />
+                                                                </FormField>
+                                                                <FormField
                                                                     label="Pacote de serviços"
                                                                     name="package_template_id"
                                                                     required
@@ -1267,8 +1293,9 @@ export default function SalesShow({
                                                                 {pendingCustomerPackages.length >
                                                                 0 ? (
                                                                     <FormField
-                                                                        label="Instância pendente (opcional)"
+                                                                        label="Pacote já lançado (opcional)"
                                                                         name="customer_package_id"
+                                                                        description="Escolha um pacote que aguarda pagamento para vinculá-lo a esta comanda sem criar outro. Sem seleção, um novo pacote será lançado nesta comanda."
                                                                     >
                                                                         <select
                                                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -1316,10 +1343,11 @@ export default function SalesShow({
                                                                         >
                                                                             <option value="">
                                                                                 Criar
-                                                                                nova
-                                                                                instância
-                                                                                ao
-                                                                                adicionar
+                                                                                um
+                                                                                novo
+                                                                                pacote
+                                                                                nesta
+                                                                                comanda
                                                                             </option>
                                                                             {pendingCustomerPackages.map(
                                                                                 (
@@ -1333,9 +1361,7 @@ export default function SalesShow({
                                                                                             pending.id
                                                                                         }
                                                                                     >
-                                                                                        {
-                                                                                            pending.name
-                                                                                        }
+                                                                                        {`${pending.name} — aguardando pagamento`}
                                                                                     </option>
                                                                                 ),
                                                                             )}

@@ -277,6 +277,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('sale-categories', SaleCategoryController::class)
             ->except(['create', 'edit']);
         Route::patch('sale-categories/{sale_category}/reactivate', [SaleCategoryController::class, 'reactivate'])->name('sale-categories.reactivate');
+        Route::get('packages/archived', [CustomerPackageController::class, 'archived'])->name('packages.archived');
         Route::resource('packages', PackageTemplateController::class)
             ->parameters(['packages' => 'package_template'])
             ->except(['create', 'edit']);
@@ -284,6 +285,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('customer-packages', [CustomerPackageController::class, 'store'])->name('customer-packages.store');
         Route::post('customer-packages/{customer_package}/consume', [CustomerPackageController::class, 'consume'])->name('customer-packages.consume');
         Route::post('customer-packages/{customer_package}/cancel', [CustomerPackageController::class, 'cancel'])->name('customer-packages.cancel');
+        Route::post('customer-packages/{customer_package}/archive', [CustomerPackageController::class, 'archive'])->name('customer-packages.archive');
+        Route::post('customer-packages/{customer_package}/restore', [CustomerPackageController::class, 'restore'])->name('customer-packages.restore');
         Route::post('customer-packages/{customer_package}/usages/{package_usage}/reverse', [CustomerPackageController::class, 'reverseUsage'])
             ->scopeBindings()
             ->name('customer-packages.usages.reverse');

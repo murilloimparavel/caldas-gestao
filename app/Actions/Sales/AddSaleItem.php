@@ -14,15 +14,29 @@ use App\Models\SaleCategory;
 use App\Models\SaleItem;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\LegacyPackageReconciliation;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class AddSaleItem extends OperationalAction
 {
+    public function __construct(
+        AuthorizationService $authorization = new AuthorizationService,
+        IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly LegacyPackageReconciliation $packageEvidence = new LegacyPackageReconciliation,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, Sale $sale, array $data, string $permission = 'sale.manage'): SaleItem
     {
@@ -219,6 +233,12 @@ final class AddSaleItem extends OperationalAction
                 ? (string) $data['professional_id']
                 : null;
 
+            if ($itemType === 'package' && $professionalId === null) {
+                throw ValidationException::withMessages([
+                    'professional_id' => 'Selecione o profissional que executará os serviços do pacote.',
+                ]);
+            }
+
             if ($professionalId !== null) {
                 $professionalExists = Professional::query()
                     ->where('tenant_id', $tenantId)
@@ -237,6 +257,12 @@ final class AddSaleItem extends OperationalAction
             $sellerProfessionalId = isset($data['seller_professional_id']) && ! empty($data['seller_professional_id'])
                 ? (string) $data['seller_professional_id']
                 : null;
+
+            if ($itemType === 'package' && $sellerProfessionalId !== null) {
+                throw ValidationException::withMessages([
+                    'seller_professional_id' => 'Pacotes usam o profissional executor, não o profissional vendedor.',
+                ]);
+            }
 
             if ($sellerProfessionalId !== null) {
                 $sellerProfessionalExists = Professional::query()
@@ -359,6 +385,20 @@ final class AddSaleItem extends OperationalAction
                 if ($customerPackage === null || $customerPackage->status !== 'active' || ($customerPackage->expires_at !== null && $customerPackage->expires_at->endOfDay()->isPast())) {
                     throw ValidationException::withMessages([
                         'customer_package_id' => 'O pacote não está ativo, venceu ou não pertence ao cliente da comanda.',
+                    ]);
+                }
+
+                $linkedItems = SaleItem::query()
+                    ->where('customer_package_id', $customerPackage->getKey())
+                    ->with('sale.closingSessions.payments')
+                    ->get();
+                if (! $this->packageEvidence->hasStrictPaidSaleEvidence(
+                    $customerPackage,
+                    $linkedItems,
+                    Schema::hasColumn('financial_obligations', 'customer_package_id'),
+                )) {
+                    throw ValidationException::withMessages([
+                        'customer_package_id' => 'O pacote não possui comprovação válida de venda paga e precisa de revisão.',
                     ]);
                 }
 

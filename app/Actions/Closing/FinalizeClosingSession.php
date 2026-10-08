@@ -22,11 +22,13 @@ use App\Models\User;
 use App\Support\AuditEventWriter;
 use App\Support\AuthorizationService;
 use App\Support\IdentityEventRecorder;
+use App\Support\LegacyPackageReconciliation;
 use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -38,6 +40,7 @@ final class FinalizeClosingSession extends OperationalAction
         IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
         private readonly AccrueCommissionsForSale $accrueCommissions = new AccrueCommissionsForSale,
         private readonly RecordCustomerActivity $recordCustomerActivity = new RecordCustomerActivity,
+        private readonly LegacyPackageReconciliation $packageEvidence = new LegacyPackageReconciliation,
     ) {
         parent::__construct($authorization, $events);
     }
@@ -167,6 +170,20 @@ final class FinalizeClosingSession extends OperationalAction
                     ]);
                 }
 
+                $packageSaleItems = SaleItem::query()
+                    ->where('customer_package_id', $package->getKey())
+                    ->with('sale.closingSessions.payments')
+                    ->get();
+                if (! $this->packageEvidence->hasStrictPaidSaleEvidence(
+                    $package,
+                    $packageSaleItems,
+                    Schema::hasColumn('financial_obligations', 'customer_package_id'),
+                )) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => "O pacote {$package->name_snapshot} não tem comprovação válida de pagamento; solicite revisão antes de fechar.",
+                    ]);
+                }
+
                 $sessionsToConsume = (int) $usages->sum('sessions_reserved');
                 if ($package->remaining_sessions < $sessionsToConsume) {
                     throw ValidationException::withMessages([
@@ -196,9 +213,10 @@ final class FinalizeClosingSession extends OperationalAction
                 }
 
                 $newRemaining = $package->remaining_sessions - $sessionsToConsume;
+                $packageStatus = $newRemaining === 0 ? 'completed' : $package->status;
                 $package->forceFill([
                     'remaining_sessions' => $newRemaining,
-                    'status' => $newRemaining === 0 ? 'completed' : 'active',
+                    'status' => $packageStatus,
                     'lock_version' => $package->lock_version + 1,
                 ])->save();
 
@@ -232,7 +250,7 @@ final class FinalizeClosingSession extends OperationalAction
                     'customer_package_id' => $package->getKey(),
                     'sessions_consumed' => $sessionsToConsume,
                     'remaining_sessions' => $newRemaining,
-                    'status' => $newRemaining === 0 ? 'completed' : 'active',
+                    'status' => $packageStatus,
                 ]);
             }
 
@@ -286,6 +304,26 @@ final class FinalizeClosingSession extends OperationalAction
             if ($allocationTotal !== $calculatedFinalTotalCents) {
                 throw ValidationException::withMessages(['payment_allocations' => 'A soma das parcelas deve corresponder exatamente ao total da comanda.']);
             }
+
+            $packageItems = $sales->flatMap(fn (Sale $sale) => $sale->items)
+                ->filter(static fn (SaleItem $item): bool => $item->item_type === 'package');
+
+            foreach ($packageItems as $packageItem) {
+                $packageSale = $sales->firstWhere('id', $packageItem->sale_id);
+
+                if ($packageItem->total_cents <= 0) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => 'A linha do pacote precisa ter um valor efetivo positivo para ser ativada.',
+                    ]);
+                }
+
+                if ($packageSale === null || $packageSale->final_amount_cents <= 0 || $allocationTotal <= 0) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => 'O pacote não pode ser ativado sem valor líquido positivo recebido na comanda.',
+                    ]);
+                }
+            }
+
             $hasCash = collect($allocations)->contains(fn (array $allocation): bool => $allocation['method'] === 'cash');
             $cashShift = CashShift::query()
                 ->where('tenant_id', $tenantId)->where('unit_id', $unitId)
@@ -498,15 +536,13 @@ final class FinalizeClosingSession extends OperationalAction
                         ->lockForUpdate()
                         ->firstOrFail();
 
-                    if ($sale->status !== 'finalized' || $package->customer_id !== $sale->customer_id || $package->package_template_id !== $item->package_template_id) {
+                    if ($sale->status !== 'finalized'
+                        || $package->status !== 'pending'
+                        || $package->sale_id !== $sale->getKey()
+                        || $package->customer_id !== $sale->customer_id
+                        || $package->package_template_id !== $item->package_template_id) {
                         throw ValidationException::withMessages([
                             'sale_ids' => 'A instância do pacote exige uma comanda finalizada do mesmo cliente e modelo.',
-                        ]);
-                    }
-
-                    if ($package->status !== 'pending') {
-                        throw ValidationException::withMessages([
-                            'sale_ids' => "O pacote {$package->name_snapshot} não está pendente e não pode ser ativado novamente.",
                         ]);
                     }
 

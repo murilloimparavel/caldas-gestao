@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use stdClass;
 
 class GetDashboardSnapshot
 {
@@ -67,8 +68,12 @@ class GetDashboardSnapshot
         }
 
         // 2. Sales metrics
-        $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'finalized')->sum('final_amount_cents');
-        $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'finalized')->sum('final_amount_cents');
+        $currentOrphanPackageRevenue = $this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate);
+        $prevOrphanPackageRevenue = $this->orphanPaidPackageObligations($tenant, $unit, $prevStartDate, $prevEndDate);
+        $totalSalesCents = (int) (clone $currentSalesQuery)->where('status', 'finalized')->sum('final_amount_cents')
+            + (int) $currentOrphanPackageRevenue->sum('amount_cents');
+        $prevTotalSalesCents = (int) (clone $prevSalesQuery)->where('status', 'finalized')->sum('final_amount_cents')
+            + (int) $prevOrphanPackageRevenue->sum('amount_cents');
 
         $todayStart = CarbonImmutable::now($timezone)->startOfDay();
         $todayEnd = CarbonImmutable::now($timezone)->endOfDay();
@@ -77,7 +82,8 @@ class GetDashboardSnapshot
             ->when($unit, fn ($q) => $q->where('unit_id', $unit->id))
             ->where('status', 'finalized')
             ->whereBetween('created_at', $this->utcDateRange($todayStart, $todayEnd))
-            ->sum('final_amount_cents');
+            ->sum('final_amount_cents')
+            + (int) $this->orphanPaidPackageObligations($tenant, $unit, $todayStart, $todayEnd)->sum('amount_cents');
 
         $salesVariationPercentage = $this->calculateVariation($totalSalesCents, $prevTotalSalesCents);
 
@@ -237,6 +243,11 @@ class GetDashboardSnapshot
             ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
             ->map(fn (Collection $daySales): int => (int) $daySales->sum('final_amount_cents'));
 
+        foreach ($this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate) as $obligation) {
+            $dateKey = CarbonImmutable::parse((string) $obligation->paid_date, $timezone)->toDateString();
+            $sales[$dateKey] = (int) ($sales[$dateKey] ?? 0) + (int) $obligation->amount_cents;
+        }
+
         $data = [];
         $cursor = $startDate->startOfDay();
         while ($cursor->lte($endDate)) {
@@ -323,6 +334,11 @@ class GetDashboardSnapshot
             ->get()
             ->groupBy(fn (Sale $sale): string => $sale->created_at->setTimezone($timezone)->toDateString())
             ->map(fn (Collection $daySales): int => (int) $daySales->sum('final_amount_cents'));
+
+        foreach ($this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate) as $obligation) {
+            $dateKey = CarbonImmutable::parse((string) $obligation->paid_date, $timezone)->toDateString();
+            $sales[$dateKey] = (int) ($sales[$dateKey] ?? 0) + (int) $obligation->amount_cents;
+        }
 
         $trend = [];
         $cursor = $startDate->startOfDay();
@@ -641,6 +657,8 @@ class GetDashboardSnapshot
             }
         }
 
+        $categoryTotals['package'] += (int) $this->orphanPaidPackageObligations($tenant, $unit, $startDate, $endDate)->sum('amount_cents');
+
         $servicesCents = $categoryTotals['service'];
         $productsCents = $categoryTotals['product'];
         $packagesCents = $categoryTotals['package'];
@@ -670,6 +688,39 @@ class GetDashboardSnapshot
                 'color' => '#8b5cf6',
             ],
         ];
+    }
+
+    /**
+     * Return paid package receivables from the legacy flow that have no finalized
+     * package sale item representing the same customer package.
+     *
+     * @return Collection<int, stdClass>
+     */
+    private function orphanPaidPackageObligations(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): Collection
+    {
+        return DB::table('financial_obligations')
+            ->join('customer_packages', 'customer_packages.id', '=', 'financial_obligations.customer_package_id')
+            ->select(['financial_obligations.amount_cents', 'financial_obligations.paid_date'])
+            ->where('financial_obligations.tenant_id', $tenant->id)
+            ->when($unit, fn ($q) => $q->where('financial_obligations.unit_id', $unit->id))
+            ->where('financial_obligations.type', 'receivable')
+            ->where('financial_obligations.status', 'paid')
+            ->whereNotNull('financial_obligations.paid_date')
+            ->whereNull('financial_obligations.deleted_at')
+            ->whereNull('customer_packages.deleted_at')
+            ->whereDate('financial_obligations.paid_date', '>=', $startDate->toDateString())
+            ->whereDate('financial_obligations.paid_date', '<=', $endDate->toDateString())
+            ->whereNotExists(function ($query): void {
+                $query->selectRaw('1')
+                    ->from('sale_items')
+                    ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+                    ->whereColumn('sale_items.customer_package_id', 'customer_packages.id')
+                    ->where('sale_items.item_type', 'package')
+                    ->where('sales.status', 'finalized')
+                    ->whereNull('sale_items.deleted_at')
+                    ->whereNull('sales.deleted_at');
+            })
+            ->get();
     }
 
     /**

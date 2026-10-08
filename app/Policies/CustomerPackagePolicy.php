@@ -17,6 +17,11 @@ final class CustomerPackagePolicy
         return $this->allows($user, 'package.view');
     }
 
+    public function manageAny(User $user): bool
+    {
+        return $this->allows($user, 'package.manage');
+    }
+
     public function view(User $user, CustomerPackage $customerPackage): bool
     {
         return $this->allows($user, 'package.view', $customerPackage);
@@ -35,6 +40,16 @@ final class CustomerPackagePolicy
     public function consume(User $user, CustomerPackage $customerPackage): bool
     {
         return $this->allows($user, 'package.consume', $customerPackage) || $this->allows($user, 'package.manage', $customerPackage);
+    }
+
+    public function archive(User $user, CustomerPackage $customerPackage): bool
+    {
+        return $this->allows($user, 'package.manage', $customerPackage);
+    }
+
+    public function restore(User $user, CustomerPackage $customerPackage): bool
+    {
+        return $this->allows($user, 'package.manage', $customerPackage);
     }
 
     private function allows(User $user, string $permission, ?CustomerPackage $customerPackage = null): bool
