@@ -283,17 +283,32 @@ it('requires review for cross-customer sales, duplicate package lines, balance c
             'final_total_cents' => 10000,
         ]);
         $closing->sales()->attach($sale->getKey());
-        ClosingSessionPayment::query()->create([
+        $originalPayment = ClosingSessionPayment::query()->create([
             'tenant_id' => $tenant->getKey(),
             'unit_id' => $unit->getKey(),
             'closing_session_id' => $closing->getKey(),
             'payment_method' => 'pix',
             'amount_cents' => 10000,
             'change_cents' => 0,
-            'is_reversal' => $case === 'reversed_payment',
             'recorded_by_user_id' => $owner->getKey(),
             'recorded_at' => now(),
         ]);
+
+        if ($case === 'reversed_payment') {
+            ClosingSessionPayment::query()->create([
+                'tenant_id' => $tenant->getKey(),
+                'unit_id' => $unit->getKey(),
+                'closing_session_id' => $closing->getKey(),
+                'payment_method' => 'pix',
+                'amount_cents' => 10000,
+                'change_cents' => 0,
+                'is_reversal' => true,
+                'reversal_of_id' => $originalPayment->getKey(),
+                'reversal_reason' => 'Pagamento estornado no cenário de teste',
+                'recorded_by_user_id' => $owner->getKey(),
+                'recorded_at' => now(),
+            ]);
+        }
 
         if ($case === 'pending_reservation') {
             $openSale = Sale::factory()->create([
