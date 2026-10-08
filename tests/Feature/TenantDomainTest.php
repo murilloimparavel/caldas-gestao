@@ -18,7 +18,6 @@ use App\Models\Entitlement;
 use App\Models\TenantDomain;
 use App\Models\User;
 use App\Support\HostnameNormalizer;
-use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;

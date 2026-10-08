@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Collapsible,
     CollapsibleContent,
@@ -24,21 +24,17 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { useHydratedLocalStorageState } from '@/hooks/use-hydrated-local-storage-state';
 import type { SidebarNavGroup } from '@/types';
 
 const STORAGE_VERSION = 'v1';
 
-function readPersistedState(storageKey: string): Record<string, boolean> {
-    if (typeof window === 'undefined') {
-        return {};
-    }
-
+function parsePersistedState(value: string): Record<string, boolean> | null {
     try {
-        const value = window.localStorage.getItem(storageKey);
-        const parsed: unknown = value ? JSON.parse(value) : null;
+        const parsed: unknown = JSON.parse(value);
 
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            return {};
+            return null;
         }
 
         return Object.fromEntries(
@@ -47,7 +43,7 @@ function readPersistedState(storageKey: string): Record<string, boolean> {
             ),
         );
     } catch {
-        return {};
+        return null;
     }
 }
 
@@ -78,31 +74,19 @@ export function NavMain({
             ),
         [groups, currentUrl, isCurrentUrl],
     );
-    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-        () => {
-            const persisted = readPersistedState(storageKey);
-
-            return Object.fromEntries(
-                groups.map((group) => [
-                    group.id,
-                    persisted[group.id] ?? activeGroupIds.has(group.id),
-                ]),
-            );
-        },
+    const defaultOpenGroups = useMemo(
+        () =>
+            Object.fromEntries(
+                groups.map((group) => [group.id, activeGroupIds.has(group.id)]),
+            ),
+        [groups, activeGroupIds],
+    );
+    const [openGroups, setOpenGroups] = useHydratedLocalStorageState(
+        storageKey,
+        defaultOpenGroups,
+        parsePersistedState,
     );
     const [openFlyout, setOpenFlyout] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-
-        try {
-            window.localStorage.setItem(storageKey, JSON.stringify(openGroups));
-        } catch {
-            // Storage may be unavailable.
-        }
-    }, [openGroups, storageKey]);
 
     if (state === 'collapsed') {
         return (

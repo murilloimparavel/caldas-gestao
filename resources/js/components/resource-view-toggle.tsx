@@ -1,8 +1,11 @@
 import { LayoutGrid, List } from 'lucide-react';
-import { useState } from 'react';
+import { useHydratedLocalStorageState } from '@/hooks/use-hydrated-local-storage-state';
 import { cn } from '@/lib/utils';
 
 export type ResourceView = 'cards' | 'list';
+
+const parseResourceView = (storedView: string): ResourceView =>
+    storedView === 'list' ? 'list' : 'cards';
 
 type ResourceViewToggleProps = {
     value: ResourceView;
@@ -13,22 +16,13 @@ export function useResourceView(storageKey: string): {
     view: ResourceView;
     setView: (view: ResourceView) => void;
 } {
-    const [view, setViewState] = useState<ResourceView>(() => {
-        if (typeof window === 'undefined') {
-            return 'cards';
-        }
+    const [view, setView] = useHydratedLocalStorageState<ResourceView>(
+        storageKey,
+        'cards',
+        parseResourceView,
+    );
 
-        const storedView = window.localStorage.getItem(storageKey);
-
-        return storedView === 'list' ? 'list' : 'cards';
-    });
-
-    const setView = (nextView: ResourceView): void => {
-        setViewState(nextView);
-        window.localStorage.setItem(storageKey, nextView);
-    };
-
-    return { view, setView };
+    return { view, setView: (nextView) => setView(nextView) };
 }
 
 export function ResourceViewToggle({

@@ -31,20 +31,20 @@ it('creates, updates, and deactivates availability rules idempotently', function
     $payload = ['professional_id' => $professional->getKey(), 'weekday' => 1, 'starts_at' => '09:00', 'ends_at' => '18:00', 'timezone' => 'America/Sao_Paulo'];
 
     $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'X-Idempotency-Key' => 'availability-rule-create-1'])
-        ->actingAs($owner)->post(route('availability_rules.store'), $payload)->assertRedirect();
+        ->actingAs($owner)->post(route('availability_rules.store'), $payload)->assertRedirect(route('professionals.show', $professional));
     $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'X-Idempotency-Key' => 'availability-rule-create-1'])
-        ->actingAs($owner)->post(route('availability_rules.store'), $payload)->assertRedirect();
+        ->actingAs($owner)->post(route('availability_rules.store'), $payload)->assertRedirect(route('professionals.show', $professional));
 
     $rule = AvailabilityRule::query()->sole();
     expect(AvailabilityRule::query()->count())->toBe(1);
 
     $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'X-Idempotency-Key' => 'availability-rule-update-1'])
-        ->actingAs($owner)->put(route('availability_rules.update', $rule), [...$payload, 'starts_at' => '10:00', 'lock_version' => 0])->assertRedirect();
+        ->actingAs($owner)->put(route('availability_rules.update', $rule), [...$payload, 'starts_at' => '10:00', 'lock_version' => 0])->assertRedirect(route('professionals.show', $professional));
     expect($rule->fresh()->starts_at)->toStartWith('10:00')
         ->and($rule->fresh()->lock_version)->toBe(1);
 
     $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'X-Idempotency-Key' => 'availability-rule-delete-1'])
-        ->actingAs($owner)->delete(route('availability_rules.destroy', $rule), ['lock_version' => 1])->assertRedirect();
+        ->actingAs($owner)->delete(route('availability_rules.destroy', $rule), ['lock_version' => 1])->assertRedirect(route('professionals.show', $professional));
     expect($rule->fresh()->status)->toBe('inactive');
 });
 

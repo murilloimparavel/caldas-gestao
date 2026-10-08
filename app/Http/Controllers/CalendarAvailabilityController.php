@@ -23,17 +23,17 @@ final class CalendarAvailabilityController extends Controller
     public function storeAvailabilityRule(AvailabilityRuleRequest $request, TenantContext $context, CreateAvailabilityRule $create): RedirectResponse
     {
         $data = $request->validated();
-        $reference = $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $create->handle($request->user(), $context, $data)->getKey(), 'resource_type' => 'availability_rule']);
+        $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $create->handle($request->user(), $context, $data)->getKey(), 'resource_type' => 'availability_rule']);
 
-        return to_route('calendar.index', ['availability_rule' => $reference['resource_id']])->with('success', 'Regra de disponibilidade criada.');
+        return to_route('professionals.show', ['professional' => $data['professional_id']])->with('success', 'Regra de disponibilidade criada.');
     }
 
     public function updateAvailabilityRule(AvailabilityRuleRequest $request, TenantContext $context, AvailabilityRule $availabilityRule, UpdateAvailabilityRule $update): RedirectResponse
     {
         $data = $request->validated();
-        $reference = $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $update->handle($request->user(), $context, $availabilityRule, $data)->getKey(), 'resource_type' => 'availability_rule']);
+        $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $update->handle($request->user(), $context, $availabilityRule, $data)->getKey(), 'resource_type' => 'availability_rule']);
 
-        return to_route('calendar.index', ['availability_rule' => $reference['resource_id']])->with('success', 'Regra de disponibilidade atualizada.');
+        return to_route('professionals.show', ['professional' => $data['professional_id']])->with('success', 'Regra de disponibilidade atualizada.');
     }
 
     public function deleteAvailabilityRule(AvailabilityRuleRequest $request, TenantContext $context, AvailabilityRule $availabilityRule, DeleteAvailabilityRule $delete): RedirectResponse
@@ -41,7 +41,7 @@ final class CalendarAvailabilityController extends Controller
         $data = $request->validated();
         $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $delete->handle($request->user(), $context, $availabilityRule, (int) $data['lock_version'])->getKey(), 'resource_type' => 'availability_rule']);
 
-        return to_route('calendar.index')->with('success', 'Regra de disponibilidade removida.');
+        return to_route('professionals.show', ['professional' => $availabilityRule->professional_id])->with('success', 'Regra de disponibilidade removida.');
     }
 
     public function storeScheduleBlock(ScheduleBlockRequest $request, TenantContext $context, CreateScheduleBlock $create): RedirectResponse
