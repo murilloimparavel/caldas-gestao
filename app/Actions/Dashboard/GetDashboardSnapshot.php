@@ -13,6 +13,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use stdClass;
 
 class GetDashboardSnapshot
 {
@@ -693,7 +694,7 @@ class GetDashboardSnapshot
      * Return paid package receivables from the legacy flow that have no finalized
      * package sale item representing the same customer package.
      *
-     * @return Collection<int, object{amount_cents:int, paid_date:string}>
+     * @return Collection<int, stdClass>
      */
     private function orphanPaidPackageObligations(Tenant $tenant, ?Unit $unit, CarbonImmutable $startDate, CarbonImmutable $endDate): Collection
     {

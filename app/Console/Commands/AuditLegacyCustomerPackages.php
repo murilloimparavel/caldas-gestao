@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ClosingSession;
+use App\Models\ClosingSessionPayment;
 use App\Models\CustomerPackage;
 use App\Models\SaleItem;
 use Illuminate\Console\Attributes\Description;
@@ -149,8 +150,8 @@ final class AuditLegacyCustomerPackages extends Command
         $sale = $package->sale;
         $linkedPackageItems = $candidateItems->where('sale_id', $package->sale_id);
         $differentSaleItems = $candidateItems->where('sale_id', '!=', $package->sale_id);
-        $closingSessions = $sale?->closingSessions ?? collect();
-        $saleFinalAmountCents = (int) ($sale?->final_amount_cents ?? 0);
+        $closingSessions = $sale->closingSessions ?? collect();
+        $saleFinalAmountCents = (int) ($sale->final_amount_cents ?? 0);
         $closingEvidence = $this->closingEvidence($closingSessions, $saleFinalAmountCents);
         $hasCompletedPaidClosing = $closingSessions->contains(static function ($session) use ($saleFinalAmountCents): bool {
             $netReceived = $session->payments->sum(static fn ($payment): int => $payment->is_reversal
@@ -205,8 +206,8 @@ final class AuditLegacyCustomerPackages extends Command
                     'sale_final_amount_cents' => $candidateSale?->final_amount_cents,
                     'sale_customer_id' => $candidateSale?->customer_id,
                     'closing_sessions' => self::closingEvidence(
-                        $candidateSale?->closingSessions ?? collect(),
-                        (int) ($candidateSale?->final_amount_cents ?? 0),
+                        $candidateSale->closingSessions ?? collect(),
+                        (int) ($candidateSale->final_amount_cents ?? 0),
                     ),
                 ];
             })->values()->all(),
@@ -226,23 +227,26 @@ final class AuditLegacyCustomerPackages extends Command
      */
     private static function closingEvidence(Collection $closingSessions, int $saleFinalAmountCents): array
     {
-        return $closingSessions->map(static function ($session) use ($saleFinalAmountCents): array {
-            $netReceived = $session->payments->sum(static fn ($payment): int => $payment->is_reversal
+        return array_values($closingSessions->map(static function (ClosingSession $session) use ($saleFinalAmountCents): array {
+            $netReceived = (int) $session->payments->sum(static fn (ClosingSessionPayment $payment): int => $payment->is_reversal
                 ? -$payment->amount_cents
                 : $payment->amount_cents);
+            $paymentMethods = array_values(array_unique($session->payments
+                ->map(static fn (ClosingSessionPayment $payment): string => $payment->payment_method)
+                ->all()));
 
             return [
-                'id' => $session->getKey(),
-                'status' => $session->status,
-                'final_total_cents' => $session->final_total_cents,
+                'id' => (string) $session->getKey(),
+                'status' => (string) $session->status,
+                'final_total_cents' => (int) $session->final_total_cents,
                 'payment_count' => $session->payments->count(),
-                'payment_methods' => $session->payments->pluck('payment_method')->unique()->values()->all(),
+                'payment_methods' => $paymentMethods,
                 'net_received_cents' => $netReceived,
                 'payment_sufficient' => $session->status === 'completed'
                     && $session->final_total_cents >= $saleFinalAmountCents
                     && $netReceived >= $session->final_total_cents,
             ];
-        })->values()->all();
+        })->all());
     }
 
     private function classify(

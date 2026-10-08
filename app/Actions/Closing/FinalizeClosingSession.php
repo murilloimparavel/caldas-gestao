@@ -528,12 +528,6 @@ final class FinalizeClosingSession extends OperationalAction
                         ]);
                     }
 
-                    if ($package->status !== 'pending') {
-                        throw ValidationException::withMessages([
-                            'sale_ids' => "O pacote {$package->name_snapshot} não está pendente e não pode ser ativado novamente.",
-                        ]);
-                    }
-
                     $activatedAt = now();
                     $expiresAt = $package->validity_days_snapshot !== null && $package->validity_days_snapshot > 0
                         ? $activatedAt->copy()->addDays($package->validity_days_snapshot)->toDateString()

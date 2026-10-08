@@ -62,8 +62,10 @@ final class OperationalMutation
         ];
     }
 
-    /** @return array{command:string,method:string,route:string,resource_type:string,resource_id:string|null,unit_id:string|null} */
-    /** @param array<string, mixed> $requestPayload */
+    /**
+     * @param  array<string, mixed>  $requestPayload
+     * @return array{command:string,method:string,route:string,resource_type:string,resource_id:string|null,unit_id:string|null}
+     */
     private function scope(Request $request, TenantContext $context, array $requestPayload = []): array
     {
         $route = $request->route();
