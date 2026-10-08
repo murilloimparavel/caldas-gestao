@@ -48,6 +48,7 @@ import { index as calendarIndex } from '@/routes/calendar';
 import customerPackagesRoutes from '@/routes/customer-packages';
 import customerSubscriptionsRoutes from '@/routes/customer-subscriptions';
 import customers from '@/routes/customers';
+import packagesRoutes from '@/routes/packages';
 import sales from '@/routes/sales';
 import type { SharedPageProps } from '@/types';
 
@@ -122,7 +123,14 @@ type CustomerPackageItem = {
     name_snapshot?: string | null;
     price_cents_snapshot?: number | null;
     remaining_sessions: number;
-    status: ResourceStatus;
+    status:
+        | 'pending'
+        | 'active'
+        | 'completed'
+        | 'exhausted'
+        | 'expired'
+        | 'cancelled'
+        | 'archived';
     total_sessions: number;
     total_sessions_snapshot?: number | null;
     validity_days_snapshot?: number | null;
@@ -139,16 +147,6 @@ type PackageTemplateOption = {
     total_sessions: number;
     validity_days: number;
 };
-
-const PACKAGE_PAYMENT_METHODS = [
-    { value: 'pix', label: 'PIX' },
-    { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'cartao_credito', label: 'Cartão de Crédito' },
-    { value: 'cartao_debito', label: 'Cartão de Débito' },
-    { value: 'boleto', label: 'Boleto Bancário' },
-    { value: 'transferencia', label: 'Transferência Bancária' },
-    { value: 'outros', label: 'Outro' },
-];
 
 type ActiveSubscription = {
     billing_cycle?: string;
@@ -232,6 +230,47 @@ function formatSaleDateTime(isoString: string): string {
         hour: '2-digit',
         minute: '2-digit',
     });
+}
+
+const customerPackageStatusLabels: Record<
+    CustomerPackageItem['status'],
+    string
+> = {
+    pending: 'Pendente de pagamento',
+    active: 'Ativo',
+    completed: 'Concluído',
+    exhausted: 'Concluído',
+    expired: 'Expirado',
+    cancelled: 'Cancelado',
+    archived: 'Arquivado',
+};
+
+const customerPackageStatusDescriptions: Record<
+    CustomerPackageItem['status'],
+    string
+> = {
+    pending:
+        'Aguardando o fechamento e a confirmação do pagamento da comanda. As sessões ainda não estão disponíveis.',
+    active: 'Pacote liberado para consumo. Use as sessões ainda disponíveis.',
+    completed: 'Todas as sessões deste pacote já foram utilizadas.',
+    exhausted: 'Todas as sessões deste pacote já foram utilizadas.',
+    expired:
+        'A validade terminou. Este pacote não está disponível para consumo.',
+    cancelled: 'Este pacote foi cancelado e não pode mais ser usado.',
+    archived:
+        'Este pacote está arquivado e pode ser consultado na tela de pacotes arquivados.',
+};
+
+function CustomerPackageStatusBadge({
+    status,
+}: {
+    status: CustomerPackageItem['status'];
+}) {
+    return (
+        <Badge variant="outline" className="rounded-full">
+            {customerPackageStatusLabels[status] ?? status}
+        </Badge>
+    );
 }
 
 function SaleStatusBadge({ status }: { status: CustomerSale['status'] }) {
@@ -400,6 +439,12 @@ export default function CustomerShow({
     const canSellPackage =
         props.auth.permissions.includes('package.sell') ||
         props.auth.permissions.includes('package.manage');
+    const canManagePackages = props.auth.permissions.includes('package.manage');
+    const canViewPackages = props.auth.permissions.includes('package.view');
+    const canStartPackageSale =
+        canSellPackage &&
+        props.auth.permissions.includes('sale.manage') &&
+        props.auth.permissions.includes('sale.view');
     const canConsumePackage =
         props.auth.permissions.includes('package.consume') ||
         props.auth.permissions.includes('package.manage');
@@ -882,219 +927,148 @@ export default function CustomerShow({
                                             Pacotes de Serviços
                                         </h2>
                                         <p className="text-sm text-muted-foreground">
-                                            Sessões pré-pagas, validades e
-                                            histórico de utilização de pacotes.
+                                            Acompanhe o pagamento, as sessões
+                                            disponíveis e o histórico de cada
+                                            pacote deste cliente.
                                         </p>
                                     </div>
-                                    {canSellPackage && hasPackageTemplates && (
-                                        <Dialog
-                                            open={sellPackageOpen}
-                                            onOpenChange={setSellPackageOpen}
-                                        >
-                                            <DialogTrigger asChild>
-                                                <Button size="sm">
-                                                    <Gift className="mr-2 h-4 w-4" />
-                                                    Vender / Adicionar Pacote
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                                                <DialogHeader>
-                                                    <DialogTitle>
-                                                        Vender Pacote para{' '}
-                                                        {customer.name}
-                                                    </DialogTitle>
-                                                    <DialogDescription>
-                                                        Selecione o modelo do
-                                                        pacote para atribuir as
-                                                        sessões e calcular a
-                                                        validade.
-                                                    </DialogDescription>
-                                                </DialogHeader>
+                                    {canStartPackageSale &&
+                                        hasPackageTemplates && (
+                                            <Dialog
+                                                open={sellPackageOpen}
+                                                onOpenChange={
+                                                    setSellPackageOpen
+                                                }
+                                            >
+                                                <DialogTrigger asChild>
+                                                    <Button size="sm">
+                                                        <Gift className="mr-2 h-4 w-4" />
+                                                        Vender / Adicionar
+                                                        Pacote
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                                                    <DialogHeader>
+                                                        <DialogTitle>
+                                                            Vender Pacote para{' '}
+                                                            {customer.name}
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                            A venda será lançada
+                                                            em uma comanda. O
+                                                            pacote só ficará
+                                                            ativo depois do
+                                                            fechamento e
+                                                            pagamento.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
 
-                                                <Form
-                                                    method="post"
-                                                    action={
-                                                        customerPackagesRoutes.store()
-                                                            .url
-                                                    }
-                                                    headers={{
-                                                        'X-Idempotency-Key':
-                                                            sellKey,
-                                                    }}
-                                                    onSuccess={() =>
-                                                        setSellPackageOpen(
-                                                            false,
-                                                        )
-                                                    }
-                                                    className="space-y-4"
-                                                >
-                                                    {({
-                                                        processing,
-                                                        errors,
-                                                    }) => (
-                                                        <>
-                                                            <FormErrorSummary
-                                                                errors={errors}
-                                                            />
-                                                            <input
-                                                                type="hidden"
-                                                                name="customer_id"
-                                                                value={
-                                                                    customer.id
-                                                                }
-                                                            />
-
-                                                            <FormField
-                                                                id="package_template_id"
-                                                                label="Modelo de Pacote"
-                                                                required
-                                                                error={
-                                                                    errors.package_template_id
-                                                                }
-                                                            >
-                                                                <RemoteOptionPicker
-                                                                    id="package_template_id"
-                                                                    name="package_template_id"
-                                                                    options={
-                                                                        packageTemplates
+                                                    <Form
+                                                        method="post"
+                                                        action={
+                                                            customerPackagesRoutes.store()
+                                                                .url
+                                                        }
+                                                        headers={{
+                                                            'X-Idempotency-Key':
+                                                                sellKey,
+                                                        }}
+                                                        onSuccess={() =>
+                                                            setSellPackageOpen(
+                                                                false,
+                                                            )
+                                                        }
+                                                        className="space-y-4"
+                                                    >
+                                                        {({
+                                                            processing,
+                                                            errors,
+                                                        }) => (
+                                                            <>
+                                                                <FormErrorSummary
+                                                                    errors={
+                                                                        errors
                                                                     }
-                                                                    placeholder="Selecione um pacote..."
-                                                                    resource="packages"
+                                                                />
+                                                                <input
+                                                                    type="hidden"
+                                                                    name="customer_id"
                                                                     value={
-                                                                        selectedPackageTemplateId
+                                                                        customer.id
                                                                     }
-                                                                    onChange={(
-                                                                        value,
-                                                                    ) =>
-                                                                        setSelectedPackageTemplateId(
+                                                                />
+                                                                <input
+                                                                    type="hidden"
+                                                                    name="start_sale"
+                                                                    value="1"
+                                                                />
+
+                                                                <FormField
+                                                                    id="package_template_id"
+                                                                    label="Modelo de Pacote"
+                                                                    required
+                                                                    error={
+                                                                        errors.package_template_id
+                                                                    }
+                                                                >
+                                                                    <RemoteOptionPicker
+                                                                        id="package_template_id"
+                                                                        name="package_template_id"
+                                                                        options={
+                                                                            packageTemplates
+                                                                        }
+                                                                        placeholder="Selecione um pacote..."
+                                                                        resource="packages"
+                                                                        value={
+                                                                            selectedPackageTemplateId
+                                                                        }
+                                                                        onChange={(
                                                                             value,
+                                                                        ) =>
+                                                                            setSelectedPackageTemplateId(
+                                                                                value,
+                                                                            )
+                                                                        }
+                                                                        required
+                                                                    />
+                                                                </FormField>
+
+                                                                <FormActions
+                                                                    cancelLabel="Cancelar"
+                                                                    onCancel={() =>
+                                                                        setSellPackageOpen(
+                                                                            false,
                                                                         )
                                                                     }
-                                                                    required
+                                                                    submitLabel="Abrir comanda com pacote"
+                                                                    submitting={
+                                                                        processing
+                                                                    }
                                                                 />
-                                                            </FormField>
-
-                                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                                                <FormField
-                                                                    id="total_sessions"
-                                                                    label="Sessões (opcional)"
-                                                                    error={
-                                                                        errors.total_sessions
-                                                                    }
-                                                                >
-                                                                    <Input
-                                                                        id="total_sessions"
-                                                                        name="total_sessions"
-                                                                        type="number"
-                                                                        min="1"
-                                                                        placeholder="Padrão do modelo"
-                                                                    />
-                                                                </FormField>
-
-                                                                <FormField
-                                                                    id="expires_at"
-                                                                    label="Validade personalizada (opcional)"
-                                                                    error={
-                                                                        errors.expires_at
-                                                                    }
-                                                                >
-                                                                    <Input
-                                                                        id="expires_at"
-                                                                        name="expires_at"
-                                                                        type="date"
-                                                                    />
-                                                                </FormField>
-                                                            </div>
-
-                                                            {(packageTemplates.find(
-                                                                (template) =>
-                                                                    template.id ===
-                                                                    selectedPackageTemplateId,
-                                                            )?.price_cents ??
-                                                                0) > 0 && (
-                                                                <FormField
-                                                                    id="payment_method"
-                                                                    label="Forma de pagamento informada"
-                                                                    required
-                                                                    error={
-                                                                        errors.payment_method
-                                                                    }
-                                                                >
-                                                                    <select
-                                                                        id="payment_method"
-                                                                        name="payment_method"
-                                                                        required
-                                                                        defaultValue="pix"
-                                                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
-                                                                    >
-                                                                        {PACKAGE_PAYMENT_METHODS.map(
-                                                                            (
-                                                                                method,
-                                                                            ) => (
-                                                                                <option
-                                                                                    key={
-                                                                                        method.value
-                                                                                    }
-                                                                                    value={
-                                                                                        method.value
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        method.label
-                                                                                    }
-                                                                                </option>
-                                                                            ),
-                                                                        )}
-                                                                    </select>
-                                                                    <p className="mt-1 text-xs text-muted-foreground">
-                                                                        Informe
-                                                                        como o
-                                                                        cliente
-                                                                        pagou. O
-                                                                        sistema
-                                                                        registra
-                                                                        essa
-                                                                        confirmação
-                                                                        manual.
-                                                                    </p>
-                                                                </FormField>
-                                                            )}
-
-                                                            <FormActions
-                                                                cancelLabel="Cancelar"
-                                                                onCancel={() =>
-                                                                    setSellPackageOpen(
-                                                                        false,
-                                                                    )
-                                                                }
-                                                                submitLabel={
-                                                                    selectedPackageTemplateId ===
-                                                                    ''
-                                                                        ? 'Selecionar pacote'
-                                                                        : (packageTemplates.find(
-                                                                                (
-                                                                                    template,
-                                                                                ) =>
-                                                                                    template.id ===
-                                                                                    selectedPackageTemplateId,
-                                                                            )
-                                                                                ?.price_cents ??
-                                                                                0) >
-                                                                            0
-                                                                          ? 'Confirmar venda e recebimento'
-                                                                          : 'Atribuir pacote gratuito'
-                                                                }
-                                                                submitting={
-                                                                    processing
-                                                                }
-                                                            />
-                                                        </>
-                                                    )}
-                                                </Form>
-                                            </DialogContent>
-                                        </Dialog>
-                                    )}
+                                                            </>
+                                                        )}
+                                                    </Form>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )}
                                 </div>
+
+                                {canSellPackage && !canStartPackageSale && (
+                                    <p className="text-sm text-muted-foreground">
+                                        Para vender um pacote, seu usuário
+                                        precisa também poder gerenciar e
+                                        visualizar comandas.
+                                    </p>
+                                )}
+                                {canViewPackages && (
+                                    <Button asChild size="sm" variant="outline">
+                                        <Link
+                                            href={packagesRoutes.archived().url}
+                                        >
+                                            Ver pacotes arquivados
+                                        </Link>
+                                    </Button>
+                                )}
 
                                 {customerPackages.length === 0 ? (
                                     <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -1119,7 +1093,7 @@ export default function CustomerShow({
                                                                         ?.name ??
                                                                     'Pacote de Serviços'}
                                                             </h3>
-                                                            <StatusBadge
+                                                            <CustomerPackageStatusBadge
                                                                 status={
                                                                     cp.status
                                                                 }
@@ -1168,6 +1142,13 @@ export default function CustomerShow({
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {
+                                                                customerPackageStatusDescriptions[
+                                                                    cp.status
+                                                                ]
+                                                            }
+                                                        </p>
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
@@ -1210,6 +1191,81 @@ export default function CustomerShow({
                                                                     Sessão
                                                                 </Button>
                                                             )}
+                                                        {canSellPackage &&
+                                                            cp.status ===
+                                                                'pending' && (
+                                                                <Form
+                                                                    method="post"
+                                                                    action={
+                                                                        customerPackageActions.cancel(
+                                                                            cp.id,
+                                                                        ).url
+                                                                    }
+                                                                    onSubmit={(
+                                                                        event,
+                                                                    ) => {
+                                                                        if (
+                                                                            !window.confirm(
+                                                                                'Cancelar este pacote pendente? Ele não será ativado nem poderá ser usado.',
+                                                                            )
+                                                                        ) {
+                                                                            event.preventDefault();
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <input
+                                                                        type="hidden"
+                                                                        name="reason"
+                                                                        value="Cancelamento manual de pacote pendente"
+                                                                    />
+                                                                    <Button
+                                                                        type="submit"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="text-destructive"
+                                                                    >
+                                                                        Cancelar
+                                                                        pendente
+                                                                    </Button>
+                                                                </Form>
+                                                            )}
+                                                        {canManagePackages &&
+                                                            [
+                                                                'completed',
+                                                                'exhausted',
+                                                                'cancelled',
+                                                                'expired',
+                                                            ].includes(
+                                                                cp.status,
+                                                            ) && (
+                                                                <Form
+                                                                    method="post"
+                                                                    action={
+                                                                        customerPackageActions.archive(
+                                                                            cp.id,
+                                                                        ).url
+                                                                    }
+                                                                    onSubmit={(
+                                                                        event,
+                                                                    ) => {
+                                                                        if (
+                                                                            !window.confirm(
+                                                                                'Arquivar este pacote? Ele sairá desta tela e continuará disponível em Pacotes arquivados.',
+                                                                            )
+                                                                        ) {
+                                                                            event.preventDefault();
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Button
+                                                                        type="submit"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                    >
+                                                                        Arquivar
+                                                                    </Button>
+                                                                </Form>
+                                                            )}
                                                     </div>
                                                 </div>
 
@@ -1245,7 +1301,8 @@ export default function CustomerShow({
                                                         <div className="border-t pt-2">
                                                             <p className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground">
                                                                 <History className="h-3 w-3" />{' '}
-                                                                Utilizações:
+                                                                Histórico de
+                                                                uso:
                                                             </p>
                                                             <div className="space-y-1">
                                                                 {cp.usages.map(
@@ -1262,8 +1319,8 @@ export default function CustomerShow({
                                                                                 }{' '}
                                                                                 {u.sessions_consumed ===
                                                                                 1
-                                                                                    ? 'sessão consumida'
-                                                                                    : 'sessões consumidas'}
+                                                                                    ? '1 sessão utilizada'
+                                                                                    : `${u.sessions_consumed} sessões utilizadas`}
                                                                                 {u.user
                                                                                     ? ` por ${u.user.name}`
                                                                                     : ''}

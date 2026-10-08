@@ -286,6 +286,26 @@ final class FinalizeClosingSession extends OperationalAction
             if ($allocationTotal !== $calculatedFinalTotalCents) {
                 throw ValidationException::withMessages(['payment_allocations' => 'A soma das parcelas deve corresponder exatamente ao total da comanda.']);
             }
+
+            $packageItems = $sales->flatMap(fn (Sale $sale) => $sale->items)
+                ->filter(static fn (SaleItem $item): bool => $item->item_type === 'package');
+
+            foreach ($packageItems as $packageItem) {
+                $packageSale = $sales->firstWhere('id', $packageItem->sale_id);
+
+                if ($packageItem->total_cents <= 0) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => 'A linha do pacote precisa ter um valor efetivo positivo para ser ativada.',
+                    ]);
+                }
+
+                if ($packageSale === null || $packageSale->final_amount_cents <= 0 || $allocationTotal <= 0) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => 'O pacote não pode ser ativado sem valor líquido positivo recebido na comanda.',
+                    ]);
+                }
+            }
+
             $hasCash = collect($allocations)->contains(fn (array $allocation): bool => $allocation['method'] === 'cash');
             $cashShift = CashShift::query()
                 ->where('tenant_id', $tenantId)->where('unit_id', $unitId)
@@ -498,7 +518,11 @@ final class FinalizeClosingSession extends OperationalAction
                         ->lockForUpdate()
                         ->firstOrFail();
 
-                    if ($sale->status !== 'finalized' || $package->customer_id !== $sale->customer_id || $package->package_template_id !== $item->package_template_id) {
+                    if ($sale->status !== 'finalized'
+                        || $package->status !== 'pending'
+                        || $package->sale_id !== $sale->getKey()
+                        || $package->customer_id !== $sale->customer_id
+                        || $package->package_template_id !== $item->package_template_id) {
                         throw ValidationException::withMessages([
                             'sale_ids' => 'A instância do pacote exige uma comanda finalizada do mesmo cliente e modelo.',
                         ]);

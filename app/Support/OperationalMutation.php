@@ -37,7 +37,7 @@ final class OperationalMutation
             $actor,
             $key,
             [
-                'scope' => $this->scope($request, $context),
+                'scope' => $this->scope($request, $context, $requestPayload),
                 'payload' => $requestPayload,
             ],
             fn (): array => [
@@ -63,12 +63,17 @@ final class OperationalMutation
     }
 
     /** @return array{command:string,method:string,route:string,resource_type:string,resource_id:string|null,unit_id:string|null} */
-    private function scope(Request $request, TenantContext $context): array
+    /** @param array<string, mixed> $requestPayload */
+    private function scope(Request $request, TenantContext $context, array $requestPayload = []): array
     {
         $route = $request->route();
         $routeName = $route instanceof Route ? (string) ($route->getName() ?? '') : '';
         $routeUri = $route instanceof Route ? $route->uri() : $request->path();
         $resourceType = Str::snake(Str::singular(Str::before($routeName, '.')));
+
+        if ($routeName === 'customer-packages.store' && ($requestPayload['start_sale'] ?? false) === true) {
+            $resourceType = 'sale';
+        }
 
         // Nested package usage routes mutate the child resource returned by the
         // controller, not the parent customer package.

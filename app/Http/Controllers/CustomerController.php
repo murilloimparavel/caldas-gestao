@@ -74,6 +74,7 @@ final class CustomerController extends Controller
                 ])
                 ->orderBy('created_at', 'desc'),
             'customerPackages' => fn ($query) => $query
+                ->where('status', '!=', 'archived')
                 ->with([
                     'packageTemplate.services:id,name,price_cents',
                     'serviceBalances.service:id,name',

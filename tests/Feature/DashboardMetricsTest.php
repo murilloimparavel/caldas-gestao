@@ -3,6 +3,7 @@
 use App\Actions\Identity\OnboardTenant;
 use App\Models\Appointment;
 use App\Models\AvailabilityRule;
+use App\Models\CustomerPackage;
 use App\Models\FinancialObligation;
 use App\Models\Professional;
 use App\Models\Sale;
@@ -138,6 +139,81 @@ it('calculates dashboard metrics with existing sales and appointments in camelCa
                 ->has('attentionItems', 1)
                 ->etc()
             )
+        );
+});
+
+it('includes an orphan paid package receivable in dashboard revenue and package totals', function (): void {
+    Carbon::setTestNow('2026-08-26 12:00:00');
+
+    [$owner, $tenant, $unit] = dashboardTestWorkspace();
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'status' => 'pending',
+        'sale_id' => null,
+    ]);
+    FinancialObligation::factory()->receivable()->paid()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'customer_id' => $package->customer_id,
+        'customer_package_id' => $package->id,
+        'amount_cents' => 20000,
+        'paid_date' => '2026-08-26',
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', ['preset' => 'today']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('dashboard.topKpis.totalSales.value', 'R$ 200,00')
+            ->where('dashboard.topKpis.totalSales.todayValue', 'R$ 200,00')
+            ->where('dashboard.salesCategoryBreakdown.2.totalAmount', 'R$ 200,00')
+            ->where('dashboard.visitsTrend.0.salesCents', 20000)
+        );
+});
+
+it('does not count a paid package receivable twice when a finalized package sale item exists', function (): void {
+    Carbon::setTestNow('2026-08-26 12:00:00');
+
+    [$owner, $tenant, $unit] = dashboardTestWorkspace();
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'type' => 'mixed']);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'status' => 'active',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'sale_category_id' => $category->id,
+        'status' => 'finalized',
+        'final_amount_cents' => 20000,
+        'created_at' => Carbon::parse('2026-08-26 10:00:00'),
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'sale_id' => $sale->id,
+        'item_type' => 'package',
+        'customer_package_id' => $package->id,
+        'package_template_id' => $package->package_template_id,
+        'total_cents' => 20000,
+    ]);
+    FinancialObligation::factory()->receivable()->paid()->create([
+        'tenant_id' => $tenant->id,
+        'unit_id' => $unit->id,
+        'customer_id' => $package->customer_id,
+        'customer_package_id' => $package->id,
+        'amount_cents' => 20000,
+        'paid_date' => '2026-08-26',
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('dashboard', ['preset' => 'today']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('dashboard.topKpis.totalSales.value', 'R$ 200,00')
+            ->where('dashboard.salesCategoryBreakdown.2.totalAmount', 'R$ 200,00')
         );
 });
 

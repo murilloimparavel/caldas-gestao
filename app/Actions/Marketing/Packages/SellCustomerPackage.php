@@ -3,126 +3,51 @@
 namespace App\Actions\Marketing\Packages;
 
 use App\Actions\Operational\OperationalAction;
-use App\Models\Customer;
+use App\Actions\Sales\AddSaleItem;
 use App\Models\CustomerPackage;
-use App\Models\CustomerPackageService;
-use App\Models\PackageTemplate;
 use App\Models\Sale;
-use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 final class SellCustomerPackage extends OperationalAction
 {
-    /** @param array<string, mixed> $data */
+    public function __construct(private readonly AddSaleItem $addSaleItem = new AddSaleItem)
+    {
+        parent::__construct();
+    }
+
+    /** @param array{customer_id: string, package_template_id: string, sale_id?: string|null, source_id?: string|null} $data */
     public function handle(User $actor, TenantContext $context, array $data): CustomerPackage
     {
         $unit = $this->unit($actor, $context, 'package.sell');
+        $saleId = trim((string) ($data['sale_id'] ?? ''));
 
-        $customerId = (string) ($data['customer_id'] ?? '');
-        $templateId = (string) ($data['package_template_id'] ?? '');
-        $saleId = isset($data['sale_id']) && $data['sale_id'] !== '' ? (string) $data['sale_id'] : null;
+        if ($saleId === '') {
+            throw ValidationException::withMessages([
+                'sale_id' => 'O pacote precisa ser lançado como item de uma comanda.',
+            ]);
+        }
 
-        $customer = Customer::query()
+        $sale = Sale::query()
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $unit->getKey())
-            ->whereKey($customerId)
+            ->where('customer_id', $data['customer_id'])
+            ->whereKey($saleId)
             ->first();
 
-        if ($customer === null) {
-            throw new \InvalidArgumentException('The selected customer was not found in this unit.');
-        }
-
-        $template = PackageTemplate::query()
-            ->where('tenant_id', $context->tenant->getKey())
-            ->where('unit_id', $unit->getKey())
-            ->whereKey($templateId)
-            ->with('services:id,name')
-            ->first();
-
-        if ($template === null) {
-            throw new \InvalidArgumentException('The selected package template was not found in this unit.');
-        }
-
-        if (! $template->is_active) {
-            throw new \InvalidArgumentException('The selected package template is not active.');
-        }
-
-        if ($saleId !== null) {
-            $saleExists = Sale::query()
-                ->where('tenant_id', $context->tenant->getKey())
-                ->where('unit_id', $unit->getKey())
-                ->where('customer_id', $customer->getKey())
-                ->whereKey($saleId)
-                ->exists();
-
-            if (! $saleExists) {
-                throw new \InvalidArgumentException('The associated sale was not found in this unit.');
-            }
-        }
-
-        $totalSessions = isset($data['total_sessions']) && (int) $data['total_sessions'] > 0
-            ? (int) $data['total_sessions']
-            : $template->total_sessions;
-
-        $serviceAllocations = $template->services
-            ->map(static fn (Service $service): array => [
-                'id' => (string) $service->getKey(),
-                'name' => (string) $service->name,
-                'quantity' => (int) ($service->pivot->included_quantity ?? 1),
-            ])
-            ->values()
-            ->all();
-
-        return DB::transaction(function () use ($actor, $context, $unit, $customer, $template, $saleId, $totalSessions, $serviceAllocations): CustomerPackage {
-            $customerPackage = CustomerPackage::query()->create([
-                'id' => (string) Str::uuid7(),
-                'tenant_id' => $context->tenant->getKey(),
-                'unit_id' => $unit->getKey(),
-                'customer_id' => $customer->getKey(),
-                'package_template_id' => $template->getKey(),
-                'sale_id' => $saleId,
-                'name_snapshot' => $template->name,
-                'price_cents_snapshot' => $template->price_cents,
-                'total_sessions_snapshot' => $totalSessions,
-                'validity_days_snapshot' => $template->validity_days,
-                'eligible_services_snapshot' => $serviceAllocations,
-                'total_sessions' => $totalSessions,
-                'remaining_sessions' => $totalSessions,
-                // The validity window starts only when the package is paid in a closing.
-                'expires_at' => null,
-                'status' => 'pending',
-                'activated_at' => null,
-                'lock_version' => 0,
+        if ($sale === null) {
+            throw ValidationException::withMessages([
+                'sale_id' => 'A comanda deve pertencer ao cliente e à unidade selecionados.',
             ]);
+        }
 
-            foreach ($serviceAllocations as $allocation) {
-                CustomerPackageService::query()->create([
-                    'tenant_id' => $context->tenant->getKey(),
-                    'unit_id' => $unit->getKey(),
-                    'customer_package_id' => $customerPackage->getKey(),
-                    'service_id' => $allocation['id'],
-                    'allocated_quantity' => $allocation['quantity'],
-                    'remaining_quantity' => $allocation['quantity'],
-                ]);
-            }
+        $item = $this->addSaleItem->handle($actor, $context, $sale, [
+            'item_type' => 'package',
+            'package_template_id' => $data['package_template_id'],
+            'source_id' => $data['source_id'] ?? null,
+        ]);
 
-            $this->events->record($actor, $context, 'customer_package.sold', $customerPackage, [
-                'customer_id' => $customer->getKey(),
-                'package_template_id' => $template->getKey(),
-                'sale_id' => $saleId,
-                'price_cents' => $template->price_cents,
-                'service_ids' => $template->services->modelKeys(),
-                'total_sessions' => $totalSessions,
-                'validity_days' => $template->validity_days,
-                'remaining_sessions' => $totalSessions,
-                'expires_at' => null,
-                'status' => 'pending',
-            ]);
-
-            return $customerPackage->load(['packageTemplate.services', 'customer']);
-        }, 5);
+        return CustomerPackage::query()->findOrFail($item->customer_package_id);
     }
 }

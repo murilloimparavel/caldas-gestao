@@ -4,6 +4,8 @@ namespace App\Actions\Sales;
 
 use App\Actions\Inventory\RecordInventoryMovement;
 use App\Actions\Operational\OperationalAction;
+use App\Models\ClosingSession;
+use App\Models\ClosingSessionPayment;
 use App\Models\CommissionAccrual;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
@@ -11,6 +13,7 @@ use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
 use App\Models\Product;
 use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\SaleStatusHistory;
 use App\Models\User;
 use App\Support\AuditEventWriter;
@@ -75,6 +78,40 @@ final class AdjustSale extends OperationalAction
                 throw ValidationException::withMessages([
                     'status' => "A comanda possui status '{$lockedSale->status}' e apenas comandas finalizadas podem ser estornadas.",
                 ]);
+            }
+
+            $soldPackageItems = $lockedSale->items->filter(
+                static fn (SaleItem $item): bool => $item->item_type === 'package' && $item->customer_package_id !== null,
+            );
+
+            if ($soldPackageItems->isNotEmpty()) {
+                $soldPackages = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereIn('id', $soldPackageItems->pluck('customer_package_id')->unique())
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+                $packageWasCancelled = $soldPackageItems->every(
+                    static fn (SaleItem $item): bool => $soldPackages->get($item->customer_package_id)?->status === 'cancelled',
+                );
+                $closingSessions = $lockedSale->closingSessions()
+                    ->with('payments')
+                    ->lockForUpdate()
+                    ->get();
+                $hasNetReceived = $closingSessions->isEmpty() || $closingSessions->contains(
+                    static fn (ClosingSession $closingSession): bool => $closingSession->payments->sum(
+                        static fn (ClosingSessionPayment $payment): int => $payment->is_reversal
+                            ? -$payment->amount_cents
+                            : $payment->amount_cents,
+                    ) > 0,
+                );
+
+                if (! $packageWasCancelled || $hasNetReceived) {
+                    throw ValidationException::withMessages([
+                        'sale' => 'Para ajustar uma comanda que vendeu pacote, estorne integralmente os recebimentos e confirme o cancelamento do pacote primeiro.',
+                    ]);
+                }
             }
 
             // 1. Reposição de estoque via RecordInventoryMovement (adjustment_gain)

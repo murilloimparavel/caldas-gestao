@@ -3,6 +3,7 @@
 use App\Actions\Closing\FinalizeClosingSession;
 use App\Actions\Identity\OnboardTenant;
 use App\Actions\Marketing\Packages\ConsumePackageSession;
+use App\Actions\Marketing\Packages\SellCustomerPackage;
 use App\Actions\Sales\AddSaleItem;
 use App\Actions\Sales\AdjustSale;
 use App\Actions\Sales\RemoveSaleItem;
@@ -48,7 +49,7 @@ function packageIntegrityWorkspace(): array
 }
 
 it('snapshots package terms and rejects a source sale for another customer', function (): void {
-    [$owner, $tenant, $unit] = packageIntegrityWorkspace();
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $otherCustomer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'name' => 'Corte']);
@@ -66,30 +67,36 @@ it('snapshots package terms and rejects a source sale for another customer', fun
         'unit_id' => $unit->getKey(),
         'customer_id' => $otherCustomer->getKey(),
     ]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
+
+    expect(fn () => (new SellCustomerPackage)->handle($owner, $context, [
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'sale_id' => $foreignCustomerSale->getKey(),
+    ]))->toThrow(ValidationException::class);
 
     $this->actingAs($owner)
         ->post(route('customer-packages.store'), [
             'customer_id' => $customer->getKey(),
             'package_template_id' => $template->getKey(),
-            'sale_id' => $foreignCustomerSale->getKey(),
-            'payment_method' => 'pix',
-        ])
-        ->assertSessionHasErrors('sale_id');
-
-    $this->actingAs($owner)
-        ->post(route('customer-packages.store'), [
-            'customer_id' => $customer->getKey(),
-            'package_template_id' => $template->getKey(),
-            'payment_method' => 'pix',
+            'start_sale' => '1',
         ])
         ->assertSessionHasNoErrors();
 
     $package = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
+    $saleItem = SaleItem::query()->where('customer_package_id', $package->getKey())->firstOrFail();
     expect($package->name_snapshot)->toBe('Corte mensal')
         ->and($package->price_cents_snapshot)->toBe(24900)
         ->and($package->total_sessions_snapshot)->toBe(4)
         ->and($package->validity_days_snapshot)->toBe(30)
         ->and($package->eligible_services_snapshot)->toBe([['id' => $service->getKey(), 'name' => 'Corte', 'quantity' => 1]])
+        ->and($package->status)->toBe('pending')
+        ->and($package->sale_id)->toBe($saleItem->sale_id)
         ->and($package->serviceBalances()->first()->remaining_quantity)->toBe(1);
 
     $template->update(['name' => 'Novo nome', 'price_cents' => 29900]);

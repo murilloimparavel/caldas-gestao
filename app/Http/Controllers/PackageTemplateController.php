@@ -31,7 +31,7 @@ final class PackageTemplateController extends Controller
 
         $packages = PackageTemplate::query()
             ->with(['services:id,name,price_cents'])
-            ->withCount(['customerPackages'])
+            ->withCount(['customerPackages' => fn ($query) => $query->where('status', '!=', 'archived')])
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit?->getKey())
             ->when($status === 'active', fn ($query) => $query->where('is_active', true))
@@ -89,6 +89,7 @@ final class PackageTemplateController extends Controller
             ->all();
 
         $customerPackagesQuery = $packageTemplate->customerPackages()
+            ->where('status', '!=', 'archived')
             ->with([
                 'customer:id,name,phone,email',
                 'serviceBalances.service:id,name',

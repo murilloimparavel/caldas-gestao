@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\Finance\Cash\OpenCashShift;
 use App\Actions\Identity\OnboardTenant;
 use App\Models\CashMovement;
 use App\Models\Customer;
@@ -14,6 +13,9 @@ use App\Models\PackageTemplate;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\Sale;
+use App\Models\SaleCategory;
+use App\Models\SaleItem;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -184,7 +186,7 @@ it('keeps package details available when the finance link migration is pending',
         );
 });
 
-it('assigns a package to a customer without activating validity', function () {
+it('opens a comanda for a package and keeps it pending until payment', function () {
     [$owner, $tenant, $unit] = packageTestWorkspace();
 
     $customer = Customer::factory()->create([
@@ -199,19 +201,30 @@ it('assigns a package to a customer without activating validity', function () {
         'validity_days' => 60,
         'is_active' => true,
     ]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
 
     $response = $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
-        'payment_method' => 'pix',
+        'start_sale' => '1',
     ]);
 
     $response->assertSessionHasNoErrors();
-    $response->assertRedirect();
+    $sale = Sale::query()->where('customer_id', $customer->getKey())->firstOrFail();
+    $item = SaleItem::query()->where('sale_id', $sale->getKey())->firstOrFail();
+    $response->assertRedirect(route('sales.show', $sale));
 
     $customerPackage = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
 
-    expect($customerPackage->total_sessions)->toBe(10)
+    expect($sale->status)->toBe('open')
+        ->and($item->item_type)->toBe('package')
+        ->and($customerPackage->sale_id)->toBe($sale->getKey())
+        ->and($customerPackage->total_sessions)->toBe(10)
         ->and($customerPackage->remaining_sessions)->toBe(10)
         ->and($customerPackage->status)->toBe('pending')
         ->and($customerPackage->expires_at)->toBeNull()
@@ -220,7 +233,7 @@ it('assigns a package to a customer without activating validity', function () {
 
     $this->assertDatabaseHas('audit_events', [
         'tenant_id' => $tenant->getKey(),
-        'action' => 'customer_package.sold',
+        'action' => 'sale.item_added',
     ]);
 
     $this->actingAs($owner)->get(route('packages.show', $template))
@@ -232,7 +245,7 @@ it('assigns a package to a customer without activating validity', function () {
         );
 });
 
-it('assigns a free package without creating a payment obligation', function (): void {
+it('opens a comanda for a free package without creating a payment obligation', function (): void {
     [$owner, $tenant, $unit] = packageTestWorkspace();
     $customer = Customer::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -243,10 +256,17 @@ it('assigns a free package without creating a payment obligation', function (): 
         'unit_id' => $unit->getKey(),
         'price_cents' => 0,
     ]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
 
     $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'start_sale' => '1',
     ])->assertSessionHasNoErrors();
 
     $package = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
@@ -255,7 +275,7 @@ it('assigns a free package without creating a payment obligation', function (): 
         ->and(FinancialObligation::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
 });
 
-it('allows assigning a priced package before its comanda is paid', function (): void {
+it('leaves a priced package pending before its comanda is closed', function (): void {
     [$owner, $tenant, $unit] = packageTestWorkspace();
     $customer = Customer::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -266,17 +286,27 @@ it('allows assigning a priced package before its comanda is paid', function (): 
         'unit_id' => $unit->getKey(),
         'price_cents' => 10000,
     ]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
 
     $this->actingAs($owner)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
+        'start_sale' => '1',
     ])->assertSessionHasNoErrors();
 
-    expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->value('status'))->toBe('pending');
+    $package = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
+    expect($package->status)->toBe('pending')
+        ->and($package->activated_at)->toBeNull()
+        ->and($package->financialObligation)->toBeNull();
 });
 
-it('keeps an idempotent direct package assignment pending without a payment record', function () {
-    [$owner, $tenant, $unit, $context] = packageTestWorkspace();
+it('keeps an idempotent package sale pending without a payment record before comanda closing', function () {
+    [$owner, $tenant, $unit] = packageTestWorkspace();
     $customer = Customer::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
@@ -286,11 +316,16 @@ it('keeps an idempotent direct package assignment pending without a payment reco
         'unit_id' => $unit->getKey(),
         'price_cents' => 27500,
     ]);
-    $shift = (new OpenCashShift)->handle($owner, $context, ['initial_amount_cents' => 10000]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
     $payload = [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
-        'payment_method' => 'dinheiro',
+        'start_sale' => '1',
     ];
 
     $this->actingAs($owner)
@@ -306,12 +341,13 @@ it('keeps an idempotent direct package assignment pending without a payment reco
     $customerPackage = CustomerPackage::query()->where('customer_id', $customer->getKey())->firstOrFail();
     expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->count())->toBe(1)
         ->and($customerPackage->status)->toBe('pending')
+        ->and($customerPackage->sale_id)->not->toBeNull()
         ->and(FinancialObligation::query()->where('customer_package_id', $customerPackage->getKey())->exists())->toBeFalse()
-        ->and(CashMovement::query()->where('cash_shift_id', $shift->getKey())->count())->toBe(0)
-        ->and($shift->fresh()->expected_amount_cents)->toBe(10000);
+        ->and(CashMovement::query()->exists())->toBeFalse()
+        ->and(SaleItem::query()->where('customer_package_id', $customerPackage->getKey())->count())->toBe(1);
 });
 
-it('requires package sell permission before assigning a package', function () {
+it('requires package sell permission before starting a package comanda', function () {
     [, $tenant, $unit] = packageTestWorkspace();
     $staff = User::factory()->create();
     $membership = Membership::factory()->create([
@@ -331,14 +367,21 @@ it('requires package sell permission before assigning a package', function () {
     MembershipRole::factory()->forMembership($membership)->forRole($role)->create();
     $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $template = PackageTemplate::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+        'uniqueness_scope' => 'none',
+    ]);
 
     $this->actingAs($staff)->post(route('customer-packages.store'), [
         'customer_id' => $customer->getKey(),
         'package_template_id' => $template->getKey(),
-        'payment_method' => 'pix',
-    ])->assertSessionHasNoErrors();
+        'start_sale' => '1',
+    ])->assertForbidden();
 
-    expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->value('status'))->toBe('pending')
+    expect(CustomerPackage::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse()
+        ->and(Sale::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse()
         ->and(FinancialObligation::query()->where('customer_id', $customer->getKey())->exists())->toBeFalse();
 });
 
