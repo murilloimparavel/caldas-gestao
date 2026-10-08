@@ -7,15 +7,30 @@ use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
+use App\Models\SaleItem;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\LegacyPackageReconciliation;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class ConsumePackageSession extends OperationalAction
 {
+    public function __construct(
+        AuthorizationService $authorization = new AuthorizationService,
+        IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly LegacyPackageReconciliation $packageEvidence = new LegacyPackageReconciliation,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, CustomerPackage $customerPackage, array $data = []): CustomerPackage
     {
@@ -67,6 +82,18 @@ final class ConsumePackageSession extends OperationalAction
                 ]);
 
                 return null;
+            }
+
+            $linkedItems = SaleItem::query()
+                ->where('customer_package_id', $locked->getKey())
+                ->with('sale.closingSessions.payments')
+                ->get();
+            if (! $this->packageEvidence->hasStrictPaidSaleEvidence(
+                $locked,
+                $linkedItems,
+                Schema::hasColumn('financial_obligations', 'customer_package_id'),
+            )) {
+                throw new ConflictHttpException('O pacote não tem uma comanda paga válida e precisa de revisão.');
             }
 
             $eligibleServiceIds = collect($locked->eligible_services_snapshot ?? [])

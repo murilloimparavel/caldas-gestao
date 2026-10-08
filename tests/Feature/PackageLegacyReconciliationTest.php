@@ -74,6 +74,51 @@ function createLegacyPackageRecord(Customer $customer, PackageTemplate $template
     return [$package, $balance];
 }
 
+function attachPaidSaleEvidenceToLegacyPackage(User $owner, Customer $customer, PackageTemplate $template, CustomerPackage $package): void
+{
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $customer->tenant_id,
+        'unit_id' => $customer->unit_id,
+        'type' => 'mixed',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $customer->tenant_id,
+        'unit_id' => $customer->unit_id,
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'finalized',
+        'final_amount_cents' => 10000,
+    ]);
+    $package->forceFill(['sale_id' => $sale->getKey()])->save();
+    SaleItem::factory()->create([
+        'tenant_id' => $customer->tenant_id,
+        'unit_id' => $customer->unit_id,
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'total_cents' => 10000,
+    ]);
+    $closing = ClosingSession::factory()->create([
+        'tenant_id' => $customer->tenant_id,
+        'unit_id' => $customer->unit_id,
+        'status' => 'completed',
+        'expected_total_cents' => 10000,
+        'final_total_cents' => 10000,
+    ]);
+    $closing->sales()->attach($sale->getKey());
+    ClosingSessionPayment::query()->create([
+        'tenant_id' => $customer->tenant_id,
+        'unit_id' => $customer->unit_id,
+        'closing_session_id' => $closing->getKey(),
+        'payment_method' => 'pix',
+        'amount_cents' => 10000,
+        'change_cents' => 0,
+        'recorded_by_user_id' => $owner->getKey(),
+        'recorded_at' => now(),
+    ]);
+}
+
 it('dry runs and safely reconciles legacy active packages without changing financial or usage history', function (): void {
     [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
     [$withoutSale] = createLegacyPackageRecord($customer, $template, $service);
@@ -191,6 +236,7 @@ it('dry runs and safely reconciles legacy active packages without changing finan
 it('keeps a reviewed package in review after reversing a prior usage', function (): void {
     [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
     [$package] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     (new ConsumePackageSession)->handle($owner, $context, $package, ['service_id' => $service->getKey()]);
     $usage = $package->usages()->latest()->firstOrFail();
@@ -205,6 +251,7 @@ it('keeps a reviewed package in review after reversing a prior usage', function 
 it('keeps a reviewed package in review when a reserved comanda item is removed', function (): void {
     [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
     [$package] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
     $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
     $category = SaleCategory::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'service',
@@ -385,4 +432,42 @@ it('blocks manual and comanda consumption for packages that need review', functi
 
     expect($package->fresh()->remaining_sessions)->toBe(4)
         ->and(PackageUsage::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
+});
+
+it('blocks manual consumption of a legacy active package without paid sale evidence', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+
+    expect(fn () => (new ConsumePackageSession)->handle($owner, $context, $package, [
+        'service_id' => $service->getKey(),
+    ]))->toThrow(ConflictHttpException::class, 'verified paid sale evidence');
+
+    expect($package->fresh()->status)->toBe('active')
+        ->and($package->fresh()->remaining_sessions)->toBe(4)
+        ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(4)
+        ->and(PackageUsage::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
+});
+
+it('blocks adding a package-covered service for a legacy active package without paid sale evidence', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'service',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(), 'status' => 'open',
+    ]);
+
+    expect(fn () => (new AddSaleItem)->handle($owner, $context, $sale, [
+        'item_type' => 'service', 'service_id' => $service->getKey(), 'customer_package_id' => $package->getKey(),
+    ]))->toThrow(ValidationException::class, 'comprovação válida de venda paga');
+
+    expect($package->fresh()->status)->toBe('active')
+        ->and($package->fresh()->remaining_sessions)->toBe(4)
+        ->and($package->serviceBalances()->where('service_id', $service->getKey())->value('remaining_quantity'))->toBe(4)
+        ->and($sale->items()->exists())->toBeFalse()
+        ->and(PackageUsageReservation::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
 });

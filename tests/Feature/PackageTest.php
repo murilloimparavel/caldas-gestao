@@ -1,6 +1,8 @@
 <?php
 
+use App\Actions\Closing\FinalizeClosingSession;
 use App\Actions\Identity\OnboardTenant;
+use App\Actions\Sales\AddSaleItem;
 use App\Models\CashMovement;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
@@ -45,6 +47,35 @@ function packageTestExecutor(Tenant $tenant, Unit $unit): Professional
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
     ]);
+}
+
+function createPaidPackageForManualConsumption(User $owner, Tenant $tenant, Unit $unit, Customer $customer, Service $service): CustomerPackage
+{
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'price_cents' => 20000,
+        'total_sessions' => 2, 'validity_days' => 30,
+    ]);
+    $template->services()->attach($service->getKey(), [
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'included_quantity' => 2,
+    ]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'type' => 'mixed',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(), 'status' => 'open',
+    ]);
+    (new AddSaleItem)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), $sale, [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+        'professional_id' => packageTestExecutor($tenant, $unit)->getKey(),
+    ]);
+    (new FinalizeClosingSession)->handle($owner, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey()), [
+        'sale_ids' => [$sale->getKey()],
+        'payment_method' => 'pix',
+    ]);
+
+    return CustomerPackage::query()->where('sale_id', $sale->getKey())->firstOrFail();
 }
 
 it('allows creating, updating, viewing, and deactivating package templates', function () {
@@ -412,34 +443,8 @@ it('consumes package sessions atomically, records usage and exhausts package on 
         'unit_id' => $unit->getKey(),
     ]);
 
-    $template = PackageTemplate::factory()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'total_sessions' => 2,
-    ]);
-
-    $customerPackage = CustomerPackage::factory()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'customer_id' => $customer->getKey(),
-        'package_template_id' => $template->getKey(),
-        'total_sessions' => 2,
-        'remaining_sessions' => 2,
-        'status' => 'active',
-        'expires_at' => now()->addDays(30)->toDateString(),
-    ]);
     $service = Service::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
-    $customerPackage->forceFill([
-        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
-    ])->save();
-    CustomerPackageService::query()->create([
-        'tenant_id' => $tenant->getKey(),
-        'unit_id' => $unit->getKey(),
-        'customer_package_id' => $customerPackage->getKey(),
-        'service_id' => $service->getKey(),
-        'allocated_quantity' => 2,
-        'remaining_quantity' => 2,
-    ]);
+    $customerPackage = createPaidPackageForManualConsumption($owner, $tenant, $unit, $customer, $service);
 
     // 1st consumption
     $consume1 = $this->actingAs($owner)->post(route('customer-packages.consume', $customerPackage), [
