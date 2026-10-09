@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -158,7 +159,7 @@ export default function SalesIndex({
     const [closeOpen, setCloseOpen] = useState(false);
     const [openCashShiftDialog, setOpenCashShiftDialog] = useState(false);
     const [paymentAllocationValid, setPaymentAllocationValid] = useState(true);
-    const [createKey] = useState(() => createIdempotencyKey('sale-open'));
+    const [createKey, rotateCreateKey] = useIdempotencyKey('sale-open');
     const [closeKey, setCloseKey] = useState(() =>
         createIdempotencyKey('closing-session'),
     );
@@ -265,7 +266,13 @@ export default function SalesIndex({
                         canManage ? (
                             <Dialog
                                 open={createOpen}
-                                onOpenChange={setCreateOpen}
+                                onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateCreateKey();
+                                    }
+
+                                    setCreateOpen(open);
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full sm:w-auto">
@@ -289,8 +296,12 @@ export default function SalesIndex({
                                         headers={{
                                             'X-Idempotency-Key': createKey,
                                         }}
+                                        onChange={rotateCreateKey}
                                         resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
+                                        onSuccess={() => {
+                                            rotateCreateKey();
+                                            setCreateOpen(false);
+                                        }}
                                         className="space-y-5"
                                     >
                                         {({ errors, processing }) => (
@@ -674,6 +685,11 @@ export default function SalesIndex({
                             headers={{
                                 'X-Idempotency-Key': closeKey,
                             }}
+                            onChange={() =>
+                                setCloseKey(
+                                    createIdempotencyKey('closing-session'),
+                                )
+                            }
                             onSubmit={(event) => {
                                 if (
                                     selectedTotal > 0 &&
@@ -683,6 +699,9 @@ export default function SalesIndex({
                                 }
                             }}
                             onSuccess={() => {
+                                setCloseKey(
+                                    createIdempotencyKey('closing-session'),
+                                );
                                 setCloseOpen(false);
                                 setSelectedIds([]);
                             }}

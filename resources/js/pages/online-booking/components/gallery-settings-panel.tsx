@@ -1,4 +1,5 @@
 import { GalleryHorizontalEnd, ImagePlus } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SectionCard } from './booking-form-primitives';
@@ -21,10 +22,40 @@ export function GallerySettingsPanel({
 }: {
     galleryItems: GalleryItem[];
     onUpload: (file: File) => void;
-    onUpdateAlt: (id: string, alt: string) => void;
+    onUpdateAlt: (id: string, alt: string) => Promise<boolean>;
     onDelete: (id: string) => void;
     onMove: (id: string, direction: -1 | 1) => void;
 }) {
+    const [pendingAltTextIds, setPendingAltTextIds] = useState<Set<string>>(
+        () => new Set(),
+    );
+
+    const saveAltText = async (
+        id: string,
+        value: string,
+        persistedValue: string,
+        input: HTMLInputElement,
+    ): Promise<void> => {
+        setPendingAltTextIds((current) => new Set(current).add(id));
+
+        try {
+            const saved = await onUpdateAlt(id, value);
+
+            if (!saved) {
+                input.value = persistedValue;
+            }
+        } catch {
+            input.value = persistedValue;
+        } finally {
+            setPendingAltTextIds((current) => {
+                const next = new Set(current);
+                next.delete(id);
+
+                return next;
+            });
+        }
+    };
+
     return (
         <SectionCard
             icon={GalleryHorizontalEnd}
@@ -60,14 +91,36 @@ export function GallerySettingsPanel({
                         )}
                         <div className="absolute inset-x-0 bottom-0 space-y-1 bg-background/90 p-2 backdrop-blur-sm">
                             <Input
+                                key={`${image.id}:${image.alt ?? image.alt_text ?? ''}`}
                                 aria-label={`Texto alternativo da imagem ${index + 1}`}
                                 defaultValue={image.alt ?? image.alt_text ?? ''}
-                                onBlur={(event) =>
-                                    onUpdateAlt(image.id, event.target.value)
-                                }
+                                disabled={pendingAltTextIds.has(image.id)}
+                                onBlur={(event) => {
+                                    const persistedValue =
+                                        image.alt ?? image.alt_text ?? '';
+                                    const input = event.currentTarget;
+                                    const value = input.value;
+
+                                    if (value !== persistedValue) {
+                                        void saveAltText(
+                                            image.id,
+                                            value,
+                                            persistedValue,
+                                            input,
+                                        );
+                                    }
+                                }}
                                 placeholder="Texto alternativo"
                                 className="h-7 text-3xs"
                             />
+                            {pendingAltTextIds.has(image.id) ? (
+                                <span
+                                    role="status"
+                                    className="text-3xs text-muted-foreground"
+                                >
+                                    Salvando texto alternativo…
+                                </span>
+                            ) : null}
                             <div className="flex gap-1">
                                 <Button
                                     type="button"

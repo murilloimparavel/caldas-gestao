@@ -103,7 +103,18 @@ export function QuickCreateCustomerModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setMutationKey(
+                        createIdempotencyKey('customer-quick-create'),
+                    );
+                }
+
+                onOpenChange(nextOpen);
+            }}
+        >
             <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Novo Cliente</DialogTitle>
@@ -112,7 +123,15 @@ export function QuickCreateCustomerModal({
                         agendamento.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                    onSubmit={handleSubmit}
+                    onChange={() =>
+                        setMutationKey(
+                            createIdempotencyKey('customer-quick-create'),
+                        )
+                    }
+                    className="space-y-4"
+                >
                     <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome"
@@ -242,7 +261,18 @@ export function QuickCreateServiceModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setMutationKey(
+                        createIdempotencyKey('service-quick-create'),
+                    );
+                }
+
+                onOpenChange(nextOpen);
+            }}
+        >
             <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Novo Serviço</DialogTitle>
@@ -251,7 +281,15 @@ export function QuickCreateServiceModal({
                         agendamento.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                    onSubmit={handleSubmit}
+                    onChange={() =>
+                        setMutationKey(
+                            createIdempotencyKey('service-quick-create'),
+                        )
+                    }
+                    className="space-y-4"
+                >
                     <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome do Serviço"
@@ -391,7 +429,18 @@ export function QuickCreateProfessionalModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setMutationKey(
+                        createIdempotencyKey('professional-quick-create'),
+                    );
+                }
+
+                onOpenChange(nextOpen);
+            }}
+        >
             <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Novo Profissional</DialogTitle>
@@ -399,7 +448,15 @@ export function QuickCreateProfessionalModal({
                         Cadastre um novo profissional para atender agendamentos.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                    onSubmit={handleSubmit}
+                    onChange={() =>
+                        setMutationKey(
+                            createIdempotencyKey('professional-quick-create'),
+                        )
+                    }
+                    className="space-y-4"
+                >
                     <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome do Profissional"
@@ -513,7 +570,18 @@ export function QuickCreateSupplierModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setMutationKey(
+                        createIdempotencyKey('supplier-quick-create'),
+                    );
+                }
+
+                onOpenChange(nextOpen);
+            }}
+        >
             <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Novo Fornecedor</DialogTitle>
@@ -522,7 +590,15 @@ export function QuickCreateSupplierModal({
                         lançamento.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                    onSubmit={handleSubmit}
+                    onChange={() =>
+                        setMutationKey(
+                            createIdempotencyKey('supplier-quick-create'),
+                        )
+                    }
+                    className="space-y-4"
+                >
                     <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Razão Social / Empresa"
@@ -654,7 +730,18 @@ export function QuickCreateCategoryModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setMutationKey(
+                        createIdempotencyKey('category-quick-create'),
+                    );
+                }
+
+                onOpenChange(nextOpen);
+            }}
+        >
             <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Nova Categoria</DialogTitle>
@@ -663,7 +750,15 @@ export function QuickCreateCategoryModal({
                         lançamentos.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                    onSubmit={handleSubmit}
+                    onChange={() =>
+                        setMutationKey(
+                            createIdempotencyKey('category-quick-create'),
+                        )
+                    }
+                    className="space-y-4"
+                >
                     <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome da Categoria"
@@ -772,7 +867,18 @@ export function QuickCreateProductModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                    setMutationKey(
+                        createIdempotencyKey('product-quick-create'),
+                    );
+                }
+
+                onOpenChange(nextOpen);
+            }}
+        >
             <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Novo Produto</DialogTitle>
@@ -780,7 +886,15 @@ export function QuickCreateProductModal({
                         Cadastre um produto rapidamente para incluir na comanda.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                    onSubmit={handleSubmit}
+                    onChange={() =>
+                        setMutationKey(
+                            createIdempotencyKey('product-quick-create'),
+                        )
+                    }
+                    className="space-y-4"
+                >
                     <FormErrorSummary errors={form.errors} />
                     <FormField
                         label="Nome do Produto"

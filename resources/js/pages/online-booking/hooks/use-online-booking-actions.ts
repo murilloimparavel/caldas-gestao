@@ -1,5 +1,6 @@
-import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { router, useHttp } from '@inertiajs/react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 import onlineBooking from '@/routes/online_booking';
 import galleryRoutes from '@/routes/online_booking/gallery';
 import type { OnlineBookingProps } from '../types';
@@ -8,6 +9,18 @@ type UseOnlineBookingActionsOptions = {
     draft: OnlineBookingProps['draft'];
     publicUrl: string | null;
     gallery: NonNullable<OnlineBookingProps['gallery']>;
+};
+
+type GalleryUploadData = {
+    image: File | null;
+};
+
+type GalleryAltData = {
+    alt_text: string;
+};
+
+type GalleryReorderData = {
+    image_ids: string[];
 };
 
 export function useOnlineBookingActions({
@@ -21,6 +34,20 @@ export function useOnlineBookingActions({
     );
     const [publicationProcessing, setPublicationProcessing] = useState(false);
     const [galleryItems, setGalleryItems] = useState(gallery);
+    const [previousGallery, setPreviousGallery] = useState(gallery);
+    const galleryReorderInProgress = useRef(false);
+    const galleryUploadInProgress = useRef(false);
+    const galleryUploadRequest = useHttp<GalleryUploadData>({ image: null });
+    const galleryAltRequest = useHttp<GalleryAltData>({ alt_text: '' });
+    const galleryDeleteRequest = useHttp();
+    const galleryReorderRequest = useHttp<GalleryReorderData>({
+        image_ids: [],
+    });
+
+    if (gallery !== previousGallery) {
+        setPreviousGallery(gallery);
+        setGalleryItems(gallery);
+    }
 
     const copyPublicUrl = async (): Promise<void> => {
         if (!publicUrl || !navigator.clipboard) {
@@ -76,44 +103,169 @@ export function useOnlineBookingActions({
     };
 
     const uploadGalleryImage = (file: File): void => {
-        const data = new FormData();
-        data.append('image', file);
-        router.post(galleryRoutes.store.url(), data, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['gallery'] }),
-        });
+        if (galleryUploadInProgress.current) {
+            return;
+        }
+
+        galleryUploadInProgress.current = true;
+        galleryUploadRequest.setData({ image: file });
+        const toastId = toast.loading('Enviando imagem…');
+        void galleryUploadRequest
+            .post(galleryRoutes.store.url(), {
+                onSuccess: () => {
+                    toast.success('Imagem adicionada à galeria.', {
+                        id: toastId,
+                    });
+                    router.reload({
+                        only: ['gallery'],
+                        onError: () =>
+                            toast.error(
+                                'A imagem foi enviada, mas a galeria não pôde ser atualizada. Recarregue a página.',
+                            ),
+                        onNetworkError: () => {
+                            toast.error(
+                                'A imagem foi enviada, mas a atualização da galeria falhou por conexão. Recarregue a página.',
+                            );
+
+                            return false;
+                        },
+                        onHttpException: () => {
+                            toast.error(
+                                'A imagem foi enviada, mas o servidor não conseguiu atualizar a galeria. Recarregue a página.',
+                            );
+
+                            return false;
+                        },
+                    });
+                },
+                onError: (errors) =>
+                    toast.error(
+                        errors.image ??
+                            'Não foi possível enviar a imagem. Tente novamente.',
+                        { id: toastId },
+                    ),
+                onNetworkError: () => {
+                    toast.error(
+                        'Falha de conexão ao enviar a imagem. Verifique sua conexão e tente novamente.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onHttpException: () => {
+                    toast.error(
+                        'O servidor não conseguiu enviar a imagem. Tente novamente.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onCancel: () => toast.dismiss(toastId),
+                onFinish: () => {
+                    galleryUploadRequest.setData({ image: null });
+                    galleryUploadInProgress.current = false;
+                },
+            })
+            .catch(() => undefined);
     };
 
-    const updateGalleryAlt = (id: string, alt_text: string): void => {
-        router.patch(
-            galleryRoutes.update.url(id),
-            { alt_text },
-            {
-                preserveScroll: true,
-                onSuccess: () =>
+    const updateGalleryAlt = async (
+        id: string,
+        alt_text: string,
+    ): Promise<boolean> => {
+        galleryAltRequest.setData({ alt_text });
+        const toastId = toast.loading('Salvando o texto alternativo…');
+        let requestSucceeded = false;
+
+        try {
+            await galleryAltRequest.patch(galleryRoutes.update.url(id), {
+                onSuccess: () => {
                     setGalleryItems((items) =>
                         items.map((item) =>
                             item.id === id
                                 ? { ...item, alt: alt_text, alt_text }
                                 : item,
                         ),
+                    );
+                    toast.success('Texto alternativo atualizado.', {
+                        id: toastId,
+                    });
+                    requestSucceeded = true;
+                },
+                onError: (errors) =>
+                    toast.error(
+                        errors.alt_text ??
+                            'Não foi possível salvar o texto alternativo. Tente novamente.',
+                        { id: toastId },
                     ),
-            },
-        );
+                onNetworkError: () => {
+                    toast.error(
+                        'Falha de conexão ao salvar o texto alternativo. Tente novamente.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onHttpException: () => {
+                    toast.error(
+                        'O servidor não conseguiu salvar o texto alternativo. Tente novamente.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onCancel: () => toast.dismiss(toastId),
+            });
+        } catch {
+            return false;
+        }
+
+        return requestSucceeded;
     };
 
     const deleteGalleryImage = (id: string): void => {
-        router.delete(galleryRoutes.destroy.url(id), {
-            preserveScroll: true,
-            onSuccess: () =>
-                setGalleryItems((items) =>
-                    items.filter((item) => item.id !== id),
-                ),
-        });
+        const toastId = toast.loading('Excluindo imagem…');
+        void galleryDeleteRequest
+            .delete(galleryRoutes.destroy.url(id), {
+                onSuccess: () => {
+                    setGalleryItems((items) =>
+                        items.filter((item) => item.id !== id),
+                    );
+                    toast.success('Imagem excluída da galeria.', {
+                        id: toastId,
+                    });
+                },
+                onError: () =>
+                    toast.error(
+                        'Não foi possível excluir a imagem. Tente novamente.',
+                        { id: toastId },
+                    ),
+                onNetworkError: () => {
+                    toast.error(
+                        'Falha de conexão ao excluir a imagem. Tente novamente.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onHttpException: () => {
+                    toast.error(
+                        'O servidor não conseguiu excluir a imagem. Tente novamente.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onCancel: () => toast.dismiss(toastId),
+            })
+            .catch(() => undefined);
     };
 
     const moveGalleryImage = (id: string, direction: -1 | 1): void => {
+        if (galleryReorderInProgress.current) {
+            return;
+        }
+
         const index = galleryItems.findIndex((item) => item.id === id);
         const nextIndex = index + direction;
 
@@ -122,16 +274,55 @@ export function useOnlineBookingActions({
         }
 
         const next = [...galleryItems];
+        const previousItems = galleryItems;
 
         [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+        galleryReorderInProgress.current = true;
         setGalleryItems(next);
-        router.post(
-            galleryRoutes.reorder.url(),
-            {
-                image_ids: next.map((item) => item.id),
-            },
-            { preserveScroll: true },
-        );
+        galleryReorderRequest.setData({
+            image_ids: next.map((item) => item.id),
+        });
+        const toastId = toast.loading('Salvando a ordem da galeria…');
+        void galleryReorderRequest
+            .post(galleryRoutes.reorder.url(), {
+                onSuccess: () =>
+                    toast.success('Ordem da galeria atualizada.', {
+                        id: toastId,
+                    }),
+                onError: () => {
+                    setGalleryItems(previousItems);
+                    toast.error(
+                        'Não foi possível salvar a ordem. A galeria voltou à ordem anterior.',
+                        { id: toastId },
+                    );
+                },
+                onNetworkError: () => {
+                    setGalleryItems(previousItems);
+                    toast.error(
+                        'Falha de conexão ao salvar a ordem. A galeria voltou à ordem anterior.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onHttpException: () => {
+                    setGalleryItems(previousItems);
+                    toast.error(
+                        'O servidor não conseguiu salvar a ordem. A galeria voltou à ordem anterior.',
+                        { id: toastId },
+                    );
+
+                    return false;
+                },
+                onCancel: () => {
+                    setGalleryItems(previousItems);
+                    toast.dismiss(toastId);
+                },
+                onFinish: () => {
+                    galleryReorderInProgress.current = false;
+                },
+            })
+            .catch(() => undefined);
     };
 
     return {

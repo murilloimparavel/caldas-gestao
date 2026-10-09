@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -163,7 +164,7 @@ export default function SubscriptionsShow({
     subscribers,
 }: Props) {
     const [editOpen, setEditOpen] = useState(false);
-    const [editKey] = useState(() => createIdempotencyKey('subscription-edit'));
+    const [editKey, rotateEditKey] = useIdempotencyKey('subscription-edit');
     const [cancelSubOpen, setCancelSubOpen] = useState<string | null>(null);
     const [consumeSubscriber, setConsumeSubscriber] =
         useState<SubscriberAction | null>(null);
@@ -220,7 +221,16 @@ export default function SubscriptionsShow({
                 action={
                     canManage && (
                         <div className="flex gap-2">
-                            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                            <Dialog
+                                open={editOpen}
+                                onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateEditKey();
+                                    }
+
+                                    setEditOpen(open);
+                                }}
+                            >
                                 <DialogTrigger asChild>
                                     <Button variant="outline">
                                         Editar Plano
@@ -243,7 +253,11 @@ export default function SubscriptionsShow({
                                         headers={{
                                             'X-Idempotency-Key': editKey,
                                         }}
-                                        onSuccess={() => setEditOpen(false)}
+                                        onChange={rotateEditKey}
+                                        onSuccess={() => {
+                                            rotateEditKey();
+                                            setEditOpen(false);
+                                        }}
                                         className="space-y-4"
                                     >
                                         {({ processing, errors }) => (

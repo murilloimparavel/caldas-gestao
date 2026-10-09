@@ -6,6 +6,7 @@ use App\Actions\Identity\OnboardTenant;
 use App\Models\AvailabilityRule;
 use App\Models\Category;
 use App\Models\OnlineBookingDraft;
+use App\Models\OnlineBookingGalleryImage;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
 use App\Models\Professional;
@@ -143,6 +144,16 @@ final class PublicBookingE2ESeeder extends Seeder
                 'content_hash' => hash('sha256', json_encode($draftContent, JSON_THROW_ON_ERROR)),
                 'updated_by' => $updatedBy->getKey(),
             ]);
+
+            foreach ([1, 2] as $position) {
+                OnlineBookingGalleryImage::query()->create([
+                    'tenant_id' => $tenant->getKey(),
+                    'unit_id' => $unit->getKey(),
+                    'path' => "e2e-gallery-placeholder-{$position}.jpg",
+                    'alt_text' => "Foto de teste {$position}",
+                    'position' => $position,
+                ]);
+            }
         }
     }
 

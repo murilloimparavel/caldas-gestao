@@ -2,7 +2,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Clock3, Plus, Scissors } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -110,7 +110,7 @@ export default function ServicesIndex({
     const [createOpen, setCreateOpen] = useState(false);
     const { view, setView } = useResourceView('caldas-gestao:services-view');
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
-    const [createKey] = useState(() => createIdempotencyKey('service-create'));
+    const [createKey, rotateCreateKey] = useIdempotencyKey('service-create');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('service.manage');
 
@@ -148,6 +148,10 @@ export default function ServicesIndex({
                             <Dialog
                                 open={createOpen}
                                 onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateCreateKey();
+                                    }
+
                                     setCreateOpen(open);
 
                                     if (!open) {
@@ -175,8 +179,10 @@ export default function ServicesIndex({
                                         headers={{
                                             'X-Idempotency-Key': createKey,
                                         }}
+                                        onChange={rotateCreateKey}
                                         resetOnSuccess
                                         onSuccess={() => {
+                                            rotateCreateKey();
                                             setCreateOpen(false);
                                             setSelectedPhoto(null);
                                         }}

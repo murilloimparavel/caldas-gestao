@@ -2,7 +2,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus, RefreshCw, Scissors, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -114,8 +114,8 @@ export default function SubscriptionsIndex({
     metrics,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
-    const [createKey] = useState(() =>
-        createIdempotencyKey('subscription-create'),
+    const [createKey, rotateCreateKey] = useIdempotencyKey(
+        'subscription-create',
     );
     const [billingCycle, setBillingCycle] = useState('monthly');
     const { props } = usePage<SharedPageProps>();
@@ -132,7 +132,16 @@ export default function SubscriptionsIndex({
                 description="Gerencie planos recorrentes e acompanhe assinantes ativos."
                 action={
                     canManage && (
-                        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                        <Dialog
+                            open={createOpen}
+                            onOpenChange={(open) => {
+                                if (open) {
+                                    rotateCreateKey();
+                                }
+
+                                setCreateOpen(open);
+                            }}
+                        >
                             <DialogTrigger asChild>
                                 <Button>
                                     <Plus className="mr-2 h-4 w-4" />
@@ -154,7 +163,11 @@ export default function SubscriptionsIndex({
                                     method="post"
                                     action={subscriptionsRoutes.store().url}
                                     headers={{ 'X-Idempotency-Key': createKey }}
-                                    onSuccess={() => setCreateOpen(false)}
+                                    onChange={rotateCreateKey}
+                                    onSuccess={() => {
+                                        rotateCreateKey();
+                                        setCreateOpen(false);
+                                    }}
                                     className="space-y-4"
                                 >
                                     {({ processing, errors }) => (

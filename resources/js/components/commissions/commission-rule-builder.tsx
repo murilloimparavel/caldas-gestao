@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -106,6 +106,10 @@ export function CommissionRuleBuilder({
     editingRule,
     onCancel,
 }: CommissionRuleBuilderProps) {
+    const [idempotencyKey, rotateIdempotencyKey] = useIdempotencyKey(
+        'commission-rule-save',
+        editingRule?.id ?? 'create',
+    );
     const initialItemType = getInitialItemType(editingRule);
     const initialScopeMode = getInitialScopeMode(editingRule);
     const derivedServiceCategories = categories.filter(
@@ -296,9 +300,13 @@ export function CommissionRuleBuilder({
                     }
                     method={editingRule ? 'put' : 'post'}
                     headers={{
-                        'X-Idempotency-Key': createIdempotencyKey('save-rule'),
+                        'X-Idempotency-Key': idempotencyKey,
                     }}
-                    onSuccess={onCancel}
+                    onChange={rotateIdempotencyKey}
+                    onSuccess={() => {
+                        rotateIdempotencyKey();
+                        onCancel();
+                    }}
                     className="space-y-5"
                 >
                     {({ processing, errors }) => (

@@ -1,6 +1,7 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { lazy, Suspense, useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
+import { Spinner } from '@/components/ui/spinner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 
@@ -9,6 +10,17 @@ const AuthLayout = lazy(() => import('@/layouts/auth-layout'));
 const SettingsLayout = lazy(() => import('@/layouts/settings/layout'));
 
 const appName = import.meta.env.VITE_APP_NAME || 'Caldas Gestão';
+
+function AppLoadingFallback() {
+    return (
+        <main className="flex min-h-dvh items-center justify-center bg-background text-foreground">
+            <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                <Spinner className="size-5" aria-label="Carregando a página" />
+                <span aria-hidden="true">Carregando…</span>
+            </div>
+        </main>
+    );
+}
 
 function AppBootstrap({ children }: { children: React.ReactNode }) {
     useEffect(() => {
@@ -37,7 +49,7 @@ createInertiaApp({
     strictMode: true,
     withApp(app) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<AppLoadingFallback />}>
                 <AppBootstrap>
                     <TooltipProvider delayDuration={0}>
                         {app}

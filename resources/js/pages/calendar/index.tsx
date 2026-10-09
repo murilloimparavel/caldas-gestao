@@ -42,6 +42,7 @@ import {
     FormErrorSummary,
     FormField,
     PageCanvas,
+    useIdempotencyKey,
 } from '@/components/operational';
 import { cn } from '@/lib/utils';
 import {
@@ -391,12 +392,9 @@ function AppointmentForm({
     services: CalendarOption[];
     unitTimezone: string;
 }) {
-    const [mutationKey] = useState(() =>
-        createIdempotencyKey(
-            appointment
-                ? `appointment-update:${appointment.id}`
-                : 'appointment-create',
-        ),
+    const [mutationKey, rotateMutationKey] = useIdempotencyKey(
+        appointment ? 'appointment-update' : 'appointment-create',
+        appointment?.id,
     );
 
     const [customerList, setCustomerList] =
@@ -493,6 +491,7 @@ function AppointmentForm({
     };
 
     const handleCustomerCreated = (created: CreatedEntity) => {
+        rotateMutationKey();
         const newOpt: CalendarOption = { id: created.id, name: created.name };
         setCustomerList((prev) => [
             ...prev.filter((c) => c.id !== created.id),
@@ -502,6 +501,7 @@ function AppointmentForm({
     };
 
     const handleServiceCreated = (created: CreatedEntity) => {
+        rotateMutationKey();
         const newOpt: CalendarOption = { id: created.id, name: created.name };
         setServiceList((prev) => [
             ...prev.filter((s) => s.id !== created.id),
@@ -530,6 +530,7 @@ function AppointmentForm({
     };
 
     const handleProfessionalCreated = (created: CreatedEntity) => {
+        rotateMutationKey();
         const newOpt: CalendarOption = { id: created.id, name: created.name };
         setProfessionalList((prev) => [
             ...prev.filter((p) => p.id !== created.id),
@@ -637,7 +638,11 @@ function AppointmentForm({
                 {...route}
                 headers={{ 'X-Idempotency-Key': mutationKey }}
                 className="space-y-6"
-                onSuccess={onClose}
+                onChange={rotateMutationKey}
+                onSuccess={() => {
+                    rotateMutationKey();
+                    onClose();
+                }}
             >
                 {({ errors, processing, submit }) => {
                     const automationIssue = automationIssueFromErrors(errors);
@@ -1469,8 +1474,9 @@ function OpenAppointmentSaleForm({
     appointment: CalendarAppointment;
     onClose: () => void;
 }) {
-    const [mutationKey] = useState(() =>
-        createIdempotencyKey(`appointment-sale-open:${appointment.id}`),
+    const [mutationKey, rotateMutationKey] = useIdempotencyKey(
+        'appointment-sale-open',
+        appointment.id,
     );
     const [selectedSaleCategory, setSelectedSaleCategory] = useState('');
 
@@ -1479,7 +1485,11 @@ function OpenAppointmentSaleForm({
             {...sales.store.form()}
             headers={{ 'X-Idempotency-Key': mutationKey }}
             className="space-y-4"
-            onSuccess={onClose}
+            onChange={rotateMutationKey}
+            onSuccess={() => {
+                rotateMutationKey();
+                onClose();
+            }}
         >
             {({ errors, processing, submit }) => (
                 <>
@@ -1572,8 +1582,8 @@ function ScheduleBlockForm({
     professionals: CalendarOption[];
     unitTimezone: string;
 }) {
-    const [mutationKey] = useState(() =>
-        createIdempotencyKey('schedule-block-create'),
+    const [mutationKey, rotateMutationKey] = useIdempotencyKey(
+        'schedule-block-create',
     );
 
     const [selectedProfessional, setSelectedProfessional] = useState(
@@ -1582,6 +1592,7 @@ function ScheduleBlockForm({
     const [quickProfessionalOpen, setQuickProfessionalOpen] = useState(false);
 
     const handleProfessionalCreated = (created: CreatedEntity) => {
+        rotateMutationKey();
         setSelectedProfessional(created.id);
     };
 
@@ -1594,7 +1605,11 @@ function ScheduleBlockForm({
                 {...storeScheduleBlock.form()}
                 headers={{ 'X-Idempotency-Key': mutationKey }}
                 className="space-y-4"
-                onSuccess={onClose}
+                onChange={rotateMutationKey}
+                onSuccess={() => {
+                    rotateMutationKey();
+                    onClose();
+                }}
             >
                 {({ errors, processing }) => (
                     <>

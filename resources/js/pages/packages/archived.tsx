@@ -1,12 +1,12 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { ArrowLeft, ArchiveRestore, History, Search } from 'lucide-react';
 import {
-    createIdempotencyKey,
     EmptyState,
     formatMoney,
     PageCanvas,
     Pagination,
     ResourceHeader,
+    useIdempotencyKey,
 } from '@/components/operational';
 import type { Paginated } from '@/components/operational';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,27 @@ type ArchivedPackage = {
         user?: { id: string; name: string } | null;
     }>;
 };
+
+function RestorePackageForm({ packageId }: { packageId: string }) {
+    const [idempotencyKey, rotateKey] = useIdempotencyKey(
+        'customer-package-restore',
+        packageId,
+    );
+
+    return (
+        <Form
+            method="post"
+            action={customerPackageActions.restore(packageId).url}
+            headers={{ 'X-Idempotency-Key': idempotencyKey }}
+            onSuccess={rotateKey}
+        >
+            <Button type="submit" variant="outline">
+                <ArchiveRestore className="mr-2 size-4" />
+                Restaurar pacote
+            </Button>
+        </Form>
+    );
+}
 
 type Props = {
     canManage: boolean;
@@ -195,26 +216,7 @@ export default function ArchivedPackages({
                                     </div>
                                 </div>
                                 {canManage && (
-                                    <Form
-                                        method="post"
-                                        action={
-                                            customerPackageActions.restore(
-                                                pkg.id,
-                                            ).url
-                                        }
-                                        headers={{
-                                            'X-Idempotency-Key':
-                                                createIdempotencyKey(
-                                                    'customer-package-restore',
-                                                    pkg.id,
-                                                ),
-                                        }}
-                                    >
-                                        <Button type="submit" variant="outline">
-                                            <ArchiveRestore className="mr-2 size-4" />
-                                            Restaurar pacote
-                                        </Button>
-                                    </Form>
+                                    <RestorePackageForm packageId={pkg.id} />
                                 )}
                             </div>
 

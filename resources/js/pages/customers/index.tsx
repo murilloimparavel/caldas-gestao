@@ -2,7 +2,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -50,7 +50,7 @@ export default function CustomersIndex({
     filters,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
-    const [createKey] = useState(() => createIdempotencyKey('customer-create'));
+    const [createKey, rotateCreateKey] = useIdempotencyKey('customer-create');
     const { view, setView } = useResourceView('caldas-gestao:customers-view');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('customer.manage');
@@ -75,7 +75,13 @@ export default function CustomersIndex({
                         canManage ? (
                             <Dialog
                                 open={createOpen}
-                                onOpenChange={setCreateOpen}
+                                onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateCreateKey();
+                                    }
+
+                                    setCreateOpen(open);
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full sm:w-auto">
@@ -96,8 +102,12 @@ export default function CustomersIndex({
                                         headers={{
                                             'X-Idempotency-Key': createKey,
                                         }}
+                                        onChange={rotateCreateKey}
                                         resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
+                                        onSuccess={() => {
+                                            rotateCreateKey();
+                                            setCreateOpen(false);
+                                        }}
                                         className="space-y-5"
                                     >
                                         {({ errors, processing }) => (

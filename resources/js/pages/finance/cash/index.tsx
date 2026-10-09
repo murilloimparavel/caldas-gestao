@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     DenominationShortcuts,
     EmptyState,
     FormActions,
@@ -126,6 +126,22 @@ export default function CashIndex({ active_shift, metrics }: Props) {
     const [supplyModalOpen, setSupplyModalOpen] = useState(false);
     const [bleedModalOpen, setBleedModalOpen] = useState(false);
     const [closeModalOpen, setCloseModalOpen] = useState(false);
+    const [openShiftKey, rotateOpenShiftKey] = useIdempotencyKey(
+        'cash-shift-open',
+        props.auth.user?.id ?? 'anonymous',
+    );
+    const [supplyKey, rotateSupplyKey] = useIdempotencyKey(
+        'cash-supply',
+        active_shift?.id,
+    );
+    const [bleedKey, rotateBleedKey] = useIdempotencyKey(
+        'cash-bleed',
+        active_shift?.id,
+    );
+    const [closeShiftKey, rotateCloseShiftKey] = useIdempotencyKey(
+        'cash-close',
+        active_shift?.id,
+    );
 
     // Initial Shift Form
     const [initialAmountFloat, setInitialAmountFloat] = useState('0,00');
@@ -216,7 +232,16 @@ export default function CashIndex({ active_shift, metrics }: Props) {
 
             {/* Modal de Abertura de Caixa Independente */}
             {canOpen && (
-                <Dialog open={openModalOpen} onOpenChange={setOpenModalOpen}>
+                <Dialog
+                    open={openModalOpen}
+                    onOpenChange={(open) => {
+                        if (open) {
+                            rotateOpenShiftKey();
+                        }
+
+                        setOpenModalOpen(open);
+                    }}
+                >
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Abrir Novo Turno de Caixa</DialogTitle>
@@ -229,12 +254,11 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                         <Form
                             {...cashShifts.store.form()}
                             headers={{
-                                'X-Idempotency-Key': createIdempotencyKey(
-                                    'cash-shift-open',
-                                    props.auth.user?.id ?? 'anonymous',
-                                ),
+                                'X-Idempotency-Key': openShiftKey,
                             }}
+                            onChange={rotateOpenShiftKey}
                             onSuccess={() => {
+                                rotateOpenShiftKey();
                                 setOpenModalOpen(false);
                                 setInitialAmountCents(0);
                                 setInitialAmountFloat('0,00');
@@ -476,7 +500,13 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                             {canMove && (
                                 <Dialog
                                     open={supplyModalOpen}
-                                    onOpenChange={setSupplyModalOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateSupplyKey();
+                                        }
+
+                                        setSupplyModalOpen(open);
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button
@@ -504,13 +534,11 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
-                                                'X-Idempotency-Key':
-                                                    createIdempotencyKey(
-                                                        'cash-supply',
-                                                        active_shift.id,
-                                                    ),
+                                                'X-Idempotency-Key': supplyKey,
                                             }}
+                                            onChange={rotateSupplyKey}
                                             onSuccess={() => {
+                                                rotateSupplyKey();
                                                 setSupplyModalOpen(false);
                                                 setSupplyAmountCents(0);
                                                 setSupplyAmountFloat('');
@@ -648,7 +676,13 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                             {canMove && (
                                 <Dialog
                                     open={bleedModalOpen}
-                                    onOpenChange={setBleedModalOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateBleedKey();
+                                        }
+
+                                        setBleedModalOpen(open);
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button
@@ -676,13 +710,11 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                                 cashShift: active_shift.id,
                                             })}
                                             headers={{
-                                                'X-Idempotency-Key':
-                                                    createIdempotencyKey(
-                                                        'cash-bleed',
-                                                        active_shift.id,
-                                                    ),
+                                                'X-Idempotency-Key': bleedKey,
                                             }}
+                                            onChange={rotateBleedKey}
                                             onSuccess={() => {
+                                                rotateBleedKey();
                                                 setBleedModalOpen(false);
                                                 setBleedAmountCents(0);
                                                 setBleedAmountFloat('');
@@ -830,7 +862,13 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                             {canClose && (
                                 <Dialog
                                     open={closeModalOpen}
-                                    onOpenChange={setCloseModalOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateCloseShiftKey();
+                                        }
+
+                                        setCloseModalOpen(open);
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button
@@ -860,12 +898,11 @@ export default function CashIndex({ active_shift, metrics }: Props) {
                                             })}
                                             headers={{
                                                 'X-Idempotency-Key':
-                                                    createIdempotencyKey(
-                                                        'cash-close',
-                                                        active_shift.id,
-                                                    ),
+                                                    closeShiftKey,
                                             }}
+                                            onChange={rotateCloseShiftKey}
                                             onSuccess={() => {
+                                                rotateCloseShiftKey();
                                                 setCloseModalOpen(false);
                                                 setFinalAmountCents(0);
                                                 setFinalAmountFloat('');

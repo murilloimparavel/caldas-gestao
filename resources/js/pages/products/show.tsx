@@ -18,7 +18,7 @@ import {
 import { useState } from 'react';
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -192,13 +192,10 @@ export default function ProductShow({
     categoryOptions = [],
     movements,
 }: Props) {
-    const [updateKey] = useState(() => createIdempotencyKey('product-update'));
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('product-destroy'),
-    );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('product-reactivate'),
-    );
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey('product-update');
+    const [destroyKey, rotateDestroyKey] = useIdempotencyKey('product-destroy');
+    const [reactivateKey, rotateReactivateKey] =
+        useIdempotencyKey('product-reactivate');
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [inactivateConflict, setInactivateConflict] = useState(false);
     const [inactivateProcessing, setInactivateProcessing] = useState(false);
@@ -300,6 +297,8 @@ export default function ProductShow({
                         <Form
                             {...products.update.form(product.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
+                            onChange={rotateUpdateKey}
+                            onSuccess={rotateUpdateKey}
                             className="space-y-5"
                         >
                             {({ errors, processing }) => (
@@ -490,6 +489,10 @@ export default function ProductShow({
                                                 <Dialog
                                                     open={inactivateOpen}
                                                     onOpenChange={(open) => {
+                                                        if (open) {
+                                                            rotateDestroyKey();
+                                                        }
+
                                                         if (
                                                             !open &&
                                                             inactivateProcessing
@@ -554,11 +557,12 @@ export default function ProductShow({
 
                                                                 return true;
                                                             }}
-                                                            onSuccess={() =>
+                                                            onSuccess={() => {
+                                                                rotateDestroyKey();
                                                                 setInactivateOpen(
                                                                     false,
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                             onFinish={() =>
                                                                 setInactivateProcessing(
                                                                     false,
@@ -679,9 +683,13 @@ export default function ProductShow({
                                             ) : (
                                                 <Dialog
                                                     open={reactivateOpen}
-                                                    onOpenChange={
-                                                        setReactivateOpen
-                                                    }
+                                                    onOpenChange={(open) => {
+                                                        if (open) {
+                                                            rotateReactivateKey();
+                                                        }
+
+                                                        setReactivateOpen(open);
+                                                    }}
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -714,11 +722,12 @@ export default function ProductShow({
                                                                     reactivateKey,
                                                             }}
                                                             method="patch"
-                                                            onSuccess={() =>
+                                                            onSuccess={() => {
+                                                                rotateReactivateKey();
                                                                 setReactivateOpen(
                                                                     false,
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             {({
                                                                 processing:

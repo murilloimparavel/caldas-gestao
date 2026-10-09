@@ -1,5 +1,5 @@
 import { Head, router, useHttp } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -58,6 +58,24 @@ const valueOrDefault = (
     key: keyof BookingAppearance,
 ): string => appearance?.[key] ?? defaults[key];
 
+function resolveAppearance(
+    draft: NonNullable<OnlineBookingProps['draft']>,
+    settings: PublicSettings,
+    unitName: string,
+): Record<keyof BookingAppearance, string> {
+    const source = draft.content?.appearance ?? settings.appearance;
+
+    return {
+        brand_name: valueOrDefault(source, 'brand_name') || unitName,
+        headline: valueOrDefault(source, 'headline'),
+        subheadline: valueOrDefault(source, 'subheadline'),
+        primary_color: valueOrDefault(source, 'primary_color'),
+        background_color: valueOrDefault(source, 'background_color'),
+        cta_label: valueOrDefault(source, 'cta_label'),
+        font_style: valueOrDefault(source, 'font_style'),
+    };
+}
+
 export function AppearanceEditor({
     draft,
     settings,
@@ -71,44 +89,25 @@ export function AppearanceEditor({
     templateKey: string;
     logoUrl?: string | null;
 }) {
-    const initial = {
-        brand_name:
-            valueOrDefault(
-                draft.content?.appearance ?? settings.appearance,
-                'brand_name',
-            ) || unitName,
-        headline: valueOrDefault(
-            draft.content?.appearance ?? settings.appearance,
-            'headline',
-        ),
-        subheadline: valueOrDefault(
-            draft.content?.appearance ?? settings.appearance,
-            'subheadline',
-        ),
-        primary_color: valueOrDefault(
-            draft.content?.appearance ?? settings.appearance,
-            'primary_color',
-        ),
-        background_color: valueOrDefault(
-            draft.content?.appearance ?? settings.appearance,
-            'background_color',
-        ),
-        cta_label: valueOrDefault(
-            draft.content?.appearance ?? settings.appearance,
-            'cta_label',
-        ),
-        font_style: valueOrDefault(
-            draft.content?.appearance ?? settings.appearance,
-            'font_style',
-        ),
-    } satisfies Record<keyof BookingAppearance, string>;
+    const initial = useMemo(
+        () => resolveAppearance(draft, settings, unitName),
+        [draft, settings, unitName],
+    );
     const [appearance, setAppearance] = useState(initial);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const hasUnsavedChanges = useRef(false);
     const draftRequest = useHttp();
 
+    useEffect(() => {
+        if (!hasUnsavedChanges.current) {
+            setAppearance(initial);
+        }
+    }, [initial]);
+
     const update = (key: keyof typeof appearance, value: string): void => {
+        hasUnsavedChanges.current = true;
         setSaved(false);
         setError(null);
         setAppearance((current) => ({ ...current, [key]: value }));
@@ -127,14 +126,67 @@ export function AppearanceEditor({
             },
         });
 
+        let requestSucceeded = false;
+        let requestError: string | null = null;
+
         try {
-            await draftRequest.patch(onlineBooking.draft.update.url());
+            await draftRequest.patch(onlineBooking.draft.update.url(), {
+                onSuccess: () => {
+                    requestSucceeded = true;
+                },
+                onError: () => {
+                    requestError =
+                        'Não foi possível salvar a aparência. Revise os dados e tente novamente.';
+                    setError(requestError);
+                },
+                onNetworkError: () => {
+                    requestError =
+                        'Falha de conexão ao salvar a aparência. Tente novamente.';
+                    setError(requestError);
+
+                    return false;
+                },
+                onHttpException: () => {
+                    requestError =
+                        'O servidor não conseguiu salvar a aparência. Tente novamente.';
+                    setError(requestError);
+
+                    return false;
+                },
+            });
+
+            if (!requestSucceeded) {
+                return;
+            }
+
+            hasUnsavedChanges.current = false;
             setSaved(true);
             router.reload({
                 only: ['draft', 'publication', 'draftDiff', 'previewUrl'],
+                onError: () =>
+                    setError(
+                        'A aparência foi salva, mas não foi possível atualizar os dados exibidos. Recarregue a página.',
+                    ),
+                onNetworkError: () => {
+                    setError(
+                        'A aparência foi salva, mas a atualização da tela falhou por conexão. Recarregue a página.',
+                    );
+
+                    return false;
+                },
+                onHttpException: () => {
+                    setError(
+                        'A aparência foi salva, mas o servidor não conseguiu atualizar os dados exibidos. Recarregue a página.',
+                    );
+
+                    return false;
+                },
             });
         } catch {
-            setError('Não foi possível salvar a aparência. Tente novamente.');
+            setError(
+                requestError ??
+                    'Não foi possível salvar a aparência. Tente novamente.',
+            );
         } finally {
             setSaving(false);
         }

@@ -22,6 +22,7 @@ import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPacka
 import { statusLabels } from '@/components/calendar';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -411,18 +412,15 @@ export default function CustomerShow({
     const [activeTab, setActiveTab] = useState<
         'sales' | 'appointments' | 'packages' | 'details' | 'subscriptions'
     >('sales');
-    const [updateKey] = useState(() => createIdempotencyKey('customer-update'));
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('customer-destroy'),
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey('customer-update');
+    const [destroyKey, rotateDestroyKey] =
+        useIdempotencyKey('customer-destroy');
+    const [reactivateKey, rotateReactivateKey] = useIdempotencyKey(
+        'customer-reactivate',
     );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('customer-reactivate'),
-    );
-    const [sellKey] = useState(() =>
-        createIdempotencyKey('customer-package-sell'),
-    );
-    const [consumeKey] = useState(() =>
-        createIdempotencyKey('customer-package-consume'),
+    const [sellKey, rotateSellKey] = useIdempotencyKey('customer-package-sell');
+    const [consumeKey, rotateConsumeKey] = useIdempotencyKey(
+        'customer-package-consume',
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -439,6 +437,7 @@ export default function CustomerShow({
         useState('');
     const [usageToReverse, setUsageToReverse] = useState<{
         customerPackageId: string;
+        idempotencyKey: string;
         usage: CustomerPackageUsage;
     } | null>(null);
 
@@ -462,9 +461,8 @@ export default function CustomerShow({
     const canViewSub = props.auth.permissions.includes('subscription.view');
     const canCancelSub = props.auth.permissions.includes('subscription.cancel');
     const canManageSub = props.auth.permissions.includes('subscription.manage');
-    const [subscribeKey] = useState(() =>
-        createIdempotencyKey('customer-subscribe'),
-    );
+    const [subscribeKey, rotateSubscribeKey] =
+        useIdempotencyKey('customer-subscribe');
     const appointments = customer.appointments ?? [];
     const salesList = customer.sales ?? [];
     const customerPackages = customer.customer_packages ?? [];
@@ -945,6 +943,10 @@ export default function CustomerShow({
                                             <Dialog
                                                 open={sellPackageOpen}
                                                 onOpenChange={(open) => {
+                                                    if (open) {
+                                                        rotateSellKey();
+                                                    }
+
                                                     setSellPackageOpen(open);
 
                                                     if (!open) {
@@ -990,7 +992,9 @@ export default function CustomerShow({
                                                             'X-Idempotency-Key':
                                                                 sellKey,
                                                         }}
+                                                        onChange={rotateSellKey}
                                                         onSuccess={() => {
+                                                            rotateSellKey();
                                                             setSellPackageOpen(
                                                                 false,
                                                             );
@@ -1231,6 +1235,7 @@ export default function CustomerShow({
                                                                         setSelectedPackageForConsume(
                                                                             cp,
                                                                         );
+                                                                        rotateConsumeKey();
                                                                         setConsumePackageOpen(
                                                                             true,
                                                                         );
@@ -1397,6 +1402,11 @@ export default function CustomerShow({
                                                                                                     {
                                                                                                         customerPackageId:
                                                                                                             cp.id,
+                                                                                                        idempotencyKey:
+                                                                                                            createIdempotencyKey(
+                                                                                                                'customer-package-usage-reverse',
+                                                                                                                u.id,
+                                                                                                            ),
                                                                                                         usage: u,
                                                                                                     },
                                                                                                 )
@@ -1446,6 +1456,8 @@ export default function CustomerShow({
                                                     'X-Idempotency-Key':
                                                         subscribeKey,
                                                 }}
+                                                onChange={rotateSubscribeKey}
+                                                onSuccess={rotateSubscribeKey}
                                                 className="flex flex-col gap-2 sm:flex-row sm:items-end"
                                             >
                                                 {({ processing, errors }) => (
@@ -1685,6 +1697,8 @@ export default function CustomerShow({
                                 <Form
                                     {...customers.update.form(customer.id)}
                                     headers={{ 'X-Idempotency-Key': updateKey }}
+                                    onChange={rotateUpdateKey}
+                                    onSuccess={rotateUpdateKey}
                                     className="space-y-5"
                                 >
                                     {({ errors, processing }) => (
@@ -1911,7 +1925,13 @@ export default function CustomerShow({
                                     </div>
                                     <Dialog
                                         open={reactivateOpen}
-                                        onOpenChange={setReactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateReactivateKey();
+                                            }
+
+                                            setReactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -1942,9 +1962,10 @@ export default function CustomerShow({
                                                     'X-Idempotency-Key':
                                                         reactivateKey,
                                                 }}
-                                                onSuccess={() =>
-                                                    setReactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateReactivateKey();
+                                                    setReactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>
@@ -2005,7 +2026,13 @@ export default function CustomerShow({
                                     </div>
                                     <Dialog
                                         open={inactivateOpen}
-                                        onOpenChange={setInactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateDestroyKey();
+                                            }
+
+                                            setInactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -2037,9 +2064,10 @@ export default function CustomerShow({
                                                         destroyKey,
                                                 }}
                                                 method="delete"
-                                                onSuccess={() =>
-                                                    setInactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateDestroyKey();
+                                                    setInactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>
@@ -2089,6 +2117,10 @@ export default function CustomerShow({
                     <Dialog
                         open={consumePackageOpen}
                         onOpenChange={(open) => {
+                            if (open) {
+                                rotateConsumeKey();
+                            }
+
                             setConsumePackageOpen(open);
 
                             if (!open) {
@@ -2116,7 +2148,9 @@ export default function CustomerShow({
                                     ).url
                                 }
                                 headers={{ 'X-Idempotency-Key': consumeKey }}
+                                onChange={rotateConsumeKey}
                                 onSuccess={() => {
+                                    rotateConsumeKey();
                                     setConsumePackageOpen(false);
                                     setSelectedPackageForConsume(null);
                                 }}
@@ -2276,10 +2310,8 @@ export default function CustomerShow({
                                     }).url
                                 }
                                 headers={{
-                                    'X-Idempotency-Key': createIdempotencyKey(
-                                        'customer-package-usage-reverse',
-                                        usageToReverse.usage.id,
-                                    ),
+                                    'X-Idempotency-Key':
+                                        usageToReverse.idempotencyKey,
                                 }}
                                 onSuccess={() => setUsageToReverse(null)}
                             >
