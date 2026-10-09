@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -100,14 +100,14 @@ export default function SaleCategoryShow({
     appointment_automation: automation,
     category,
 }: Props) {
-    const [updateKey] = useState(() =>
-        createIdempotencyKey('sale-category-update'),
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey(
+        'sale-category-update',
     );
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('sale-category-destroy'),
+    const [destroyKey, rotateDestroyKey] = useIdempotencyKey(
+        'sale-category-destroy',
     );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('sale-category-reactivate'),
+    const [reactivateKey, rotateReactivateKey] = useIdempotencyKey(
+        'sale-category-reactivate',
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -185,7 +185,10 @@ export default function SaleCategoryShow({
                                     <Button
                                         type="button"
                                         size="sm"
-                                        onClick={() => setReactivateOpen(true)}
+                                        onClick={() => {
+                                            rotateReactivateKey();
+                                            setReactivateOpen(true);
+                                        }}
                                         className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
                                     >
                                         Reativar cadastro
@@ -204,6 +207,8 @@ export default function SaleCategoryShow({
                         <Form
                             {...saleCategories.update.form(category.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
+                            onChange={rotateUpdateKey}
+                            onSuccess={rotateUpdateKey}
                             className="space-y-5"
                         >
                             {({ errors, processing, submit }) => (
@@ -452,9 +457,13 @@ export default function SaleCategoryShow({
                                             {category.is_active ? (
                                                 <Dialog
                                                     open={inactivateOpen}
-                                                    onOpenChange={
-                                                        setInactivateOpen
-                                                    }
+                                                    onOpenChange={(open) => {
+                                                        if (open) {
+                                                            rotateDestroyKey();
+                                                        }
+
+                                                        setInactivateOpen(open);
+                                                    }}
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -491,11 +500,12 @@ export default function SaleCategoryShow({
                                                                     destroyKey,
                                                             }}
                                                             method="delete"
-                                                            onSuccess={() =>
+                                                            onSuccess={() => {
+                                                                rotateDestroyKey();
                                                                 setInactivateOpen(
                                                                     false,
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             {({
                                                                 processing:
@@ -541,9 +551,13 @@ export default function SaleCategoryShow({
                                             ) : (
                                                 <Dialog
                                                     open={reactivateOpen}
-                                                    onOpenChange={
-                                                        setReactivateOpen
-                                                    }
+                                                    onOpenChange={(open) => {
+                                                        if (open) {
+                                                            rotateReactivateKey();
+                                                        }
+
+                                                        setReactivateOpen(open);
+                                                    }}
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -578,11 +592,12 @@ export default function SaleCategoryShow({
                                                                     reactivateKey,
                                                             }}
                                                             method="patch"
-                                                            onSuccess={() =>
+                                                            onSuccess={() => {
+                                                                rotateReactivateKey();
                                                                 setReactivateOpen(
                                                                     false,
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             {({
                                                                 processing:

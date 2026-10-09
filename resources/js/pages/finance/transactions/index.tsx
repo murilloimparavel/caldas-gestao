@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -116,9 +116,7 @@ export default function FinancialTransactionsIndex({
     const [createType, setCreateType] =
         useState<FinancialObligationType>('payable');
     const [createAmount, setCreateAmount] = useState('');
-    const [createKey] = useState(() =>
-        createIdempotencyKey('create-obligation'),
-    );
+    const [createKey, rotateCreateKey] = useIdempotencyKey('create-obligation');
 
     // Dynamic lists & selected values for quick create auto-selection
     const [categories, setCategories] = useState<Option[]>(
@@ -269,7 +267,13 @@ export default function FinancialTransactionsIndex({
                         canManage ? (
                             <Dialog
                                 open={isCreateOpen}
-                                onOpenChange={setIsCreateOpen}
+                                onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateCreateKey();
+                                    }
+
+                                    setIsCreateOpen(open);
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full gap-2 sm:w-auto">
@@ -334,8 +338,10 @@ export default function FinancialTransactionsIndex({
                                         headers={{
                                             'X-Idempotency-Key': createKey,
                                         }}
+                                        onChange={rotateCreateKey}
                                         resetOnSuccess
                                         onSuccess={() => {
+                                            rotateCreateKey();
                                             setIsCreateOpen(false);
                                             setCreateAmount('');
                                             setSelectedCategoryId('');

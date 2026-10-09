@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -470,6 +470,9 @@ export function CashShiftQuickOpenDialog({
 }: CashShiftQuickOpenDialogProps) {
     const [initialAmountCents, setInitialAmountCents] = useState(0);
     const [initialAmountFloat, setInitialAmountFloat] = useState('0,00');
+    const [idempotencyKey, rotateIdempotencyKey] = useIdempotencyKey(
+        'cash-shift-open-from-sale',
+    );
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -486,11 +489,11 @@ export function CashShiftQuickOpenDialog({
                         query: { return_to: 'sales' },
                     })}
                     headers={{
-                        'X-Idempotency-Key': createIdempotencyKey(
-                            'cash-shift-open-from-sale',
-                        ),
+                        'X-Idempotency-Key': idempotencyKey,
                     }}
+                    onChange={rotateIdempotencyKey}
                     onSuccess={() => {
+                        rotateIdempotencyKey();
                         onOpenChange(false);
                     }}
                     className="space-y-4"

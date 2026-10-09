@@ -7,10 +7,10 @@ import {
     UserRound,
 } from 'lucide-react';
 import {
-    createIdempotencyKey,
     EmptyState,
     PageCanvas,
     ResourceHeader,
+    useIdempotencyKey,
 } from '@/components/operational';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +41,60 @@ type Props = {
     customers: InactiveCustomer[];
     days: number;
 };
+
+function RetentionActionForm({
+    action,
+    customerId,
+    days,
+}: {
+    action: 'mark' | 'reactivate';
+    customerId: string;
+    days?: number;
+}) {
+    const [idempotencyKey, rotateKey] = useIdempotencyKey(
+        `retention-${action}`,
+        action === 'mark' ? `${customerId}-${days ?? ''}` : customerId,
+    );
+    const actionRoute =
+        action === 'mark'
+            ? customerRetention.mark.form(customerId)
+            : customerRetention.reactivate.form(customerId);
+
+    return (
+        <Form
+            {...actionRoute}
+            headers={{ 'X-Idempotency-Key': idempotencyKey }}
+            onSuccess={rotateKey}
+        >
+            {({ processing }) => (
+                <>
+                    {action === 'mark' && (
+                        <input type="hidden" name="days" value={days} />
+                    )}
+                    <Button
+                        type="submit"
+                        size="sm"
+                        variant={action === 'mark' ? 'outline' : 'default'}
+                        disabled={processing}
+                    >
+                        {action === 'mark' ? (
+                            <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
+                        ) : (
+                            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        {processing
+                            ? action === 'mark'
+                                ? 'Marcando…'
+                                : 'Reativando…'
+                            : action === 'mark'
+                              ? 'Marcar risco'
+                              : 'Reativar'}
+                    </Button>
+                </>
+            )}
+        </Form>
+    );
+}
 
 const channelLabel: Record<CommunicationPreference['channel'], string> = {
     email: 'E-mail',
@@ -245,71 +299,20 @@ export default function RetentionInactive({
                                             <div className="flex flex-wrap gap-2 sm:justify-end">
                                                 {customer.retention_status !==
                                                     'at_risk' && (
-                                                    <Form
-                                                        {...customerRetention.mark.form(
-                                                            customer.id,
-                                                        )}
-                                                        headers={{
-                                                            'X-Idempotency-Key':
-                                                                createIdempotencyKey(
-                                                                    'retention-mark',
-                                                                    customer.id,
-                                                                ),
-                                                        }}
-                                                    >
-                                                        {({ processing }) => (
-                                                            <>
-                                                                <input
-                                                                    type="hidden"
-                                                                    name="days"
-                                                                    value={days}
-                                                                />
-                                                                <Button
-                                                                    type="submit"
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    disabled={
-                                                                        processing
-                                                                    }
-                                                                >
-                                                                    <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
-                                                                    {processing
-                                                                        ? 'Marcando…'
-                                                                        : 'Marcar risco'}
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </Form>
+                                                    <RetentionActionForm
+                                                        key={`mark-${customer.id}-${days}`}
+                                                        action="mark"
+                                                        customerId={customer.id}
+                                                        days={days}
+                                                    />
                                                 )}
                                                 {customer.retention_status !==
                                                     'reactivated' && (
-                                                    <Form
-                                                        {...customerRetention.reactivate.form(
-                                                            customer.id,
-                                                        )}
-                                                        headers={{
-                                                            'X-Idempotency-Key':
-                                                                createIdempotencyKey(
-                                                                    'retention-reactivate',
-                                                                    customer.id,
-                                                                ),
-                                                        }}
-                                                    >
-                                                        {({ processing }) => (
-                                                            <Button
-                                                                type="submit"
-                                                                size="sm"
-                                                                disabled={
-                                                                    processing
-                                                                }
-                                                            >
-                                                                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                                                                {processing
-                                                                    ? 'Reativando…'
-                                                                    : 'Reativar'}
-                                                            </Button>
-                                                        )}
-                                                    </Form>
+                                                    <RetentionActionForm
+                                                        key={`reactivate-${customer.id}`}
+                                                        action="reactivate"
+                                                        customerId={customer.id}
+                                                    />
                                                 )}
                                             </div>
                                         )}

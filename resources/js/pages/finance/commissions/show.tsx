@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -109,6 +109,10 @@ export default function ProfessionalCommissionShow({
     const { auth } = usePage<SharedPageProps>().props;
     const canSettle = auth.permissions.includes('commission.settle');
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [settleKey, rotateSettleKey] = useIdempotencyKey(
+        'settle-commissions',
+        professional.id,
+    );
 
     return (
         <PageCanvas
@@ -143,7 +147,10 @@ export default function ProfessionalCommissionShow({
                             </Button>
                             {canSettle && metrics.pending_amount_cents > 0 && (
                                 <Button
-                                    onClick={() => setIsSettleModalOpen(true)}
+                                    onClick={() => {
+                                        rotateSettleKey();
+                                        setIsSettleModalOpen(true);
+                                    }}
                                     className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
                                 >
                                     <Wallet className="h-4 w-4" />
@@ -540,7 +547,13 @@ export default function ProfessionalCommissionShow({
             {/* Modal de Liquidação */}
             <Dialog
                 open={isSettleModalOpen}
-                onOpenChange={setIsSettleModalOpen}
+                onOpenChange={(open) => {
+                    if (open) {
+                        rotateSettleKey();
+                    }
+
+                    setIsSettleModalOpen(open);
+                }}
             >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -555,10 +568,12 @@ export default function ProfessionalCommissionShow({
                         action="/finance/commissions/settle"
                         method="post"
                         headers={{
-                            'X-Idempotency-Key':
-                                createIdempotencyKey('settle-commissions'),
+                            'X-Idempotency-Key': settleKey,
                         }}
-                        onSuccess={() => setIsSettleModalOpen(false)}
+                        onSuccess={() => {
+                            rotateSettleKey();
+                            setIsSettleModalOpen(false);
+                        }}
                         className="space-y-4 pt-2"
                     >
                         {({ processing, errors }) => (

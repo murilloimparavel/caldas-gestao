@@ -2,11 +2,11 @@ import { Form } from '@inertiajs/react';
 import { ArrowDownRight, ArrowUpRight, Boxes, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
     parseBrazilianCurrency,
+    useIdempotencyKey,
 } from '@/components/operational';
 import {
     Dialog,
@@ -54,8 +54,9 @@ export function StockAdjustmentDialog({
             ? (product.cost_price_cents / 100).toFixed(2).replace('.', ',')
             : '',
     );
-    const [idempotencyKey, setIdempotencyKey] = useState(() =>
-        createIdempotencyKey('inventory-adjust'),
+    const [idempotencyKey, rotateKey] = useIdempotencyKey(
+        'inventory-adjust',
+        product.id,
     );
 
     const qty = parseInt(quantityInput, 10);
@@ -72,7 +73,7 @@ export function StockAdjustmentDialog({
 
     const handleOpenChange = (nextOpen: boolean) => {
         if (nextOpen) {
-            setIdempotencyKey(createIdempotencyKey('inventory-adjust'));
+            rotateKey();
             setQuantityInput('1');
             setCostInput(
                 product.cost_price_cents && product.cost_price_cents > 0
@@ -144,7 +145,11 @@ export function StockAdjustmentDialog({
                     {...inventory.movements.store.form()}
                     headers={{ 'X-Idempotency-Key': idempotencyKey }}
                     resetOnSuccess
-                    onSuccess={() => onOpenChange(false)}
+                    onChange={rotateKey}
+                    onSuccess={() => {
+                        rotateKey();
+                        onOpenChange(false);
+                    }}
                     className="space-y-4"
                 >
                     {({ errors, processing }) => (

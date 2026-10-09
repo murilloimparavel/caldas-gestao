@@ -13,6 +13,7 @@ import { CustomerPicker } from '@/components/customer-picker';
 import { RemoteOptionPicker } from '@/components/remote-option-picker';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -300,17 +301,20 @@ export default function PackageShow({
     const [sellProfessionalId, setSellProfessionalId] = useState('');
     const [usageToReverse, setUsageToReverse] = useState<{
         customerPackageId: string;
+        idempotencyKey: string;
         usage: PackageUsageRecord;
     } | null>(null);
     const showPackageFinancialObligations =
         can_view_finance && package_finance_available;
 
-    const [updateKey] = useState(() => createIdempotencyKey('package-update'));
-    const [deactivateKey] = useState(() =>
-        createIdempotencyKey('package-deactivate'),
-    );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('package-reactivate'),
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey('package-update');
+    const [deactivateKey, rotateDeactivateKey] =
+        useIdempotencyKey('package-deactivate');
+    const [reactivateKey, rotateReactivateKey] =
+        useIdempotencyKey('package-reactivate');
+    const [sellKey, rotateSellKey] = useIdempotencyKey(
+        'customer-package-sell',
+        pkg.id,
     );
 
     const { props } = usePage<SharedPageProps>();
@@ -368,7 +372,13 @@ export default function PackageShow({
                         <div className="flex items-center gap-2">
                             <Dialog
                                 open={updateOpen}
-                                onOpenChange={setUpdateOpen}
+                                onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateUpdateKey();
+                                    }
+
+                                    setUpdateOpen(open);
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button variant="outline">
@@ -394,7 +404,11 @@ export default function PackageShow({
                                         headers={{
                                             'X-Idempotency-Key': updateKey,
                                         }}
-                                        onSuccess={() => setUpdateOpen(false)}
+                                        onChange={rotateUpdateKey}
+                                        onSuccess={() => {
+                                            rotateUpdateKey();
+                                            setUpdateOpen(false);
+                                        }}
                                         className="space-y-4"
                                     >
                                         {({ processing, errors }) => (
@@ -535,7 +549,13 @@ export default function PackageShow({
                             {pkg.is_active ? (
                                 <Dialog
                                     open={deactivateOpen}
-                                    onOpenChange={setDeactivateOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateDeactivateKey();
+                                        }
+
+                                        setDeactivateOpen(open);
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button
@@ -567,9 +587,10 @@ export default function PackageShow({
                                                 'X-Idempotency-Key':
                                                     deactivateKey,
                                             }}
-                                            onSuccess={() =>
-                                                setDeactivateOpen(false)
-                                            }
+                                            onSuccess={() => {
+                                                rotateDeactivateKey();
+                                                setDeactivateOpen(false);
+                                            }}
                                         >
                                             {({ processing }) => (
                                                 <>
@@ -610,7 +631,13 @@ export default function PackageShow({
                             ) : (
                                 <Dialog
                                     open={reactivateOpen}
-                                    onOpenChange={setReactivateOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateReactivateKey();
+                                        }
+
+                                        setReactivateOpen(open);
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button variant="outline">
@@ -640,9 +667,10 @@ export default function PackageShow({
                                                 'X-Idempotency-Key':
                                                     reactivateKey,
                                             }}
-                                            onSuccess={() =>
-                                                setReactivateOpen(false)
-                                            }
+                                            onSuccess={() => {
+                                                rotateReactivateKey();
+                                                setReactivateOpen(false);
+                                            }}
                                         >
                                             {({ processing }) => (
                                                 <>
@@ -762,6 +790,10 @@ export default function PackageShow({
                         <Dialog
                             open={sellOpen}
                             onOpenChange={(open) => {
+                                if (open) {
+                                    rotateSellKey();
+                                }
+
                                 setSellOpen(open);
 
                                 if (!open) {
@@ -793,13 +825,11 @@ export default function PackageShow({
                                     method="post"
                                     action={customerPackageActions.store().url}
                                     headers={{
-                                        'X-Idempotency-Key':
-                                            createIdempotencyKey(
-                                                'customer-package-sell',
-                                                pkg.id,
-                                            ),
+                                        'X-Idempotency-Key': sellKey,
                                     }}
+                                    onChange={rotateSellKey}
                                     onSuccess={() => {
+                                        rotateSellKey();
                                         setSellOpen(false);
                                         setSellCustomerId('');
                                         setSellProfessionalId('');
@@ -1153,6 +1183,11 @@ export default function PackageShow({
                                                                                 {
                                                                                     customerPackageId:
                                                                                         cp.id,
+                                                                                    idempotencyKey:
+                                                                                        createIdempotencyKey(
+                                                                                            'package-usage-reverse',
+                                                                                            usage.id,
+                                                                                        ),
                                                                                     usage,
                                                                                 },
                                                                             )
@@ -1199,10 +1234,8 @@ export default function PackageShow({
                                 }).url
                             }
                             headers={{
-                                'X-Idempotency-Key': createIdempotencyKey(
-                                    'package-usage-reverse',
-                                    usageToReverse.usage.id,
-                                ),
+                                'X-Idempotency-Key':
+                                    usageToReverse.idempotencyKey,
                             }}
                             onSuccess={() => setUsageToReverse(null)}
                         >

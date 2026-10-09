@@ -13,7 +13,7 @@ jobs:
   quality:
     name: Validar aplicação
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17-alpine
@@ -88,3 +88,15 @@ jobs:
 
       - name: Run CI Checks
         run: composer ci:check
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run deterministic UI fluency regressions
+        run: >-
+          npx playwright test tests/e2e/ui-fluidity.spec.ts
+          --project=chromium
+          --project=mobile-chromium
+          --workers=1
+          --reporter=line
+          --output=/tmp/caldas-gestao-ui-fluidity-e2e

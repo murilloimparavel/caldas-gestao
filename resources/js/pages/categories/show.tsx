@@ -2,7 +2,7 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Package, Scissors, Tag } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -67,12 +67,11 @@ const categoryTypeLabels: Record<CategoryType, string> = {
 };
 
 export default function CategoryShow({ category }: Props) {
-    const [updateKey] = useState(() => createIdempotencyKey('category-update'));
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('category-destroy'),
-    );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('category-reactivate'),
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey('category-update');
+    const [destroyKey, rotateDestroyKey] =
+        useIdempotencyKey('category-destroy');
+    const [reactivateKey, rotateReactivateKey] = useIdempotencyKey(
+        'category-reactivate',
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -142,6 +141,8 @@ export default function CategoryShow({ category }: Props) {
                         <Form
                             {...categories.update.form(category.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
+                            onChange={rotateUpdateKey}
+                            onSuccess={rotateUpdateKey}
                             className="space-y-5"
                         >
                             {({ errors, processing }) => (
@@ -219,9 +220,13 @@ export default function CategoryShow({ category }: Props) {
                                             {category.is_active ? (
                                                 <Dialog
                                                     open={inactivateOpen}
-                                                    onOpenChange={
-                                                        setInactivateOpen
-                                                    }
+                                                    onOpenChange={(open) => {
+                                                        if (open) {
+                                                            rotateDestroyKey();
+                                                        }
+
+                                                        setInactivateOpen(open);
+                                                    }}
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -257,11 +262,12 @@ export default function CategoryShow({ category }: Props) {
                                                                     destroyKey,
                                                             }}
                                                             method="delete"
-                                                            onSuccess={() =>
+                                                            onSuccess={() => {
+                                                                rotateDestroyKey();
                                                                 setInactivateOpen(
                                                                     false,
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             {({
                                                                 processing:
@@ -307,9 +313,13 @@ export default function CategoryShow({ category }: Props) {
                                             ) : (
                                                 <Dialog
                                                     open={reactivateOpen}
-                                                    onOpenChange={
-                                                        setReactivateOpen
-                                                    }
+                                                    onOpenChange={(open) => {
+                                                        if (open) {
+                                                            rotateReactivateKey();
+                                                        }
+
+                                                        setReactivateOpen(open);
+                                                    }}
                                                 >
                                                     <DialogTrigger asChild>
                                                         <Button
@@ -343,11 +353,12 @@ export default function CategoryShow({ category }: Props) {
                                                                     reactivateKey,
                                                             }}
                                                             method="patch"
-                                                            onSuccess={() =>
+                                                            onSuccess={() => {
+                                                                rotateReactivateKey();
                                                                 setReactivateOpen(
                                                                     false,
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             {({
                                                                 processing:

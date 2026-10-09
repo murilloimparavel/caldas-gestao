@@ -12,9 +12,10 @@ import {
     Sparkles,
     Users,
 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -89,6 +90,97 @@ type OperationResponse = {
     selected?: number;
     sent?: number;
 };
+
+function CampaignStatusActions({ campaign }: { campaign: RetentionCampaign }) {
+    const [activateKey, rotateActivateKey] = useIdempotencyKey(
+        'retention-campaign-activate',
+        campaign.id,
+    );
+    const [pauseKey, rotatePauseKey] = useIdempotencyKey(
+        'retention-campaign-pause',
+        campaign.id,
+    );
+    const [resumeKey, rotateResumeKey] = useIdempotencyKey(
+        'retention-campaign-resume',
+        campaign.id,
+    );
+
+    function rotateStatusKeys(): void {
+        rotateActivateKey();
+        rotatePauseKey();
+        rotateResumeKey();
+    }
+
+    return (
+        <>
+            {campaign.status === 'draft' ? (
+                <Form
+                    {...campaignsRoutes.status.form(campaign.id)}
+                    headers={{ 'X-Idempotency-Key': activateKey }}
+                    onSuccess={rotateStatusKeys}
+                >
+                    {({ processing }) => (
+                        <>
+                            <input type="hidden" name="status" value="active" />
+                            <Button
+                                type="submit"
+                                size="sm"
+                                disabled={processing}
+                            >
+                                <Play className="mr-1.5 size-3.5" />
+                                Ativar
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            ) : null}
+            {campaign.status === 'active' ? (
+                <Form
+                    {...campaignsRoutes.status.form(campaign.id)}
+                    headers={{ 'X-Idempotency-Key': pauseKey }}
+                    onSuccess={rotateStatusKeys}
+                >
+                    {({ processing }) => (
+                        <>
+                            <input type="hidden" name="status" value="paused" />
+                            <Button
+                                type="submit"
+                                size="sm"
+                                variant="outline"
+                                disabled={processing}
+                            >
+                                <ChevronDown className="mr-1.5 size-3.5" />
+                                Pausar
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            ) : null}
+            {campaign.status === 'paused' ? (
+                <Form
+                    {...campaignsRoutes.status.form(campaign.id)}
+                    headers={{ 'X-Idempotency-Key': resumeKey }}
+                    onSuccess={rotateStatusKeys}
+                >
+                    {({ processing }) => (
+                        <>
+                            <input type="hidden" name="status" value="active" />
+                            <Button
+                                type="submit"
+                                size="sm"
+                                variant="outline"
+                                disabled={processing}
+                            >
+                                <Play className="mr-1.5 size-3.5" />
+                                Retomar
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            ) : null}
+        </>
+    );
+}
 
 const statusLabel: Record<CampaignStatus, string> = {
     draft: 'Rascunho',
@@ -183,6 +275,7 @@ export default function RetentionCampaigns({ campaigns }: Props) {
     const [processingAction, setProcessingAction] = useState<string | null>(
         null,
     );
+    const operationKeys = useRef<Record<string, string>>({});
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('retention.manage');
     const initialMessage =
@@ -232,9 +325,8 @@ export default function RetentionCampaigns({ campaigns }: Props) {
         minute: '2-digit',
     }).format(new Date());
 
-    const createKey = useMemo(
-        () => createIdempotencyKey('retention-campaign-create'),
-        [],
+    const [createKey, rotateCreateKey] = useIdempotencyKey(
+        'retention-campaign-create',
     );
     const audienceRequest = useHttp<{ dry_run: boolean }, OperationResponse>({
         dry_run: false,
@@ -261,6 +353,18 @@ export default function RetentionCampaigns({ campaigns }: Props) {
         router.reload({ only: ['campaigns'] });
     }
 
+    function getOperationKey(operationKey: string): string {
+        operationKeys.current[operationKey] ??=
+            createIdempotencyKey(operationKey);
+
+        return operationKeys.current[operationKey];
+    }
+
+    function rotateOperationKey(operationKey: string): void {
+        operationKeys.current[operationKey] =
+            createIdempotencyKey(operationKey);
+    }
+
     async function runOperation(
         operation: 'audience' | 'dispatch' | 'process',
         campaign: RetentionCampaign,
@@ -278,7 +382,7 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                     campaignsRoutes.audience.url(campaign.id),
                     {
                         headers: {
-                            'X-Idempotency-Key': createIdempotencyKey(key),
+                            'X-Idempotency-Key': getOperationKey(key),
                         },
                     },
                 );
@@ -291,7 +395,7 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                     campaignsRoutes.dispatch.url(campaign.id),
                     {
                         headers: {
-                            'X-Idempotency-Key': createIdempotencyKey(key),
+                            'X-Idempotency-Key': getOperationKey(key),
                         },
                     },
                 );
@@ -304,7 +408,7 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                     campaignsRoutes.process.url(campaign.id),
                     {
                         headers: {
-                            'X-Idempotency-Key': createIdempotencyKey(key),
+                            'X-Idempotency-Key': getOperationKey(key),
                         },
                     },
                 );
@@ -313,6 +417,7 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                 );
             }
 
+            rotateOperationKey(key);
             reloadCampaigns();
         } catch {
             setFeedback(
@@ -333,7 +438,16 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                 description="Crie audiências responsáveis, acompanhe a fila e mantenha o histórico de cada ação de reativação."
                 action={
                     canManage ? (
-                        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                        <Dialog
+                            open={createOpen}
+                            onOpenChange={(open) => {
+                                if (open) {
+                                    rotateCreateKey();
+                                }
+
+                                setCreateOpen(open);
+                            }}
+                        >
                             <DialogTrigger asChild>
                                 <Button>
                                     <Megaphone className="mr-2 size-4" />
@@ -355,7 +469,9 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                 <Form
                                     {...campaignsRoutes.store.form()}
                                     headers={{ 'X-Idempotency-Key': createKey }}
+                                    onChange={rotateCreateKey}
                                     onSuccess={() => {
+                                        rotateCreateKey();
                                         setCreateOpen(false);
                                         setMessageText(initialMessage);
                                     }}
@@ -794,107 +910,9 @@ export default function RetentionCampaigns({ campaigns }: Props) {
                                     </div>
                                     {canManage ? (
                                         <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-                                            {campaign.status === 'draft' ? (
-                                                <Form
-                                                    {...campaignsRoutes.status.form(
-                                                        campaign.id,
-                                                    )}
-                                                    headers={{
-                                                        'X-Idempotency-Key':
-                                                            createIdempotencyKey(
-                                                                `campaign-active-${campaign.id}`,
-                                                            ),
-                                                    }}
-                                                >
-                                                    {({ processing }) => (
-                                                        <>
-                                                            <input
-                                                                type="hidden"
-                                                                name="status"
-                                                                value="active"
-                                                            />
-                                                            <Button
-                                                                type="submit"
-                                                                size="sm"
-                                                                disabled={
-                                                                    processing
-                                                                }
-                                                            >
-                                                                <Play className="mr-1.5 size-3.5" />
-                                                                Ativar
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </Form>
-                                            ) : null}
-                                            {campaign.status === 'active' ? (
-                                                <Form
-                                                    {...campaignsRoutes.status.form(
-                                                        campaign.id,
-                                                    )}
-                                                    headers={{
-                                                        'X-Idempotency-Key':
-                                                            createIdempotencyKey(
-                                                                `campaign-pause-${campaign.id}`,
-                                                            ),
-                                                    }}
-                                                >
-                                                    {({ processing }) => (
-                                                        <>
-                                                            <input
-                                                                type="hidden"
-                                                                name="status"
-                                                                value="paused"
-                                                            />
-                                                            <Button
-                                                                type="submit"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                disabled={
-                                                                    processing
-                                                                }
-                                                            >
-                                                                <ChevronDown className="mr-1.5 size-3.5" />
-                                                                Pausar
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </Form>
-                                            ) : null}
-                                            {campaign.status === 'paused' ? (
-                                                <Form
-                                                    {...campaignsRoutes.status.form(
-                                                        campaign.id,
-                                                    )}
-                                                    headers={{
-                                                        'X-Idempotency-Key':
-                                                            createIdempotencyKey(
-                                                                `campaign-resume-${campaign.id}`,
-                                                            ),
-                                                    }}
-                                                >
-                                                    {({ processing }) => (
-                                                        <>
-                                                            <input
-                                                                type="hidden"
-                                                                name="status"
-                                                                value="active"
-                                                            />
-                                                            <Button
-                                                                type="submit"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                disabled={
-                                                                    processing
-                                                                }
-                                                            >
-                                                                <Play className="mr-1.5 size-3.5" />
-                                                                Retomar
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </Form>
-                                            ) : null}
+                                            <CampaignStatusActions
+                                                campaign={campaign}
+                                            />
                                             {!hasAudience &&
                                             campaign.status !== 'completed' ? (
                                                 <Button

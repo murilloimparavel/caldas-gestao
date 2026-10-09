@@ -86,6 +86,25 @@ export function createIdempotencyKey(
     return `${scopedKey}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+/**
+ * Keeps one idempotency key for a mutation attempt and exposes an explicit
+ * rotation point for the next logical attempt.
+ */
+export function useIdempotencyKey(
+    scope: string,
+    discriminator?: string | null,
+): [string, () => void] {
+    const [key, setKey] = useState(() =>
+        createIdempotencyKey(scope, discriminator),
+    );
+
+    const rotate = () => {
+        setKey(createIdempotencyKey(scope, discriminator));
+    };
+
+    return [key, rotate];
+}
+
 export function parseBrazilianCurrency(value: string): number {
     const normalizedInput = value
         .trim()

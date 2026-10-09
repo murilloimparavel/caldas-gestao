@@ -2,7 +2,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { FolderTree, Layers, Plus, Tag } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -56,7 +56,7 @@ export default function CategoriesIndex({
     filters,
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
-    const [createKey] = useState(() => createIdempotencyKey('category-create'));
+    const [createKey, rotateCreateKey] = useIdempotencyKey('category-create');
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('category.manage');
 
@@ -80,7 +80,13 @@ export default function CategoriesIndex({
                         canManage ? (
                             <Dialog
                                 open={createOpen}
-                                onOpenChange={setCreateOpen}
+                                onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateCreateKey();
+                                    }
+
+                                    setCreateOpen(open);
+                                }}
                             >
                                 <DialogTrigger asChild>
                                     <Button className="w-full sm:w-auto">
@@ -103,8 +109,12 @@ export default function CategoriesIndex({
                                         headers={{
                                             'X-Idempotency-Key': createKey,
                                         }}
+                                        onChange={rotateCreateKey}
                                         resetOnSuccess
-                                        onSuccess={() => setCreateOpen(false)}
+                                        onSuccess={() => {
+                                            rotateCreateKey();
+                                            setCreateOpen(false);
+                                        }}
                                         className="space-y-5"
                                     >
                                         {({ errors, processing }) => (

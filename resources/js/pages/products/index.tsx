@@ -12,7 +12,7 @@ import {
 import { useState } from 'react';
 import { StockAdjustmentDialog } from '@/components/inventory/stock-adjustment-dialog';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -147,7 +147,7 @@ export default function ProductsIndex({
     const [createOpen, setCreateOpen] = useState(false);
     const { view, setView } = useResourceView('caldas-gestao:products-view');
     const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
-    const [createKey] = useState(() => createIdempotencyKey('product-create'));
+    const [createKey, rotateCreateKey] = useIdempotencyKey('product-create');
     const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(
         null,
     );
@@ -204,6 +204,10 @@ export default function ProductsIndex({
                                 <Dialog
                                     open={createOpen}
                                     onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateCreateKey();
+                                        }
+
                                         setCreateOpen(open);
 
                                         if (!open) {
@@ -234,8 +238,10 @@ export default function ProductsIndex({
                                             headers={{
                                                 'X-Idempotency-Key': createKey,
                                             }}
+                                            onChange={rotateCreateKey}
                                             resetOnSuccess
                                             onSuccess={() => {
+                                                rotateCreateKey();
                                                 setCreateOpen(false);
                                                 setSelectedPhoto(null);
                                                 setSelectedCategoryId('');

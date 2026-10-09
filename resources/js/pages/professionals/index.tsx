@@ -2,7 +2,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -78,8 +78,8 @@ export default function ProfessionalsIndex({
     );
     const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
     const getInitials = useInitials();
-    const [createKey] = useState(() =>
-        createIdempotencyKey('professional-create'),
+    const [createKey, rotateCreateKey] = useIdempotencyKey(
+        'professional-create',
     );
     const { props } = usePage<SharedPageProps>();
     const canManage = props.auth.permissions.includes('professional.manage');
@@ -107,6 +107,10 @@ export default function ProfessionalsIndex({
                             <Dialog
                                 open={createOpen}
                                 onOpenChange={(open) => {
+                                    if (open) {
+                                        rotateCreateKey();
+                                    }
+
                                     setCreateOpen(open);
 
                                     if (!open) {
@@ -135,8 +139,10 @@ export default function ProfessionalsIndex({
                                         headers={{
                                             'X-Idempotency-Key': createKey,
                                         }}
+                                        onChange={rotateCreateKey}
                                         resetOnSuccess
                                         onSuccess={() => {
+                                            rotateCreateKey();
                                             setCreateOpen(false);
                                             setSelectedAvatar(null);
                                         }}

@@ -11,9 +11,10 @@ import {
     Trash2,
     UserRound,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -122,9 +123,74 @@ function AvailabilityEditor({
     timezone,
 }: AvailabilityEditorProps) {
     const [draftCount, setDraftCount] = useState(1);
-    const [mutationKey] = useState(() =>
-        createIdempotencyKey(`availability-rule-${day.day}`),
+    const [mutationKeys, setMutationKeys] = useState<Record<string, string>>(
+        () => {
+            const keys: Record<string, string> = {
+                [`availability-create:${day.day}:0`]: createIdempotencyKey(
+                    `availability-rule-create:${day.day}`,
+                ),
+            };
+
+            rules.forEach((rule) => {
+                keys[`availability-update:${rule.id}`] = createIdempotencyKey(
+                    `availability-rule-update:${rule.id}`,
+                );
+                keys[`availability-delete:${rule.id}`] = createIdempotencyKey(
+                    `availability-rule-delete:${rule.id}`,
+                );
+            });
+
+            return keys;
+        },
     );
+
+    useEffect(() => {
+        // Reconcile newly returned availability rule IDs to their own mutation keys.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMutationKeys((current) => {
+            const next = { ...current };
+            let changed = false;
+
+            rules.forEach((rule) => {
+                const updateKey = `availability-update:${rule.id}`;
+                const deleteKey = `availability-delete:${rule.id}`;
+
+                if (!next[updateKey]) {
+                    next[updateKey] = createIdempotencyKey(
+                        `availability-rule-update:${rule.id}`,
+                    );
+                    changed = true;
+                }
+
+                if (!next[deleteKey]) {
+                    next[deleteKey] = createIdempotencyKey(
+                        `availability-rule-delete:${rule.id}`,
+                    );
+                    changed = true;
+                }
+            });
+
+            for (let index = 0; index < draftCount; index += 1) {
+                const createKey = `availability-create:${day.day}:${index}`;
+
+                if (!next[createKey]) {
+                    next[createKey] = createIdempotencyKey(
+                        `availability-rule-create:${day.day}:${index}`,
+                    );
+                    changed = true;
+                }
+            }
+
+            return changed ? next : current;
+        });
+    }, [day.day, draftCount, rules]);
+
+    const rotateMutationKey = (operation: string) => {
+        setMutationKeys((current) => ({
+            ...current,
+            [operation]: createIdempotencyKey(operation),
+        }));
+    };
 
     return (
         <div className="space-y-4">
@@ -144,7 +210,16 @@ function AvailabilityEditor({
                 <Form
                     key={rule.id}
                     {...updateAvailabilityRule.form(rule.id)}
-                    headers={{ 'X-Idempotency-Key': mutationKey }}
+                    headers={{
+                        'X-Idempotency-Key':
+                            mutationKeys[`availability-update:${rule.id}`],
+                    }}
+                    onChange={() =>
+                        rotateMutationKey(`availability-update:${rule.id}`)
+                    }
+                    onSuccess={() =>
+                        rotateMutationKey(`availability-update:${rule.id}`)
+                    }
                     className="rounded-xl border border-border bg-card p-4"
                 >
                     {({ errors, processing }) => (
@@ -222,8 +297,16 @@ function AvailabilityEditor({
                                             rule.id,
                                         )}
                                         headers={{
-                                            'X-Idempotency-Key': mutationKey,
+                                            'X-Idempotency-Key':
+                                                mutationKeys[
+                                                    `availability-delete:${rule.id}`
+                                                ],
                                         }}
+                                        onSuccess={() =>
+                                            rotateMutationKey(
+                                                `availability-delete:${rule.id}`,
+                                            )
+                                        }
                                     >
                                         {({ processing: deleting }) => (
                                             <>
@@ -262,7 +345,22 @@ function AvailabilityEditor({
                 <Form
                     key={`new-${index}`}
                     {...storeAvailabilityRule.form()}
-                    headers={{ 'X-Idempotency-Key': `${mutationKey}-${index}` }}
+                    headers={{
+                        'X-Idempotency-Key':
+                            mutationKeys[
+                                `availability-create:${day.day}:${index}`
+                            ],
+                    }}
+                    onChange={() =>
+                        rotateMutationKey(
+                            `availability-create:${day.day}:${index}`,
+                        )
+                    }
+                    onSuccess={() =>
+                        rotateMutationKey(
+                            `availability-create:${day.day}:${index}`,
+                        )
+                    }
                     className="rounded-xl border border-dashed border-primary/35 bg-primary/[0.03] p-4"
                 >
                     {({ errors, processing }) => (
@@ -377,14 +475,14 @@ export default function ProfessionalShow({
         professional.avatar_url ?? null,
     );
     const getInitials = useInitials();
-    const [updateKey] = useState(() =>
-        createIdempotencyKey('professional-update'),
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey(
+        'professional-update',
     );
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('professional-destroy'),
+    const [destroyKey, rotateDestroyKey] = useIdempotencyKey(
+        'professional-destroy',
     );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('professional-reactivate'),
+    const [reactivateKey, rotateReactivateKey] = useIdempotencyKey(
+        'professional-reactivate',
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -481,6 +579,8 @@ export default function ProfessionalShow({
                                 {...professionals.update.form(professional.id)}
                                 id="professional-update-form"
                                 headers={{ 'X-Idempotency-Key': updateKey }}
+                                onChange={rotateUpdateKey}
+                                onSuccess={rotateUpdateKey}
                                 className="space-y-5"
                             >
                                 {({ errors, processing }) => (
@@ -1017,7 +1117,13 @@ export default function ProfessionalShow({
                                     </div>
                                     <Dialog
                                         open={reactivateOpen}
-                                        onOpenChange={setReactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateReactivateKey();
+                                            }
+
+                                            setReactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -1048,9 +1154,10 @@ export default function ProfessionalShow({
                                                     'X-Idempotency-Key':
                                                         reactivateKey,
                                                 }}
-                                                onSuccess={() =>
-                                                    setReactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateReactivateKey();
+                                                    setReactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>
@@ -1110,7 +1217,13 @@ export default function ProfessionalShow({
                                     </div>
                                     <Dialog
                                         open={inactivateOpen}
-                                        onOpenChange={setInactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateDestroyKey();
+                                            }
+
+                                            setInactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -1142,9 +1255,10 @@ export default function ProfessionalShow({
                                                         destroyKey,
                                                 }}
                                                 method="delete"
-                                                onSuccess={() =>
-                                                    setInactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateDestroyKey();
+                                                    setInactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>

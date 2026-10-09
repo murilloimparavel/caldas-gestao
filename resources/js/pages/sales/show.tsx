@@ -22,6 +22,7 @@ import {
 import { useState } from 'react';
 import {
     createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -283,11 +284,20 @@ export default function SalesShow({
     const [transitionKey, setTransitionKey] = useState(() =>
         createIdempotencyKey(`sale-transition:${sale.id}`),
     );
-    const [closeKey] = useState(() =>
-        createIdempotencyKey(`sale-close:${sale.id}`),
+    const [closeKey, rotateCloseKey] = useIdempotencyKey(
+        `sale-close:${sale.id}`,
     );
-    const [adjustKey] = useState(() =>
+    const [adjustKey, setAdjustKey] = useState(() =>
         createIdempotencyKey(`sale-adjust:${sale.id}`),
+    );
+    const [cancelKey, rotateCancelKey] = useIdempotencyKey(
+        `sale-cancel:${sale.id}`,
+    );
+    const [addItemKey, rotateAddItemKey] = useIdempotencyKey(
+        `sale-item-add:${sale.id}`,
+    );
+    const [discountKey, rotateDiscountKey] = useIdempotencyKey(
+        `sale-discount:${sale.id}`,
     );
 
     const isSaleActive =
@@ -499,7 +509,10 @@ export default function SalesShow({
 
                                 {canClosePermission ? (
                                     <Button
-                                        onClick={() => setCloseOpen(true)}
+                                        onClick={() => {
+                                            rotateCloseKey();
+                                            setCloseOpen(true);
+                                        }}
                                         className="gap-1.5 bg-emerald-600 font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
                                     >
                                         <Receipt className="size-4" />
@@ -509,7 +522,13 @@ export default function SalesShow({
 
                                 <Dialog
                                     open={cancelOpen}
-                                    onOpenChange={setCancelOpen}
+                                    onOpenChange={(open) => {
+                                        if (open) {
+                                            rotateCancelKey();
+                                        }
+
+                                        setCancelOpen(open);
+                                    }}
                                 >
                                     <DialogTrigger asChild>
                                         <Button
@@ -533,14 +552,13 @@ export default function SalesShow({
                                         <Form
                                             {...sales.transition.form(sale.id)}
                                             headers={{
-                                                'X-Idempotency-Key':
-                                                    createIdempotencyKey(
-                                                        `sale-cancel:${sale.id}`,
-                                                    ),
+                                                'X-Idempotency-Key': cancelKey,
                                             }}
-                                            onSuccess={() =>
-                                                setCancelOpen(false)
-                                            }
+                                            onChange={rotateCancelKey}
+                                            onSuccess={() => {
+                                                rotateCancelKey();
+                                                setCancelOpen(false);
+                                            }}
                                             className="space-y-4"
                                         >
                                             {({ errors, processing }) => (
@@ -613,6 +631,7 @@ export default function SalesShow({
                                             headers={{
                                                 'X-Idempotency-Key': closeKey,
                                             }}
+                                            onChange={rotateCloseKey}
                                             onSubmit={(event) => {
                                                 if (
                                                     sale.final_amount_cents >
@@ -622,9 +641,10 @@ export default function SalesShow({
                                                     event.preventDefault();
                                                 }
                                             }}
-                                            onSuccess={() =>
-                                                setCloseOpen(false)
-                                            }
+                                            onSuccess={() => {
+                                                rotateCloseKey();
+                                                setCloseOpen(false);
+                                            }}
                                             className="space-y-4"
                                         >
                                             {({ errors, processing }) => (
@@ -780,7 +800,17 @@ export default function SalesShow({
                                 {canAdjust ? (
                                     <Dialog
                                         open={adjustOpen}
-                                        onOpenChange={setAdjustOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                setAdjustKey(
+                                                    createIdempotencyKey(
+                                                        `sale-adjust:${sale.id}`,
+                                                    ),
+                                                );
+                                            }
+
+                                            setAdjustOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -839,6 +869,11 @@ export default function SalesShow({
                                                         adjustKey,
                                                 }}
                                                 onSuccess={() => {
+                                                    setAdjustKey(
+                                                        createIdempotencyKey(
+                                                            `sale-adjust:${sale.id}`,
+                                                        ),
+                                                    );
                                                     setAdjustOpen(false);
                                                     setAdjustReason('');
                                                 }}
@@ -1085,6 +1120,10 @@ export default function SalesShow({
                                     <Dialog
                                         open={addItemOpen}
                                         onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateAddItemKey();
+                                            }
+
                                             setAddItemOpen(open);
 
                                             if (!open) {
@@ -1116,12 +1155,12 @@ export default function SalesShow({
                                                 )}
                                                 headers={{
                                                     'X-Idempotency-Key':
-                                                        createIdempotencyKey(
-                                                            `sale-item-add:${sale.id}`,
-                                                        ),
+                                                        addItemKey,
                                                 }}
+                                                onChange={rotateAddItemKey}
                                                 resetOnSuccess
                                                 onSuccess={() => {
+                                                    rotateAddItemKey();
                                                     setAddItemOpen(false);
                                                     resetItemForm();
                                                 }}
@@ -2142,7 +2181,13 @@ export default function SalesShow({
                                 <div className="pt-2">
                                     <Dialog
                                         open={discountOpen}
-                                        onOpenChange={setDiscountOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateDiscountKey();
+                                            }
+
+                                            setDiscountOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -2173,13 +2218,13 @@ export default function SalesShow({
                                                 )}
                                                 headers={{
                                                     'X-Idempotency-Key':
-                                                        createIdempotencyKey(
-                                                            `sale-discount:${sale.id}`,
-                                                        ),
+                                                        discountKey,
                                                 }}
-                                                onSuccess={() =>
-                                                    setDiscountOpen(false)
-                                                }
+                                                onChange={rotateDiscountKey}
+                                                onSuccess={() => {
+                                                    rotateDiscountKey();
+                                                    setDiscountOpen(false);
+                                                }}
                                                 className="space-y-4"
                                             >
                                                 {({ errors, processing }) => (

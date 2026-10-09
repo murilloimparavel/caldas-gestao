@@ -2,7 +2,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Gift, Plus, Scissors } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     EmptyState,
     FormActions,
     FormErrorSummary,
@@ -171,7 +171,7 @@ export default function PackagesIndex({
     serviceOptions = [],
 }: Props) {
     const [createOpen, setCreateOpen] = useState(false);
-    const [createKey] = useState(() => createIdempotencyKey('package-create'));
+    const [createKey, rotateCreateKey] = useIdempotencyKey('package-create');
     const { props } = usePage<SharedPageProps>();
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('package.manage');
@@ -185,7 +185,16 @@ export default function PackagesIndex({
                 subtitle="Configure pacotes de sessões pré-pagas com validade para seus clientes."
                 actions={
                     canManage && (
-                        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                        <Dialog
+                            open={createOpen}
+                            onOpenChange={(open) => {
+                                if (open) {
+                                    rotateCreateKey();
+                                }
+
+                                setCreateOpen(open);
+                            }}
+                        >
                             <DialogTrigger asChild>
                                 <Button>
                                     <Plus className="mr-2 h-4 w-4" />
@@ -207,7 +216,11 @@ export default function PackagesIndex({
                                     method="post"
                                     action={packagesRoutes.store().url}
                                     headers={{ 'X-Idempotency-Key': createKey }}
-                                    onSuccess={() => setCreateOpen(false)}
+                                    onChange={rotateCreateKey}
+                                    onSuccess={() => {
+                                        rotateCreateKey();
+                                        setCreateOpen(false);
+                                    }}
                                     className="space-y-4"
                                 >
                                     {({ processing, errors }) => (

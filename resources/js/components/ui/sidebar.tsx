@@ -1,4 +1,5 @@
 import { Slot } from "@radix-ui/react-slot"
+import { usePage } from "@inertiajs/react"
 import type { VariantProps} from "class-variance-authority";
 import { cva } from "class-variance-authority"
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react"
@@ -66,7 +67,9 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
+  const currentUrl = usePage().url
   const [openMobile, _setOpenMobile] = React.useState(false)
+  const previousUrl = React.useRef(currentUrl)
   const sidebarTriggerRef = React.useRef<HTMLButtonElement | null>(null)
 
   const registerSidebarTrigger = React.useCallback(
@@ -90,6 +93,13 @@ function SidebarProvider({
     },
     [openMobile],
   )
+
+  React.useEffect(() => {
+    if (previousUrl.current !== currentUrl) {
+      previousUrl.current = currentUrl
+      setOpenMobile(false)
+    }
+  }, [currentUrl, setOpenMobile])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -48,12 +48,11 @@ type Props = {
 };
 
 export default function SupplierShow({ supplier }: Props) {
-    const [updateKey] = useState(() => createIdempotencyKey('supplier-update'));
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('supplier-destroy'),
-    );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('supplier-reactivate'),
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey('supplier-update');
+    const [destroyKey, rotateDestroyKey] =
+        useIdempotencyKey('supplier-destroy');
+    const [reactivateKey, rotateReactivateKey] = useIdempotencyKey(
+        'supplier-reactivate',
     );
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
@@ -99,6 +98,8 @@ export default function SupplierShow({ supplier }: Props) {
                         <Form
                             {...suppliers.update.form(supplier.id)}
                             headers={{ 'X-Idempotency-Key': updateKey }}
+                            onChange={rotateUpdateKey}
+                            onSuccess={rotateUpdateKey}
                             className="space-y-5"
                         >
                             {({ errors, processing }) => (
@@ -356,7 +357,13 @@ export default function SupplierShow({ supplier }: Props) {
                                     </div>
                                     <Dialog
                                         open={reactivateOpen}
-                                        onOpenChange={setReactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateReactivateKey();
+                                            }
+
+                                            setReactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -387,9 +394,10 @@ export default function SupplierShow({ supplier }: Props) {
                                                     'X-Idempotency-Key':
                                                         reactivateKey,
                                                 }}
-                                                onSuccess={() =>
-                                                    setReactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateReactivateKey();
+                                                    setReactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>
@@ -451,7 +459,13 @@ export default function SupplierShow({ supplier }: Props) {
                                     </div>
                                     <Dialog
                                         open={inactivateOpen}
-                                        onOpenChange={setInactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateDestroyKey();
+                                            }
+
+                                            setInactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -483,9 +497,10 @@ export default function SupplierShow({ supplier }: Props) {
                                                         destroyKey,
                                                 }}
                                                 method="delete"
-                                                onSuccess={() =>
-                                                    setInactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateDestroyKey();
+                                                    setInactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>

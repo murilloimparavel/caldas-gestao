@@ -2,7 +2,7 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Clock3, Plus, Scissors, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import {
-    createIdempotencyKey,
+    useIdempotencyKey,
     FormActions,
     FormErrorSummary,
     FormField,
@@ -94,13 +94,10 @@ export default function ServiceShow({
     professionalOptions,
     hasProfessionalOptions = false,
 }: Props) {
-    const [updateKey] = useState(() => createIdempotencyKey('service-update'));
-    const [destroyKey] = useState(() =>
-        createIdempotencyKey('service-destroy'),
-    );
-    const [reactivateKey] = useState(() =>
-        createIdempotencyKey('service-reactivate'),
-    );
+    const [updateKey, rotateUpdateKey] = useIdempotencyKey('service-update');
+    const [destroyKey, rotateDestroyKey] = useIdempotencyKey('service-destroy');
+    const [reactivateKey, rotateReactivateKey] =
+        useIdempotencyKey('service-reactivate');
     const [inactivateOpen, setInactivateOpen] = useState(false);
     const [reactivateOpen, setReactivateOpen] = useState(false);
     const [hasImageError, setHasImageError] = useState(false);
@@ -174,6 +171,8 @@ export default function ServiceShow({
                             {...services.update.form(service.id)}
                             id="service-update-form"
                             headers={{ 'X-Idempotency-Key': updateKey }}
+                            onChange={rotateUpdateKey}
+                            onSuccess={rotateUpdateKey}
                             className="space-y-5"
                         >
                             {({ errors, processing }) => (
@@ -542,7 +541,13 @@ export default function ServiceShow({
                                     </div>
                                     <Dialog
                                         open={reactivateOpen}
-                                        onOpenChange={setReactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateReactivateKey();
+                                            }
+
+                                            setReactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -573,9 +578,10 @@ export default function ServiceShow({
                                                     'X-Idempotency-Key':
                                                         reactivateKey,
                                                 }}
-                                                onSuccess={() =>
-                                                    setReactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateReactivateKey();
+                                                    setReactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>
@@ -636,7 +642,13 @@ export default function ServiceShow({
                                     </div>
                                     <Dialog
                                         open={inactivateOpen}
-                                        onOpenChange={setInactivateOpen}
+                                        onOpenChange={(open) => {
+                                            if (open) {
+                                                rotateDestroyKey();
+                                            }
+
+                                            setInactivateOpen(open);
+                                        }}
                                     >
                                         <DialogTrigger asChild>
                                             <Button
@@ -668,9 +680,10 @@ export default function ServiceShow({
                                                         destroyKey,
                                                 }}
                                                 method="delete"
-                                                onSuccess={() =>
-                                                    setInactivateOpen(false)
-                                                }
+                                                onSuccess={() => {
+                                                    rotateDestroyKey();
+                                                    setInactivateOpen(false);
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <>

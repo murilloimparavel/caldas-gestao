@@ -57,7 +57,12 @@ export function NavMain({
     persistenceKey = 'anonymous',
 }: NavMainProps) {
     const { currentUrl, isCurrentUrl } = useCurrentUrl();
-    const { state } = useSidebar();
+    const { isMobile, setOpenMobile, state } = useSidebar();
+    const closeMobileSidebar = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
     const storageKey = `sidebar-nav-groups:${STORAGE_VERSION}:${persistenceKey}`;
     const activeGroupIds = useMemo(
         () =>
@@ -151,9 +156,10 @@ export function NavMain({
                                                 <Link
                                                     href={item.href}
                                                     prefetch
-                                                    onClick={() =>
-                                                        setOpenFlyout(null)
-                                                    }
+                                                    onClick={() => {
+                                                        setOpenFlyout(null);
+                                                        closeMobileSidebar();
+                                                    }}
                                                     className="flex w-full items-center gap-2"
                                                 >
                                                     {item.icon && (
@@ -249,6 +255,9 @@ export function NavMain({
                                                                     : undefined
                                                             }
                                                             prefetch
+                                                            onClick={
+                                                                closeMobileSidebar
+                                                            }
                                                             className="gap-2"
                                                         >
                                                             {item.icon && (
