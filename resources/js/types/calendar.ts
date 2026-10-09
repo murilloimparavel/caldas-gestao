@@ -156,6 +156,7 @@ export type CalendarProps = {
         services?: CalendarOption[];
         sale_categories?: SaleCategoryOptionSummary[];
         statuses?: AppointmentStatus[];
+        timezone?: string;
     };
     professionals?: CalendarOption[];
     range?: CalendarRange;

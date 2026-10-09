@@ -19,6 +19,7 @@ use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +32,7 @@ final class CalendarController extends Controller
         $filters = $request->validated();
         Gate::authorize('viewAny', Appointment::class);
         $unitId = $context->unit?->getKey();
-        $unitTimezone = $context->unit === null ? config('app.timezone') : ($context->unit->timezone ?? config('app.timezone'));
+        $unitTimezone = $context->unit?->timezone ?: $context->tenant->timezone ?: config('app.timezone');
         $start = CarbonImmutable::parse((string) ($filters['date'] ?? now($unitTimezone)->toDateString()), $unitTimezone)->startOfDay();
         $end = $start->addDays(42);
         $appointments = Appointment::query()
@@ -93,7 +94,7 @@ final class CalendarController extends Controller
                 'avatar_path' => $p->avatar_path,
                 'avatar_url' => $p->avatar_url,
             ]),
-            'timezone' => $context->unit === null ? config('app.timezone') : ($context->unit->timezone ?? config('app.timezone')),
+            'timezone' => $unitTimezone,
             'statuses' => ['draft', 'scheduled', 'confirmed', 'checked_in', 'in_service', 'completed', 'no_show', 'cancelled'],
         ];
 
@@ -143,16 +144,24 @@ final class CalendarController extends Controller
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $create->handle($request->user(), $context, $data)->getKey(), 'resource_type' => 'appointment']);
+        $appointment = Appointment::query()->where('tenant_id', $context->tenant->getKey())->findOrFail($reference['resource_id']);
+        $message = 'Agendamento criado.';
 
-        return to_route('calendar.index', ['appointment' => $reference['resource_id']])->with('success', 'Agendamento criado.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return to_route('calendar.index', $this->calendarReturnQuery($request, $context, $appointment))->with('success', $message);
     }
 
     public function update(AppointmentRequest $request, TenantContext $context, Appointment $appointment, UpdateAppointment $update): RedirectResponse
     {
         $data = $request->validated();
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $update->handle($request->user(), $context, $appointment, $data)->getKey(), 'resource_type' => 'appointment']);
+        $appointment = Appointment::query()->where('tenant_id', $context->tenant->getKey())->findOrFail($reference['resource_id']);
+        $message = 'Agendamento atualizado.';
 
-        return to_route('calendar.index', ['appointment' => $reference['resource_id']])->with('success', 'Agendamento atualizado.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return to_route('calendar.index', $this->calendarReturnQuery($request, $context, $appointment))->with('success', $message);
     }
 
     public function cancel(CancelAppointmentRequest $request, TenantContext $context, Appointment $appointment, CancelAppointment $cancel): RedirectResponse
@@ -169,5 +178,40 @@ final class CalendarController extends Controller
         $reference = $this->mutation->execute($request, $context, $request->user(), $data, fn (): array => ['resource_id' => $checkIn->handle($request->user(), $context, $appointment, (int) $data['lock_version'])->getKey(), 'resource_type' => 'appointment']);
 
         return to_route('calendar.index', ['appointment' => $reference['resource_id']])->with('success', 'Cliente registrado como presente.');
+    }
+
+    /** @return array{date:string,view:string,professional_ids?:list<string>,status?:list<string>} */
+    private function calendarReturnQuery(AppointmentRequest $request, TenantContext $context, Appointment $appointment): array
+    {
+        $timezone = $appointment->timezone ?: $context->unit?->timezone ?: $context->tenant->timezone ?: config('app.timezone');
+        $calendarContext = $request->input('calendar_context', []);
+        $calendarContext = is_array($calendarContext) ? $calendarContext : [];
+
+        $query = [
+            'date' => $appointment->starts_at->timezone($timezone)->toDateString(),
+            'view' => in_array($calendarContext['view'] ?? null, ['day', 'week', 'month'], true) ? $calendarContext['view'] : 'week',
+        ];
+
+        $professionalIds = $calendarContext['professional_ids'] ?? [];
+
+        if (is_array($professionalIds)) {
+            $professionalIds = array_values(array_filter($professionalIds, fn (mixed $id): bool => is_string($id) && Str::isUuid($id)));
+
+            if ($professionalIds !== [] && in_array((string) $appointment->professional_id, $professionalIds, true)) {
+                $query['professional_ids'] = $professionalIds;
+            }
+        }
+
+        $statuses = $calendarContext['status'] ?? [];
+
+        if (is_array($statuses)) {
+            $statuses = array_values(array_filter($statuses, fn (mixed $status): bool => is_string($status) && in_array($status, ['draft', 'scheduled', 'confirmed', 'checked_in', 'in_service', 'completed', 'no_show', 'cancelled'], true)));
+
+            if ($statuses !== [] && in_array($appointment->status, $statuses, true)) {
+                $query['status'] = $statuses;
+            }
+        }
+
+        return $query;
     }
 }

@@ -15,6 +15,7 @@ final class CreateCustomer extends OperationalAction
     public function handle(User $actor, TenantContext $context, array $data): Customer
     {
         $unit = $this->unit($actor, $context, 'customer.manage');
+        $data['phone_normalized'] = $this->normalizePhone($data['phone'] ?? null);
 
         return DB::transaction(function () use ($actor, $context, $data, $unit): Customer {
             $customer = Customer::query()->create([...$data, 'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'last_activity_at' => now(), 'lock_version' => 0]);
@@ -22,5 +23,12 @@ final class CreateCustomer extends OperationalAction
 
             return $customer;
         }, 5);
+    }
+
+    private function normalizePhone(mixed $phone): ?string
+    {
+        $digits = is_string($phone) ? preg_replace('/\D+/', '', $phone) : null;
+
+        return $digits === '' ? null : $digits;
     }
 }

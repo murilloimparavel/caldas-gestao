@@ -34,10 +34,21 @@ function calendarWorkspace(): array
 
 it('creates and cancels an appointment with history and idempotent replay', function () {
     [$owner, $tenantId, $unitId, $customer, $professional, $service] = calendarWorkspace();
+    $otherProfessional = Professional::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId]);
     $payload = ['customer_id' => $customer->getKey(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => '2030-02-10 10:00', 'duration_minutes' => 45];
 
-    $response = $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->withHeader('X-Idempotency-Key', 'appointment-create-1')->actingAs($owner)->post(route('appointments.store'), $payload);
-    $response->assertRedirect();
+    $response = $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->withHeader('X-Idempotency-Key', 'appointment-create-1')->actingAs($owner)->post(route('appointments.store'), [
+        ...$payload,
+        'calendar_context' => [
+            'view' => 'day',
+            'professional_ids' => [$otherProfessional->getKey()],
+            'status' => ['scheduled'],
+        ],
+    ]);
+    $response->assertRedirect(route('calendar.index', [
+        'date' => '2030-02-10',
+        'view' => 'day',
+    ]))->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Agendamento criado.']);
     $appointment = Appointment::query()->firstOrFail();
     expect((int) $appointment->starts_at->diffInMinutes($appointment->ends_at))->toBe(45)
         ->and(AppointmentStatusHistory::query()->where('appointment_id', $appointment->getKey())->count())->toBe(1);
@@ -80,7 +91,25 @@ it('updates with optimistic locking and requires a cancellation reason', functio
     $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->post(route('appointments.store'), ['customer_id' => $customer->getKey(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => '2030-02-10 10:00', 'duration_minutes' => 60])->assertRedirect();
     $appointment = Appointment::query()->firstOrFail();
 
-    $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->put(route('appointments.update', $appointment), ['customer_id' => $customer->getKey(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => '2030-02-10 11:00', 'duration_minutes' => 60, 'lock_version' => 0])->assertRedirect();
+    $updateResponse = $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->put(route('appointments.update', $appointment), [
+        'customer_id' => $customer->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => '2030-02-10 11:00',
+        'duration_minutes' => 60,
+        'lock_version' => 0,
+        'calendar_context' => [
+            'view' => 'month',
+            'professional_ids' => [$professional->getKey()],
+            'status' => ['confirmed'],
+        ],
+    ]);
+    $updateResponse->assertRedirect(route('calendar.index', [
+        'date' => '2030-02-10',
+        'view' => 'month',
+        'professional_ids' => [$professional->getKey()],
+        'status' => ['confirmed'],
+    ]))->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Agendamento atualizado.']);
     expect($appointment->fresh()->lock_version)->toBe(1);
     $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->put(route('appointments.update', $appointment), ['customer_id' => $customer->getKey(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => '2030-02-10 12:00', 'duration_minutes' => 60, 'lock_version' => 0])->assertStatus(409);
     $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->post(route('appointments.cancel', $appointment), ['lock_version' => 1])->assertSessionHasErrors('cancel_reason');
