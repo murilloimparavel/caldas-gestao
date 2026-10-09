@@ -186,9 +186,10 @@ final class CalendarController extends Controller
         $timezone = $appointment->timezone ?: $context->unit?->timezone ?: $context->tenant->timezone ?: config('app.timezone');
         $calendarContext = $request->input('calendar_context', []);
         $calendarContext = is_array($calendarContext) ? $calendarContext : [];
+        $startsAt = CarbonImmutable::parse((string) $appointment->starts_at, $timezone);
 
         $query = [
-            'date' => $appointment->starts_at->timezone($timezone)->toDateString(),
+            'date' => $startsAt->toDateString(),
             'view' => in_array($calendarContext['view'] ?? null, ['day', 'week', 'month'], true) ? $calendarContext['view'] : 'week',
         ];
 
