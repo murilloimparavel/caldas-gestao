@@ -6,6 +6,7 @@ use App\Models\AuditEvent;
 use App\Models\Category;
 use App\Models\CommissionAccrual;
 use App\Models\CommissionRule;
+use App\Models\CommissionSettlement;
 use App\Models\Customer;
 use App\Models\IdempotencyKey;
 use App\Models\InventoryMovement;
@@ -209,6 +210,68 @@ it('adjusts a finalized sale, replenishing inventory and cancelling commissions 
         ->where('resource_id', $sale->getKey())
         ->exists()
     )->toBeTrue();
+});
+
+it('rejects adjustment before any mutation when a sale has a settled commission', function () {
+    [$owner, $tenant, $unit] = saleAdjustmentTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'finalized',
+        'lock_version' => 1,
+    ]);
+
+    $saleItem = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+    ]);
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $settlement = CommissionSettlement::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $professional->getKey(),
+        'user_id' => $owner->getKey(),
+    ]);
+    $accrual = CommissionAccrual::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $professional->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $saleItem->getKey(),
+        'status' => 'settled',
+        'settled_at' => $settlement->paid_at,
+        'settlement_id' => $settlement->getKey(),
+        'lock_version' => 1,
+    ]);
+
+    $response = $this->actingAs($owner)->post(route('sales.adjust', $sale), [
+        'reason' => 'Tentativa de estorno após pagamento de comissão',
+        'lock_version' => 1,
+    ]);
+
+    $response->assertSessionHasErrors('sale');
+    expect(session('errors')->get('sale'))->toContain('A comanda possui comissão já paga; reconcilie a comissão antes de estornar.');
+
+    $sale->refresh();
+    $accrual->refresh();
+
+    expect($sale->status)->toBe('finalized')
+        ->and($sale->lock_version)->toBe(1)
+        ->and($accrual->status)->toBe('settled')
+        ->and($accrual->lock_version)->toBe(1)
+        ->and(SaleStatusHistory::query()->where('sale_id', $sale->getKey())->exists())->toBeFalse()
+        ->and(AuditEvent::query()->where('action', 'sale.adjusted')->where('resource_id', $sale->getKey())->exists())->toBeFalse();
 });
 
 it('rejects adjustment for sales that are not finalized', function (string $invalidStatus) {

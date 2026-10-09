@@ -115,6 +115,28 @@ final class FinalizeClosingSession extends OperationalAction
                 ]);
             }
 
+            foreach ($sales as $sale) {
+                $itemsTotalCents = (int) $sale->items->sum('total_cents');
+                if ($sale->total_amount_cents !== $itemsTotalCents) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => "A comanda #{$sale->getKey()} possui total persistido divergente da soma dos itens ativos.",
+                    ]);
+                }
+
+                if ($sale->discount_amount_cents > $sale->total_amount_cents) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => "A comanda #{$sale->getKey()} possui desconto maior que o total.",
+                    ]);
+                }
+
+                $expectedFinalAmountCents = max(0, $sale->total_amount_cents - $sale->discount_amount_cents);
+                if ($sale->final_amount_cents !== $expectedFinalAmountCents) {
+                    throw ValidationException::withMessages([
+                        'sale_ids' => "A comanda #{$sale->getKey()} possui valor final inconsistente com o total e o desconto.",
+                    ]);
+                }
+            }
+
             // Concurrency lock_version validation
             if (isset($data['lock_versions'])) {
                 foreach ($sales as $sale) {
