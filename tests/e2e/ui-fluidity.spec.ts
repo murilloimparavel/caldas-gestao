@@ -261,4 +261,106 @@ test('persists a gallery reorder and restores the order after a failed update', 
     await page.getByRole('button', { name: 'Galeria' }).click();
     await expect(altTextInputs.nth(0)).toHaveValue('Foto de teste 2');
     await expect(altTextInputs.nth(1)).toHaveValue('Foto de teste 1');
+
+    let galleryOnlyReloadRequested = false;
+    await page.route('**/online-booking/gallery', async (route) => {
+        if (route.request().method() === 'POST') {
+            await route.fulfill({
+                status: 201,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    gallery: {
+                        id: 'e2e-uploaded-image',
+                        path: 'e2e-uploaded-image.webp',
+                        alt_text: null,
+                        position: 3,
+                    },
+                }),
+            });
+
+            return;
+        }
+
+        await route.continue();
+    });
+    await page.route('**/online-booking', async (route) => {
+        const request = route.request();
+        const partialData = request.headers()['x-inertia-partial-data'];
+
+        if (
+            request.method() === 'GET' &&
+            partialData?.split(',').includes('gallery')
+        ) {
+            galleryOnlyReloadRequested = partialData === 'gallery';
+            const response = await route.fetch();
+            const payload = await response.json();
+            payload.props.gallery.push({
+                id: 'e2e-uploaded-image',
+                path: 'e2e-uploaded-image.webp',
+                alt_text: null,
+                position: 3,
+            });
+
+            await route.fulfill({ response, json: payload });
+
+            return;
+        }
+
+        await route.continue();
+    });
+    const uploadResponse = page.waitForResponse(
+        (response) =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname.endsWith(
+                '/online-booking/gallery',
+            ),
+    );
+    await page
+        .getByText('Galeria de fotos', { exact: true })
+        .locator('xpath=ancestor::*[@data-slot="card"][1]')
+        .locator('input[type="file"]')
+        .setInputFiles({
+            name: 'foto-e2e.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/oZsAAAAASUVORK5CYII=',
+                'base64',
+            ),
+        });
+    expect((await uploadResponse).status()).toBe(201);
+    await expect(altTextInputs).toHaveCount(3);
+    await expect(altTextInputs.nth(2)).toHaveValue('');
+    expect(galleryOnlyReloadRequested).toBe(true);
+});
+
+test('syncs normalized appearance props after saving and reloading the draft', async ({
+    isMobile,
+    page,
+}) => {
+    test.skip(
+        isMobile,
+        'The seeded appearance draft is intentionally mutated once per run.',
+    );
+
+    await signIn(page);
+    await page.goto('/online-booking');
+
+    const primaryColor = page.locator('#appearance-primary_color');
+    await expect(primaryColor).toBeVisible();
+    await primaryColor.fill('#a1b2c3');
+
+    const draftUpdate = page.waitForResponse(
+        (response) =>
+            response.request().method() === 'PATCH' &&
+            new URL(response.url()).pathname.endsWith('/online-booking/draft'),
+    );
+    await page.getByRole('button', { name: 'Salvar identidade' }).click();
+    expect((await draftUpdate).ok()).toBeTruthy();
+
+    await expect(page.getByText('Aparência salva no rascunho.')).toBeVisible();
+    await expect(page.getByText('#A1B2C3', { exact: true })).toBeVisible();
+
+    await page.reload();
+    await expect(primaryColor).toHaveValue('#a1b2c3');
+    await expect(page.getByText('#A1B2C3', { exact: true })).toBeVisible();
 });
