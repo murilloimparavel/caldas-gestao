@@ -168,6 +168,10 @@ final class ReconcileImportedSaleCommissions extends Command
     private function renderCsv(array $rows): string
     {
         $stream = fopen('php://temp', 'w+');
+        if ($stream === false) {
+            return '';
+        }
+
         fputcsv($stream, [
             'sale_id', 'tenant_id', 'unit_id', 'source_id', 'status', 'commission_accrual_status',
             'active_items_total_cents', 'total_amount_cents', 'final_amount_cents',
