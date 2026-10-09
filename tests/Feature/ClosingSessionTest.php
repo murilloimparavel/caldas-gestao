@@ -37,6 +37,116 @@ function closingTestWorkspace(): array
     return [$owner, $tenant, $unit, TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey())];
 }
 
+function closingTestSaleItem(Sale $sale, int $totalCents): SaleItem
+{
+    return SaleItem::factory()->create([
+        'tenant_id' => $sale->tenant_id,
+        'unit_id' => $sale->unit_id,
+        'sale_id' => $sale->getKey(),
+        'unit_price_cents' => $totalCents,
+        'total_cents' => $totalCents,
+    ]);
+}
+
+it('rejects closing a sale when its persisted total differs from active sale items', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 2500,
+        'discount_amount_cents' => 0,
+        'final_amount_cents' => 2500,
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'total_cents' => 2000,
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('closing-sessions.store'), [
+            'sale_ids' => [$sale->getKey()],
+            'expected_total_cents' => 2500,
+            'payment_method' => 'pix',
+        ])
+        ->assertSessionHasErrors('sale_ids');
+
+    expect($sale->fresh()->status)->toBe('open')
+        ->and(ClosingSession::query()->exists())->toBeFalse();
+});
+
+it('rejects closing a sale when its final amount differs from total less discount', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 2500,
+        'discount_amount_cents' => 500,
+        'final_amount_cents' => 2500,
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'total_cents' => 2500,
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('closing-sessions.store'), [
+            'sale_ids' => [$sale->getKey()],
+            'expected_total_cents' => 2500,
+            'payment_method' => 'pix',
+        ])
+        ->assertSessionHasErrors('sale_ids');
+
+    expect($sale->fresh()->status)->toBe('open')
+        ->and(ClosingSession::query()->exists())->toBeFalse();
+});
+
+it('rejects closing a sale when its discount exceeds the total', function () {
+    [$owner, $tenant, $unit] = closingTestWorkspace();
+
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+        'total_amount_cents' => 1000,
+        'discount_amount_cents' => 1500,
+        'final_amount_cents' => 0,
+    ]);
+    closingTestSaleItem($sale, 1000);
+
+    $this->actingAs($owner)
+        ->post(route('closing-sessions.store'), [
+            'sale_ids' => [$sale->getKey()],
+            'expected_total_cents' => 0,
+        ])
+        ->assertSessionHasErrors('sale_ids');
+
+    expect($sale->fresh()->status)->toBe('open')
+        ->and(ClosingSession::query()->exists())->toBeFalse();
+});
+
 it('finalizes a single sale closing session, generating receipt payload, status histories and audit events', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
 
@@ -159,6 +269,7 @@ it('accepts permuta as a closing session payment method', function () {
         'total_amount_cents' => 1000,
         'final_amount_cents' => 1000,
     ]);
+    closingTestSaleItem($sale, 1000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -190,6 +301,7 @@ it('rejects cash closing when the received amount is lower than the total', func
         'total_amount_cents' => 4000,
         'final_amount_cents' => 4000,
     ]);
+    closingTestSaleItem($sale, 4000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -219,6 +331,7 @@ it('records exact cash payment with no change', function () {
         'total_amount_cents' => 4000,
         'final_amount_cents' => 4000,
     ]);
+    closingTestSaleItem($sale, 4000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -252,6 +365,7 @@ it('records excess cash and calculates the change', function () {
         'total_amount_cents' => 4000,
         'final_amount_cents' => 4000,
     ]);
+    closingTestSaleItem($sale, 4000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -279,6 +393,7 @@ it('keeps cash fields null for noncash closing methods', function () {
         'total_amount_cents' => 4000,
         'final_amount_cents' => 4000,
     ]);
+    closingTestSaleItem($sale, 4000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -298,6 +413,7 @@ it('keeps cash fields null for noncash closing methods', function () {
 it('records split payments and adds only the applied cash amount to the open drawer', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);
+    closingTestSaleItem($sale, 1000);
     $shift = CashShift::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'opened_by_user_id' => $owner->getKey(), 'expected_amount_cents' => 5000]);
 
     $this->actingAs($owner)->post(route('closing-sessions.store'), [
@@ -342,6 +458,7 @@ it('closes a fully package-covered sale without recording a payment', function (
 it('rejects cash payments without an open shift and rejects allocation totals that do not match', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);
+    closingTestSaleItem($sale, 1000);
 
     $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -357,6 +474,7 @@ it('rejects cash payments without an open shift and rejects allocation totals th
 it('appends an audited compensating payment reversal and adjusts only its open cash shift', function () {
     [$owner, $tenant, $unit] = closingTestWorkspace();
     $sale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'open', 'total_amount_cents' => 1000, 'final_amount_cents' => 1000]);
+    closingTestSaleItem($sale, 1000);
     $shift = CashShift::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'opened_by_user_id' => $owner->getKey(), 'expected_amount_cents' => 0]);
     $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -414,6 +532,7 @@ it('consolidates multiple sales for the same customer into a single closing sess
         'discount_amount_cents' => 0,
         'final_amount_cents' => 6000,
     ]);
+    closingTestSaleItem($sale1, 6000);
 
     $sale2 = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -425,6 +544,7 @@ it('consolidates multiple sales for the same customer into a single closing sess
         'discount_amount_cents' => 1000,
         'final_amount_cents' => 3000,
     ]);
+    closingTestSaleItem($sale2, 4000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
@@ -466,6 +586,7 @@ it('consolidates multiple customer-less sales with the same reference_label', fu
         'total_amount_cents' => 8000,
         'final_amount_cents' => 8000,
     ]);
+    closingTestSaleItem($sale1, 8000);
 
     $sale2 = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -477,6 +598,7 @@ it('consolidates multiple customer-less sales with the same reference_label', fu
         'total_amount_cents' => 3500,
         'final_amount_cents' => 3500,
     ]);
+    closingTestSaleItem($sale2, 3500);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
@@ -513,8 +635,10 @@ it('rejects closing session with divergent customers (different closing subjects
         'customer_id' => $customerA->getKey(),
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 2000,
         'final_amount_cents' => 2000,
     ]);
+    closingTestSaleItem($sale1, 2000);
 
     $sale2 = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -522,8 +646,10 @@ it('rejects closing session with divergent customers (different closing subjects
         'customer_id' => $customerB->getKey(),
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 3000,
         'final_amount_cents' => 3000,
     ]);
+    closingTestSaleItem($sale2, 3000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
@@ -554,8 +680,10 @@ it('rejects closing session mixing customer sale and reference sale', function (
         'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 2000,
         'final_amount_cents' => 2000,
     ]);
+    closingTestSaleItem($saleWithCustomer, 2000);
 
     $saleWithRefOnly = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -564,8 +692,10 @@ it('rejects closing session mixing customer sale and reference sale', function (
         'reference_label' => 'Mesa 10',
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 3000,
         'final_amount_cents' => 3000,
     ]);
+    closingTestSaleItem($saleWithRefOnly, 3000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$saleWithCustomer->getKey(), $saleWithRefOnly->getKey()],
@@ -620,6 +750,8 @@ it('rejects closing session if lock_version does not match expected version (con
         'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 0,
+        'final_amount_cents' => 0,
         'lock_version' => 2,
     ]);
 
@@ -655,6 +787,7 @@ it('supports idempotency via X-Idempotency-Key without re-executing or creating 
         'total_amount_cents' => 5000,
         'final_amount_cents' => 5000,
     ]);
+    closingTestSaleItem($sale, 5000);
 
     $idempotencyKey = 'idem-closing-test-'.Str::random(12);
 
@@ -742,6 +875,7 @@ it('closes a single anonymous sale without customer or reference label with sale
         'total_amount_cents' => 3000,
         'final_amount_cents' => 3000,
     ]);
+    closingTestSaleItem($sale, 3000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],
@@ -773,8 +907,10 @@ it('rejects multiple anonymous sales without customer or reference label', funct
         'reference_label' => null,
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 2000,
         'final_amount_cents' => 2000,
     ]);
+    closingTestSaleItem($sale1, 2000);
 
     $sale2 = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(),
@@ -783,8 +919,10 @@ it('rejects multiple anonymous sales without customer or reference label', funct
         'reference_label' => null,
         'sale_category_id' => $category->getKey(),
         'status' => 'open',
+        'total_amount_cents' => 3000,
         'final_amount_cents' => 3000,
     ]);
+    closingTestSaleItem($sale2, 3000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale1->getKey(), $sale2->getKey()],
@@ -814,6 +952,7 @@ it('rejects closing session if expected_total_cents does not match calculated to
         'total_amount_cents' => 5000,
         'final_amount_cents' => 5000,
     ]);
+    closingTestSaleItem($sale, 5000);
 
     $response = $this->actingAs($owner)->post(route('closing-sessions.store'), [
         'sale_ids' => [$sale->getKey()],

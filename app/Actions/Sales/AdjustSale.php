@@ -80,6 +80,20 @@ final class AdjustSale extends OperationalAction
                 ]);
             }
 
+            $settledAccrual = CommissionAccrual::query()
+                ->where('tenant_id', $tenantId)
+                ->where('unit_id', $unitId)
+                ->where('sale_id', $lockedSale->getKey())
+                ->where('status', 'settled')
+                ->lockForUpdate()
+                ->first();
+
+            if ($settledAccrual !== null) {
+                throw ValidationException::withMessages([
+                    'sale' => 'A comanda possui comissão já paga; reconcilie a comissão antes de estornar.',
+                ]);
+            }
+
             $soldPackageItems = $lockedSale->items->filter(
                 static fn (SaleItem $item): bool => $item->item_type === 'package' && $item->customer_package_id !== null,
             );

@@ -159,7 +159,7 @@ it('finalizes sale order via closing sessions, debits inventory and generates im
         'unit_price_cents' => 5000,
         'quantity' => 2,
         'discount_cents' => 1000,
-        'total_cents' => 9000,
+        'total_cents' => 10000,
     ]);
 
     // Finalize closing session

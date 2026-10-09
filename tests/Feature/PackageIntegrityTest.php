@@ -264,6 +264,7 @@ it('does not consume or reactivate a package marked for review during closing', 
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
+        'total_amount_cents' => 0, 'final_amount_cents' => 0,
     ]);
     $item = SaleItem::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'sale_id' => $sale->getKey(),
@@ -310,6 +311,7 @@ it('blocks legacy active package consumption at closing without strict paid sale
     $sale = Sale::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'customer_id' => $customer->getKey(),
         'sale_category_id' => $category->getKey(), 'status' => 'open',
+        'total_amount_cents' => 0, 'final_amount_cents' => 0,
     ]);
     $item = SaleItem::factory()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'sale_id' => $sale->getKey(),
