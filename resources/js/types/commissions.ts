@@ -31,7 +31,13 @@ export type CommissionAccrual = {
     professional_id: string;
     sale_id: string;
     sale_item_id: string;
+    source_type: 'sale_item' | 'package_service' | null;
+    service_id: string | null;
+    package_template_id: string | null;
+    customer_package_id: string | null;
     item_name_snapshot: string;
+    service_name_snapshot: string | null;
+    package_name_snapshot: string | null;
     gross_amount_cents: number;
     quantity: number | null;
     covered_quantity: number | null;
@@ -45,6 +51,9 @@ export type CommissionAccrual = {
     lock_version: number;
     created_at: string;
     updated_at: string;
+    service?: { id: string; name: string } | null;
+    package_template?: { id: string; name: string } | null;
+    customer_package?: { id: string; name_snapshot: string | null } | null;
     sale?: {
         id: string;
         reference_label?: string | null;
@@ -54,6 +63,14 @@ export type CommissionAccrual = {
         id: string;
         paid_at: string;
     } | null;
+};
+
+export type PackageCommissionSummary = {
+    id: string;
+    name: string;
+    service_count: number;
+    gross_amount_cents: number;
+    commission_amount_cents: number;
 };
 
 export type CommissionSettlement = {

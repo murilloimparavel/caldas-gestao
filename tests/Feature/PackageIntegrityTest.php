@@ -143,7 +143,7 @@ it('snapshots package terms and rejects a source sale for another customer', fun
         ->and($package->price_cents_snapshot)->toBe(24900)
         ->and($package->total_sessions_snapshot)->toBe(4)
         ->and($package->validity_days_snapshot)->toBe(30)
-        ->and($package->eligible_services_snapshot)->toBe([['id' => $service->getKey(), 'name' => 'Corte', 'quantity' => 1]])
+        ->and($package->eligible_services_snapshot)->toBe([['id' => $service->getKey(), 'name' => 'Corte', 'quantity' => 1, 'price_cents' => 0]])
         ->and($package->status)->toBe('pending')
         ->and($package->sale_id)->toBe($saleItem->sale_id)
         ->and($package->serviceBalances()->first()->remaining_quantity)->toBe(1);

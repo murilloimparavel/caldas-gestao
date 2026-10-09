@@ -154,7 +154,7 @@ final class CommissionController extends Controller
         $dateEnd = trim((string) $request->string('date_end'));
 
         $accrualsQuery = CommissionAccrual::query()
-            ->with(['sale', 'settlement'])
+            ->with(['sale', 'settlement', 'service', 'packageTemplate', 'customerPackage'])
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('professional_id', $professional->getKey())
@@ -164,6 +164,35 @@ final class CommissionController extends Controller
             ->orderByDesc('created_at');
 
         $accruals = $accrualsQuery->paginate(25)->withQueryString();
+
+        $packageSummaries = CommissionAccrual::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('professional_id', $professional->getKey())
+            ->where('source_type', 'package_service')
+            ->whereNotNull('customer_package_id')
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($dateStart !== '', fn ($query) => $query->whereDate('created_at', '>=', $dateStart))
+            ->when($dateEnd !== '', fn ($query) => $query->whereDate('created_at', '<=', $dateEnd))
+            ->get([
+                'customer_package_id',
+                'package_name_snapshot',
+                'gross_amount_cents',
+                'commission_amount_cents',
+            ])
+            ->groupBy('customer_package_id')
+            ->map(function ($packageAccruals, string $packageId): array {
+                $firstAccrual = $packageAccruals->first();
+
+                return [
+                    'id' => $packageId,
+                    'name' => $firstAccrual?->package_name_snapshot ?: 'Pacote de serviços',
+                    'service_count' => $packageAccruals->count(),
+                    'gross_amount_cents' => (int) $packageAccruals->sum('gross_amount_cents'),
+                    'commission_amount_cents' => (int) $packageAccruals->sum('commission_amount_cents'),
+                ];
+            })
+            ->values();
 
         $settlements = CommissionSettlement::query()
             ->with(['user'])
@@ -191,6 +220,7 @@ final class CommissionController extends Controller
         return Inertia::render('finance/commissions/show', [
             'professional' => $professional,
             'accruals' => $accruals,
+            'package_summaries' => $packageSummaries,
             'settlements' => $settlements,
             'filters' => [
                 'status' => $status,

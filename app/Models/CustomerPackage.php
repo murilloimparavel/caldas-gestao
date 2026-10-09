@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $price_cents_snapshot
  * @property int|null $total_sessions_snapshot
  * @property int|null $validity_days_snapshot
- * @property array<int, array{id:string,name:string,quantity?:int}>|null $eligible_services_snapshot
+ * @property array<int, array{id:string,name:string,quantity?:int,price_cents?:int}>|null $eligible_services_snapshot
  * @property string|null $sale_id
  * @property int $total_sessions
  * @property int $remaining_sessions

@@ -9,6 +9,7 @@ use App\Models\CommissionAccrual;
 use App\Models\CommissionRule;
 use App\Models\CommissionSettlement;
 use App\Models\Customer;
+use App\Models\CustomerPackage;
 use App\Models\Membership;
 use App\Models\MembershipRole;
 use App\Models\MembershipUnit;
@@ -956,6 +957,61 @@ it('renders commissions index and professional show pages with Inertia', functio
         'status' => 'inactive',
     ]);
 
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_id' => $sale->getKey(),
+        'name_snapshot' => 'Combo Corte e Barba',
+    ]);
+    $packageItem = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'package',
+        'service_id' => null,
+        'product_id' => null,
+        'package_template_id' => $package->package_template_id,
+        'customer_package_id' => $package->getKey(),
+        'professional_id' => $prof->getKey(),
+        'name_snapshot' => 'Combo Corte e Barba',
+    ]);
+    CommissionAccrual::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $prof->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $packageItem->getKey(),
+        'source_type' => 'package_service',
+        'customer_package_id' => $package->getKey(),
+        'package_name_snapshot' => 'Combo Corte e Barba',
+        'service_name_snapshot' => 'Corte',
+        'gross_amount_cents' => 8000,
+        'commission_amount_cents' => 800,
+    ]);
+    CommissionAccrual::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'professional_id' => $prof->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $packageItem->getKey(),
+        'source_type' => 'package_service',
+        'customer_package_id' => $package->getKey(),
+        'package_name_snapshot' => 'Combo Corte e Barba',
+        'service_name_snapshot' => 'Barba',
+        'gross_amount_cents' => 4000,
+        'commission_amount_cents' => 1500,
+    ]);
+
     // Index page
     $indexResponse = $this->actingAs($owner)->get(route('commissions.index'));
     $indexResponse->assertOk()
@@ -974,6 +1030,11 @@ it('renders commissions index and professional show pages with Inertia', functio
             ->component('finance/commissions/show')
             ->has('professional')
             ->has('accruals')
+            ->has('package_summaries', 1)
+            ->where('package_summaries.0.name', 'Combo Corte e Barba')
+            ->where('package_summaries.0.service_count', 2)
+            ->where('package_summaries.0.gross_amount_cents', 12000)
+            ->where('package_summaries.0.commission_amount_cents', 2300)
             ->has('settlements')
             ->has('metrics')
         );
