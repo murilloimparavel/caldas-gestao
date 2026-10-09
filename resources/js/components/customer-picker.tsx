@@ -134,6 +134,7 @@ export function CustomerPicker({
     const labelId = `${inputId}-label`;
     const helperId = `${inputId}-helper`;
     const errorId = `${inputId}-error`;
+    const selectionId = `${inputId}-selection`;
     const rootRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const listboxRef = useRef<HTMLDivElement>(null);
@@ -235,7 +236,11 @@ export function CustomerPicker({
                 )
               : undefined;
     const describedBy =
-        [helper ? helperId : undefined, errorMessage ? errorId : undefined]
+        [
+            helper ? helperId : undefined,
+            errorMessage ? errorId : undefined,
+            selected || anonymousSelected ? selectionId : undefined,
+        ]
             .filter(Boolean)
             .join(' ') || undefined;
     const visibleActiveIndex = Math.min(
@@ -522,6 +527,7 @@ export function CustomerPicker({
     };
 
     const clearSelection = () => {
+        inputRef.current?.setCustomValidity('');
         onChange('');
         onAnonymousChange?.(false);
         setQuery('');
@@ -540,6 +546,7 @@ export function CustomerPicker({
             return;
         }
 
+        inputRef.current?.setCustomValidity('');
         onChange('');
         onAnonymousChange?.(true);
         setQuery('');
@@ -549,13 +556,13 @@ export function CustomerPicker({
     };
 
     const selectOption = (option: CustomerPickerOption) => {
+        inputRef.current?.setCustomValidity('');
         onChange(option.id);
         onAnonymousChange?.(false);
         setQuery('');
         setOpen(false);
         setPosition(null);
         setPortalContainer(null);
-        requestAnimationFrame(() => inputRef.current?.focus());
     };
 
     const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -645,15 +652,20 @@ export function CustomerPicker({
                         value={query}
                         onChange={(event) => {
                             const nextQuery = event.target.value;
+                            const selectionWillBeCleared =
+                                Boolean(value) || anonymousSelected;
 
                             event.currentTarget.setCustomValidity(
-                                required &&
-                                    !value &&
-                                    !anonymousSelected &&
-                                    nextQuery.trim()
+                                required && nextQuery.trim()
                                     ? 'Selecione um cliente da lista.'
                                     : '',
                             );
+
+                            if (selectionWillBeCleared) {
+                                onChange('');
+                                onAnonymousChange?.(false);
+                            }
+
                             setQuery(nextQuery);
                             setOpen(true);
                             setActiveIndex(allowAnonymous ? 0 : 0);
@@ -668,7 +680,9 @@ export function CustomerPicker({
                             }, 120);
                         }}
                         onKeyDown={handleKeyDown}
-                        placeholder={placeholder}
+                        placeholder={
+                            selected || anonymousSelected ? '' : placeholder
+                        }
                         autoComplete="off"
                         disabled={disabled}
                         required={required && !selected && !anonymousSelected}
@@ -689,25 +703,38 @@ export function CustomerPicker({
                         className={cn(
                             'h-11 w-full rounded-xl border border-input bg-background pr-12 text-sm shadow-xs transition-[border-color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-70',
                             selected || anonymousSelected
-                                ? 'pl-32 sm:pl-44'
+                                ? 'absolute inset-0 z-10 h-full border-transparent bg-transparent px-3 text-transparent caret-transparent placeholder:text-transparent focus-visible:text-foreground focus-visible:caret-foreground'
                                 : 'pl-10',
                         )}
                     />
                     {selected || anonymousSelected ? (
-                        <span className="pointer-events-none absolute inset-y-1 left-1 flex max-w-[7rem] items-center gap-2 rounded-lg bg-primary/[0.06] px-2 sm:max-w-[10.5rem]">
+                        <div
+                            data-slot="customer-selection"
+                            className="flex min-h-11 w-full min-w-0 items-start gap-2 rounded-xl border border-input bg-background py-2 pr-12 pl-2 text-sm shadow-xs"
+                        >
                             <CustomerAvatar
                                 name={selected?.name ?? anonymousLabel}
                                 anonymous={!selected}
                             />
-                            <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+                            <span
+                                data-slot="customer-name"
+                                className="min-w-0 flex-1 self-center py-0.5 text-sm font-semibold break-words text-foreground"
+                            >
                                 {selected?.name ?? anonymousLabel}
                             </span>
+                        </div>
+                    ) : null}
+                    {selected || anonymousSelected ? (
+                        <span id={selectionId} className="sr-only">
+                            Cliente selecionado:{' '}
+                            {selected?.name ?? anonymousLabel}. Digite para
+                            pesquisar outro cliente.
                         </span>
                     ) : null}
                     {selected || anonymousSelected ? (
                         <button
                             type="button"
-                            className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                            className="absolute top-1/2 right-2 z-20 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                             aria-label="Limpar cliente selecionado"
                             onClick={clearSelection}
                             disabled={disabled}

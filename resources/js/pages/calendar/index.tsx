@@ -93,6 +93,7 @@ import type {
     AppointmentStatus,
     CalendarAppointment,
     CalendarAppointmentSaleLink,
+    CalendarFilters,
     CalendarOption,
     CalendarProps,
     ScheduleBlock,
@@ -367,6 +368,7 @@ function GoogleCalendarPanel(): ReactElement {
 
 function AppointmentForm({
     appointment,
+    calendarFilters,
     customers: initialCustomers,
     defaultDurationMinutes,
     defaultProfessionalId = '',
@@ -380,6 +382,7 @@ function AppointmentForm({
     unitTimezone,
 }: {
     appointment: CalendarAppointment | null;
+    calendarFilters: CalendarFilters;
     customers: CalendarOption[];
     defaultDurationMinutes?: number;
     defaultProfessionalId?: string;
@@ -649,6 +652,27 @@ function AppointmentForm({
 
                     return (
                         <>
+                            <input
+                                type="hidden"
+                                name="calendar_context[view]"
+                                value={calendarFilters.view ?? 'week'}
+                            />
+                            {calendarFilters.professional_ids?.map((id) => (
+                                <input
+                                    key={`calendar-professional-${id}`}
+                                    type="hidden"
+                                    name="calendar_context[professional_ids][]"
+                                    value={id}
+                                />
+                            ))}
+                            {calendarFilters.status?.map((status) => (
+                                <input
+                                    key={`calendar-status-${status}`}
+                                    type="hidden"
+                                    name="calendar_context[status][]"
+                                    value={status}
+                                />
+                            ))}
                             <FormErrorSummary errors={errors} />
 
                             {automationIssue ? (
@@ -1872,7 +1896,10 @@ export default function CalendarIndex(props: CalendarProps) {
     const filters = props.calendar?.filters ?? props.filters ?? {};
     const view = filters.view ?? 'week';
     const unitTimezone =
-        props.unitTimezone ?? props.calendar?.timezone ?? 'UTC';
+        props.unitTimezone ??
+        props.calendar?.timezone ??
+        props.options?.timezone ??
+        'UTC';
     const selectedDate =
         filters.date ??
         props.calendar?.range?.start ??
@@ -2351,6 +2378,7 @@ export default function CalendarIndex(props: CalendarProps) {
                                 : `appointment-create-${prefilledSlot?.date ?? ''}-${prefilledSlot?.time ?? ''}`
                         }
                         appointment={editing}
+                        calendarFilters={filters}
                         customers={customers}
                         defaultDurationMinutes={prefilledSlot?.durationMinutes}
                         defaultProfessionalId={prefilledSlot?.professionalId}

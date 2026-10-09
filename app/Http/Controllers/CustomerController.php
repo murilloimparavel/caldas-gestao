@@ -25,6 +25,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,13 +37,20 @@ final class CustomerController extends Controller
     {
         Gate::authorize('viewAny', Customer::class);
         $search = trim((string) $request->string('search'));
+        $normalizedSearch = Str::lower(Str::ascii($search));
+        $normalizedPhoneSearch = preg_replace('/\D+/', '', $search) ?? '';
         $status = (string) $request->string('status', 'active');
         $customers = Customer::query()
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit?->getKey())
             ->when($status === 'active', fn ($query) => $query->where('status', 'active'))
             ->when($status === 'inactive', fn ($query) => $query->where('status', 'inactive'))
-            ->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")))
+            ->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested
+                ->whereRaw($this->unaccentedNameColumn().' LIKE ?', ["%{$normalizedSearch}%"])
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->when($normalizedPhoneSearch !== '', fn ($phoneQuery) => $phoneQuery
+                    ->orWhere('phone_normalized', 'like', "%{$normalizedPhoneSearch}%")
+                    ->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '(', ''), ')', ''), '-', ''), '+', ''), '.', ''), '/', '') LIKE ?", ["%{$normalizedPhoneSearch}%"]))))
             ->orderBy('name')
             ->paginate(25)
             ->withQueryString();
@@ -54,6 +62,14 @@ final class CustomerController extends Controller
                 'status' => $status,
             ],
         ]);
+    }
+
+    /**
+     * @return literal-string
+     */
+    private function unaccentedNameColumn(): string
+    {
+        return "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(name), 'á', 'a'), 'à', 'a'), 'â', 'a'), 'ã', 'a'), 'ä', 'a'), 'é', 'e'), 'è', 'e'), 'ê', 'e'), 'ë', 'e'), 'í', 'i'), 'ì', 'i'), 'î', 'i'), 'ï', 'i'), 'ó', 'o'), 'ò', 'o'), 'ô', 'o'), 'õ', 'o'), 'ö', 'o'), 'ú', 'u'), 'ù', 'u'), 'û', 'u'), 'ü', 'u'), 'ç', 'c'), 'ñ', 'n')";
     }
 
     public function show(Customer $customer): Response

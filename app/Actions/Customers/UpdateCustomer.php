@@ -17,6 +17,9 @@ final class UpdateCustomer extends OperationalAction
     {
         $expectedVersion ??= isset($data['lock_version']) ? (int) $data['lock_version'] : null;
         unset($data['lock_version']);
+        if (array_key_exists('phone', $data)) {
+            $data['phone_normalized'] = $this->normalizePhone($data['phone']);
+        }
         $unit = $this->unit($actor, $context, 'customer.manage');
         if ($customer->tenant_id !== $context->tenant->getKey() || $customer->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The customer belongs to another workspace.');
@@ -35,5 +38,12 @@ final class UpdateCustomer extends OperationalAction
 
             return $locked->fresh();
         }, 5);
+    }
+
+    private function normalizePhone(mixed $phone): ?string
+    {
+        $digits = is_string($phone) ? preg_replace('/\D+/', '', $phone) : null;
+
+        return $digits === '' ? null : $digits;
     }
 }

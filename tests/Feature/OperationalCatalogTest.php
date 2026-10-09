@@ -37,7 +37,7 @@ it('creates, updates, searches and inactivates the customer catalog', function (
     [$owner, $tenant, $unit] = operationalWorkspace();
 
     $createResponse = $this->actingAs($owner)->post(route('customers.store'), [
-        'name' => 'Ana Cliente',
+        'name' => 'João Cliente',
         'email' => null,
         'phone' => '+55 11 99999-1234',
         'notes' => 'Prefere atendimento no período da manhã.',
@@ -49,26 +49,35 @@ it('creates, updates, searches and inactivates the customer catalog', function (
     $createResponse->assertRedirect(route('customers.show', $customer));
     expect($customer->unit_id)->toBe($unit->getKey())
         ->and($customer->status)->toBe('active')
+        ->and($customer->phone_normalized)->toBe('5511999991234')
         ->and(AuditEvent::query()->where('action', 'customer.created')->where('resource_id', $customer->getKey())->exists())->toBeTrue();
 
     $this->actingAs($owner)
-        ->get(route('customers.index', ['search' => 'Ana']))
+        ->get(route('customers.index', ['search' => 'Joao']))
         ->assertInertia(fn (Assert $page) => $page
             ->component('customers/index')
-            ->where('filters.search', 'Ana')
+            ->where('filters.search', 'Joao')
+            ->has('customers.data', 1)
+            ->where('customers.data.0.id', $customer->getKey()));
+
+    $this->actingAs($owner)
+        ->get(route('customers.index', ['search' => '5511999991234']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('customers/index')
+            ->where('filters.search', '5511999991234')
             ->has('customers.data', 1)
             ->where('customers.data.0.id', $customer->getKey()));
 
     $this->flushHeaders()->actingAs($owner)
         ->patch(route('customers.update', $customer), [
-            'name' => 'Ana Atualizada',
+            'name' => 'João Atualizada',
             'email' => null,
             'phone' => $customer->phone,
             'lock_version' => 0,
         ])
         ->assertRedirect(route('customers.show', $customer));
 
-    expect($customer->fresh()->name)->toBe('Ana Atualizada')
+    expect($customer->fresh()->name)->toBe('João Atualizada')
         ->and($customer->fresh()->lock_version)->toBe(1);
 
     $this->actingAs($owner)

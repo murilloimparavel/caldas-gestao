@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 
 const fixtureEmail = 'e2e-booking@caldas.local';
 const fixturePassword = 'CaldasE2E!2026';
+const customerName = 'Maria Fernanda da Silva Oliveira de Albuquerque';
 
 const viewports = [
     { height: 844, name: 'mobile', width: 390 },
@@ -15,9 +16,9 @@ async function signIn(page: Page): Promise<void> {
     await expect(page.locator('#app-loading')).toHaveCount(0, {
         timeout: 10000,
     });
-    await page.getByLabel('Email address').fill(fixtureEmail);
-    await page.locator('input[name="password"]').fill(fixturePassword);
-    await page.getByRole('button', { name: 'Log in' }).click();
+    await page.getByLabel('E-mail').fill(fixtureEmail);
+    await page.getByRole('textbox', { name: 'Senha' }).fill(fixturePassword);
+    await page.getByRole('button', { name: 'Entrar', exact: true }).click();
     await page.waitForURL((url) => !url.pathname.endsWith('/login'), {
         waitUntil: 'domcontentloaded',
     });
@@ -80,7 +81,7 @@ for (const viewport of viewports) {
                 async (route) => {
                     const url = new URL(route.request().url());
 
-                    if (url.searchParams.get('search') !== 'maria') {
+                    if (!url.searchParams.get('search')?.startsWith('maria')) {
                         await route.continue();
 
                         return;
@@ -91,7 +92,7 @@ for (const viewport of viewports) {
                             data: [
                                 {
                                     id: 'customer-maria',
-                                    name: 'Maria da Silva',
+                                    name: customerName,
                                     phone: '(48) 99999-0000',
                                 },
                             ],
@@ -115,8 +116,15 @@ for (const viewport of viewports) {
             });
 
             await customer.fill('maria');
+            await expect
+                .poll(() =>
+                    customer.evaluate(
+                        (input: HTMLInputElement) => input.validity.customError,
+                    ),
+                )
+                .toBe(true);
             await expect(
-                page.getByRole('option', { name: /Maria da Silva/ }),
+                page.getByRole('option', { name: customerName }),
             ).toBeVisible();
             await expectWithinViewport(page, '[role="listbox"]');
 
@@ -127,7 +135,41 @@ for (const viewport of viewports) {
                     name: 'Limpar cliente selecionado',
                 }),
             ).toBeVisible();
-            await expect(dialog.getByText('Maria da Silva')).toBeVisible();
+            const selectedCustomer = dialog.locator(
+                '[data-slot="customer-selection"]',
+            );
+            const selectedName = selectedCustomer.locator(
+                '[data-slot="customer-name"]',
+            );
+            await expect(selectedName).toHaveText(customerName);
+            await expect(selectedName).toHaveCSS('white-space', 'normal');
+            await expect(customer).toHaveAttribute('placeholder', '');
+            await expect(customer).toHaveAttribute('aria-expanded', 'false');
+            await expect
+                .poll(() =>
+                    customer.evaluate((input: HTMLInputElement) => ({
+                        customError: input.validity.customError,
+                        required: input.required,
+                        valid: input.validity.valid,
+                    })),
+                )
+                .toEqual({ customError: false, required: false, valid: true });
+            await expect(
+                dialog.locator('input[name="customer_id"]'),
+            ).toHaveValue('customer-maria');
+            const selectedNameBox = await selectedName.boundingBox();
+            const clearButtonBox = await page
+                .getByRole('button', { name: 'Limpar cliente selecionado' })
+                .boundingBox();
+            expect(selectedNameBox).not.toBeNull();
+            expect(clearButtonBox).not.toBeNull();
+
+            if (selectedNameBox && clearButtonBox) {
+                expect(selectedNameBox.x + selectedNameBox.width).toBeLessThan(
+                    clearButtonBox.x,
+                );
+            }
+
             await expect(
                 customer.locator('xpath=preceding-sibling::svg'),
             ).toHaveCount(0);
@@ -141,6 +183,20 @@ for (const viewport of viewports) {
                 }),
             ).toHaveCount(0);
             await expectWithinViewport(page, '[role="listbox"]');
+            await customer.fill('maria fernanda');
+            await expect(customer).toHaveValue('maria fernanda');
+            await expect(customer).toHaveAttribute('aria-expanded', 'true');
+            await expect(
+                dialog.locator('input[name="customer_id"]'),
+            ).toHaveValue('');
+            await expect
+                .poll(() =>
+                    customer.evaluate((input: HTMLInputElement) => ({
+                        customError: input.validity.customError,
+                        required: input.required,
+                    })),
+                )
+                .toEqual({ customError: true, required: true });
             await expect(
                 page
                     .locator('html')
