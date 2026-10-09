@@ -212,7 +212,7 @@ final class AccrueCommissionsForSale extends OperationalAction
                 ->first();
         }
 
-        $snapshot = $item->customerPackage?->eligible_services_snapshot ?? [];
+        $snapshot = $item->customerPackage->eligible_services_snapshot ?? [];
         if ($snapshot !== []) {
             $serviceIds = collect($snapshot)->pluck('id')->filter()->values();
             $services = Service::query()
@@ -222,9 +222,9 @@ final class AccrueCommissionsForSale extends OperationalAction
                 ->get()
                 ->keyBy('id');
 
-            return collect($snapshot)
+            return array_values(collect($snapshot)
                 ->map(function (array $definition) use ($services): ?array {
-                    $service = $services->get((string) ($definition['id'] ?? ''));
+                    $service = $services->get($definition['id']);
                     if (! $service instanceof Service) {
                         return null;
                     }
@@ -233,7 +233,7 @@ final class AccrueCommissionsForSale extends OperationalAction
                         'service' => $service,
                         'quantity' => max(1, (int) ($definition['quantity'] ?? 1)),
                         'price_cents' => max(0, (int) ($definition['price_cents'] ?? $service->price_cents)),
-                        'name_snapshot' => trim((string) ($definition['name'] ?? $service->name)) ?: $service->name,
+                        'name_snapshot' => trim($definition['name']) ?: $service->name,
                     ];
                 })
                 ->filter()
@@ -249,19 +249,19 @@ final class AccrueCommissionsForSale extends OperationalAction
                     ];
                 })
                 ->values()
-                ->all();
+                ->all());
         }
 
         if ($packageTemplate === null || ! $packageTemplate->relationLoaded('services') || $packageTemplate->services->isEmpty()) {
             return [];
         }
 
-        return $packageTemplate->services->map(static fn (Service $service): array => [
+        return array_values($packageTemplate->services->map(static fn (Service $service): array => [
             'service' => $service,
             'quantity' => max(1, (int) ($service->pivot->included_quantity ?? 1)),
             'price_cents' => max(0, (int) $service->price_cents),
             'name_snapshot' => $service->name,
-        ])->values()->all();
+        ])->values()->all());
     }
 
     private function calculateCommission(CommissionRule $rule, int $baseAmountCents, int $quantity): int
