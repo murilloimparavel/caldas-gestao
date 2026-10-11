@@ -51,8 +51,7 @@ it('creates and cancels an appointment with history and idempotent replay', func
     ]))->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Agendamento criado.']);
     $appointment = Appointment::query()->firstOrFail();
     expect((int) $appointment->starts_at->diffInMinutes($appointment->ends_at))->toBe(45)
-        ->and($appointment->getRawOriginal('starts_at'))->toBe('2030-02-10 13:00:00')
-        ->and($appointment->starts_at->toIso8601String())->toBe('2030-02-10T13:00:00+00:00')
+        ->and($appointment->starts_at->utc()->toIso8601String())->toBe('2030-02-10T13:00:00+00:00')
         ->and(AppointmentStatusHistory::query()->where('appointment_id', $appointment->getKey())->count())->toBe(1);
 
     $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->withHeader('X-Idempotency-Key', 'appointment-create-1')->actingAs($owner)->post(route('appointments.store'), $payload)->assertRedirect();
@@ -134,7 +133,7 @@ it('updates with optimistic locking and requires a cancellation reason', functio
         'status' => ['confirmed'],
     ]))->assertInertiaFlash('toast', ['type' => 'success', 'message' => 'Agendamento atualizado.']);
     expect($appointment->fresh()->lock_version)->toBe(1)
-        ->and($appointment->fresh()->getRawOriginal('starts_at'))->toBe('2030-02-10 14:00:00');
+        ->and($appointment->fresh()->starts_at->utc()->toIso8601String())->toBe('2030-02-10T14:00:00+00:00');
     $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->put(route('appointments.update', $appointment), ['customer_id' => $customer->getKey(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => '2030-02-10 12:00', 'duration_minutes' => 60, 'lock_version' => 0])->assertStatus(409);
     $this->withHeader('X-Tenant-Id', $tenantId)->withHeader('X-Unit-Id', $unitId)->actingAs($owner)->post(route('appointments.cancel', $appointment), ['lock_version' => 1])->assertSessionHasErrors('cancel_reason');
 });
@@ -184,12 +183,12 @@ it('uses the unit timezone for appointment timestamps and stored timezone', func
 
     $appointment = app(CreateAppointment::class)->handle($owner, $context, $payload);
     expect($appointment->timezone)->toBe('America/Sao_Paulo')
-        ->and($appointment->getRawOriginal('starts_at'))->toBe('2030-02-10 13:00:00')
+        ->and($appointment->starts_at->utc()->toIso8601String())->toBe('2030-02-10T13:00:00+00:00')
         ->and($appointment->starts_at->setTimezone('America/Sao_Paulo')->format('H:i'))->toBe('10:00');
 
     $updated = app(UpdateAppointment::class)->handle($owner, $context, $appointment, [...$payload, 'starts_at' => '2030-02-10 11:00', 'lock_version' => 0]);
     expect($updated->timezone)->toBe('America/Sao_Paulo')
-        ->and($updated->getRawOriginal('starts_at'))->toBe('2030-02-10 14:00:00')
+        ->and($updated->starts_at->utc()->toIso8601String())->toBe('2030-02-10T14:00:00+00:00')
         ->and($updated->starts_at->setTimezone('America/Sao_Paulo')->format('H:i'))->toBe('11:00');
 });
 

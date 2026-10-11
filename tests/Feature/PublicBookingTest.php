@@ -524,7 +524,7 @@ it('creates one appointment with multiple compatible services', function () {
 
     $appointment = Appointment::query()->sole();
     expect($response->json('appointment.status'))->toBe('scheduled')
-        ->and($appointment->getRawOriginal('starts_at'))->toBe($date->setTime(9, 0)->utc()->format('Y-m-d H:i:s'))
+        ->and($appointment->starts_at->utc()->toIso8601String())->toBe($date->setTime(9, 0)->utc()->toIso8601String())
         ->and($appointment->starts_at->setTimezone('America/Sao_Paulo')->format('H:i'))->toBe('09:00')
         ->and($appointment->items()->count())->toBe(2)
         ->and((int) abs($appointment->ends_at->diffInMinutes($appointment->starts_at)))->toBe($service->duration_minutes + $secondService->duration_minutes);

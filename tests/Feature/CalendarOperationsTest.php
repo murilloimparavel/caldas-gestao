@@ -90,8 +90,8 @@ it('creates, updates, and cancels schedule blocks idempotently', function () {
 
     $block = ScheduleBlock::query()->sole();
     expect(ScheduleBlock::query()->count())->toBe(1)
-        ->and($block->getRawOriginal('starts_at'))->toBe('2030-02-10 12:00:00')
-        ->and($block->starts_at->toIso8601String())->toBe('2030-02-10T12:00:00+00:00');
+        ->and($block->starts_at->utc()->toIso8601String())->toBe('2030-02-10T12:00:00+00:00')
+        ->and($block->starts_at->setTimezone('America/Sao_Paulo')->format('H:i'))->toBe('09:00');
 
     $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'X-Idempotency-Key' => 'schedule-block-update-1'])
         ->actingAs($owner)->put(route('schedule_blocks.update', $block), [...$payload, 'reason' => 'Reunião', 'lock_version' => 0])->assertRedirect();

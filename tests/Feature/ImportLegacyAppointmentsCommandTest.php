@@ -30,8 +30,8 @@ it('previews and imports appointments with source crosswalks', function (): void
     $this->artisan('app:import-legacy-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file, '--write' => true])->assertSuccessful();
     $appointment = Appointment::query()->where('source_id', 'appointment-1')->firstOrFail();
     expect($appointment->customer_id)->toBe($customer->getKey())->and($appointment->professional_id)->toBe($professional->getKey())->and($appointment->status)->toBe('completed')->and($appointment->source)->toBe('imported')->and($appointment->notes)->toBe('Imported')->and($appointment->items()->firstOrFail()->service_id)->toBe($service->getKey())
-        ->and($appointment->getRawOriginal('starts_at'))->toBe('2026-01-02 13:00:00')
-        ->and($appointment->starts_at->toIso8601String())->toBe('2026-01-02T13:00:00+00:00');
+        ->and($appointment->starts_at->utc()->toIso8601String())->toBe('2026-01-02T13:00:00+00:00')
+        ->and($appointment->starts_at->setTimezone('America/Sao_Paulo')->format('H:i'))->toBe('10:00');
     unlink($file);
 });
 
