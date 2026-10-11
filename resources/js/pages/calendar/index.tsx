@@ -476,6 +476,7 @@ function AppointmentForm({
         const end = new Date(
             start.getTime() + Number(selectedDuration) * 60 * 1000,
         );
+
         return formatTime(end.toISOString(), unitTimezone);
     }, [selectedStartsAt, selectedDuration, unitTimezone]);
 
