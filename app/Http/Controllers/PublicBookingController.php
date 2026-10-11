@@ -546,13 +546,7 @@ final class PublicBookingController extends Controller
         $duration = $appointment->items->sum('duration_minutes');
         $price = number_format($appointment->items->sum('price_cents') / 100, 2, ',', '.');
         $timezone = (string) ($appointment->timezone ?: $unit->timezone ?: config('app.timezone'));
-        $appointmentStartsAt = $appointment->starts_at;
-
-        if ($appointmentStartsAt === null) {
-            return null;
-        }
-
-        $startsAt = new \DateTimeImmutable((string) $appointmentStartsAt, new \DateTimeZone($timezone));
+        $startsAt = CarbonImmutable::instance($appointment->starts_at)->setTimezone($timezone);
         $weekdays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
         $weekday = $weekdays[(int) $startsAt->format('w')];
         $dateTime = $weekday.', '.$startsAt->format('d/m/Y \\à\\s H:i');

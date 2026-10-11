@@ -16,7 +16,7 @@ Esta pasta é a **fonte canônica** do levantamento clean-room e das propostas p
 
 - Em conflito, evidência e claim ledger prevalecem sobre sínteses.
 - `Observed`, `Inferred`, `Proposed` e `Unknown` não podem ser misturados.
-- `docs/BELASIS-REVERSE-ENGINEERING.md` é um resumo editorial; não recebe novas evidências diretamente.
+- `docs/REFERENCE-SYSTEM-RESEARCH.md` é um resumo editorial; não recebe novas evidências diretamente.
 - Resumos devem ser revisados em marcos, usando este dossiê como origem.
 - Nenhum documento descreve código, API ou banco interno do produto observado.
 

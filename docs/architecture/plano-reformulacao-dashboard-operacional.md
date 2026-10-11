@@ -2,7 +2,7 @@
 
 - **Status:** Proposto
 - **Data:** 26/08/2026
-- **Alvo:** Reformulação completa da tela de Dashboard (`resources/js/pages/dashboard.tsx`) para prover uma central operacional e analítica inspirada nos melhores padrões do setor (Belasis/SaaS Beleza).
+- **Alvo:** Reformulação completa da tela de Dashboard (`resources/js/pages/dashboard.tsx`) para prover uma central operacional e analítica inspirada nos melhores padrões do setor (produtos SaaS de gestão).
 
 ---
 

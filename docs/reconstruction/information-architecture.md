@@ -6,7 +6,7 @@
 |---|---|---|
 | Global | IA Beta, criação rápida, notificações, mensagens, ajuda, perfil | ações/superfícies globais |
 | Principal | Painel, Agenda, Comandas, Pacotes, Vendas por Assinatura | grupo expansível |
-| Financeiro | Painel, Transações, Cadastros, Caixas abertos, Histórico de caixa, Belasis Pay, Notas Fiscais, Configurações | grupo expansível |
+| Financeiro | Painel, Transações, Cadastros, Caixas abertos, Histórico de caixa, pagamentos integrados, Notas Fiscais, Configurações | grupo expansível |
 | Comissões | Detalhadas, Pagas, Configurações e outra visão resumida observada anteriormente | grupo expansível |
 | Cadastros | Clientes, Anamneses, convite e profissionais, Fornecedores | grupo expansível |
 | Controle | Serviços, Produtos, Pacotes predefinidos, Categorias, Marcas, Compras, Gerador de documento | grupo expansível |

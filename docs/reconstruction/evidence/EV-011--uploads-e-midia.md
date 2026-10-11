@@ -1,7 +1,7 @@
 # EV-011 — Superfícies de arquivos, imagens e mídia
 
 - **Data do registro:** 26/08/2026
-- **Alvo:** Belasis, em reconstrução clean-room para o Caldas Gestão
+- **Alvo:** produto observado, em reconstrução clean-room para o Caldas Gestão
 - **Fontes locais:** SCR-001, SCR-002, SCR-004, SCR-005 e SCR-006; EV-002, EV-007 e EV-009; `domain/contexts.md`; ADR-007
 - **Classificação:** evidência observada de superfície e menção de catálogo; não é especificação de upload
 
@@ -50,7 +50,7 @@ Os batches autenticados foram somente leitura: o EV-002 registra que nenhum camp
 
 ## Impactos propostos para ADR-007
 
-O ADR-007 deve continuar sendo tratado como decisão arquitetural do Caldas Gestão, não como descrição comprovada da implementação interna do Belasis. Os achados acrescentam requisitos de classificação e deixam explícitas as lacunas:
+O ADR-007 deve continuar sendo tratado como decisão arquitetural do Caldas Gestão, não como descrição comprovada da implementação interna do produto observado. Os achados acrescentam requisitos de classificação e deixam explícitas as lacunas:
 
 1. **Distinguir mídia publicável de documento/sensível.** Imagens de catálogo e outras imagens explicitamente destinadas à exibição pública podem ter uma política de mídia publicável, com derivados/URLs adequados. Arquivos de cliente, anexos de anamnese e materiais ligados à assinatura digital devem ser classificados como potencialmente sensíveis por padrão, com acesso autenticado, autorização tenant-scoped/unit-scoped quando aplicável, URLs temporárias e trilha de acesso.
 2. **Não generalizar a política de imagens para documentos.** A allowlist de imagens e o limite definidos no ADR-007 não devem ser reutilizados automaticamente para Arquivos, Anamneses, assinatura digital ou Importação XML. Cada classe precisa de MIME, tamanho, retenção, inspeção e política de exposição próprios antes da implementação.

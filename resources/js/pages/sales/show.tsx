@@ -107,7 +107,10 @@ type PendingCustomerPackageOption = {
     validity_days: number;
 };
 
-function formatDateTime(iso: string | null | undefined): string {
+function formatDateTime(
+    iso: string | null | undefined,
+    timeZone?: string,
+): string {
     if (!iso) {
         return '—';
     }
@@ -121,6 +124,7 @@ function formatDateTime(iso: string | null | undefined): string {
     return new Intl.DateTimeFormat('pt-BR', {
         dateStyle: 'short',
         timeStyle: 'short',
+        ...(timeZone ? { timeZone } : {}),
     }).format(date);
 }
 
@@ -180,6 +184,10 @@ export default function SalesShow({
     pendingCustomerPackages,
 }: Props) {
     const { props } = usePage<SharedPageProps>();
+    const unitTimezone =
+        props.workspace?.activeUnit?.timezone ??
+        props.workspace?.tenant.timezone ??
+        'UTC';
     const permissions = new Set(props.auth.permissions);
     const canManage = permissions.has('sale.manage');
     const canAdjust =
@@ -2348,6 +2356,7 @@ export default function SalesShow({
                                             {formatDateTime(
                                                 sale.appointment_link
                                                     .appointment.starts_at,
+                                                unitTimezone,
                                             )}
                                         </p>
                                         <p className="text-muted-foreground capitalize">

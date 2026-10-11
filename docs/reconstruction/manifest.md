@@ -2,7 +2,7 @@
 
 ## Alvo e autorização
 
-- **Produtos observados:** aplicação Belasis (`https://belasis.app`) e site público (`https://www.belasis.com.br`).
+- **Produtos observados:** aplicação web observada e site público observado.
 - **Ambientes:** aplicação web autenticada com aparência de ambiente operacional real; marketing público anônimo.
 - **Acesso:** sessão já autenticada no Chrome do usuário e explicitamente autorizada para exploração do produto.
 - **Mutação permitida neste passe:** nenhuma. Navegação e inspeção somente leitura.
@@ -47,7 +47,7 @@
 | Artefato | Estado | Observação |
 |---|---|---|
 | `README.md` | canônico | índice, precedência e política de atualização |
-| `../BELASIS-REVERSE-ENGINEERING.md` | resumo | síntese editorial; dossiê canônico prevalece |
+| `../REFERENCE-SYSTEM-RESEARCH.md` | resumo | síntese editorial; dossiê canônico prevalece |
 | `../ROADMAP.md` | canônico | status, prioridades e próximos marcos do produto |
 | `claim-ledger.md` | ativo | claims sustentados por EV-001 a EV-010 |
 | `information-architecture.md` | ativo | rotas e agrupamentos observados |

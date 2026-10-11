@@ -53,7 +53,7 @@ final class CreateAppointment extends OperationalAction
             $appointment = Appointment::query()->create([
                 'id' => (string) Str::uuid7(), 'tenant_id' => $tenantId, 'unit_id' => $unitId,
                 'customer_id' => $data['customer_id'], 'professional_id' => $data['professional_id'],
-                'starts_at' => $startsAt, 'ends_at' => $endsAt, 'timezone' => $timezone,
+                'starts_at' => $startsAt->utc(), 'ends_at' => $endsAt->utc(), 'timezone' => $timezone,
                 'status' => $status, 'source' => $data['source'] ?? 'internal',
                 'color' => $data['color'] ?? null, 'reminder_enabled' => $data['reminder_enabled'] ?? true,
                 'fit_in' => $data['fit_in'] ?? false, 'notes' => $data['notes'] ?? null, 'lock_version' => 0,

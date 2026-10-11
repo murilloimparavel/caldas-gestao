@@ -14,15 +14,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
-#[Signature('app:import-belasis-transactions
+#[Signature('app:import-legacy-transactions
     {--tenant-id= : Explicit destination tenant UUID}
     {--unit-id= : Explicit destination unit UUID}
-    {--file= : JSON file containing the sanitized Belasis transactions export}
+    {--file= : JSON file containing the sanitized Legacy transactions export}
     {--dry-run : Validate and preview without persisting changes}
     {--write : Persist validated changes; --dry-run remains required as a safety gate}
     {--chunk=100 : Number of rows processed per chunk}')]
-#[Description('Import sanitized Belasis financial transactions idempotently')]
-final class ImportBelasisTransactions extends Command
+#[Description('Import sanitized Legacy financial transactions idempotently')]
+final class ImportLegacyTransactions extends Command
 {
     /** @var array<string, int> */
     private array $summary = ['found' => 0, 'exported' => 0, 'ignored' => 0, 'failed' => 0, 'pending' => 0];
@@ -146,7 +146,7 @@ final class ImportBelasisTransactions extends Command
             return null;
         }
 
-        $description = $this->description($record) ?? 'Belasis transaction '.$sourceId;
+        $description = $this->description($record) ?? 'Legacy transaction '.$sourceId;
         if (mb_strlen($description) > 255) {
             throw new \RuntimeException('Transaction description exceeds the database limit.');
         }

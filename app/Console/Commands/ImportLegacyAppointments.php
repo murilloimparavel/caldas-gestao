@@ -18,15 +18,15 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
-#[Signature('app:import-belasis-appointments
+#[Signature('app:import-legacy-appointments
     {--tenant-id= : Explicit destination tenant UUID}
     {--unit-id= : Explicit destination unit UUID}
-    {--file= : Sanitized Belasis appointments JSON file}
+    {--file= : Sanitized Legacy appointments JSON file}
     {--dry-run : Validate and preview without persisting changes (the default)}
     {--write : Persist validated changes}
     {--report= : Optional JSON report output path}')]
-#[Description('Import sanitized Belasis appointments idempotently')]
-final class ImportBelasisAppointments extends Command
+#[Description('Import sanitized Legacy appointments idempotently')]
+final class ImportLegacyAppointments extends Command
 {
     /** @var array{found:int,created:int,updated:int,skipped:int,failed:int,pending:int} */
     private array $summary = ['found' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0, 'failed' => 0, 'pending' => 0];
@@ -87,8 +87,9 @@ final class ImportBelasisAppointments extends Command
             $customer = $this->resolveCustomer($tenantId, $unitId, $record['client_source_id'] ?? null);
             $service = $this->resolveService($tenantId, $unitId, $record['service_source_id'] ?? null);
             $professional = $this->resolveProfessional($tenantId, $unitId, $record['professional_source_id'] ?? null);
-            $startsAt = CarbonImmutable::parse((string) ($record['starts_at'] ?? ''));
-            $endsAt = CarbonImmutable::parse((string) ($record['ends_at'] ?? ''));
+            $timezone = 'America/Sao_Paulo';
+            $startsAt = CarbonImmutable::parse((string) ($record['starts_at'] ?? ''), $timezone);
+            $endsAt = CarbonImmutable::parse((string) ($record['ends_at'] ?? ''), $timezone);
             if ($endsAt->lessThanOrEqualTo($startsAt)) {
                 throw new RuntimeException('invalid_time_range');
             }
@@ -101,9 +102,9 @@ final class ImportBelasisAppointments extends Command
 
                 return;
             }
-            DB::transaction(function () use ($existing, $record, $sourceId, $customer, $service, $professional, $startsAt, $endsAt, $status, $tenantId, $unitId): void {
+            DB::transaction(function () use ($existing, $record, $sourceId, $customer, $service, $professional, $startsAt, $endsAt, $status, $tenantId, $unitId, $timezone): void {
                 $appointment = $existing ?? new Appointment(['id' => (string) Str::uuid7()]);
-                $appointment->forceFill(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'source_id' => $sourceId, 'customer_id' => $customer->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $startsAt, 'ends_at' => $endsAt, 'timezone' => 'America/Sao_Paulo', 'status' => $status, 'source' => 'imported', 'notes' => $this->stringValue($record['notes'] ?? null), 'cancelled_at' => $status === 'cancelled' ? $endsAt : null, 'lock_version' => $existing === null ? 0 : $existing->lock_version + 1])->save();
+                $appointment->forceFill(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'source_id' => $sourceId, 'customer_id' => $customer->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => $startsAt->utc(), 'ends_at' => $endsAt->utc(), 'timezone' => $timezone, 'status' => $status, 'source' => 'imported', 'notes' => $this->stringValue($record['notes'] ?? null), 'cancelled_at' => $status === 'cancelled' ? $endsAt->utc() : null, 'lock_version' => $existing === null ? 0 : $existing->lock_version + 1])->save();
                 AppointmentItem::query()->updateOrCreate(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'appointment_id' => $appointment->getKey(), 'position' => 1], ['id' => (string) Str::uuid7(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'service_name_snapshot' => $service->name, 'duration_minutes' => max(1, $startsAt->diffInMinutes($endsAt)), 'price_cents' => $service->price_cents]);
             });
             $this->summary[$action]++;

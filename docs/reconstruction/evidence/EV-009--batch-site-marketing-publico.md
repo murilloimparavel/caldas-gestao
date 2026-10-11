@@ -3,7 +3,7 @@
 ## Escopo
 
 - data: 24/08/2026;
-- alvo: `https://www.belasis.com.br/`;
+- alvo: `site público observado`;
 - acesso: público, sem autenticação;
 - viewports: desktop 1710 × 985 e mobile 390 × 844;
 - mutações: nenhuma;
@@ -87,7 +87,7 @@ Esses são claims comerciais. Não comprovam causalidade, disponibilidade em tod
 - **consultiva:** Agendar demonstração;
 - **retenção/confiança:** Suporte, base de conhecimento, status e downloads.
 
-Um CTA fixo “Testar grátis” permanece visível em desktop e mobile. Formulários de vendas, criação e demonstração são incorporados por iframes de `hub.belasis.ai`; nenhum contrato de campos foi inspecionado e nada foi enviado.
+Um CTA fixo “Testar grátis” permanece visível em desktop e mobile. Formulários de vendas, criação e demonstração são incorporados por iframes de `provedor externo de formulários`; nenhum contrato de campos foi inspecionado e nada foi enviado.
 
 ## Conteúdo da home
 

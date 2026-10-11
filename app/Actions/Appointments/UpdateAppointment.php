@@ -67,7 +67,7 @@ final class UpdateAppointment extends OperationalAction
             $fromStatus = $locked->status;
             $nextStatus = (string) ($data['status'] ?? $locked->status);
             $this->transitions->assertCanTransition($fromStatus, $nextStatus);
-            $locked->forceFill(['customer_id' => $data['customer_id'], 'professional_id' => $data['professional_id'], 'starts_at' => $startsAt, 'ends_at' => $endsAt, 'timezone' => $timezone, 'status' => $nextStatus, 'source' => $data['source'] ?? $locked->source, 'color' => $data['color'] ?? $locked->color, 'reminder_enabled' => $data['reminder_enabled'] ?? $locked->reminder_enabled, 'fit_in' => $data['fit_in'] ?? $locked->fit_in, 'notes' => $data['notes'] ?? $locked->notes, 'lock_version' => $locked->lock_version + 1])->save();
+            $locked->forceFill(['customer_id' => $data['customer_id'], 'professional_id' => $data['professional_id'], 'starts_at' => $startsAt->utc(), 'ends_at' => $endsAt->utc(), 'timezone' => $timezone, 'status' => $nextStatus, 'source' => $data['source'] ?? $locked->source, 'color' => $data['color'] ?? $locked->color, 'reminder_enabled' => $data['reminder_enabled'] ?? $locked->reminder_enabled, 'fit_in' => $data['fit_in'] ?? $locked->fit_in, 'notes' => $data['notes'] ?? $locked->notes, 'lock_version' => $locked->lock_version + 1])->save();
             $appointmentItem = AppointmentItem::query()
                 ->where('tenant_id', $locked->tenant_id)
                 ->where('unit_id', $locked->unit_id)

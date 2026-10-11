@@ -919,6 +919,7 @@ export default function ProfessionalShow({
                                                     ).toLocaleString('pt-BR', {
                                                         dateStyle: 'short',
                                                         timeStyle: 'short',
+                                                        timeZone: timezone,
                                                     })}{' '}
                                                     –{' '}
                                                     {new Date(
@@ -927,6 +928,7 @@ export default function ProfessionalShow({
                                                         'pt-BR',
                                                         {
                                                             timeStyle: 'short',
+                                                            timeZone: timezone,
                                                         },
                                                     )}
                                                 </p>
