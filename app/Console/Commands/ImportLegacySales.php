@@ -21,17 +21,17 @@ use JsonException;
 use RuntimeException;
 use Throwable;
 
-final class BelasisPendingRelation extends RuntimeException {}
+final class LegacyPendingRelation extends RuntimeException {}
 
-#[Signature('app:import-belasis-sales
+#[Signature('app:import-legacy-sales
     {--tenant-id= : Explicit destination tenant UUID}
     {--unit-id= : Explicit destination unit UUID}
-    {--file= : Sanitized Belasis sales JSON file}
+    {--file= : Sanitized Legacy sales JSON file}
     {--sale-category-id= : Explicit active destination sale category UUID}
     {--dry-run : Validate and report without writing}
     {--report= : Optional JSON report output path}')]
-#[Description('Import sanitized Belasis sales into a tenant and unit')]
-final class ImportBelasisSales extends Command
+#[Description('Import sanitized Legacy sales into a tenant and unit')]
+final class ImportLegacySales extends Command
 {
     /** @var array{found:int,created:int,updated:int,skipped:int,failed:int,pending:int,payments_pending:int} */
     private array $summary = [
@@ -67,7 +67,7 @@ final class ImportBelasisSales extends Command
 
             $sales = $this->readSales((string) $this->option('file'));
         } catch (Throwable) {
-            $this->components->error('Belasis sales import validation failed.');
+            $this->components->error('Legacy sales import validation failed.');
 
             return self::FAILURE;
         }
@@ -78,7 +78,7 @@ final class ImportBelasisSales extends Command
         }
 
         $this->components->info(sprintf(
-            'Belasis sales: %d found, %d created, %d updated, %d skipped, %d pending, %d failed, %d payments pending scope.',
+            'Legacy sales: %d found, %d created, %d updated, %d skipped, %d pending, %d failed, %d payments pending scope.',
             $this->summary['found'],
             $this->summary['created'],
             $this->summary['updated'],
@@ -97,7 +97,7 @@ final class ImportBelasisSales extends Command
     {
         try {
             $mapped = $this->mapSale($record, $tenantId, $unitId, $category);
-        } catch (BelasisPendingRelation $exception) {
+        } catch (LegacyPendingRelation $exception) {
             $this->summary['pending']++;
             $this->addRow($position, 'pending', $exception->getMessage());
 
@@ -185,7 +185,7 @@ final class ImportBelasisSales extends Command
                 ->where('source_id', $clientSourceId)
                 ->value('id');
             if ($customerId === null) {
-                throw new BelasisPendingRelation('missing_customer_relation');
+                throw new LegacyPendingRelation('missing_customer_relation');
             }
         }
 
@@ -248,7 +248,7 @@ final class ImportBelasisSales extends Command
         $sourceId = $this->sourceId($item['source_id'] ?? null, 'missing_item_source_id');
         $isService = $item['is_service'] ?? $item['product_is_service'] ?? null;
         if (! is_bool($isService)) {
-            throw new BelasisPendingRelation('missing_item_type_relation');
+            throw new LegacyPendingRelation('missing_item_type_relation');
         }
 
         $productSourceId = $this->sourceId($item['product_source_id'] ?? null, 'missing_product_source_id');
@@ -256,7 +256,7 @@ final class ImportBelasisSales extends Command
             ? Service::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', $productSourceId)->first()
             : Product::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', $productSourceId)->first();
         if ($catalogItem === null) {
-            throw new BelasisPendingRelation($isService ? 'missing_service_relation' : 'missing_product_relation');
+            throw new LegacyPendingRelation($isService ? 'missing_service_relation' : 'missing_product_relation');
         }
 
         $professionalId = null;
@@ -268,7 +268,7 @@ final class ImportBelasisSales extends Command
                 ->where('source_id', $professionalSourceId)
                 ->value('id');
             if ($professionalId === null) {
-                throw new BelasisPendingRelation('missing_professional_relation');
+                throw new LegacyPendingRelation('missing_professional_relation');
             }
         }
 

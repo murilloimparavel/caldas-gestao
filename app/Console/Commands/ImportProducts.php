@@ -17,12 +17,12 @@ use Throwable;
 #[Signature('app:import-products
     {--tenant-id= : Explicit destination tenant UUID}
     {--unit-id= : Explicit destination unit UUID}
-    {--file= : JSON file containing the sanitized Belasis products export}
+    {--file= : JSON file containing the sanitized Legacy products export}
     {--dry-run : Validate and preview without persisting changes (the default)}
     {--write : Persist validated changes}
     {--chunk=100 : Number of rows processed per chunk}
     {--report= : Optional JSON report output path}')]
-#[Description('Import sanitized Belasis products idempotently')]
+#[Description('Import sanitized Legacy products idempotently')]
 final class ImportProducts extends Command
 {
     /** @var array{found:int,created:int,updated:int,skipped:int,failed:int,pending:int} */

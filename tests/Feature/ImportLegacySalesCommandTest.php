@@ -71,7 +71,7 @@ function salesImportFixtures(string $tenantId, string $unitId): array
 }
 
 /** @param array<string,mixed> $overrides */
-function belasisSanitizedSale(array $overrides = []): array
+function legacySanitizedSale(array $overrides = []): array
 {
     return array_replace_recursive([
         'source_id' => 'sale-synthetic-1',
@@ -111,9 +111,9 @@ function belasisSanitizedSale(array $overrides = []): array
 it('previews the real sanitized structure without writing', function (): void {
     [$tenantId, $unitId, $category] = salesImportDestination();
     salesImportFixtures($tenantId, $unitId);
-    $file = salesImportFile([belasisSanitizedSale()]);
+    $file = salesImportFile([legacySanitizedSale()]);
 
-    $this->artisan('app:import-belasis-sales', [
+    $this->artisan('app:import-legacy-sales', [
         '--tenant-id' => $tenantId,
         '--unit-id' => $unitId,
         '--file' => $file,
@@ -129,10 +129,10 @@ it('previews the real sanitized structure without writing', function (): void {
 it('imports real-shape sales with source-id crosswalks and payment scope', function (): void {
     [$tenantId, $unitId, $category] = salesImportDestination();
     [$customer, $service, , $professional] = salesImportFixtures($tenantId, $unitId);
-    $file = salesImportFile([belasisSanitizedSale()]);
+    $file = salesImportFile([legacySanitizedSale()]);
     $report = tempnam(sys_get_temp_dir(), 'sales-report-');
 
-    $this->artisan('app:import-belasis-sales', [
+    $this->artisan('app:import-legacy-sales', [
         '--tenant-id' => $tenantId,
         '--unit-id' => $unitId,
         '--file' => $file,
@@ -161,7 +161,7 @@ it('imports real-shape sales with source-id crosswalks and payment scope', funct
 it('updates a sale and synchronizes items by source id on rerun', function (): void {
     [$tenantId, $unitId, $category] = salesImportDestination();
     salesImportFixtures($tenantId, $unitId);
-    $file = salesImportFile([belasisSanitizedSale([
+    $file = salesImportFile([legacySanitizedSale([
         'items' => [
             [
                 'source_id' => 'item-service-1',
@@ -196,11 +196,11 @@ it('updates a sale and synchronizes items by source id on rerun', function (): v
         '--sale-category-id' => $category->getKey(),
     ];
 
-    $this->artisan('app:import-belasis-sales', $arguments)->assertSuccessful();
+    $this->artisan('app:import-legacy-sales', $arguments)->assertSuccessful();
     file_put_contents($file, json_encode([
         'source' => 'sanitized-test-fixture',
         'entity' => 'sale',
-        'records' => [belasisSanitizedSale([
+        'records' => [legacySanitizedSale([
             'date' => '2024-01-03',
             'finished' => false,
             'total_cents' => 5000,
@@ -221,7 +221,7 @@ it('updates a sale and synchronizes items by source id on rerun', function (): v
         ])],
     ], JSON_THROW_ON_ERROR));
 
-    $this->artisan('app:import-belasis-sales', $arguments)->assertSuccessful()->expectsOutputToContain('1 updated');
+    $this->artisan('app:import-legacy-sales', $arguments)->assertSuccessful()->expectsOutputToContain('1 updated');
 
     $sale = Sale::query()->where('source_id', 'sale-synthetic-1')->firstOrFail();
     $staleItem = SaleItem::withTrashed()->where('source_id', 'item-product-1')->firstOrFail();
@@ -244,10 +244,10 @@ it('updates a sale and synchronizes items by source id on rerun', function (): v
 it('keeps sales with missing source-id relations pending', function (): void {
     [$tenantId, $unitId, $category] = salesImportDestination();
     salesImportFixtures($tenantId, $unitId);
-    $file = salesImportFile([belasisSanitizedSale(['client_source_id' => 'missing-client-synthetic'])]);
+    $file = salesImportFile([legacySanitizedSale(['client_source_id' => 'missing-client-synthetic'])]);
     $report = tempnam(sys_get_temp_dir(), 'sales-report-');
 
-    $this->artisan('app:import-belasis-sales', [
+    $this->artisan('app:import-legacy-sales', [
         '--tenant-id' => $tenantId,
         '--unit-id' => $unitId,
         '--file' => $file,
@@ -266,7 +266,7 @@ it('fails before processing an invalid file structure', function (): void {
     $file = tempnam(sys_get_temp_dir(), 'invalid-sales-');
     file_put_contents($file, '{"records":{"not":"a list"}}');
 
-    $this->artisan('app:import-belasis-sales', [
+    $this->artisan('app:import-legacy-sales', [
         '--tenant-id' => $tenantId,
         '--unit-id' => $unitId,
         '--file' => $file,

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 if ($argc !== 4) {
-    fwrite(STDERR, "Usage: php scripts/prepare-belasis-catalog.php <mixed-catalog.json> <products.json> <output-directory>\n");
+    fwrite(STDERR, "Usage: php scripts/prepare-legacy-catalog.php <mixed-catalog.json> <products.json> <output-directory>\n");
     exit(1);
 }
 
@@ -39,7 +39,7 @@ function records(array $payload, string $key): array
 function writeJson(string $path, string $entity, array $records): void
 {
     $payload = [
-        'source' => 'belasis',
+        'source' => 'legacy',
         'entity' => $entity,
         'source_count' => count($records),
         $entity => $records,

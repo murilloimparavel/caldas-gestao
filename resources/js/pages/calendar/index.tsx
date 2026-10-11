@@ -34,6 +34,7 @@ import {
     dateTimeValue,
     formatDay,
     formatTime,
+    instantFromDateTimeValue,
     statusLabel,
 } from '@/components/calendar';
 import {
@@ -466,20 +467,17 @@ function AppointmentForm({
             return null;
         }
 
-        const start = new Date(selectedStartsAt);
+        const start = instantFromDateTimeValue(selectedStartsAt, unitTimezone);
 
-        if (Number.isNaN(start.getTime())) {
+        if (!start) {
             return null;
         }
 
         const end = new Date(
             start.getTime() + Number(selectedDuration) * 60 * 1000,
         );
-        const hours = String(end.getHours()).padStart(2, '0');
-        const minutes = String(end.getMinutes()).padStart(2, '0');
-
-        return `${hours}:${minutes}`;
-    }, [selectedStartsAt, selectedDuration]);
+        return formatTime(end.toISOString(), unitTimezone);
+    }, [selectedStartsAt, selectedDuration, unitTimezone]);
 
     const handleStatusChange = (newStatus: AppointmentStatus) => {
         if (newStatus === 'cancelled') {
@@ -552,9 +550,9 @@ function AppointmentForm({
             return null;
         }
 
-        const start = new Date(selectedStartsAt);
+        const start = instantFromDateTimeValue(selectedStartsAt, unitTimezone);
 
-        if (Number.isNaN(start.getTime())) {
+        if (!start) {
             return null;
         }
 
@@ -909,6 +907,7 @@ function AppointmentForm({
                                 <FormField
                                     label="Data e horário"
                                     name="starts_at"
+                                    description={`Horário local da unidade (${unitTimezone}).`}
                                     error={errors.starts_at}
                                 >
                                     <Input
@@ -1677,6 +1676,7 @@ function ScheduleBlockForm({
                             <FormField
                                 label="Início do bloqueio"
                                 name="starts_at"
+                                description={`Horário local da unidade (${unitTimezone}).`}
                                 error={errors.starts_at}
                             >
                                 <Input
@@ -1690,6 +1690,7 @@ function ScheduleBlockForm({
                             <FormField
                                 label="Fim do bloqueio"
                                 name="ends_at"
+                                description={`Horário local da unidade (${unitTimezone}).`}
                                 error={errors.ends_at}
                             >
                                 <Input

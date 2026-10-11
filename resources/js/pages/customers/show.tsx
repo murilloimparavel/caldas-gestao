@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import customerPackageActions from '@/actions/App/Http/Controllers/CustomerPackageController';
-import { statusLabels } from '@/components/calendar';
+import { dateKey, statusLabels } from '@/components/calendar';
 import {
     createIdempotencyKey,
     useIdempotencyKey,
@@ -204,22 +204,24 @@ type Props = {
     subscription_history?: ActiveSubscription[];
 };
 
-function formatAppointmentDate(isoString: string): string {
+function formatAppointmentDate(isoString: string, timeZone: string): string {
     const date = new Date(isoString);
 
     return date.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
+        timeZone,
         year: 'numeric',
     });
 }
 
-function formatAppointmentTime(isoString: string): string {
+function formatAppointmentTime(isoString: string, timeZone: string): string {
     const date = new Date(isoString);
 
     return date.toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
+        timeZone,
     });
 }
 
@@ -442,6 +444,10 @@ export default function CustomerShow({
     } | null>(null);
 
     const { props } = usePage<SharedPageProps>();
+    const unitTimezone =
+        props.workspace?.activeUnit?.timezone ??
+        props.workspace?.tenant.timezone ??
+        'UTC';
     const canManage = props.auth.permissions.includes('customer.manage');
     const canSellPackage =
         props.auth.permissions.includes('package.sell') ||
@@ -840,6 +846,10 @@ export default function CustomerShow({
                                             Atendimentos recentes e agendamentos
                                             deste cliente.
                                         </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Horários no fuso da unidade (
+                                            {unitTimezone}).
+                                        </p>
                                     </div>
                                     <Button asChild variant="outline" size="sm">
                                         <Link href={calendarIndex()}>
@@ -866,15 +876,18 @@ export default function CustomerShow({
                                                         <span className="font-medium text-foreground">
                                                             {formatAppointmentDate(
                                                                 apt.starts_at,
+                                                                unitTimezone,
                                                             )}
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
                                                             {formatAppointmentTime(
                                                                 apt.starts_at,
+                                                                unitTimezone,
                                                             )}{' '}
                                                             -{' '}
                                                             {formatAppointmentTime(
                                                                 apt.ends_at,
+                                                                unitTimezone,
                                                             )}
                                                         </span>
                                                     </div>
@@ -904,9 +917,9 @@ export default function CustomerShow({
                                                             href={calendarIndex(
                                                                 {
                                                                     query: {
-                                                                        date: apt.starts_at.slice(
-                                                                            0,
-                                                                            10,
+                                                                        date: dateKey(
+                                                                            apt.starts_at,
+                                                                            unitTimezone,
                                                                         ),
                                                                     },
                                                                 },

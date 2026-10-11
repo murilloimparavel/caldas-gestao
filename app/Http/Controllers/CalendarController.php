@@ -44,8 +44,8 @@ final class CalendarController extends Controller
             ])
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $unitId)
-            ->where('starts_at', '<', $end)
-            ->where('ends_at', '>', $start)
+            ->where('starts_at', '<', $end->utc())
+            ->where('ends_at', '>', $start->utc())
             ->when(isset($filters['professional_ids']), fn ($query) => $query->whereIn('professional_id', $filters['professional_ids']))
             ->when(isset($filters['status']), fn ($query) => $query->whereIn('status', $filters['status']))
             ->orderBy('starts_at')
@@ -117,8 +117,8 @@ final class CalendarController extends Controller
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $unitId)
                 ->where('status', 'active')
-                ->where('ends_at', '>', $start)
-                ->where('starts_at', '<', $end)
+                ->where('ends_at', '>', $start->utc())
+                ->where('starts_at', '<', $end->utc())
                 ->orderBy('starts_at')
                 ->get(['id', 'professional_id', 'starts_at', 'ends_at', 'timezone', 'reason', 'status', 'lock_version'])
                 ->map(fn (ScheduleBlock $block): array => [
@@ -186,7 +186,7 @@ final class CalendarController extends Controller
         $timezone = $appointment->timezone ?: $context->unit?->timezone ?: $context->tenant->timezone ?: config('app.timezone');
         $calendarContext = $request->input('calendar_context', []);
         $calendarContext = is_array($calendarContext) ? $calendarContext : [];
-        $startsAt = CarbonImmutable::parse((string) $appointment->starts_at, $timezone);
+        $startsAt = CarbonImmutable::instance($appointment->starts_at)->setTimezone($timezone);
 
         $query = [
             'date' => $startsAt->toDateString(),

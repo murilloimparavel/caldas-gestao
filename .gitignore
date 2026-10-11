@@ -22,7 +22,7 @@ Homestead.yaml
 npm-debug.log
 yarn-error.log
 /auth.json
-/.playwright/belasis-profile/
+/.playwright/*-profile/
 /.fleet
 /.idea
 /.nova

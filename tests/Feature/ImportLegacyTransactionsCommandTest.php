@@ -27,11 +27,11 @@ function transactionImportFile(array $records): string
 }
 
 it('requires all explicit flags and dry-run', function (): void {
-    $this->artisan('app:import-belasis-transactions')->assertFailed();
+    $this->artisan('app:import-legacy-transactions')->assertFailed();
     [$tenantId, $unitId] = transactionImportDestination();
     $file = transactionImportFile([]);
 
-    $this->artisan('app:import-belasis-transactions', ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file])
+    $this->artisan('app:import-legacy-transactions', ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file])
         ->assertFailed();
     unlink($file);
 });
@@ -41,7 +41,7 @@ it('previews a valid transaction without writing', function (): void {
     $customer = Customer::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'source_id' => 'client-1']);
     $file = transactionImportFile([['source_id' => 'transaction-1', 'customer' => ['source_id' => 'client-1'], 'date' => '2026-01-10', 'value' => '125.50', 'bill_type' => 'receivable', 'description' => 'Venda teste']]);
 
-    $this->artisan('app:import-belasis-transactions', ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file, '--dry-run' => true])
+    $this->artisan('app:import-legacy-transactions', ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file, '--dry-run' => true])
         ->assertSuccessful()->expectsOutputToContain('1 found');
 
     expect($customer->exists)->toBeTrue()
@@ -49,7 +49,7 @@ it('previews a valid transaction without writing', function (): void {
     unlink($file);
 });
 
-it('imports the real Belasis transaction format', function (): void {
+it('imports the real Legacy transaction format', function (): void {
     [$tenantId, $unitId] = transactionImportDestination();
     Customer::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'source_id' => 'real-client-1']);
     Customer::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'source_id' => 'real-client-2']);
@@ -85,7 +85,7 @@ it('imports the real Belasis transaction format', function (): void {
         '--write' => true,
     ];
 
-    $this->artisan('app:import-belasis-transactions', $arguments)->assertSuccessful();
+    $this->artisan('app:import-legacy-transactions', $arguments)->assertSuccessful();
 
     $receivable = FinancialObligation::query()->where('source_id', 'real-transaction-rec')->firstOrFail();
     $payable = FinancialObligation::query()->where('source_id', 'real-transaction-pay')->firstOrFail();
@@ -107,8 +107,8 @@ it('creates and replays a transaction by source id', function (): void {
     $file = transactionImportFile([['source_id' => 'transaction-2', 'customer' => ['source_id' => 'client-2'], 'date' => '2026-01-11', 'value' => 80, 'bill_type' => 'receivable', 'status' => 'paid']]);
     $arguments = ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file, '--dry-run' => true, '--write' => true];
 
-    $this->artisan('app:import-belasis-transactions', $arguments)->assertSuccessful();
-    $this->artisan('app:import-belasis-transactions', $arguments)->assertSuccessful();
+    $this->artisan('app:import-legacy-transactions', $arguments)->assertSuccessful();
+    $this->artisan('app:import-legacy-transactions', $arguments)->assertSuccessful();
     expect(FinancialObligation::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('source_id', 'transaction-2')->count())->toBe(1)
         ->and(FinancialObligation::query()->where('source_id', 'transaction-2')->value('amount_cents'))->toBe(8000);
     unlink($file);
@@ -118,7 +118,7 @@ it('leaves transactions with unresolved customers pending', function (): void {
     [$tenantId, $unitId] = transactionImportDestination();
     $file = transactionImportFile([['source_id' => 'transaction-pending', 'customer' => ['source_id' => 'missing'], 'date' => '2026-01-12', 'value' => 30, 'bill_type' => 'payable']]);
 
-    $this->artisan('app:import-belasis-transactions', ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file, '--dry-run' => true])
+    $this->artisan('app:import-legacy-transactions', ['--tenant-id' => $tenantId, '--unit-id' => $unitId, '--file' => $file, '--dry-run' => true])
         ->assertSuccessful()->expectsOutputToContain('1 pending');
 
     expect(FinancialObligation::query()->where('source_id', 'transaction-pending')->exists())->toBeFalse();

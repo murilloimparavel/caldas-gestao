@@ -14,13 +14,13 @@ use Illuminate\Support\Str;
 use Throwable;
 
 #[Signature('app:import-customers
-    {file : JSON file containing the Belasis clients export}
+    {file : JSON file containing the Legacy clients export}
     {tenant : Explicit destination tenant UUID}
     {unit : Explicit destination unit UUID}
     {--write : Persist changes; without this flag the command only previews}
     {--chunk=100 : Number of rows processed per chunk}
     {--report= : Optional JSON report output path}')]
-#[Description('Safely import customers from a sanitized Belasis export')]
+#[Description('Safely import customers from a sanitized Legacy export')]
 final class ImportCustomers extends Command
 {
     /** @var array<string, int> */

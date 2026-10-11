@@ -1,7 +1,7 @@
 # Sprint — Reformulação da Agenda Operacional (Calendar)
 
 ## 🎯 Objetivo
-Executar o plano definido em [`plano-reformulacao-agenda-calendar.md`](file:///Users/murilloalves/Projects/caldas-gestao/docs/architecture/plano-reformulacao-agenda-calendar.md), alinhando a interface e UX da Agenda aos melhores padrões do mercado (referência Belasis).
+Executar o plano definido em [`plano-reformulacao-agenda-calendar.md`](file:///Users/murilloalves/Projects/caldas-gestao/docs/architecture/plano-reformulacao-agenda-calendar.md), alinhando a interface e UX da Agenda aos melhores padrões do mercado (padrões de mercado).
 
 ---
 

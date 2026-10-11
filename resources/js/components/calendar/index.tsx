@@ -10,6 +10,7 @@ export {
     formatDuration,
     formatMinutes,
     formatTime,
+    instantFromDateTimeValue,
     partsFor,
     zonedTimeParts,
 } from './date-utils';

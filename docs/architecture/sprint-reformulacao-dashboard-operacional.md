@@ -1,7 +1,7 @@
 # Sprint — Reformulação do Dashboard Operacional (Visão de Hoje)
 
 ## 🎯 Objetivo
-Executar o plano definido em [`plano-reformulacao-dashboard-operacional.md`](file:///Users/murilloalves/Projects/caldas-gestao/docs/architecture/plano-reformulacao-dashboard-operacional.md), transformando o Dashboard (`resources/js/pages/dashboard.tsx`) em um painel analítico dinâmico, responsivo e visualmente rico, inspirado no padrão de referência Belasis.
+Executar o plano definido em [`plano-reformulacao-dashboard-operacional.md`](file:///Users/murilloalves/Projects/caldas-gestao/docs/architecture/plano-reformulacao-dashboard-operacional.md), transformando o Dashboard (`resources/js/pages/dashboard.tsx`) em um painel analítico dinâmico, responsivo e visualmente rico, inspirado no padrões de mercado.
 
 ---
 

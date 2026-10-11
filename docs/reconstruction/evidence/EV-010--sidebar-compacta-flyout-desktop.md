@@ -1,7 +1,7 @@
 # EV-010 — Sidebar compacta e flyout desktop
 
 **Data:** 26/08/2026
-**Fonte:** inspeção autorizada em Chrome no shell autenticado do Belasis e smoke local do Caldas
+**Fonte:** inspeção autorizada em Chrome no shell autenticado do produto observado e smoke local do Caldas
 **Classificação:** observação funcional + validação de implementação independente
 
 ## Escopo

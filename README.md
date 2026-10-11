@@ -141,13 +141,13 @@ container. Não execute `migrate` genérico diretamente no servidor: migrations
 devem seguir o processo da conexão administrativa, com backup e janela de
 mudança.
 
-### Importação de serviços do Belasis
+### Importação de catálogo de serviços
 
 O importador recebe somente um JSON sanitizado, respeita o tenant e a unidade
 ativa, evita duplicidades por nome normalizado e pode gerar um relatório:
 
 ```bash
-php artisan app:import-services storage/app/import/belasis-services.json \
+php artisan app:import-services storage/app/import/services.json \
   --tenant-email=admin@example.test \
   --dry-run \
   --report=storage/app/import/report.json
@@ -156,7 +156,7 @@ php artisan app:import-services storage/app/import/belasis-services.json \
 Depois de revisar o relatório e fazer backup, a gravação pode ser executada:
 
 ```bash
-php artisan app:import-services storage/app/import/belasis-services.json \
+php artisan app:import-services storage/app/import/services.json \
   --tenant-email=admin@example.test \
   --report=storage/app/import/report.json
 ```

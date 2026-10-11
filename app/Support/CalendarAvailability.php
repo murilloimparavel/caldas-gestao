@@ -27,8 +27,8 @@ final class CalendarAvailability
             ->where('professional_id', $professionalId)
             ->whereNotIn('status', ['cancelled', 'no_show'])
             ->when($exceptAppointmentId !== null, fn ($query) => $query->where((new Appointment)->getTable().'.id', '<>', $exceptAppointmentId))
-            ->where('starts_at', '<', $endsAt)
-            ->where('ends_at', '>', $startsAt)
+            ->where('starts_at', '<', $endsAt->utc())
+            ->where('ends_at', '>', $startsAt->utc())
             ->exists();
 
         $blockConflict = ScheduleBlock::query()
@@ -36,8 +36,8 @@ final class CalendarAvailability
             ->where('unit_id', $unitId)
             ->where('status', 'active')
             ->where(fn ($query) => $query->where('professional_id', $professionalId)->orWhereNull('professional_id'))
-            ->where('starts_at', '<', $endsAt)
-            ->where('ends_at', '>', $startsAt)
+            ->where('starts_at', '<', $endsAt->utc())
+            ->where('ends_at', '>', $startsAt->utc())
             ->exists();
 
         $localStartsAt = $startsAt->setTimezone($this->unitTimezone($tenantId, $unitId));

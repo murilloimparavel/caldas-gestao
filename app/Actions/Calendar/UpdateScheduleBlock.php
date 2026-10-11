@@ -7,6 +7,7 @@ use App\Models\Professional;
 use App\Models\ScheduleBlock;
 use App\Models\User;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -25,7 +26,11 @@ final class UpdateScheduleBlock extends OperationalAction
             Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
         }
 
-        return DB::transaction(function () use ($actor, $context, $block, $data): ScheduleBlock {
+        $timezone = (string) $data['timezone'];
+        $startsAt = CarbonImmutable::parse((string) $data['starts_at'], $timezone)->utc();
+        $endsAt = CarbonImmutable::parse((string) $data['ends_at'], $timezone)->utc();
+
+        return DB::transaction(function () use ($actor, $context, $block, $data, $timezone, $startsAt, $endsAt): ScheduleBlock {
             $locked = ScheduleBlock::query()->whereKey($block->getKey())->lockForUpdate()->firstOrFail();
             if ($locked->lock_version !== (int) $data['lock_version']) {
                 throw new ConflictHttpException('The schedule block was modified concurrently.');
@@ -34,8 +39,8 @@ final class UpdateScheduleBlock extends OperationalAction
                 throw ValidationException::withMessages(['schedule_block' => 'Cancelled schedule blocks cannot be edited.']);
             }
             $locked->forceFill([
-                'professional_id' => $data['professional_id'], 'starts_at' => $data['starts_at'],
-                'ends_at' => $data['ends_at'], 'timezone' => $data['timezone'],
+                'professional_id' => $data['professional_id'], 'starts_at' => $startsAt,
+                'ends_at' => $endsAt, 'timezone' => $timezone,
                 'reason' => $data['reason'] ?? null, 'status' => $data['status'] ?? $locked->status,
                 'lock_version' => $locked->lock_version + 1,
             ])->save();

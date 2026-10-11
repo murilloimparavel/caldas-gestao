@@ -25,11 +25,13 @@ it('previews and imports appointments with source crosswalks', function (): void
     $professional = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'source_id' => 'professional-1']);
     $file = appointmentImportFile([['source_id' => 'appointment-1', 'starts_at' => '2026-01-02 10:00', 'ends_at' => '2026-01-02 11:00', 'client_source_id' => 'client-1', 'service_source_id' => 'service-1', 'professional_source_id' => 'professional-1', 'status' => 'completed', 'notes' => 'Imported']]);
 
-    $this->artisan('app:import-belasis-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file])->assertSuccessful()->expectsOutputToContain('1 created');
+    $this->artisan('app:import-legacy-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file])->assertSuccessful()->expectsOutputToContain('1 created');
     expect(Appointment::query()->where('source_id', 'appointment-1')->exists())->toBeFalse();
-    $this->artisan('app:import-belasis-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file, '--write' => true])->assertSuccessful();
+    $this->artisan('app:import-legacy-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file, '--write' => true])->assertSuccessful();
     $appointment = Appointment::query()->where('source_id', 'appointment-1')->firstOrFail();
-    expect($appointment->customer_id)->toBe($customer->getKey())->and($appointment->professional_id)->toBe($professional->getKey())->and($appointment->status)->toBe('completed')->and($appointment->source)->toBe('imported')->and($appointment->notes)->toBe('Imported')->and($appointment->items()->firstOrFail()->service_id)->toBe($service->getKey());
+    expect($appointment->customer_id)->toBe($customer->getKey())->and($appointment->professional_id)->toBe($professional->getKey())->and($appointment->status)->toBe('completed')->and($appointment->source)->toBe('imported')->and($appointment->notes)->toBe('Imported')->and($appointment->items()->firstOrFail()->service_id)->toBe($service->getKey())
+        ->and($appointment->getRawOriginal('starts_at'))->toBe('2026-01-02 13:00:00')
+        ->and($appointment->starts_at->toIso8601String())->toBe('2026-01-02T13:00:00+00:00');
     unlink($file);
 });
 
@@ -38,7 +40,7 @@ it('keeps appointment blocks and missing relations pending', function (): void {
     $tenant = (new OnboardTenant)->handle($owner, ['name' => 'Appointment pending '.Str::random(8), 'slug' => 'appointment-pending-'.Str::lower(Str::random(8))]);
     $unit = $tenant->units()->firstOrFail();
     $file = appointmentImportFile([['source_id' => 'block-1', 'starts_at' => '2026-01-02 10:00', 'ends_at' => '2026-01-02 11:00', 'client_source_id' => null, 'service_source_id' => null, 'professional_source_id' => 'missing', 'status' => null]]);
-    $this->artisan('app:import-belasis-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file, '--write' => true])->assertSuccessful()->expectsOutputToContain('1 pending');
+    $this->artisan('app:import-legacy-appointments', ['--tenant-id' => $tenant->getKey(), '--unit-id' => $unit->getKey(), '--file' => $file, '--write' => true])->assertSuccessful()->expectsOutputToContain('1 pending');
     expect(Appointment::query()->where('source_id', 'block-1')->exists())->toBeFalse();
     unlink($file);
 });

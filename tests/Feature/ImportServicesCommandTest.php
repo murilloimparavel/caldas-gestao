@@ -40,7 +40,7 @@ it('imports a service once when the command is replayed', function (): void {
     ]);
     $file = tempnam(sys_get_temp_dir(), 'services-');
     file_put_contents($file, json_encode(['services' => [[
-        'source_id' => 'belasis-service-1',
+        'source_id' => 'legacy-service-1',
         'name' => 'Barba teste',
         'price_cents' => 3500,
         'duration_minutes' => 30,
@@ -52,7 +52,7 @@ it('imports a service once when the command is replayed', function (): void {
 
     expect(Service::query()->where('tenant_id', $tenant->getKey())->count())->toBe(1)
         ->and(Service::query()->where('tenant_id', $tenant->getKey())->firstOrFail()->price_cents)->toBe(3500)
-        ->and(Service::query()->where('tenant_id', $tenant->getKey())->firstOrFail()->source_id)->toBe('belasis-service-1');
+        ->and(Service::query()->where('tenant_id', $tenant->getKey())->firstOrFail()->source_id)->toBe('legacy-service-1');
     unlink($file);
 });
 
@@ -72,7 +72,7 @@ it('reconciles a legacy service without source id by a unique normalized name', 
     ]);
     $file = tempnam(sys_get_temp_dir(), 'services-');
     file_put_contents($file, json_encode(['services' => [[
-        'source_id' => 'belasis-service-unique',
+        'source_id' => 'legacy-service-unique',
         'name' => ' corte teste ',
         'price_cents' => 3500,
         'duration_minutes' => 45,
@@ -84,7 +84,7 @@ it('reconciles a legacy service without source id by a unique normalized name', 
     ])->assertSuccessful();
 
     expect(Service::query()->where('tenant_id', $tenant->getKey())->count())->toBe(1)
-        ->and($legacyService->fresh()->source_id)->toBe('belasis-service-unique')
+        ->and($legacyService->fresh()->source_id)->toBe('legacy-service-unique')
         ->and($legacyService->fresh()->price_cents)->toBe(3500)
         ->and($legacyService->fresh()->duration_minutes)->toBe(45);
     unlink($file);
@@ -101,7 +101,7 @@ it('updates an existing source id match and skips ambiguous legacy names', funct
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
         'name' => 'Nome antigo',
-        'source_id' => 'belasis-service-update',
+        'source_id' => 'legacy-service-update',
         'price_cents' => 1000,
     ]);
     Service::factory()->create([
@@ -119,12 +119,12 @@ it('updates an existing source id match and skips ambiguous legacy names', funct
     $file = tempnam(sys_get_temp_dir(), 'services-');
     $report = tempnam(sys_get_temp_dir(), 'services-report-');
     file_put_contents($file, json_encode(['services' => [[
-        'source_id' => 'belasis-service-update',
+        'source_id' => 'legacy-service-update',
         'name' => 'Nome atualizado',
         'price_cents' => 4500,
         'duration_minutes' => 50,
     ], [
-        'source_id' => 'belasis-service-ambiguous',
+        'source_id' => 'legacy-service-ambiguous',
         'name' => 'AMBÍGUO',
         'price_cents' => 5000,
         'duration_minutes' => 30,
@@ -140,18 +140,18 @@ it('updates an existing source id match and skips ambiguous legacy names', funct
     expect($existingService->fresh()->name)->toBe('Nome atualizado')
         ->and($existingService->fresh()->price_cents)->toBe(4500)
         ->and($reportPayload['services'][1]['reason'])->toBe('ambiguous_existing_name')
-        ->and(Service::query()->where('tenant_id', $tenant->getKey())->where('source_id', 'belasis-service-ambiguous')->exists())->toBeFalse();
+        ->and(Service::query()->where('tenant_id', $tenant->getKey())->where('source_id', 'legacy-service-ambiguous')->exists())->toBeFalse();
     unlink($file);
     unlink($report);
 });
 
-it('imports the sanitized Belasis service catalog without duplicates', function (): void {
+it('imports the sanitized Legacy service catalog without duplicates', function (): void {
     $owner = User::factory()->create();
     $tenant = (new OnboardTenant)->handle($owner, [
-        'name' => 'Belasis import '.Str::random(8),
-        'slug' => 'belasis-'.Str::lower(Str::random(8)),
+        'name' => 'Legacy import '.Str::random(8),
+        'slug' => 'legacy-'.Str::lower(Str::random(8)),
     ]);
-    $file = base_path('tests/Fixtures/belasis-services.sanitized.json');
+    $file = base_path('tests/Fixtures/legacy-services.sanitized.json');
 
     $arguments = ['file' => $file, '--tenant-email' => $owner->email];
     $this->artisan('app:import-services', $arguments)->assertSuccessful();

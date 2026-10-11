@@ -130,7 +130,10 @@ export function SaleStatusBadge({ status }: { status: SaleStatus }) {
     );
 }
 
-function formatDateTime(iso: string | null | undefined): string {
+function formatDateTime(
+    iso: string | null | undefined,
+    timeZone?: string,
+): string {
     if (!iso) {
         return '—';
     }
@@ -144,6 +147,7 @@ function formatDateTime(iso: string | null | undefined): string {
     return new Intl.DateTimeFormat('pt-BR', {
         dateStyle: 'short',
         timeStyle: 'short',
+        ...(timeZone ? { timeZone } : {}),
     }).format(date);
 }
 
@@ -170,6 +174,10 @@ export default function SalesIndex({
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { view, setView } = useResourceView('caldas-gestao:sales:view');
     const { props } = usePage<SharedPageProps>();
+    const unitTimezone =
+        props.workspace?.activeUnit?.timezone ??
+        props.workspace?.tenant.timezone ??
+        'UTC';
     const canManage = props.auth.permissions.includes('sale.manage');
     const canClosePermission =
         props.auth.permissions.includes('sale.close') ||
@@ -933,6 +941,7 @@ export default function SalesIndex({
                                                         sale.appointment_link
                                                             .appointment
                                                             .starts_at,
+                                                        unitTimezone,
                                                     )}
                                                     )
                                                 </span>

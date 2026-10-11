@@ -26,7 +26,7 @@ function customerImportFile(array $clients): string
 
 it('previews customers without writing', function (): void {
     [$tenantId, $unitId] = customerImportDestination();
-    $file = customerImportFile([['source_id' => 'belasis-1', 'name' => 'Cliente teste', 'phone' => '(35) 99999-0001']]);
+    $file = customerImportFile([['source_id' => 'legacy-1', 'name' => 'Cliente teste', 'phone' => '(35) 99999-0001']]);
 
     $this->artisan('app:import-customers', ['file' => $file, 'tenant' => $tenantId, 'unit' => $unitId])
         ->assertSuccessful()
@@ -39,7 +39,7 @@ it('previews customers without writing', function (): void {
 it('imports idempotently by tenant, unit and source id', function (): void {
     [$tenantId, $unitId] = customerImportDestination();
     $file = customerImportFile([[
-        'source_id' => 'belasis-2',
+        'source_id' => 'legacy-2',
         'name' => 'Cliente idempotente',
         'phone' => '(35) 99999-0002',
         'birthday' => '1990-05-20',
@@ -51,15 +51,15 @@ it('imports idempotently by tenant, unit and source id', function (): void {
     $this->artisan('app:import-customers', $arguments)->assertSuccessful();
 
     expect(Customer::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->count())->toBe(1)
-        ->and(Customer::query()->where('source_id', 'belasis-2')->firstOrFail()->phone_normalized)->toBe('35999990002');
+        ->and(Customer::query()->where('source_id', 'legacy-2')->firstOrFail()->phone_normalized)->toBe('35999990002');
     unlink($file);
 });
 
-it('preserves non-promoted Belasis fields and rejects compound values in scalar fields', function (): void {
+it('preserves non-promoted Legacy fields and rejects compound values in scalar fields', function (): void {
     [$tenantId, $unitId] = customerImportDestination();
     $file = customerImportFile([[
-        'id' => 'belasis-original',
-        'source_id' => 'belasis-preserved',
+        'id' => 'legacy-original',
+        'source_id' => 'legacy-preserved',
         'name' => 'Cliente preservado',
         'email' => ['invalid' => 'compound'],
         'phone' => ['invalid' => 'compound'],
@@ -81,7 +81,7 @@ it('preserves non-promoted Belasis fields and rejects compound values in scalar 
     $this->artisan('app:import-customers', ['file' => $file, 'tenant' => $tenantId, 'unit' => $unitId, '--write' => true])
         ->assertSuccessful();
 
-    $customer = Customer::query()->where('source_id', 'belasis-preserved')->firstOrFail();
+    $customer = Customer::query()->where('source_id', 'legacy-preserved')->firstOrFail();
     expect($customer->email)->toBeNull()
         ->and($customer->phone)->toBeNull()
         ->and($customer->birth_date)->toBeNull()
@@ -104,12 +104,12 @@ it('preserves non-promoted Belasis fields and rejects compound values in scalar 
 it('keeps the same source id isolated between tenants', function (): void {
     [$tenantA, $unitA] = customerImportDestination();
     [$tenantB, $unitB] = customerImportDestination();
-    $file = customerImportFile([['source_id' => 'belasis-shared', 'name' => 'Cliente compartilhado', 'phone' => '35999990003']]);
+    $file = customerImportFile([['source_id' => 'legacy-shared', 'name' => 'Cliente compartilhado', 'phone' => '35999990003']]);
 
     $this->artisan('app:import-customers', ['file' => $file, 'tenant' => $tenantA, 'unit' => $unitA, '--write' => true])->assertSuccessful();
     $this->artisan('app:import-customers', ['file' => $file, 'tenant' => $tenantB, 'unit' => $unitB, '--write' => true])->assertSuccessful();
 
-    expect(Customer::query()->where('tenant_id', $tenantA)->where('source_id', 'belasis-shared')->count())->toBe(1)
+    expect(Customer::query()->where('tenant_id', $tenantA)->where('source_id', 'legacy-shared')->count())->toBe(1)
         ->and(Customer::query()->where('tenant_id', $tenantB)->count())->toBe(1);
     unlink($file);
 });
@@ -118,14 +118,14 @@ it('does not merge an ambiguous phone and reports row failure without leaking pe
     [$tenantId, $unitId] = customerImportDestination();
     Customer::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'phone' => '35999990004', 'phone_normalized' => '35999990004']);
     Customer::factory()->create(['tenant_id' => $tenantId, 'unit_id' => $unitId, 'phone' => '(35) 99999-0004', 'phone_normalized' => '35999990004']);
-    $file = customerImportFile([['source_id' => 'belasis-ambiguous', 'name' => 'Não deve importar', 'phone' => '35999990004']]);
+    $file = customerImportFile([['source_id' => 'legacy-ambiguous', 'name' => 'Não deve importar', 'phone' => '35999990004']]);
     $report = tempnam(sys_get_temp_dir(), 'customer-report-');
 
     $this->artisan('app:import-customers', ['file' => $file, 'tenant' => $tenantId, 'unit' => $unitId, '--write' => true, '--report' => $report])
         ->assertSuccessful();
 
     $reportPayload = json_decode((string) file_get_contents($report), true, 512, JSON_THROW_ON_ERROR);
-    expect(Customer::query()->where('source_id', 'belasis-ambiguous')->exists())->toBeFalse()
+    expect(Customer::query()->where('source_id', 'legacy-ambiguous')->exists())->toBeFalse()
         ->and($reportPayload['summary']['skipped'])->toBe(1)
         ->and((string) file_get_contents($report))->not->toContain('Não deve importar');
     unlink($file);
@@ -135,16 +135,16 @@ it('does not merge an ambiguous phone and reports row failure without leaking pe
 it('rolls back an invalid row and reports it without stopping valid rows', function (): void {
     [$tenantId, $unitId] = customerImportDestination();
     $file = customerImportFile([
-        ['source_id' => 'belasis-valid', 'name' => 'Cliente válido', 'phone' => '35999990005'],
-        ['source_id' => 'belasis-invalid', 'name' => str_repeat('x', 161), 'phone' => '35999990006'],
+        ['source_id' => 'legacy-valid', 'name' => 'Cliente válido', 'phone' => '35999990005'],
+        ['source_id' => 'legacy-invalid', 'name' => str_repeat('x', 161), 'phone' => '35999990006'],
     ]);
     $report = tempnam(sys_get_temp_dir(), 'customer-report-');
 
     $this->artisan('app:import-customers', ['file' => $file, 'tenant' => $tenantId, 'unit' => $unitId, '--write' => true, '--report' => $report])
         ->assertFailed();
 
-    expect(Customer::query()->where('source_id', 'belasis-valid')->exists())->toBeTrue()
-        ->and(Customer::query()->where('source_id', 'belasis-invalid')->exists())->toBeFalse();
+    expect(Customer::query()->where('source_id', 'legacy-valid')->exists())->toBeTrue()
+        ->and(Customer::query()->where('source_id', 'legacy-invalid')->exists())->toBeFalse();
     $reportPayload = json_decode((string) file_get_contents($report), true, 512, JSON_THROW_ON_ERROR);
     expect($reportPayload['summary']['failed'])->toBe(1);
     unlink($file);

@@ -11,11 +11,11 @@ Evoluir a navegação lateral do Caldas para que a sidebar continue útil nos do
 - expandida, com categorias e itens filhos claramente hierarquizados;
 - recolhida, como rail de ícones com um flyout de links por categoria.
 
-A referência funcional foi observada no Belasis em Chrome. A implementação mantém identidade visual, rotas e permissões próprias do Caldas; não copia marca, paleta, textos ou ativos do produto observado.
+A referência funcional foi observada no produto observado em Chrome. A implementação mantém identidade visual, rotas e permissões próprias do Caldas; não copia marca, paleta, textos ou ativos do produto observado.
 
 ## Evidência funcional observada
 
-No Belasis, a sidebar expandida apresenta grupos independentes que podem permanecer abertos simultaneamente. Ao recolher, os nomes e filhos deixam de ocupar a lateral, mas os ícones das categorias continuam disponíveis. Clicar em um ícone abre um menu flutuante à direita com os links daquele grupo. O flyout fecha após a navegação, ao clicar fora ou com `Escape`.
+No produto observado, a sidebar expandida apresenta grupos independentes que podem permanecer abertos simultaneamente. Ao recolher, os nomes e filhos deixam de ocupar a lateral, mas os ícones das categorias continuam disponíveis. Clicar em um ícone abre um menu flutuante à direita com os links daquele grupo. O flyout fecha após a navegação, ao clicar fora ou com `Escape`.
 
 ## Contrato implementado
 

@@ -2,7 +2,7 @@
 
 - **Status:** Proposto
 - **Data:** 26/08/2026
-- **Alvo:** Reformulação e polimento visual da Agenda (`resources/js/pages/calendar/index.tsx` e `resources/js/components/calendar/index.tsx`) inspirando-se na referência operacional Belasis.
+- **Alvo:** Reformulação e polimento visual da Agenda (`resources/js/pages/calendar/index.tsx` e `resources/js/components/calendar/index.tsx`) inspirando-se na padrões operacionais de mercado.
 
 ---
 

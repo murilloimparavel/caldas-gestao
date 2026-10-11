@@ -96,6 +96,45 @@ export function dateTimeValue(value: string, timeZone = 'UTC'): string {
     return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}T${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
 }
 
+export function instantFromDateTimeValue(
+    value: string,
+    timeZone = 'UTC',
+): Date | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+
+    if (!match) {
+        return null;
+    }
+
+    const [, year, month, day, hour, minute] = match.map(Number);
+    const target = Date.UTC(year, month - 1, day, hour, minute);
+    let timestamp = target;
+
+    try {
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            const parts = partsFor(new Date(timestamp).toISOString(), timeZone);
+            const represented = Date.UTC(
+                parts.year,
+                parts.month - 1,
+                parts.day,
+                parts.hour,
+                parts.minute,
+            );
+            const difference = target - represented;
+
+            if (difference === 0) {
+                return new Date(timestamp);
+            }
+
+            timestamp += difference;
+        }
+    } catch {
+        return null;
+    }
+
+    return null;
+}
+
 export function zonedTimeParts(
     value: string,
     timeZone = 'UTC',

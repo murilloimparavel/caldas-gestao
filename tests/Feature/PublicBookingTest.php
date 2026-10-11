@@ -496,6 +496,11 @@ it('creates and replays a public appointment idempotently with a phone-scoped cu
 
 it('creates one appointment with multiple compatible services', function () {
     [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $unit->update(['timezone' => 'America/Sao_Paulo']);
+    $date = $date->setTimezone('America/Sao_Paulo');
+    AvailabilityRule::query()
+        ->where('professional_id', $professional->getKey())
+        ->update(['timezone' => 'America/Sao_Paulo']);
     configurePublicBookingHours($tenant, $unit, $date);
     $professional->update(['name' => 'João', 'phone' => '(11) 98888-0000']);
     $secondService = Service::factory()->create([
@@ -519,6 +524,8 @@ it('creates one appointment with multiple compatible services', function () {
 
     $appointment = Appointment::query()->sole();
     expect($response->json('appointment.status'))->toBe('scheduled')
+        ->and($appointment->getRawOriginal('starts_at'))->toBe($date->setTime(9, 0)->utc()->format('Y-m-d H:i:s'))
+        ->and($appointment->starts_at->setTimezone('America/Sao_Paulo')->format('H:i'))->toBe('09:00')
         ->and($appointment->items()->count())->toBe(2)
         ->and((int) abs($appointment->ends_at->diffInMinutes($appointment->starts_at)))->toBe($service->duration_minutes + $secondService->duration_minutes);
 

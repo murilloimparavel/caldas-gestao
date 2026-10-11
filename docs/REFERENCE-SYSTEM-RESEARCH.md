@@ -1,8 +1,8 @@
-# Engenharia reversa clean-room do Belasis
+# Engenharia reversa clean-room do produto observado
 
 > **Resumo não canônico.** A fonte de verdade atual é [`reconstruction/README.md`](reconstruction/README.md), com evidências e claims versionados. Em caso de divergência, o dossiê canônico prevalece.
 
-> Documento vivo. Levantamento inicial realizado em 24/08/2026, pela interface autenticada do `belasis.app`, em modo somente leitura. Não contém código proprietário, credenciais nem dados de clientes.
+> Documento vivo. Levantamento inicial realizado em 24/08/2026, pela interface autenticada do `aplicação observada`, em modo somente leitura. Não contém código proprietário, credenciais nem dados de clientes.
 
 ## 1. Objetivo e limites
 
@@ -20,7 +20,7 @@ Não foram usados bypass de autenticação, inspeção de credenciais, extraçã
 
 ## 2. Resumo do produto observado
 
-O Belasis é um SaaS operacional para negócios de beleza e atendimento. Seu núcleo conecta agenda, clientes, execução de serviços, comandas/vendas, pacotes, pagamentos, comissões, estoque, marketing e relatórios.
+O produto observado é um SaaS operacional para negócios de beleza e atendimento. Seu núcleo conecta agenda, clientes, execução de serviços, comandas/vendas, pacotes, pagamentos, comissões, estoque, marketing e relatórios.
 
 O modelo mental aparente é:
 
