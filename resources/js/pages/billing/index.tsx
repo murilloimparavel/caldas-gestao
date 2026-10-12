@@ -40,13 +40,13 @@ export default function BillingIndex({
 
     return (
         <PageCanvas>
-            <Head title="Assinatura" />
+            <Head title="Plano e cobrança" />
             <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
                 <div>
                     <p className="text-sm text-muted-foreground">
                         Caldas Gestão
                     </p>
-                    <h1 className="text-3xl font-semibold">Sua assinatura</h1>
+                    <h1 className="text-3xl font-semibold">Plano e cobrança</h1>
                 </div>
                 <section className="rounded-xl border bg-card p-6 shadow-sm">
                     <p className="text-sm text-muted-foreground">Plano atual</p>
@@ -99,5 +99,5 @@ export default function BillingIndex({
 }
 
 BillingIndex.layout = {
-    breadcrumbs: [{ title: 'Assinatura', href: billing.index() }],
+    breadcrumbs: [{ title: 'Plano e cobrança', href: billing.index() }],
 };
