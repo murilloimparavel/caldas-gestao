@@ -39,6 +39,54 @@ test('shows accessible feedback while an authenticated layout is loading', async
     await expect(page).toHaveTitle(/Painel operacional/);
 });
 
+test('organizes the main navigation and exposes account billing settings', async ({
+    isMobile,
+    page,
+}) => {
+    test.skip(
+        isMobile,
+        'This navigation assertion targets the desktop sidebar.',
+    );
+
+    await signIn(page);
+
+    const mainNavigation = page.getByRole('navigation', {
+        name: 'Navegação principal',
+    });
+
+    for (const group of [
+        'Painel',
+        'Atendimento',
+        'Pessoas',
+        'Produtos e serviços',
+        'Financeiro',
+        'Comercial',
+    ]) {
+        await expect(
+            mainNavigation.getByRole('button', { name: group, exact: true }),
+        ).toBeVisible();
+    }
+
+    await expect(
+        mainNavigation.getByRole('button', {
+            name: 'Configurações',
+            exact: true,
+        }),
+    ).toHaveCount(0);
+
+    await page.locator('[data-test="sidebar-menu-button"]').click();
+    await page
+        .getByRole('menuitem', { name: 'Configurações', exact: true })
+        .click();
+    await page.waitForURL('**/settings/profile');
+
+    await expect(
+        page
+            .getByRole('navigation', { name: 'Configurações' })
+            .getByRole('link', { name: 'Plano e cobrança', exact: true }),
+    ).toBeVisible();
+});
+
 test('uses a fresh idempotency key for each category update on the same page', async ({
     isMobile,
     page,
@@ -155,7 +203,7 @@ test('closes the mobile drawer after navigating to another page', async ({
 
     const drawer = page.getByRole('dialog', { name: 'Barra lateral' });
     await expect(drawer).toBeVisible();
-    await drawer.getByRole('button', { name: 'Cadastros' }).click();
+    await drawer.getByRole('button', { name: 'Pessoas' }).click();
     await drawer.getByRole('link', { name: 'Clientes' }).click();
 
     await page.waitForURL('**/customers');

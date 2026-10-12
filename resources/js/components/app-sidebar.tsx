@@ -15,7 +15,6 @@ import {
     PieChart,
     Repeat2,
     Scissors,
-    Settings,
     Truck,
     UserRound,
     Users,
@@ -55,8 +54,8 @@ import type { SharedPageProps, SidebarNavGroup } from '@/types';
 
 const mainNavGroups: SidebarNavGroup[] = [
     {
-        id: 'principal',
-        label: 'Principal',
+        id: 'painel',
+        label: 'Painel',
         icon: LayoutDashboard,
         items: [
             {
@@ -64,6 +63,13 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: dashboard(),
                 icon: LayoutDashboard,
             },
+        ],
+    },
+    {
+        id: 'atendimento',
+        label: 'Atendimento',
+        icon: CalendarDays,
+        items: [
             {
                 title: 'Agenda',
                 href: calendar.index(),
@@ -85,8 +91,8 @@ const mainNavGroups: SidebarNavGroup[] = [
         ],
     },
     {
-        id: 'cadastros',
-        label: 'Cadastros',
+        id: 'pessoas',
+        label: 'Pessoas',
         icon: Users,
         items: [
             {
@@ -110,8 +116,8 @@ const mainNavGroups: SidebarNavGroup[] = [
         ],
     },
     {
-        id: 'controle',
-        label: 'Controle',
+        id: 'produtos-e-servicos',
+        label: 'Produtos e serviços',
         icon: Boxes,
         items: [
             {
@@ -127,16 +133,22 @@ const mainNavGroups: SidebarNavGroup[] = [
                 permission: 'product.view',
             },
             {
-                title: 'Pacotes de Serviços',
-                href: packagesRoutes.index(),
-                icon: Gift,
-                permission: 'package.view',
-            },
-            {
                 title: 'Categorias',
                 href: categories.index(),
                 icon: FolderTree,
                 permission: 'category.view',
+            },
+            {
+                title: 'Categorias de Comanda',
+                href: saleCategories.index(),
+                icon: Layers,
+                permission: 'sale_category.view',
+            },
+            {
+                title: 'Pacotes de Serviços',
+                href: packagesRoutes.index(),
+                icon: Gift,
+                permission: 'package.view',
             },
             {
                 title: 'Assinaturas',
@@ -145,23 +157,42 @@ const mainNavGroups: SidebarNavGroup[] = [
                 permission: 'subscription.view',
             },
             {
-                title: 'Estoque',
+                title: 'Gestão de estoque',
                 href: inventory.index(),
                 icon: Boxes,
                 permission: 'inventory.view',
             },
+        ],
+    },
+    {
+        id: 'financeiro',
+        label: 'Financeiro',
+        icon: WalletCards,
+        items: [
             {
-                title: 'Categorias de Comanda',
-                href: saleCategories.index(),
-                icon: Layers,
-                permission: 'sale_category.view',
+                title: 'Painel financeiro',
+                href: finance.dashboard(),
+                icon: PieChart,
+                permission: 'financial.view',
+            },
+            {
+                title: 'Contas a pagar e receber',
+                href: financialObligations.index(),
+                icon: ArrowLeftRight,
+                permission: 'financial.view',
+            },
+            {
+                title: 'Comissões',
+                href: commissions.index(),
+                icon: WalletCards,
+                permission: 'commission.view',
             },
         ],
     },
     {
-        id: 'configuracoes',
-        label: 'Configurações',
-        icon: Settings,
+        id: 'comercial',
+        label: 'Comercial',
+        icon: Globe2,
         items: [
             {
                 title: 'Agendamento online',
@@ -174,31 +205,6 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: assistant.index(),
                 icon: Bot,
                 adminOnly: true,
-            },
-        ],
-    },
-    {
-        id: 'financeiro',
-        label: 'Financeiro',
-        icon: WalletCards,
-        items: [
-            {
-                title: 'Painel Financeiro',
-                href: finance.dashboard(),
-                icon: PieChart,
-                permission: 'financial.view',
-            },
-            {
-                title: 'Contas a Pagar/Receber',
-                href: financialObligations.index(),
-                icon: ArrowLeftRight,
-                permission: 'financial.view',
-            },
-            {
-                title: 'Comissões',
-                href: commissions.index(),
-                icon: WalletCards,
-                permission: 'commission.view',
             },
         ],
     },
