@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     AlertCircle,
     ArrowDownRight,
@@ -26,19 +27,57 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import type { FinanceDashboardMetrics, FinancialObligation } from '@/types';
+import type {
+    FinanceDashboardFilters,
+    FinanceDashboardMetrics,
+    FinanceDashboardMovement,
+    FinancialObligation,
+} from '@/types';
 
 type Props = {
     metrics: FinanceDashboardMetrics;
     upcomingObligations: FinancialObligation[];
-    recentSettled: FinancialObligation[];
+    filters: FinanceDashboardFilters;
+    datePresets: Record<
+        'today' | 'month' | 'previous',
+        { from: string; to: string }
+    >;
+    filterOptions: {
+        sources: Record<string, string>;
+        types: Record<string, string>;
+        statuses: Record<string, string>;
+        paymentMethods: Array<{ value: string; label: string }>;
+    };
+    movements: FinanceDashboardMovement[];
 };
 
 export default function FinanceDashboard({
     metrics,
     upcomingObligations,
-    recentSettled,
+    filters,
+    datePresets,
+    filterOptions,
+    movements,
 }: Props) {
+    const [filterState, setFilterState] = useState(filters);
+
+    function applyFilters(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        router.get(
+            '/finance/dashboard',
+            { ...filterState },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    }
+
+    function setPreset(preset: 'today' | 'month' | 'previous') {
+        setFilterState((current) => ({ ...current, ...datePresets[preset] }));
+    }
+
     return (
         <>
             <Head title="Painel Financeiro - Visão Geral" />
@@ -101,6 +140,178 @@ export default function FinanceDashboard({
                     </div>
                 )}
 
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Filtrar movimentações</CardTitle>
+                        <CardDescription>
+                            Os filtros atualizam o resumo realizado e a lista.
+                            Caixa atual e previsões de hoje permanecem
+                            operacionais.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={applyFilters} className="space-y-4">
+                            <div className="flex flex-wrap gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPreset('today')}
+                                >
+                                    Hoje
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPreset('month')}
+                                >
+                                    Este mês
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPreset('previous')}
+                                >
+                                    Mês anterior
+                                </Button>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                                <label className="grid gap-1 text-sm">
+                                    De
+                                    <input
+                                        aria-label="Data inicial"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                        type="date"
+                                        value={filterState.from}
+                                        onChange={(event) =>
+                                            setFilterState({
+                                                ...filterState,
+                                                from: event.target.value,
+                                            })
+                                        }
+                                    />
+                                </label>
+                                <label className="grid gap-1 text-sm">
+                                    Até
+                                    <input
+                                        aria-label="Data final"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                        type="date"
+                                        value={filterState.to}
+                                        onChange={(event) =>
+                                            setFilterState({
+                                                ...filterState,
+                                                to: event.target.value,
+                                            })
+                                        }
+                                    />
+                                </label>
+                                <label className="grid gap-1 text-sm">
+                                    Origem
+                                    <select
+                                        aria-label="Origem"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                        value={filterState.source}
+                                        onChange={(event) =>
+                                            setFilterState({
+                                                ...filterState,
+                                                source: event.target
+                                                    .value as FinanceDashboardFilters['source'],
+                                            })
+                                        }
+                                    >
+                                        {Object.entries(
+                                            filterOptions.sources,
+                                        ).map(([value, label]) => (
+                                            <option key={value} value={value}>
+                                                {label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="grid gap-1 text-sm">
+                                    Natureza
+                                    <select
+                                        aria-label="Natureza"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                        value={filterState.type}
+                                        onChange={(event) =>
+                                            setFilterState({
+                                                ...filterState,
+                                                type: event.target
+                                                    .value as FinanceDashboardFilters['type'],
+                                            })
+                                        }
+                                    >
+                                        {Object.entries(
+                                            filterOptions.types,
+                                        ).map(([value, label]) => (
+                                            <option key={value} value={value}>
+                                                {label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="grid gap-1 text-sm">
+                                    Situação
+                                    <select
+                                        aria-label="Situação"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                        value={filterState.status}
+                                        onChange={(event) =>
+                                            setFilterState({
+                                                ...filterState,
+                                                status: event.target
+                                                    .value as FinanceDashboardFilters['status'],
+                                            })
+                                        }
+                                    >
+                                        {Object.entries(
+                                            filterOptions.statuses,
+                                        ).map(([value, label]) => (
+                                            <option key={value} value={value}>
+                                                {label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="grid gap-1 text-sm">
+                                    Forma de pagamento
+                                    <select
+                                        aria-label="Forma de pagamento"
+                                        className="h-10 rounded-md border bg-background px-3"
+                                        value={filterState.payment_method}
+                                        onChange={(event) =>
+                                            setFilterState({
+                                                ...filterState,
+                                                payment_method:
+                                                    event.target.value,
+                                            })
+                                        }
+                                    >
+                                        <option value="all">
+                                            Todas as formas
+                                        </option>
+                                        {filterOptions.paymentMethods.map(
+                                            (method) => (
+                                                <option
+                                                    key={method.value}
+                                                    value={method.value}
+                                                >
+                                                    {method.label}
+                                                </option>
+                                            ),
+                                        )}
+                                    </select>
+                                </label>
+                            </div>
+                            <Button type="submit">Aplicar filtros</Button>
+                        </form>
+                    </CardContent>
+                </Card>
+
                 {/* Main Metrics KPI Grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card className="border-sky-500/20 bg-sky-500/5">
@@ -148,19 +359,18 @@ export default function FinanceDashboard({
                     <Card className="border-emerald-500/20 bg-emerald-500/5">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">
-                                A Receber Hoje
+                                A Receber no período
                             </CardTitle>
                             <TrendingUp className="h-4 w-4 text-emerald-600" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                                {formatMoney(metrics.receivable_today_cents)}
+                                {formatMoney(
+                                    metrics.filtered_receivable_pending_cents,
+                                )}
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Previsto no mês:{' '}
-                                {formatMoney(
-                                    metrics.receivable_month_pending_cents,
-                                )}
+                                Obrigações pendentes no intervalo selecionado
                             </p>
                         </CardContent>
                     </Card>
@@ -168,46 +378,57 @@ export default function FinanceDashboard({
                     <Card className="border-rose-500/20 bg-rose-500/5">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">
-                                A Pagar Hoje
+                                A Pagar no período
                             </CardTitle>
                             <TrendingDown className="h-4 w-4 text-rose-600" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">
-                                {formatMoney(metrics.payable_today_cents)}
+                                {formatMoney(
+                                    metrics.filtered_payable_pending_cents,
+                                )}
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Previsto no mês:{' '}
-                                {formatMoney(
-                                    metrics.payable_month_pending_cents,
-                                )}
+                                Despesas pendentes no intervalo selecionado
                             </p>
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Realized summary in current month */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                Realizado no Mês (Recebimentos)
+                                Recebimentos no período
                             </CardTitle>
                             <CardDescription>
-                                Total de receitas efetivamente liquidadas no mês
-                                corrente.
+                                Comandas e recebíveis liquidados no intervalo
+                                filtrado.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 p-3">
                                 <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                                    Receitas Liquidadas
+                                    Total recebido
                                 </span>
                                 <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                                    {formatMoney(metrics.received_month_cents)}
+                                    {formatMoney(
+                                        metrics.filtered_received_cents,
+                                    )}
                                 </span>
                             </div>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Comandas:{' '}
+                                {formatMoney(
+                                    metrics.filtered_received_closings_cents,
+                                )}{' '}
+                                · Lançamentos:{' '}
+                                {formatMoney(
+                                    metrics.filtered_received_obligations_cents,
+                                )}
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -215,11 +436,11 @@ export default function FinanceDashboard({
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <CheckCircle2 className="h-4 w-4 text-rose-600" />
-                                Realizado no Mês (Pagamentos)
+                                Despesas pagas no período
                             </CardTitle>
                             <CardDescription>
-                                Total de despesas e contas operacionais pagas no
-                                mês corrente.
+                                Despesas financeiras liquidadas no intervalo
+                                filtrado.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -228,15 +449,109 @@ export default function FinanceDashboard({
                                     Despesas Pagas
                                 </span>
                                 <span className="text-xl font-bold text-rose-600 dark:text-rose-400">
-                                    {formatMoney(metrics.paid_month_cents)}
+                                    {formatMoney(metrics.filtered_paid_cents)}
                                 </span>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Upcoming Obligations & Recent Transactions */}
-                <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Movimentações no período</CardTitle>
+                        <CardDescription>
+                            Comandas fechadas aparecem como recebimentos;
+                            estornos reduzem o total recebido.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {movements.length === 0 ? (
+                            <p className="py-8 text-center text-sm text-muted-foreground">
+                                Nenhuma movimentação encontrada para os filtros
+                                selecionados.
+                            </p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[700px] text-sm">
+                                    <thead>
+                                        <tr className="border-b text-left text-muted-foreground">
+                                            <th className="p-2 font-medium">
+                                                Data
+                                            </th>
+                                            <th className="p-2 font-medium">
+                                                Descrição
+                                            </th>
+                                            <th className="p-2 font-medium">
+                                                Origem
+                                            </th>
+                                            <th className="p-2 font-medium">
+                                                Forma
+                                            </th>
+                                            <th className="p-2 text-right font-medium">
+                                                Valor
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {movements.map((movement) => (
+                                            <tr key={movement.id}>
+                                                <td className="p-2">
+                                                    {movement.date
+                                                        ? new Date(
+                                                              `${movement.date}T00:00:00`,
+                                                          ).toLocaleDateString(
+                                                              'pt-BR',
+                                                          )
+                                                        : '—'}
+                                                </td>
+                                                <td className="p-2">
+                                                    <Link
+                                                        className="font-medium hover:underline"
+                                                        href={
+                                                            movement.reference_url
+                                                        }
+                                                    >
+                                                        {movement.description}
+                                                    </Link>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {movement.counterparty}
+                                                    </div>
+                                                </td>
+                                                <td className="p-2">
+                                                    {movement.source_label}
+                                                    {movement.status ===
+                                                    'reversed'
+                                                        ? ' · Estornado'
+                                                        : ''}
+                                                </td>
+                                                <td className="p-2">
+                                                    {movement.payment_method_label ||
+                                                        '—'}
+                                                </td>
+                                                <td
+                                                    className={`p-2 text-right font-semibold ${movement.signed_amount_cents < 0 ? 'text-rose-600' : movement.type === 'receivable' ? 'text-emerald-600' : 'text-rose-600'}`}
+                                                >
+                                                    {movement.signed_amount_cents <
+                                                    0
+                                                        ? '−'
+                                                        : '+'}{' '}
+                                                    {formatMoney(
+                                                        Math.abs(
+                                                            movement.signed_amount_cents,
+                                                        ),
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Upcoming obligations */}
+                <div>
                     {/* Upcoming Obligations */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -305,96 +620,6 @@ export default function FinanceDashboard({
                                                         ).toLocaleDateString(
                                                             'pt-BR',
                                                         )}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <span
-                                                    className={`text-xs font-semibold ${
-                                                        item.type === 'payable'
-                                                            ? 'text-rose-600'
-                                                            : 'text-emerald-600'
-                                                    }`}
-                                                >
-                                                    {item.type === 'payable'
-                                                        ? '-'
-                                                        : '+'}{' '}
-                                                    {formatMoney(
-                                                        item.amount_cents,
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Recent Settlements */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-3">
-                            <div>
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <CheckCircle2 className="h-4 w-4 text-sky-600" />
-                                    Últimas Liquidações
-                                </CardTitle>
-                                <CardDescription>
-                                    Histórico das contas liquidadas mais
-                                    recentemente.
-                                </CardDescription>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                className="text-xs"
-                            >
-                                <Link href="/finance/transactions?status=paid">
-                                    Ver histórico{' '}
-                                    <ArrowRight className="ml-1 h-3 w-3" />
-                                </Link>
-                            </Button>
-                        </CardHeader>
-                        <CardContent>
-                            {recentSettled.length === 0 ? (
-                                <p className="py-6 text-center text-xs text-muted-foreground">
-                                    Nenhuma liquidação registrada recentemente.
-                                </p>
-                            ) : (
-                                <div className="divide-y text-sm">
-                                    {recentSettled.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-center justify-between py-2.5"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div
-                                                    className={`rounded-md p-1.5 ${
-                                                        item.type === 'payable'
-                                                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400'
-                                                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                                                    }`}
-                                                >
-                                                    <CheckCircle2 className="h-4 w-4" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs leading-tight font-medium text-foreground">
-                                                        {item.description}
-                                                    </p>
-                                                    <p className="mt-0.5 text-3xs text-muted-foreground">
-                                                        Pago em{' '}
-                                                        {item.paid_date
-                                                            ? new Date(
-                                                                  item.paid_date +
-                                                                      'T00:00:00',
-                                                              ).toLocaleDateString(
-                                                                  'pt-BR',
-                                                              )
-                                                            : '—'}{' '}
-                                                        •{' '}
-                                                        {item.payment_method?.toUpperCase() ||
-                                                            'PIX'}
                                                     </p>
                                                 </div>
                                             </div>
