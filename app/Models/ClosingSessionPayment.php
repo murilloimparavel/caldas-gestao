@@ -7,7 +7,20 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $tenant_id
+ * @property string $unit_id
+ * @property string $closing_session_id
+ * @property string|null $cash_shift_id
+ * @property string $payment_method
+ * @property int $amount_cents
+ * @property Carbon $recorded_at
+ * @property bool $is_reversal
+ * @property-read ClosingSession $closingSession
+ */
 #[Fillable(['tenant_id', 'unit_id', 'closing_session_id', 'cash_shift_id', 'payment_method', 'amount_cents', 'tendered_cents', 'change_cents', 'recorded_by_user_id', 'recorded_at', 'reversal_of_id', 'is_reversal', 'reversal_reason'])]
 class ClosingSessionPayment extends Model
 {

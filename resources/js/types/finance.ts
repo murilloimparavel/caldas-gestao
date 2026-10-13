@@ -35,4 +35,35 @@ export interface FinanceDashboardMetrics {
     received_month_cents: number;
     overdue_count: number;
     overdue_amount_cents: number;
+    filtered_received_cents: number;
+    filtered_received_closings_cents: number;
+    filtered_received_obligations_cents: number;
+    filtered_paid_cents: number;
+    filtered_receivable_pending_cents: number;
+    filtered_payable_pending_cents: number;
+}
+
+export interface FinanceDashboardFilters {
+    from: string;
+    to: string;
+    source: 'all' | 'closings' | 'obligations';
+    type: 'all' | FinancialObligationType;
+    status: 'all' | FinancialObligationStatus | 'reversed';
+    payment_method: string;
+}
+
+export interface FinanceDashboardMovement {
+    id: string;
+    date: string | null;
+    description: string;
+    counterparty: string;
+    source: 'closing' | 'obligation';
+    source_label: string;
+    type: FinancialObligationType;
+    status: string;
+    payment_method: string | null;
+    payment_method_label: string;
+    amount_cents: number;
+    signed_amount_cents: number;
+    reference_url: string;
 }

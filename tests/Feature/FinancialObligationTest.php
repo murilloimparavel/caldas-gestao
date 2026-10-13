@@ -2,8 +2,13 @@
 
 use App\Actions\Identity\OnboardTenant;
 use App\Models\Category;
+use App\Models\ClosingSession;
+use App\Models\ClosingSessionPayment;
 use App\Models\Customer;
+use App\Models\CustomerPackage;
 use App\Models\FinancialObligation;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\Supplier;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -350,5 +355,205 @@ it('renders the finance dashboard with consolidated metrics', function () {
         ->where('metrics.receivable_today_cents', 15000)
         ->where('metrics.overdue_count', 1)
         ->where('metrics.overdue_amount_cents', 8000)
+    );
+});
+
+it('deduplicates a package receivable only while its original closing payment is not reversed', function (): void {
+    [$owner, $tenant, $unit] = financialTestWorkspace();
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'price_cents_snapshot' => 30000,
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $package->customer_id,
+        'status' => 'finalized',
+        'final_amount_cents' => 30000,
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'package',
+        'customer_package_id' => $package->getKey(),
+        'package_template_id' => $package->package_template_id,
+        'unit_price_cents' => 30000,
+        'total_cents' => 30000,
+    ]);
+    $session = ClosingSession::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'completed',
+        'final_total_cents' => 30000,
+        'closed_by_user_id' => $owner->getKey(),
+    ]);
+    $session->sales()->attach($sale->getKey());
+    $payment = ClosingSessionPayment::create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'closing_session_id' => $session->getKey(),
+        'payment_method' => 'pix',
+        'amount_cents' => 30000,
+        'tendered_cents' => null,
+        'change_cents' => 0,
+        'recorded_by_user_id' => $owner->getKey(),
+        'recorded_at' => now(),
+        'reversal_of_id' => null,
+        'is_reversal' => false,
+        'reversal_reason' => null,
+    ]);
+    $obligation = FinancialObligation::factory()->receivable()->paid()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $package->customer_id,
+        'customer_package_id' => $package->getKey(),
+        'amount_cents' => 30000,
+        'paid_date' => now()->toDateString(),
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('finance.dashboard', ['from' => now()->toDateString(), 'to' => now()->toDateString(), 'source' => 'all']))
+        ->assertInertia(fn ($page) => $page
+            ->where('metrics.filtered_received_closings_cents', 30000)
+            ->where('metrics.filtered_received_obligations_cents', 0)
+            ->where('metrics.filtered_received_cents', 30000)
+        );
+
+    ClosingSessionPayment::create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'closing_session_id' => $session->getKey(),
+        'payment_method' => 'pix',
+        'amount_cents' => 30000,
+        'tendered_cents' => null,
+        'change_cents' => 0,
+        'recorded_by_user_id' => $owner->getKey(),
+        'recorded_at' => now(),
+        'reversal_of_id' => $payment->getKey(),
+        'is_reversal' => true,
+        'reversal_reason' => 'Estorno de teste',
+    ]);
+    $this->actingAs($owner)
+        ->get(route('finance.dashboard', ['from' => now()->toDateString(), 'to' => now()->toDateString(), 'source' => 'all']))
+        ->assertInertia(fn ($page) => $page
+            ->where('metrics.filtered_received_closings_cents', 0)
+            ->where('metrics.filtered_received_obligations_cents', 30000)
+            ->where('metrics.filtered_received_cents', 30000)
+        );
+
+    $paidStatus = $this->actingAs($owner)->get(route('finance.dashboard', [
+        'from' => now()->toDateString(),
+        'to' => now()->toDateString(),
+        'source' => 'closings',
+        'status' => 'paid',
+    ]));
+    $paidStatus->assertInertia(fn ($page) => $page
+        ->where('metrics.filtered_received_closings_cents', 0)
+        ->where('metrics.filtered_received_cents', 0)
+        ->where('movements', fn ($movements) => collect($movements)->isEmpty())
+    );
+
+    $reversedStatus = $this->actingAs($owner)->get(route('finance.dashboard', [
+        'from' => now()->toDateString(),
+        'to' => now()->toDateString(),
+        'source' => 'closings',
+        'status' => 'reversed',
+    ]));
+    $reversedStatus->assertInertia(fn ($page) => $page
+        ->where('metrics.filtered_received_closings_cents', -30000)
+        ->where('metrics.filtered_received_cents', -30000)
+        ->where('movements', fn ($movements) => collect($movements)->contains(fn ($movement) => $movement['status'] === 'reversed'
+            && $movement['signed_amount_cents'] === -30000))
+    );
+});
+
+it('includes closed sale payments in filtered receipts without changing independent obligations', function () {
+    [$owner, $tenant, $unit] = financialTestWorkspace();
+    $session = ClosingSession::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'closed_by_user_id' => $owner->getKey(),
+        'status' => 'completed',
+        'receipt_number' => 'FIN-TEST-1',
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'finalized',
+    ]);
+    SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'custom',
+        'service_id' => null,
+        'name_snapshot' => 'Pacote teste',
+        'total_cents' => 50000,
+    ]);
+    $session->sales()->attach($sale->getKey());
+
+    $payment = ClosingSessionPayment::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'closing_session_id' => $session->getKey(),
+        'payment_method' => 'pix',
+        'amount_cents' => 50000,
+        'recorded_by_user_id' => $owner->getKey(),
+        'recorded_at' => now(),
+        'is_reversal' => false,
+    ]);
+
+    FinancialObligation::factory()->receivable()->paid()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'amount_cents' => 20000,
+        'paid_date' => now()->toDateString(),
+        'payment_method' => 'pix',
+    ]);
+    FinancialObligation::factory()->payable()->paid()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'amount_cents' => 7000,
+        'paid_date' => now()->toDateString(),
+        'payment_method' => 'cash',
+    ]);
+
+    $response = $this->actingAs($owner)->get(route('finance.dashboard'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('metrics.filtered_received_cents', 70000)
+        ->where('metrics.filtered_received_closings_cents', 50000)
+        ->where('metrics.filtered_received_obligations_cents', 20000)
+        ->where('metrics.filtered_paid_cents', 7000)
+        ->where('movements', fn ($movements) => collect($movements)->contains(fn ($movement) => $movement['source'] === 'closing' && $movement['payment_method'] === 'pix'))
+    );
+
+    $closingOnly = $this->actingAs($owner)->get(route('finance.dashboard', ['source' => 'closings']));
+    $closingOnly->assertInertia(fn ($page) => $page
+        ->where('metrics.filtered_received_cents', 50000)
+        ->where('metrics.filtered_received_obligations_cents', 0)
+        ->where('metrics.filtered_paid_cents', 0)
+    );
+
+    ClosingSessionPayment::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'closing_session_id' => $session->getKey(),
+        'payment_method' => 'pix',
+        'amount_cents' => $payment->amount_cents,
+        'recorded_by_user_id' => $owner->getKey(),
+        'recorded_at' => now(),
+        'reversal_of_id' => $payment->getKey(),
+        'is_reversal' => true,
+        'reversal_reason' => 'Teste de estorno',
+    ]);
+
+    $afterReversal = $this->actingAs($owner)->get(route('finance.dashboard', ['source' => 'closings']));
+    $afterReversal->assertInertia(fn ($page) => $page
+        ->where('metrics.filtered_received_cents', 0)
+        ->where('metrics.filtered_received_closings_cents', 0)
     );
 });
