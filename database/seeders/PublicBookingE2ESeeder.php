@@ -10,6 +10,9 @@ use App\Models\OnlineBookingGalleryImage;
 use App\Models\OnlineBookingSetting;
 use App\Models\OnlineBookingSite;
 use App\Models\Professional;
+use App\Models\Sale;
+use App\Models\SaleCategory;
+use App\Models\SaleItem;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -154,7 +157,47 @@ final class PublicBookingE2ESeeder extends Seeder
                     'position' => $position,
                 ]);
             }
+
+            $this->seedClosingSale($tenant, $unit, $haircut, $joao);
         }
+    }
+
+    private function seedClosingSale(Tenant $tenant, Unit $unit, Service $service, Professional $professional): void
+    {
+        $saleCategory = SaleCategory::factory()->create([
+            'tenant_id' => $tenant->getKey(),
+            'unit_id' => $unit->getKey(),
+            'name' => 'Atendimento E2E',
+            'key' => 'e2e-atendimento',
+            'type' => 'service',
+            'uniqueness_scope' => 'none',
+        ]);
+        $sale = Sale::factory()->create([
+            'tenant_id' => $tenant->getKey(),
+            'unit_id' => $unit->getKey(),
+            'sale_category_id' => $saleCategory->getKey(),
+            'status' => 'ready_to_bill',
+            'reference_label' => 'Comanda E2E pagamento',
+            'category_key_snapshot' => $saleCategory->key,
+            'category_name_snapshot' => $saleCategory->name,
+            'total_amount_cents' => 5000,
+            'final_amount_cents' => 5000,
+        ]);
+
+        SaleItem::query()->create([
+            'tenant_id' => $tenant->getKey(),
+            'unit_id' => $unit->getKey(),
+            'sale_id' => $sale->getKey(),
+            'item_type' => 'service',
+            'service_id' => $service->getKey(),
+            'professional_id' => $professional->getKey(),
+            'name_snapshot' => $service->name,
+            'unit_price_cents' => 5000,
+            'quantity' => 1,
+            'covered_quantity' => 0,
+            'discount_cents' => 0,
+            'total_cents' => 5000,
+        ]);
     }
 
     private function createService(Tenant $tenant, Unit $unit, Category $category, string $name, int $duration, int $priceCents): Service

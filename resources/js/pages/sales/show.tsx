@@ -717,7 +717,6 @@ export default function SalesShow({
                                                     {sale.final_amount_cents >
                                                     0 ? (
                                                         <PaymentAllocationFields
-                                                            key={closeKey}
                                                             totalCents={
                                                                 sale.final_amount_cents
                                                             }

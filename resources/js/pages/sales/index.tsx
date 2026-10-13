@@ -783,7 +783,6 @@ export default function SalesIndex({
 
                                     {selectedTotal > 0 ? (
                                         <PaymentAllocationFields
-                                            key={closeKey}
                                             totalCents={selectedTotal}
                                             activeCashShift={active_cash_shift}
                                             errors={errors}

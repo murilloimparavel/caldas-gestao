@@ -7,7 +7,7 @@ import {
     QrCode,
     Trash2,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     useIdempotencyKey,
     FormActions,
@@ -80,6 +80,75 @@ function newAllocation(amountCents: number): PaymentAllocation {
     };
 }
 
+function rebalanceAllocations(
+    allocations: PaymentAllocation[],
+    totalCents: number,
+): PaymentAllocation[] {
+    const targetCents = Math.max(0, totalCents);
+
+    if (allocations.length === 0) {
+        return [newAllocation(targetCents)];
+    }
+
+    if (allocations.length === 1) {
+        const amountCents = targetCents;
+
+        return allocations.map((allocation) => ({
+            ...allocation,
+            amount_cents: amountCents,
+            tendered_cents: amountCents,
+        }));
+    }
+
+    const currentTotalCents = allocations.reduce(
+        (sum, allocation) => sum + allocation.amount_cents,
+        0,
+    );
+    const differenceCents = targetCents - currentTotalCents;
+
+    if (differenceCents === 0) {
+        return allocations;
+    }
+
+    const nextAllocations = allocations.map((allocation) => ({
+        ...allocation,
+    }));
+
+    if (differenceCents > 0) {
+        const last = nextAllocations.length - 1;
+        nextAllocations[last].amount_cents += differenceCents;
+    } else {
+        let remainingToRemove = Math.abs(differenceCents);
+
+        for (let index = nextAllocations.length - 1; index >= 0; index -= 1) {
+            const allocation = nextAllocations[index];
+            const amountCents = Math.max(
+                0,
+                allocation.amount_cents - remainingToRemove,
+            );
+            remainingToRemove -= allocation.amount_cents - amountCents;
+            allocation.amount_cents = amountCents;
+
+            if (remainingToRemove === 0) {
+                break;
+            }
+        }
+    }
+
+    const nonZeroAllocations = nextAllocations.filter(
+        (allocation) => allocation.amount_cents > 0,
+    );
+    const allocationsToReturn =
+        nonZeroAllocations.length > 0
+            ? nonZeroAllocations
+            : [nextAllocations[0]];
+
+    return allocationsToReturn.map((allocation) => ({
+        ...allocation,
+        tendered_cents: allocation.amount_cents,
+    }));
+}
+
 function getError(
     errors: Record<string, unknown> | undefined,
     key: string,
@@ -103,6 +172,16 @@ export function PaymentAllocationFields({
     const [allocations, setAllocations] = useState<PaymentAllocation[]>(() => [
         newAllocation(totalCents),
     ]);
+    const previousTotalCents = useRef(totalCents);
+
+    useEffect(() => {
+        if (previousTotalCents.current === totalCents) {
+            return;
+        }
+
+        previousTotalCents.current = totalCents;
+        setAllocations((current) => rebalanceAllocations(current, totalCents));
+    }, [totalCents]);
 
     const allocatedCents = useMemo(
         () =>
