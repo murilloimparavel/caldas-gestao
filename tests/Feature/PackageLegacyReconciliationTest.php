@@ -702,6 +702,7 @@ it('requires released reservation usage and sale item fields to agree before act
         'item_type' => 'service',
         'service_id' => $service->getKey(),
         'customer_package_id' => $package->getKey(),
+        'quantity' => 2,
         'covered_quantity' => 2,
     ]);
     $usage = PackageUsage::factory()->create([

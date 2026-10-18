@@ -214,9 +214,6 @@ final class AuditLegacyCustomerPackages extends Command
         $assessment = $package->status === 'active'
             ? $reconciliation->assess($package, $allLinkedItems, $includeFinancialObligation)
             : null;
-        if ($classification === 'active_with_paid_closing' && $assessment !== null && $assessment['target_status'] !== 'active') {
-            $classification = 'active_with_inconsistent_evidence';
-        }
 
         return [
             'customer_package_id' => $package->getKey(),
