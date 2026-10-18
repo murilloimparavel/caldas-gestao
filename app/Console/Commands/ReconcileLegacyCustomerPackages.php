@@ -11,6 +11,7 @@ use App\Support\LegacyPackageReconciliation;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -78,16 +79,43 @@ final class ReconcileLegacyCustomerPackages extends Command
         $counts = ['pending' => 0, 'review_required' => 0, 'active' => 0, 'updated' => 0, 'skipped' => 0];
 
         $query->chunkById(100, function (Collection $packages) use ($reconciliation, $auditEvents, $apply, $actorId, $backupReference, $financialLinkAvailable, &$counts): void {
-            $linkedItems = SaleItem::query()
-                ->whereIn('customer_package_id', $packages->modelKeys())
+            $reservationItemIds = $packages->mapWithKeys(static function (CustomerPackage $package): array {
+                return [$package->getKey() => $package->reservations->pluck('sale_item_id')->filter()->values()->all()];
+            });
+
+            $linkedItems = SaleItem::withTrashed()
+                ->where(function (Builder $query) use ($packages, $reservationItemIds): void {
+                    foreach ($packages as $package) {
+                        $query->orWhere(function (Builder $query) use ($package, $reservationItemIds): void {
+                            $query->where('tenant_id', $package->tenant_id)
+                                ->where('unit_id', $package->unit_id)
+                                ->where(function (Builder $query) use ($package, $reservationItemIds): void {
+                                    $query->where('customer_package_id', $package->getKey());
+
+                                    $itemIds = $reservationItemIds->get($package->getKey(), []);
+                                    if ($itemIds !== []) {
+                                        $query->orWhereIn('id', $itemIds);
+                                    }
+                                });
+                        });
+                    }
+                })
                 ->with('sale')
                 ->get()
-                ->groupBy('customer_package_id');
+                ->values();
 
             foreach ($packages as $package) {
+                $packageReservationItemIds = $reservationItemIds->get($package->getKey(), []);
+                $packageItems = $linkedItems->filter(static function (SaleItem $item) use ($package, $packageReservationItemIds): bool {
+                    return $item->tenant_id === $package->tenant_id
+                        && $item->unit_id === $package->unit_id
+                        && ($item->customer_package_id === $package->getKey()
+                            || in_array($item->getKey(), $packageReservationItemIds, true));
+                })->values();
+
                 $assessment = $reconciliation->assess(
                     $package,
-                    $linkedItems->get($package->getKey(), collect()),
+                    $packageItems,
                     $financialLinkAvailable,
                 );
                 $targetStatus = $assessment['target_status'];
@@ -111,8 +139,16 @@ final class ReconcileLegacyCustomerPackages extends Command
                             'reservations',
                             ...($financialLinkAvailable ? ['financialObligation'] : []),
                         ]);
-                        $packageItems = SaleItem::query()
-                            ->where('customer_package_id', $lockedPackage->getKey())
+                        $packageItemIds = $lockedPackage->reservations->pluck('sale_item_id')->filter()->values()->all();
+                        $packageItems = SaleItem::withTrashed()
+                            ->where('tenant_id', $lockedPackage->tenant_id)
+                            ->where('unit_id', $lockedPackage->unit_id)
+                            ->where(function (Builder $query) use ($lockedPackage, $packageItemIds): void {
+                                $query->where('customer_package_id', $lockedPackage->getKey());
+                                if ($packageItemIds !== []) {
+                                    $query->orWhereIn('id', $packageItemIds);
+                                }
+                            })
                             ->with('sale')
                             ->get();
                         $lockedAssessment = $reconciliation->assess($lockedPackage, $packageItems, $financialLinkAvailable);

@@ -22,6 +22,7 @@ use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\LegacyPackageReconciliation;
 use App\Support\TenantContext;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -471,3 +472,345 @@ it('blocks adding a package-covered service for a legacy active package without 
         ->and($sale->items()->exists())->toBeFalse()
         ->and(PackageUsageReservation::query()->where('customer_package_id', $package->getKey())->exists())->toBeFalse();
 });
+
+it('accepts a consumed legacy reservation with a null sale item package link and reports a warning', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service, ['remaining_sessions' => 3]);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'finalized',
+        'final_amount_cents' => 0,
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => null,
+        'covered_quantity' => 1,
+        'total_cents' => 0,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_consumed' => 1,
+    ]);
+    PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'consumed',
+    ]);
+    $package->serviceBalances()->where('service_id', $service->getKey())->update(['remaining_quantity' => 3]);
+    $package = $package->fresh()->load(['sale.closingSessions.payments', 'financialObligation', 'usages', 'serviceBalances', 'reservations']);
+    $linkedItems = SaleItem::withTrashed()->where('customer_package_id', $package->getKey())->orWhere('id', $item->getKey())->with('sale')->get();
+
+    $assessment = (new LegacyPackageReconciliation)->assess($package, $linkedItems, true);
+
+    expect($assessment['target_status'])->toBe('active')
+        ->and($assessment['reasons'])->toContain('legacy_sale_item_package_link_missing');
+});
+
+it('loads legacy reservation items by reservation id when auditing package links', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service, ['remaining_sessions' => 3]);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'finalized',
+        'final_amount_cents' => 0,
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => null,
+        'covered_quantity' => 1,
+        'total_cents' => 0,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_consumed' => 1,
+    ]);
+    PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'consumed',
+    ]);
+    $package->serviceBalances()->where('service_id', $service->getKey())->update(['remaining_quantity' => 3]);
+
+    $this->artisan('packages:audit-legacy', ['--format' => 'json', '--tenant' => $tenant->getKey()])
+        ->expectsOutputToContain('legacy_sale_item_package_link_missing')
+        ->assertSuccessful();
+});
+
+it('rejects a consumed legacy reservation with a conflicting non-null sale item package link', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service, ['remaining_sessions' => 3]);
+    [$otherPackage] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'status' => 'finalized',
+        'final_amount_cents' => 0,
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $otherPackage->getKey(),
+        'covered_quantity' => 1,
+        'total_cents' => 0,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_consumed' => 1,
+    ]);
+    PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'consumed',
+    ]);
+    $package->serviceBalances()->where('service_id', $service->getKey())->update(['remaining_quantity' => 3]);
+    $package = $package->fresh()->load(['sale.closingSessions.payments', 'financialObligation', 'usages', 'serviceBalances', 'reservations']);
+    $linkedItems = SaleItem::withTrashed()->where('customer_package_id', $package->getKey())->orWhere('id', $item->getKey())->with('sale')->get();
+
+    $assessment = (new LegacyPackageReconciliation)->assess($package, $linkedItems, true);
+
+    expect($assessment['target_status'])->toBe('review_required')
+        ->and($assessment['reasons'])->toContain('reservation_mismatch');
+});
+
+it('keeps a paid package active when a released reservation fully matches its reversed usage and item', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'finalized',
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'covered_quantity' => 1,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'sessions_consumed' => 1,
+        'reversed_at' => now(),
+    ]);
+    PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'released',
+        'released_at' => now(),
+    ]);
+    $package = $package->fresh()->load(['sale.closingSessions.payments', 'financialObligation', 'usages', 'serviceBalances', 'reservations']);
+    $linkedItems = SaleItem::withTrashed()->where('customer_package_id', $package->getKey())->orWhere('id', $item->getKey())->with('sale')->get();
+
+    $assessment = (new LegacyPackageReconciliation)->assess($package, $linkedItems, true);
+
+    expect($assessment['target_status'])->toBe('active')
+        ->and($assessment['reasons'])->toBe([]);
+});
+
+it('requires released reservation usage and sale item fields to agree before activation', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'finalized',
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'quantity' => 2,
+        'covered_quantity' => 2,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'sessions_consumed' => 1,
+        'reversed_at' => now(),
+    ]);
+    PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'released',
+        'released_at' => now(),
+    ]);
+    $package = $package->fresh()->load(['sale.closingSessions.payments', 'financialObligation', 'usages', 'serviceBalances', 'reservations']);
+    $linkedItems = SaleItem::withTrashed()->where('customer_package_id', $package->getKey())->orWhere('id', $item->getKey())->with('sale')->get();
+
+    $assessment = (new LegacyPackageReconciliation)->assess($package, $linkedItems, true);
+
+    expect($assessment['target_status'])->toBe('review_required')
+        ->and($assessment['reasons'])->toContain('reservation_mismatch');
+});
+
+it('requires a release timestamp before activating a package with a released reservation', function (): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'finalized',
+    ]);
+    $item = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'covered_quantity' => 1,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'sessions_consumed' => 1,
+        'reversed_at' => now(),
+    ]);
+    PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $item->getKey(),
+        'service_id' => $service->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'user_id' => $owner->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'released',
+        'released_at' => null,
+    ]);
+    $package = $package->fresh()->load(['sale.closingSessions.payments', 'financialObligation', 'usages', 'serviceBalances', 'reservations']);
+    $linkedItems = SaleItem::withTrashed()->where('customer_package_id', $package->getKey())->orWhere('id', $item->getKey())->with('sale')->get();
+
+    $assessment = (new LegacyPackageReconciliation)->assess($package, $linkedItems, true);
+
+    expect($assessment['target_status'])->toBe('review_required')
+        ->and($assessment['reasons'])->toContain('reservation_mismatch');
+});
+
+it('keeps paid packages with empty or incomplete service snapshots in review', function (string $snapshotCase): void {
+    [$owner, $tenant, $unit, $customer, $template, $service] = legacyPackageReconciliationWorkspace();
+    [$package, $balance] = createLegacyPackageRecord($customer, $template, $service);
+    attachPaidSaleEvidenceToLegacyPackage($owner, $customer, $template, $package);
+    $snapshot = $snapshotCase === 'empty'
+        ? []
+        : [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 3]];
+    $allocatedQuantity = $snapshotCase === 'empty' ? 0 : 3;
+    $package->forceFill(['eligible_services_snapshot' => $snapshot])->save();
+    $balance->forceFill([
+        'allocated_quantity' => $allocatedQuantity,
+        'remaining_quantity' => $allocatedQuantity,
+    ])->save();
+    $package = $package->fresh()->load(['sale.closingSessions.payments', 'financialObligation', 'usages', 'serviceBalances', 'reservations']);
+    $linkedItems = SaleItem::withTrashed()->where('customer_package_id', $package->getKey())->with('sale')->get();
+
+    $assessment = (new LegacyPackageReconciliation)->assess($package, $linkedItems, true);
+
+    expect($assessment['target_status'])->toBe('review_required')
+        ->and($assessment['reasons'])->toContain('usage_or_service_balance_mismatch');
+})->with([
+    'empty snapshot' => 'empty',
+    'allocation total differs from package sessions' => 'incomplete',
+]);

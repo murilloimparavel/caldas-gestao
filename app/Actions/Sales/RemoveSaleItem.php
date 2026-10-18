@@ -2,14 +2,18 @@
 
 namespace App\Actions\Sales;
 
+use App\Actions\Marketing\Packages\MutateCustomerPackageBalance;
 use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
-use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +22,14 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class RemoveSaleItem extends OperationalAction
 {
+    public function __construct(
+        AuthorizationService $authorization = new AuthorizationService,
+        IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly MutateCustomerPackageBalance $packageBalance = new MutateCustomerPackageBalance,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     public function handle(User $actor, TenantContext $context, Sale $sale, SaleItem $item, ?int $expectedVersion = null): Sale
     {
         $unit = $this->unit($actor, $context, 'sale.manage');
@@ -60,6 +72,16 @@ final class RemoveSaleItem extends OperationalAction
                 ->lockForUpdate()
                 ->first();
 
+            if ($reservation !== null && (
+                $reservation->sale_id !== $lockedSale->getKey()
+                || ($lockedItem->customer_package_id !== null && $reservation->customer_package_id !== $lockedItem->customer_package_id)
+                || ($lockedItem->service_id !== null && $reservation->service_id !== $lockedItem->service_id)
+            )) {
+                throw ValidationException::withMessages([
+                    'item' => 'A reserva não corresponde ao item da comanda.',
+                ]);
+            }
+
             if ($reservation !== null && $reservation->status === 'reserved') {
                 $reservation->forceFill([
                     'status' => 'released',
@@ -73,6 +95,12 @@ final class RemoveSaleItem extends OperationalAction
                     'reason_code' => 'sale_item_removed',
                 ]);
             } elseif ($reservation !== null && $reservation->status === 'consumed') {
+                if ($reservation->package_usage_id === null) {
+                    throw ValidationException::withMessages([
+                        'item' => 'A reserva consumida não possui lançamento de uso associado.',
+                    ]);
+                }
+
                 /** @var PackageUsage|null $packageUsage */
                 $packageUsage = PackageUsage::query()
                     ->where('tenant_id', $tenantId)
@@ -81,50 +109,65 @@ final class RemoveSaleItem extends OperationalAction
                     ->lockForUpdate()
                     ->first();
 
-                if ($packageUsage !== null && $packageUsage->reversed_at === null) {
-                    /** @var CustomerPackage $package */
-                    $package = CustomerPackage::query()
-                        ->where('tenant_id', $tenantId)
-                        ->where('unit_id', $unitId)
-                        ->whereKey($packageUsage->customer_package_id)
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                    $restoredSessions = $package->remaining_sessions + $packageUsage->sessions_consumed;
-                    if ($restoredSessions > $package->total_sessions) {
-                        throw ValidationException::withMessages([
-                            'item' => 'O saldo do pacote está inconsistente; não foi possível remover este item.',
-                        ]);
-                    }
-
-                    $package->forceFill([
-                        'remaining_sessions' => $restoredSessions,
-                        'status' => $package->status === 'review_required' ? 'review_required' : 'active',
-                        'lock_version' => $package->lock_version + 1,
-                    ])->save();
-
-                    if ($packageUsage->service_id !== null) {
-                        CustomerPackageService::query()
-                            ->where('tenant_id', $tenantId)
-                            ->where('unit_id', $unitId)
-                            ->where('customer_package_id', $package->getKey())
-                            ->where('service_id', $packageUsage->service_id)
-                            ->increment('remaining_quantity', $packageUsage->sessions_consumed);
-                    }
-
-                    $packageUsage->forceFill([
-                        'reversed_at' => now(),
-                        'reversed_by_user_id' => $actor->getKey(),
-                        'reversal_reason' => 'Item removido da comanda '.$lockedSale->getKey(),
-                    ])->save();
-
-                    $this->events->record($actor, $context, 'package_usage.reversed', $packageUsage, [
-                        'customer_package_id' => $package->getKey(),
-                        'package_usage_id' => $packageUsage->getKey(),
-                        'sessions_consumed' => $packageUsage->sessions_consumed,
-                        'reason_code' => 'sale_item_removed',
+                if ($packageUsage === null) {
+                    throw ValidationException::withMessages([
+                        'item' => 'A reserva consumida aponta para um lançamento de uso inexistente.',
                     ]);
                 }
+
+                if ($packageUsage->reversed_at !== null) {
+                    throw new ConflictHttpException('O lançamento de uso já foi estornado.');
+                }
+
+                if (
+                    $packageUsage->customer_package_id !== $reservation->customer_package_id
+                    || $packageUsage->sale_id !== $reservation->sale_id
+                    || $packageUsage->sale_item_id !== $reservation->sale_item_id
+                    || $packageUsage->service_id !== $reservation->service_id
+                    || $packageUsage->sessions_consumed !== $reservation->sessions_reserved
+                ) {
+                    throw ValidationException::withMessages([
+                        'item' => 'A reserva não corresponde ao lançamento de uso do pacote.',
+                    ]);
+                }
+
+                /** @var CustomerPackage $package */
+                $package = CustomerPackage::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->whereKey($packageUsage->customer_package_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                try {
+                    $package = $this->packageBalance->restore(
+                        $package,
+                        $tenantId,
+                        $unitId,
+                        $packageUsage->service_id,
+                        $packageUsage->sessions_consumed,
+                        $package->status === 'review_required' ? 'review_required' : 'active',
+                    );
+                } catch (ConflictHttpException $exception) {
+                    throw ValidationException::withMessages([
+                        'item' => str_contains($exception->getMessage(), 'service')
+                            ? 'O saldo do serviço no pacote está inconsistente; não foi possível remover este item.'
+                            : 'O saldo do pacote está inconsistente; não foi possível remover este item.',
+                    ]);
+                }
+
+                $packageUsage->forceFill([
+                    'reversed_at' => now(),
+                    'reversed_by_user_id' => $actor->getKey(),
+                    'reversal_reason' => 'Item removido da comanda '.$lockedSale->getKey(),
+                ])->save();
+
+                $this->events->record($actor, $context, 'package_usage.reversed', $packageUsage, [
+                    'customer_package_id' => $package->getKey(),
+                    'package_usage_id' => $packageUsage->getKey(),
+                    'sessions_consumed' => $packageUsage->sessions_consumed,
+                    'reason_code' => 'sale_item_removed',
+                ]);
             }
 
             if ($lockedItem->item_type === 'package' && $lockedItem->customer_package_id !== null) {

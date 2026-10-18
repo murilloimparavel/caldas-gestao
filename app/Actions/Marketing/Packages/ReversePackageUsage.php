@@ -4,10 +4,13 @@ namespace App\Actions\Marketing\Packages;
 
 use App\Actions\Operational\OperationalAction;
 use App\Models\CustomerPackage;
-use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
 use App\Models\User;
+use App\Support\AuditEventWriter;
+use App\Support\AuthorizationService;
+use App\Support\IdentityEventRecorder;
+use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +18,14 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class ReversePackageUsage extends OperationalAction
 {
+    public function __construct(
+        AuthorizationService $authorization = new AuthorizationService,
+        IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
+        private readonly MutateCustomerPackageBalance $packageBalance = new MutateCustomerPackageBalance,
+    ) {
+        parent::__construct($authorization, $events);
+    }
+
     /** @param array<string, mixed> $data */
     public function handle(User $actor, TenantContext $context, PackageUsage $packageUsage, array $data = []): PackageUsage
     {
@@ -62,6 +73,14 @@ final class ReversePackageUsage extends OperationalAction
                 throw new ConflictHttpException('The reservation is not in a consumable state.');
             }
 
+            if ($reservation !== null && (
+                $reservation->customer_package_id !== $usage->customer_package_id
+                || $reservation->service_id !== $usage->service_id
+                || $reservation->sessions_reserved !== $usage->sessions_consumed
+            )) {
+                throw new ConflictHttpException('The reservation does not match the package usage.');
+            }
+
             if (in_array($package->status, ['cancelled', 'expired'], true)) {
                 throw new ConflictHttpException("Package cannot be reactivated from {$package->status} status.");
             }
@@ -70,35 +89,15 @@ final class ReversePackageUsage extends OperationalAction
                 throw new ConflictHttpException('Expired packages cannot have usage reversed.');
             }
 
-            $newRemaining = $package->remaining_sessions + $usage->sessions_consumed;
-
-            if ($newRemaining > $package->total_sessions) {
-                throw new ConflictHttpException('Package session balance is inconsistent.');
-            }
-
-            $package->forceFill([
-                'remaining_sessions' => $newRemaining,
-                'status' => $package->status === 'review_required' ? 'review_required' : 'active',
-                'lock_version' => $package->lock_version + 1,
-            ])->save();
-
-            if ($usage->service_id !== null) {
-                $serviceBalance = CustomerPackageService::query()
-                    ->where('tenant_id', $context->tenant->getKey())
-                    ->where('unit_id', $unit->getKey())
-                    ->where('customer_package_id', $package->getKey())
-                    ->where('service_id', $usage->service_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($serviceBalance !== null) {
-                    if ($serviceBalance->remaining_quantity + $usage->sessions_consumed > $serviceBalance->allocated_quantity) {
-                        throw new ConflictHttpException('Package service balance is inconsistent.');
-                    }
-
-                    $serviceBalance->increment('remaining_quantity', $usage->sessions_consumed);
-                }
-            }
+            $package = $this->packageBalance->restore(
+                $package,
+                $context->tenant->getKey(),
+                $unit->getKey(),
+                $usage->service_id,
+                $usage->sessions_consumed,
+                $package->status === 'review_required' ? 'review_required' : 'active',
+            );
+            $newRemaining = $package->remaining_sessions;
 
             $usage->forceFill([
                 'reversed_at' => now(),
