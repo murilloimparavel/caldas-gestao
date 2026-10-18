@@ -3,6 +3,7 @@
 namespace App\Actions\Closing;
 
 use App\Actions\Finance\Commissions\AccrueCommissionsForSale;
+use App\Actions\Marketing\Packages\MutateCustomerPackageBalance;
 use App\Actions\Marketing\Retention\RecordCustomerActivity;
 use App\Actions\Operational\OperationalAction;
 use App\Models\CashMovement;
@@ -10,7 +11,6 @@ use App\Models\CashShift;
 use App\Models\ClosingSession;
 use App\Models\ClosingSessionPayment;
 use App\Models\CustomerPackage;
-use App\Models\CustomerPackageService;
 use App\Models\InventoryMovement;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
@@ -41,6 +41,7 @@ final class FinalizeClosingSession extends OperationalAction
         private readonly AccrueCommissionsForSale $accrueCommissions = new AccrueCommissionsForSale,
         private readonly RecordCustomerActivity $recordCustomerActivity = new RecordCustomerActivity,
         private readonly LegacyPackageReconciliation $packageEvidence = new LegacyPackageReconciliation,
+        private readonly MutateCustomerPackageBalance $packageBalance = new MutateCustomerPackageBalance,
     ) {
         parent::__construct($authorization, $events);
     }
@@ -206,41 +207,46 @@ final class FinalizeClosingSession extends OperationalAction
                     ]);
                 }
 
-                $sessionsToConsume = (int) $usages->sum('sessions_reserved');
-                if ($package->remaining_sessions < $sessionsToConsume) {
+                $serviceQuantities = $usages
+                    ->groupBy('service_id')
+                    ->mapWithKeys(static fn ($serviceUsages, $serviceId): array => [
+                        (string) $serviceId => (int) $serviceUsages->sum('sessions_reserved'),
+                    ])
+                    ->all();
+                $closingReservationIds = $usages->pluck('id')->all();
+                $otherReservedUsages = PackageUsageReservation::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('unit_id', $unitId)
+                    ->where('customer_package_id', $package->getKey())
+                    ->where('status', 'reserved')
+                    ->whereNotIn('id', $closingReservationIds)
+                    ->get();
+                $reservedPackageQuantity = (int) $otherReservedUsages->sum('sessions_reserved');
+                $reservedServiceQuantities = $otherReservedUsages
+                    ->groupBy('service_id')
+                    ->mapWithKeys(static fn ($serviceUsages, $serviceId): array => [
+                        (string) $serviceId => (int) $serviceUsages->sum('sessions_reserved'),
+                    ])
+                    ->all();
+
+                try {
+                    $package = $this->packageBalance->consume(
+                        $package,
+                        $tenantId,
+                        $unitId,
+                        $serviceQuantities,
+                        $reservedPackageQuantity,
+                        $reservedServiceQuantities,
+                    );
+                } catch (ConflictHttpException $exception) {
                     throw ValidationException::withMessages([
-                        'sale_ids' => "O saldo do pacote {$package->name_snapshot} mudou e não cobre mais os serviços reservados.",
+                        'sale_ids' => "O saldo do pacote {$package->name_snapshot} mudou e não cobre mais os serviços reservados: {$exception->getMessage()}",
                     ]);
                 }
 
-                foreach ($usages->groupBy('service_id') as $serviceId => $serviceUsages) {
-                    $serviceBalance = CustomerPackageService::query()
-                        ->where('tenant_id', $tenantId)
-                        ->where('unit_id', $unitId)
-                        ->where('customer_package_id', $package->getKey())
-                        ->where('service_id', $serviceId)
-                        ->lockForUpdate()
-                        ->first();
-                    $serviceQuantity = (int) $serviceUsages->sum('sessions_reserved');
-
-                    if ($serviceBalance === null || $serviceBalance->remaining_quantity < $serviceQuantity) {
-                        throw ValidationException::withMessages([
-                            'sale_ids' => "O saldo do serviço no pacote {$package->name_snapshot} mudou e não cobre mais os serviços reservados.",
-                        ]);
-                    }
-
-                    $serviceBalance->forceFill([
-                        'remaining_quantity' => $serviceBalance->remaining_quantity - $serviceQuantity,
-                    ])->save();
-                }
-
-                $newRemaining = $package->remaining_sessions - $sessionsToConsume;
-                $packageStatus = $newRemaining === 0 ? 'completed' : $package->status;
-                $package->forceFill([
-                    'remaining_sessions' => $newRemaining,
-                    'status' => $packageStatus,
-                    'lock_version' => $package->lock_version + 1,
-                ])->save();
+                $sessionsToConsume = (int) array_sum($serviceQuantities);
+                $newRemaining = $package->remaining_sessions;
+                $packageStatus = $package->status;
 
                 foreach ($usages as $reservation) {
                     /** @var PackageUsage $consumption */

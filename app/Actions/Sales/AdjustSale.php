@@ -3,12 +3,12 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Inventory\RecordInventoryMovement;
+use App\Actions\Marketing\Packages\MutateCustomerPackageBalance;
 use App\Actions\Operational\OperationalAction;
 use App\Models\ClosingSession;
 use App\Models\ClosingSessionPayment;
 use App\Models\CommissionAccrual;
 use App\Models\CustomerPackage;
-use App\Models\CustomerPackageService;
 use App\Models\PackageUsage;
 use App\Models\PackageUsageReservation;
 use App\Models\Product;
@@ -34,6 +34,7 @@ final class AdjustSale extends OperationalAction
         AuthorizationService $authorization = new AuthorizationService,
         IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
         private readonly RecordInventoryMovement $recordInventoryMovement = new RecordInventoryMovement,
+        private readonly MutateCustomerPackageBalance $packageBalance = new MutateCustomerPackageBalance,
     ) {
         parent::__construct($authorization, $events);
     }
@@ -211,44 +212,42 @@ final class AdjustSale extends OperationalAction
                     continue;
                 }
 
+                if (
+                    $usage->customer_package_id !== $reservation->customer_package_id
+                    || $usage->sale_id !== $reservation->sale_id
+                    || $usage->sale_item_id !== $reservation->sale_item_id
+                    || $usage->service_id !== $reservation->service_id
+                    || $usage->sessions_consumed !== $reservation->sessions_reserved
+                ) {
+                    throw ValidationException::withMessages([
+                        'sale' => 'A reserva não corresponde ao lançamento de uso do pacote.',
+                    ]);
+                }
+
                 $package = CustomerPackage::query()
                     ->where('tenant_id', $tenantId)
                     ->where('unit_id', $unitId)
                     ->whereKey($reservation->customer_package_id)
                     ->lockForUpdate()
                     ->firstOrFail();
-                $restoredSessions = $package->remaining_sessions + $usage->sessions_consumed;
-
-                if ($restoredSessions > $package->total_sessions) {
+                try {
+                    $package = $this->packageBalance->restore(
+                        $package,
+                        $tenantId,
+                        $unitId,
+                        $usage->service_id,
+                        $usage->sessions_consumed,
+                        $package->status === 'cancelled'
+                            ? 'cancelled'
+                            : ($package->expires_at?->endOfDay()->isPast() === true ? 'expired' : 'active'),
+                    );
+                } catch (ConflictHttpException $exception) {
                     throw ValidationException::withMessages([
-                        'sale' => 'O saldo do pacote está inconsistente; não foi possível estornar o consumo.',
+                        'sale' => str_contains($exception->getMessage(), 'service')
+                            ? 'O saldo do serviço no pacote está inconsistente; não foi possível estornar o consumo.'
+                            : 'O saldo do pacote está inconsistente; não foi possível estornar o consumo.',
                     ]);
                 }
-
-                if ($usage->service_id !== null) {
-                    $serviceBalance = CustomerPackageService::query()
-                        ->where('tenant_id', $tenantId)
-                        ->where('unit_id', $unitId)
-                        ->where('customer_package_id', $package->getKey())
-                        ->where('service_id', $usage->service_id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($serviceBalance === null || $serviceBalance->remaining_quantity + $usage->sessions_consumed > $serviceBalance->allocated_quantity) {
-                        throw ValidationException::withMessages([
-                            'sale' => 'O saldo do serviço no pacote está inconsistente; não foi possível estornar o consumo.',
-                        ]);
-                    }
-
-                    $serviceBalance->increment('remaining_quantity', $usage->sessions_consumed);
-                }
-                $package->forceFill([
-                    'remaining_sessions' => $restoredSessions,
-                    'status' => $package->status === 'cancelled'
-                        ? 'cancelled'
-                        : ($package->expires_at?->endOfDay()->isPast() === true ? 'expired' : 'active'),
-                    'lock_version' => $package->lock_version + 1,
-                ])->save();
                 $usage->forceFill([
                     'reversed_at' => now(),
                     'reversed_by_user_id' => $actor->getKey(),

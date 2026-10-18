@@ -28,6 +28,7 @@ use App\Models\SaleItem;
 use App\Models\Service;
 use App\Models\User;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -88,6 +89,102 @@ it('fatura pacote pela comanda e cobre usos futuros sem nova cobrança', functio
 
     expect($package->fresh()->remaining_sessions)->toBe(1)
         ->and(PackageUsage::query()->where('sale_item_id', $serviceItem->getKey())->value('sessions_consumed'))->toBe(1);
+});
+
+it('impede vender outro pacote do mesmo modelo enquanto o cliente possui um em andamento', function (): void {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, [
+        'name' => 'Package duplicate guard '.Str::random(8),
+        'slug' => 'package-duplicate-guard-'.Str::lower(Str::random(8)),
+    ]);
+    $unit = $tenant->units()->firstOrFail();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+    ]);
+
+    $openSale = fn (): Sale => Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+
+    $firstItem = addPackageSaleItem($owner, $context, $openSale(), [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+    ]);
+    $package = CustomerPackage::query()->findOrFail($firstItem->customer_package_id);
+
+    foreach (['pending', 'active', 'review_required'] as $status) {
+        $package->forceFill(['status' => $status])->save();
+
+        expect(fn () => addPackageSaleItem($owner, $context, $openSale(), [
+            'item_type' => 'package',
+            'package_template_id' => $template->getKey(),
+        ]))->toThrow(ValidationException::class, 'já possui este pacote');
+    }
+
+    $package->forceFill(['status' => 'completed'])->save();
+    $replacementItem = addPackageSaleItem($owner, $context, $openSale(), [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+    ]);
+
+    expect($replacementItem->customer_package_id)->not->toBe($package->getKey())
+        ->and(CustomerPackage::query()->where('customer_id', $customer->getKey())->count())->toBe(2);
+});
+
+it('permite vender novamente quando o pacote ativo já venceu na unidade', function (): void {
+    $owner = User::factory()->create();
+    $tenant = (new OnboardTenant)->handle($owner, [
+        'name' => 'Expired package duplicate guard '.Str::random(8),
+        'slug' => 'expired-package-duplicate-guard-'.Str::lower(Str::random(8)),
+    ]);
+    $unit = $tenant->units()->firstOrFail();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $customer = Customer::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $category = SaleCategory::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'type' => 'mixed',
+    ]);
+    $expiredPackage = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'status' => 'active',
+        'remaining_sessions' => 2,
+        'expires_at' => CarbonImmutable::now($unit->timezone)->subDay()->toDateString(),
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'sale_category_id' => $category->getKey(),
+        'status' => 'open',
+    ]);
+
+    $item = addPackageSaleItem($owner, $context, $sale, [
+        'item_type' => 'package',
+        'package_template_id' => $template->getKey(),
+    ]);
+
+    expect($item->customer_package_id)->not->toBe($expiredPackage->getKey())
+        ->and(CustomerPackage::query()->where('customer_id', $customer->getKey())->count())->toBe(2);
 });
 
 it('não ativa pacote gratuito ou totalmente descontado mesmo quando há outro item pago na comanda', function (): void {

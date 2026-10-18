@@ -3,6 +3,7 @@
 namespace App\Actions\Sales;
 
 use App\Actions\Operational\OperationalAction;
+use App\Models\Customer;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
 use App\Models\PackageTemplate;
@@ -20,6 +21,7 @@ use App\Support\IdentityEventRecorder;
 use App\Support\LegacyPackageReconciliation;
 use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -43,6 +45,9 @@ final class AddSaleItem extends OperationalAction
         $unit = $this->unit($actor, $context, $permission);
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
+        $packageGuardDate = CarbonImmutable::now(
+            (string) ($unit->timezone ?? $context->tenant->timezone ?? config('app.timezone')),
+        )->toDateString();
 
         if (($data['item_type'] ?? null) === 'service' && ! empty($data['customer_package_id'])
             && ! $this->authorization->can($actor, $context, 'package.consume', $unit)
@@ -77,7 +82,7 @@ final class AddSaleItem extends OperationalAction
             ? trim((string) $data['source_id'])
             : null;
 
-        return DB::transaction(function () use ($actor, $context, $sale, $data, $itemType, $sourceId, $tenantId, $unitId): SaleItem {
+        return DB::transaction(function () use ($actor, $context, $sale, $data, $itemType, $sourceId, $tenantId, $unitId, $packageGuardDate): SaleItem {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
 
@@ -204,6 +209,42 @@ final class AddSaleItem extends OperationalAction
                     throw ValidationException::withMessages([
                         'package_template_id' => 'O pacote selecionado não foi encontrado ou está inativo.',
                     ]);
+                }
+
+                if (trim((string) ($data['customer_package_id'] ?? '')) === '') {
+                    Customer::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->whereKey($lockedSale->customer_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $hasBlockingPackage = CustomerPackage::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('unit_id', $unitId)
+                        ->where('customer_id', $lockedSale->customer_id)
+                        ->where('package_template_id', $packageTemplate->getKey())
+                        ->where(function ($query) use ($packageGuardDate): void {
+                            $query
+                                ->whereIn('status', ['pending', 'review_required'])
+                                ->orWhere(function ($query) use ($packageGuardDate): void {
+                                    $query
+                                        ->where('status', 'active')
+                                        ->where('remaining_sessions', '>', 0)
+                                        ->where(function ($query) use ($packageGuardDate): void {
+                                            $query
+                                                ->whereNull('expires_at')
+                                                ->orWhereDate('expires_at', '>=', $packageGuardDate);
+                                        });
+                                });
+                        })
+                        ->exists();
+
+                    if ($hasBlockingPackage) {
+                        throw ValidationException::withMessages([
+                            'package_template_id' => 'O cliente já possui este pacote pendente, ativo ou em revisão. Regularize o pacote existente antes de vender outro.',
+                        ]);
+                    }
                 }
 
                 $nameSnapshot = $packageTemplate->name;
@@ -388,6 +429,8 @@ final class AddSaleItem extends OperationalAction
                         'customer_package_id' => 'O pacote não está ativo, venceu ou não pertence ao cliente da comanda.',
                     ]);
                 }
+
+                $customerPackageId = $customerPackage->getKey();
 
                 $linkedItems = SaleItem::query()
                     ->where('customer_package_id', $customerPackage->getKey())

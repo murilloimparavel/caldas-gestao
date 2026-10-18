@@ -90,18 +90,45 @@ final class AuditLegacyCustomerPackages extends Command
 
         $rows = [];
         $query->chunkById(100, function ($packages) use (&$rows, $includeFinancialObligation, $reconciliation): void {
-            $candidateItems = SaleItem::query()
-                ->whereIn('customer_package_id', $packages->modelKeys())
+            $reservationItemIds = $packages->mapWithKeys(static function (CustomerPackage $package): array {
+                return [$package->getKey() => $package->reservations->pluck('sale_item_id')->filter()->values()->all()];
+            });
+
+            $candidateItems = SaleItem::withTrashed()
+                ->where(function (Builder $query) use ($packages, $reservationItemIds): void {
+                    foreach ($packages as $package) {
+                        $query->orWhere(function (Builder $query) use ($package, $reservationItemIds): void {
+                            $query->where('tenant_id', $package->tenant_id)
+                                ->where('unit_id', $package->unit_id)
+                                ->where(function (Builder $query) use ($package, $reservationItemIds): void {
+                                    $query->where('customer_package_id', $package->getKey());
+
+                                    $itemIds = $reservationItemIds->get($package->getKey(), []);
+                                    if ($itemIds !== []) {
+                                        $query->orWhereIn('id', $itemIds);
+                                    }
+                                });
+                        });
+                    }
+                })
                 ->with('sale.closingSessions.payments')
                 ->get()
-                ->groupBy('customer_package_id');
+                ->values();
 
             foreach ($packages as $package) {
+                $packageReservationItemIds = $reservationItemIds->get($package->getKey(), []);
+                $packageItems = $candidateItems->filter(static function (SaleItem $item) use ($package, $packageReservationItemIds): bool {
+                    return $item->tenant_id === $package->tenant_id
+                        && $item->unit_id === $package->unit_id
+                        && ($item->customer_package_id === $package->getKey()
+                            || in_array($item->getKey(), $packageReservationItemIds, true));
+                })->values();
+
                 $rows[] = $this->auditPackage(
                     $package,
                     $includeFinancialObligation,
                     $reconciliation,
-                    $candidateItems->get($package->getKey(), collect()),
+                    $packageItems,
                 );
             }
         });

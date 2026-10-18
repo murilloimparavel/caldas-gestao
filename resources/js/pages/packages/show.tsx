@@ -337,6 +337,14 @@ export default function PackageShow({
             service.pivot?.included_quantity ?? 1,
         ]),
     );
+    const customerPackageCounts = customerPackages.data.reduce<
+        Record<string, number>
+    >((counts, customerPackage) => {
+        counts[customerPackage.customer.id] =
+            (counts[customerPackage.customer.id] ?? 0) + 1;
+
+        return counts;
+    }, {});
 
     return (
         <PageCanvas>
@@ -783,9 +791,18 @@ export default function PackageShow({
                     </div>
                 )}
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold tracking-tight">
-                        Vendas deste modelo ({customerPackages.total})
-                    </h3>
+                    <div>
+                        <h3 className="text-lg font-semibold tracking-tight">
+                            Instâncias registradas deste modelo (
+                            {customerPackages.total})
+                        </h3>
+                        <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+                            Cada registro representa uma instância do pacote
+                            para um cliente. O mesmo cliente pode aparecer mais
+                            de uma vez; confira o status, as datas e o histórico
+                            de uso de cada registro.
+                        </p>
+                    </div>
                     {canStartSale && pkg.is_active && (
                         <Dialog
                             open={sellOpen}
@@ -982,6 +999,22 @@ export default function PackageShow({
                                                     cp.status,
                                                 )}
                                             </p>
+                                            {(customerPackageCounts[
+                                                cp.customer.id
+                                            ] ?? 0) > 1 && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Este cliente possui{' '}
+                                                    {
+                                                        customerPackageCounts[
+                                                            cp.customer.id
+                                                        ]
+                                                    }{' '}
+                                                    registros deste modelo nesta
+                                                    página. A data, o status e o
+                                                    histórico identificam cada
+                                                    instância.
+                                                </p>
+                                            )}
                                             <div className="flex flex-wrap gap-2 text-3xs text-muted-foreground">
                                                 <span className="rounded-md bg-muted px-2 py-1">
                                                     Pacote:{' '}

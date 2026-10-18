@@ -107,6 +107,22 @@ type PendingCustomerPackageOption = {
     validity_days: number;
 };
 
+function packageIncludesServiceWithBalance(
+    customerPackage: CustomerPackageOption,
+    serviceId: string,
+): boolean {
+    return customerPackage.services.some(
+        (service) => service.id === serviceId && service.available > 0,
+    );
+}
+
+function packageIncludesService(
+    customerPackage: CustomerPackageOption,
+    serviceId: string,
+): boolean {
+    return customerPackage.services.some((service) => service.id === serviceId);
+}
+
 function formatDateTime(
     iso: string | null | undefined,
     timeZone?: string,
@@ -332,6 +348,21 @@ export default function SalesShow({
     const selectedPackageService = selectedPackage?.services.find(
         (service) => service.id === selectedServiceId,
     );
+    const packagesForSelectedService = selectedServiceId
+        ? customerPackages.filter((customerPackage) =>
+              packageIncludesService(customerPackage, selectedServiceId),
+          )
+        : [];
+    const packagesWithAvailableSelectedService = selectedServiceId
+        ? customerPackages.filter(
+              (customerPackage) =>
+                  customerPackage.available_sessions > 0 &&
+                  packageIncludesServiceWithBalance(
+                      customerPackage,
+                      selectedServiceId,
+                  ),
+          )
+        : [];
     const estimatedCoveredQuantity = selectedPackageService
         ? Math.min(
               quantity,
@@ -1504,22 +1535,9 @@ export default function SalesShow({
                                                                     />
                                                                 </FormField>
 
-                                                                {customerPackages.some(
-                                                                    (
-                                                                        customerPackage,
-                                                                    ) =>
-                                                                        customerPackage.services.some(
-                                                                            (
-                                                                                service,
-                                                                            ) =>
-                                                                                service.id ===
-                                                                                    selectedServiceId &&
-                                                                                service.available >
-                                                                                    0,
-                                                                        ) &&
-                                                                        customerPackage.available_sessions >
-                                                                            0,
-                                                                ) ? (
+                                                                {selectedServiceId &&
+                                                                customerPackages.length >
+                                                                    0 ? (
                                                                     <FormField
                                                                         label="Cobrir com pacote (opcional)"
                                                                         name="customer_package_id"
@@ -1549,60 +1567,93 @@ export default function SalesShow({
                                                                                 serviço
                                                                                 normalmente
                                                                             </option>
-                                                                            {customerPackages
-                                                                                .filter(
-                                                                                    (
-                                                                                        customerPackage,
-                                                                                    ) =>
-                                                                                        customerPackage.available_sessions >
-                                                                                            0 &&
-                                                                                        customerPackage.services.some(
+                                                                            {packagesWithAvailableSelectedService.map(
+                                                                                (
+                                                                                    customerPackage,
+                                                                                ) => {
+                                                                                    const balance =
+                                                                                        customerPackage.services.find(
                                                                                             (
                                                                                                 service,
                                                                                             ) =>
                                                                                                 service.id ===
-                                                                                                    selectedServiceId &&
-                                                                                                service.available >
-                                                                                                    0,
-                                                                                        ),
-                                                                                )
-                                                                                .map(
-                                                                                    (
-                                                                                        customerPackage,
-                                                                                    ) => {
-                                                                                        const balance =
-                                                                                            customerPackage.services.find(
-                                                                                                (
-                                                                                                    service,
-                                                                                                ) =>
-                                                                                                    service.id ===
-                                                                                                    selectedServiceId,
-                                                                                            );
-
-                                                                                        return (
-                                                                                            <option
-                                                                                                key={
-                                                                                                    customerPackage.id
-                                                                                                }
-                                                                                                value={
-                                                                                                    customerPackage.id
-                                                                                                }
-                                                                                            >
-                                                                                                {
-                                                                                                    customerPackage.name
-                                                                                                }{' '}
-                                                                                                ·{' '}
-                                                                                                {balance?.available ??
-                                                                                                    0}{' '}
-                                                                                                disponíveis
-                                                                                                para
-                                                                                                este
-                                                                                                serviço
-                                                                                            </option>
+                                                                                                selectedServiceId,
                                                                                         );
-                                                                                    },
-                                                                                )}
+
+                                                                                    return (
+                                                                                        <option
+                                                                                            key={
+                                                                                                customerPackage.id
+                                                                                            }
+                                                                                            value={
+                                                                                                customerPackage.id
+                                                                                            }
+                                                                                        >
+                                                                                            {
+                                                                                                customerPackage.name
+                                                                                            }{' '}
+                                                                                            ·{' '}
+                                                                                            {balance?.available ??
+                                                                                                0}{' '}
+                                                                                            disponíveis
+                                                                                            para
+                                                                                            este
+                                                                                            serviço
+                                                                                        </option>
+                                                                                    );
+                                                                                },
+                                                                            )}
                                                                         </select>
+                                                                        {packagesForSelectedService.length >
+                                                                            0 &&
+                                                                        packagesWithAvailableSelectedService.length ===
+                                                                            0 ? (
+                                                                            <p
+                                                                                role="alert"
+                                                                                className="mt-2 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200"
+                                                                            >
+                                                                                O
+                                                                                cliente
+                                                                                possui
+                                                                                pacote(s)
+                                                                                com
+                                                                                este
+                                                                                serviço,
+                                                                                mas
+                                                                                não
+                                                                                há
+                                                                                saldo
+                                                                                disponível
+                                                                                para
+                                                                                a
+                                                                                comanda.
+                                                                                O
+                                                                                serviço
+                                                                                será
+                                                                                cobrado
+                                                                                normalmente
+                                                                                até
+                                                                                que
+                                                                                o
+                                                                                saldo
+                                                                                seja
+                                                                                revisado.
+                                                                            </p>
+                                                                        ) : null}
+                                                                        {packagesForSelectedService.length ===
+                                                                        0 ? (
+                                                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                                                Nenhum
+                                                                                pacote
+                                                                                ativo
+                                                                                deste
+                                                                                cliente
+                                                                                inclui
+                                                                                o
+                                                                                serviço
+                                                                                selecionado.
+                                                                            </p>
+                                                                        ) : null}
                                                                         {selectedPackageService ? (
                                                                             <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
                                                                                 {

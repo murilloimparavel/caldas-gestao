@@ -281,6 +281,14 @@ function CustomerPackageStatusBadge({
     );
 }
 
+function hasConsumablePackageService(
+    customerPackage: CustomerPackageItem,
+): boolean {
+    return (customerPackage.service_balances ?? []).some(
+        (balance) => balance.remaining_quantity > 0,
+    );
+}
+
 function SaleStatusBadge({ status }: { status: CustomerSale['status'] }) {
     switch (status) {
         case 'open':
@@ -1215,6 +1223,41 @@ export default function CustomerShow({
                                                                 ]
                                                             }
                                                         </p>
+                                                        {cp.status ===
+                                                            'review_required' && (
+                                                            <p className="rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+                                                                Consumo
+                                                                bloqueado: este
+                                                                pacote precisa
+                                                                ser revisado
+                                                                antes de liberar
+                                                                qualquer sessão.
+                                                            </p>
+                                                        )}
+                                                        {cp.status ===
+                                                            'active' &&
+                                                            cp.remaining_sessions >
+                                                                0 &&
+                                                            !hasConsumablePackageService(
+                                                                cp,
+                                                            ) && (
+                                                                <p className="rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+                                                                    Este pacote
+                                                                    mostra
+                                                                    sessões no
+                                                                    saldo geral,
+                                                                    mas nenhum
+                                                                    serviço
+                                                                    possui saldo
+                                                                    disponível
+                                                                    para
+                                                                    consumo.
+                                                                    Revise os
+                                                                    saldos antes
+                                                                    de tentar
+                                                                    dar baixa.
+                                                                </p>
+                                                            )}
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
@@ -1238,7 +1281,10 @@ export default function CustomerShow({
                                                             cp.status ===
                                                                 'active' &&
                                                             cp.remaining_sessions >
-                                                                0 && (
+                                                                0 &&
+                                                            hasConsumablePackageService(
+                                                                cp,
+                                                            ) && (
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={() => {
@@ -2213,6 +2259,22 @@ export default function CustomerShow({
                                                 </span>
                                             </div>
                                         </div>
+
+                                        {!hasConsumablePackageService(
+                                            selectedPackageForConsume,
+                                        ) && (
+                                            <p
+                                                role="alert"
+                                                className="rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200"
+                                            >
+                                                Não há serviço com saldo
+                                                disponível neste pacote. A
+                                                página pode ter sido atualizada
+                                                enquanto esta janela estava
+                                                aberta; atualize o cadastro e
+                                                revise o pacote.
+                                            </p>
+                                        )}
 
                                         <FormField
                                             id="service_id"

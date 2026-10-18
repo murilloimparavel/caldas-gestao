@@ -22,6 +22,7 @@ final class LegacyPackageReconciliation
         $hasFinancialObligation = $financialObligation !== null;
         $usageIsConsistent = $this->usageBalancesAreConsistent($package);
         $reservationsAreConsistent = $this->reservationsAreConsistent($package, $linkedItems);
+        $hasLegacyNullPackageLinks = $this->hasLegacyNullPackageLinks($package, $linkedItems);
         $sale = $package->sale;
         $packageItems = $linkedItems->where('item_type', 'package')->values();
         $saleLineIsCongruent = $this->hasOneCongruentPackageSaleLine($package, $sale, $packageItems);
@@ -54,9 +55,13 @@ final class LegacyPackageReconciliation
             $reasons[] = 'sale_or_package_item_mismatch';
         }
 
+        if ($hasLegacyNullPackageLinks) {
+            $reasons[] = 'legacy_sale_item_package_link_missing';
+        }
+
         if ($hasPaidClosing && $financialLinkAvailable && ! $hasFinancialObligation && $usageIsConsistent
             && $reservationsAreConsistent && ! $hasPendingReservations) {
-            return ['target_status' => 'active', 'reasons' => []];
+            return ['target_status' => 'active', 'reasons' => $hasLegacyNullPackageLinks ? ['legacy_sale_item_package_link_missing'] : []];
         }
 
         $hasUsage = $package->usages->isNotEmpty();
@@ -64,14 +69,14 @@ final class LegacyPackageReconciliation
 
         if ($financialLinkAvailable && ! $hasFinancialObligation && ! $hasUsage && ! $hasReservations
             && $usageIsConsistent && $package->sale_id === null && $linkedItems->isEmpty()) {
-            return ['target_status' => 'pending', 'reasons' => ['no_sale_or_usage_evidence']];
+            return ['target_status' => 'pending', 'reasons' => array_values(array_unique([...$reasons, 'no_sale_or_usage_evidence']))];
         }
 
         if ($financialLinkAvailable && ! $hasFinancialObligation && ! $hasUsage && ! $hasReservations
             && $usageIsConsistent && $reservationsAreConsistent && $saleLineIsCongruent
             && $linkedItems->count() === 1 && in_array($sale?->status, ['open', 'ready_to_bill'], true)
             && $sale->closingSessions->isEmpty()) {
-            return ['target_status' => 'pending', 'reasons' => ['sale_open_without_payment_evidence']];
+            return ['target_status' => 'pending', 'reasons' => array_values(array_unique([...$reasons, 'sale_open_without_payment_evidence']))];
         }
 
         if ($package->sale_id === null && ! $hasUsage && ! $hasReservations && $linkedItems->isNotEmpty()) {
@@ -116,7 +121,7 @@ final class LegacyPackageReconciliation
 
     private function usageBalancesAreConsistent(CustomerPackage $package): bool
     {
-        if ($package->total_sessions < 0 || $package->remaining_sessions < 0 || $package->remaining_sessions > $package->total_sessions) {
+        if ($package->total_sessions <= 0 || $package->remaining_sessions < 0 || $package->remaining_sessions > $package->total_sessions) {
             return false;
         }
 
@@ -127,15 +132,19 @@ final class LegacyPackageReconciliation
             return false;
         }
 
-        $snapshot = collect($package->eligible_services_snapshot ?? []);
+        $snapshot = collect($this->snapshotEntries($package));
         if ($snapshot->isEmpty()) {
-            return $activeUsages->isEmpty();
+            return false;
         }
 
         /** @var array<string, int> $allocations */
         $allocations = [];
         foreach ($snapshot as $service) {
-            $serviceId = (string) $service['id'];
+            if (! is_array($service)) {
+                return false;
+            }
+
+            $serviceId = (string) ($service['id'] ?? '');
             $quantity = (int) ($service['quantity'] ?? 0);
 
             if ($serviceId === '' || $quantity <= 0 || isset($allocations[$serviceId])) {
@@ -143,6 +152,10 @@ final class LegacyPackageReconciliation
             }
 
             $allocations[$serviceId] = $quantity;
+        }
+
+        if (array_sum($allocations) !== (int) $package->total_sessions) {
+            return false;
         }
 
         $balances = $package->serviceBalances->keyBy('service_id');
@@ -175,12 +188,17 @@ final class LegacyPackageReconciliation
     private function reservationsAreConsistent(CustomerPackage $package, Collection $linkedItems): bool
     {
         $usages = $package->usages->keyBy('id');
+        $eligibleServiceIds = collect($this->snapshotEntries($package))
+            ->map(static fn (mixed $service): string => is_array($service) ? (string) ($service['id'] ?? '') : '')
+            ->filter()
+            ->all();
         $reservedSessions = 0;
         $reservedByService = [];
 
         foreach ($package->reservations as $reservation) {
             if ($reservation->tenant_id !== $package->tenant_id || $reservation->unit_id !== $package->unit_id
-                || $reservation->customer_package_id !== $package->getKey()) {
+                || $reservation->customer_package_id !== $package->getKey() || $reservation->sessions_reserved <= 0
+                || ! in_array($reservation->service_id, $eligibleServiceIds, true)) {
                 return false;
             }
 
@@ -188,34 +206,59 @@ final class LegacyPackageReconciliation
                 $reservedSessions += $reservation->sessions_reserved;
                 $reservedByService[$reservation->service_id] = ($reservedByService[$reservation->service_id] ?? 0) + $reservation->sessions_reserved;
                 $item = $linkedItems->firstWhere('id', $reservation->sale_item_id);
+                $sale = $item?->getRelation('sale');
 
                 if ($item === null || $item->item_type !== 'service' || $item->sale_id !== $reservation->sale_id
-                    || $item->customer_package_id !== $package->getKey() || $item->service_id !== $reservation->service_id
+                    || ! $this->saleItemPackageLinkMatches($package, $item) || $item->service_id !== $reservation->service_id
                     || $item->tenant_id !== $package->tenant_id || $item->unit_id !== $package->unit_id
                     || $item->covered_quantity !== $reservation->sessions_reserved
-                    || ! in_array($item->sale?->status, ['open', 'ready_to_bill'], true)) {
+                    || ! ($sale instanceof Sale) || ! $this->saleScopeMatchesPackage($package, $sale)
+                    || ! in_array($sale->status, ['open', 'ready_to_bill'], true)) {
                     return false;
                 }
             } elseif ($reservation->status === 'consumed') {
                 $usage = $usages->get($reservation->package_usage_id);
                 $item = $linkedItems->firstWhere('id', $reservation->sale_item_id);
-                $sale = $item?->sale;
+                $sale = $item?->getRelation('sale');
 
                 if ($usage === null || $usage->reversed_at !== null || $usage->sale_id !== $reservation->sale_id
                     || $usage->sale_item_id !== $reservation->sale_item_id || $usage->service_id !== $reservation->service_id
                     || $usage->sessions_consumed !== $reservation->sessions_reserved
                     || $usage->tenant_id !== $package->tenant_id || $usage->unit_id !== $package->unit_id
-                    || $item === null || $item->item_type !== 'service' || $item->customer_package_id !== $package->getKey()
+                    || $item === null || $item->item_type !== 'service' || ! $this->saleItemPackageLinkMatches($package, $item)
                     || $item->tenant_id !== $package->tenant_id || $item->unit_id !== $package->unit_id
                     || $item->sale_id !== $reservation->sale_id || $item->service_id !== $reservation->service_id
                     || $item->covered_quantity !== $reservation->sessions_reserved
-                    || ! $this->saleScopeMatchesPackage($package, $sale) || $sale?->status !== 'finalized') {
+                    || ! ($sale instanceof Sale) || ! $this->saleScopeMatchesPackage($package, $sale) || $sale->status !== 'finalized') {
                     return false;
                 }
-            } elseif ($reservation->status === 'released' && $reservation->package_usage_id !== null) {
-                $usage = $usages->get($reservation->package_usage_id);
+            } elseif ($reservation->status === 'released') {
+                $usage = $reservation->package_usage_id !== null ? $usages->get($reservation->package_usage_id) : null;
+                $item = $linkedItems->firstWhere('id', $reservation->sale_item_id);
+                $sale = $item?->getRelation('sale');
+                $releasedUsageMatches = $reservation->released_at !== null
+                    && $usage !== null
+                    && $usage->reversed_at !== null
+                    && $usage->tenant_id === $package->tenant_id
+                    && $usage->unit_id === $package->unit_id
+                    && $usage->customer_package_id === $package->getKey()
+                    && $usage->sale_id === $reservation->sale_id
+                    && $usage->sale_item_id === $reservation->sale_item_id
+                    && $usage->service_id === $reservation->service_id
+                    && $usage->sessions_consumed === $reservation->sessions_reserved
+                    && $item !== null
+                    && $item->item_type === 'service'
+                    && $item->tenant_id === $package->tenant_id
+                    && $item->unit_id === $package->unit_id
+                    && $item->sale_id === $reservation->sale_id
+                    && $item->service_id === $reservation->service_id
+                    && $item->covered_quantity === $reservation->sessions_reserved
+                    && $this->saleItemPackageLinkMatches($package, $item)
+                    && $sale !== null
+                    && $this->saleScopeMatchesPackage($package, $sale);
 
-                if ($usage === null || $usage->reversed_at === null) {
+                if (($reservation->package_usage_id !== null && ! $releasedUsageMatches)
+                    || ($reservation->package_usage_id === null && ! $this->releasedReservationEvidenceMatches($package, $reservation, $item))) {
                     return false;
                 }
             } else {
@@ -246,6 +289,58 @@ final class LegacyPackageReconciliation
         }
 
         return true;
+    }
+
+    /** @param Collection<int, SaleItem> $linkedItems */
+    private function hasLegacyNullPackageLinks(CustomerPackage $package, Collection $linkedItems): bool
+    {
+        return $package->reservations->contains(static function (PackageUsageReservation $reservation) use ($linkedItems): bool {
+            $item = $linkedItems->firstWhere('id', $reservation->sale_item_id);
+
+            return $item !== null && $item->customer_package_id === null;
+        });
+    }
+
+    /** @return list<mixed> */
+    private function snapshotEntries(CustomerPackage $package): array
+    {
+        $rawSnapshot = $package->getRawOriginal('eligible_services_snapshot');
+
+        if (is_string($rawSnapshot)) {
+            $decodedSnapshot = json_decode($rawSnapshot, true);
+
+            return is_array($decodedSnapshot) ? array_values($decodedSnapshot) : [];
+        }
+
+        if (is_array($rawSnapshot)) {
+            return array_values($rawSnapshot);
+        }
+
+        $snapshot = $package->eligible_services_snapshot;
+
+        return is_array($snapshot) ? array_values($snapshot) : [];
+    }
+
+    private function saleItemPackageLinkMatches(CustomerPackage $package, SaleItem $item): bool
+    {
+        return $item->customer_package_id === null || $item->customer_package_id === $package->getKey();
+    }
+
+    private function releasedReservationEvidenceMatches(CustomerPackage $package, PackageUsageReservation $reservation, ?SaleItem $item): bool
+    {
+        $sale = $item?->sale;
+
+        return $reservation->released_at !== null
+            && $item !== null
+            && $item->item_type === 'service'
+            && $item->tenant_id === $package->tenant_id
+            && $item->unit_id === $package->unit_id
+            && $item->sale_id === $reservation->sale_id
+            && $item->service_id === $reservation->service_id
+            && $item->covered_quantity === $reservation->sessions_reserved
+            && $this->saleItemPackageLinkMatches($package, $item)
+            && $sale !== null && $this->saleScopeMatchesPackage($package, $sale)
+            && ($item->trashed() || $sale->status === 'cancelled');
     }
 
     /** @param Collection<int, SaleItem> $packageItems */
