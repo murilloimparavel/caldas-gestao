@@ -431,6 +431,56 @@ it('preserves the appointment item id and synchronizes its automatic sale item b
         ->and($sale->final_amount_cents)->toBe(18000);
 });
 
+it('removes the automatic sale item when an appointment service is removed', function () {
+    $workspace = appointmentSaleAutomationWorkspace();
+    $workspace['unit']->update([
+        'appointment_sales_automation_enabled' => true,
+        'appointment_default_sale_category_id' => $workspace['category']->getKey(),
+    ]);
+    $workspace['context'] = $workspace['context']->revalidate();
+    $secondService = Service::factory()->create([
+        'tenant_id' => $workspace['tenant']->getKey(),
+        'unit_id' => $workspace['unit']->getKey(),
+        'duration_minutes' => 25,
+        'price_cents' => 3500,
+    ]);
+    $workspace['professional']->services()->attach($secondService, [
+        'tenant_id' => $workspace['tenant']->getKey(),
+        'unit_id' => $workspace['unit']->getKey(),
+    ]);
+    $appointment = app(CreateAppointment::class)->handle(
+        $workspace['owner'],
+        $workspace['context'],
+        [
+            'customer_id' => $workspace['customer']->getKey(),
+            'service_ids' => [$workspace['service']->getKey(), $secondService->getKey()],
+            'professional_id' => $workspace['professional']->getKey(),
+            'starts_at' => '2030-02-10 10:00',
+        ],
+    );
+    $sale = Sale::query()->with('items')->firstOrFail();
+
+    app(UpdateAppointment::class)->handle(
+        $workspace['owner'],
+        $workspace['context'],
+        $appointment,
+        [
+            'customer_id' => $workspace['customer']->getKey(),
+            'service_ids' => [$workspace['service']->getKey()],
+            'professional_id' => $workspace['professional']->getKey(),
+            'starts_at' => '2030-02-10 10:00',
+            'lock_version' => 0,
+        ],
+    );
+    $sale->refresh()->load('items');
+
+    expect($appointment->fresh()->items)->toHaveCount(1)
+        ->and($sale->items)->toHaveCount(1)
+        ->and($sale->items->first()->service_id)->toBe($workspace['service']->getKey())
+        ->and($sale->total_amount_cents)->toBe(12500)
+        ->and($sale->final_amount_cents)->toBe(12500);
+});
+
 it('matches automatic sale items by appointment item metadata without changing manual items', function () {
     $workspace = appointmentSaleAutomationWorkspace();
     $workspace['unit']->update([

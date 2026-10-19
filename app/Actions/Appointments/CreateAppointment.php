@@ -34,21 +34,36 @@ final class CreateAppointment extends OperationalAction
         $unit = $this->unit($actor, $context, 'calendar.manage');
         $tenantId = (string) $context->tenant->getKey();
         $unitId = (string) $unit->getKey();
-        $service = Service::query()->whereKey($data['service_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
+        $serviceIds = array_values(array_unique($data['service_ids'] ?? array_filter([$data['service_id'] ?? null], 'is_string')));
+        if (count($serviceIds) > 8) {
+            throw ValidationException::withMessages(['service_ids' => 'Selecione no máximo oito serviços por agendamento.']);
+        }
+        $servicesById = Service::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->whereIn('id', $serviceIds)->get()->keyBy(fn (Service $service): string => (string) $service->getKey());
+        $services = collect($serviceIds)->map(fn (string $serviceId): ?Service => $servicesById->get($serviceId));
+        if ($services->contains(null) || $services->isEmpty()) {
+            throw ValidationException::withMessages(['service_ids' => 'Selecione serviços ativos desta unidade.']);
+        }
+        $services = $services->filter()->values();
         Customer::query()->whereKey($data['customer_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
         $professional = Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
-        if (! $professional->services()->whereKey($service->getKey())->wherePivot('tenant_id', $tenantId)->wherePivot('unit_id', $unitId)->exists()) {
-            throw ValidationException::withMessages(['service_id' => 'The selected professional does not provide this service in the active unit.']);
+        $professionalServiceIds = $professional->services()->wherePivot('tenant_id', $tenantId)->wherePivot('unit_id', $unitId)->pluck('services.id');
+        if ($services->contains(fn (Service $service): bool => ! $professionalServiceIds->contains($service->getKey()))) {
+            throw ValidationException::withMessages(['service_ids' => 'O profissional selecionado não atende todos os serviços escolhidos.']);
         }
 
-        $duration = (int) ($data['duration_minutes'] ?? $service->duration_minutes);
+        $duration = $services->count() === 1
+            ? (int) ($data['duration_minutes'] ?? $services->sum('duration_minutes'))
+            : (int) $services->sum('duration_minutes');
+        if ($duration < 5 || $duration > 1440) {
+            throw ValidationException::withMessages(['duration_minutes' => 'A duração deve ficar entre 5 minutos e 24 horas.']);
+        }
         $timezone = (string) ($unit->timezone ?? config('app.timezone'));
         $startsAt = CarbonImmutable::parse((string) $data['starts_at'], $timezone);
         $endsAt = $startsAt->addMinutes($duration);
         $status = (string) ($data['status'] ?? 'confirmed');
         $this->transitions->assertCanCreate($status);
 
-        return DB::transaction(function () use ($actor, $context, $data, $service, $tenantId, $unitId, $startsAt, $endsAt, $timezone, $duration, $status): Appointment {
+        return DB::transaction(function () use ($actor, $context, $data, $services, $tenantId, $unitId, $startsAt, $endsAt, $timezone, $status, $duration): Appointment {
             $this->availability->assertAvailable($tenantId, $unitId, (string) $data['professional_id'], $startsAt, $endsAt);
             $appointment = Appointment::query()->create([
                 'id' => (string) Str::uuid7(), 'tenant_id' => $tenantId, 'unit_id' => $unitId,
@@ -58,7 +73,9 @@ final class CreateAppointment extends OperationalAction
                 'color' => $data['color'] ?? null, 'reminder_enabled' => $data['reminder_enabled'] ?? true,
                 'fit_in' => $data['fit_in'] ?? false, 'notes' => $data['notes'] ?? null, 'lock_version' => 0,
             ]);
-            $this->upsertItem($appointment, $service, $duration);
+            foreach ($services as $position => $service) {
+                $this->upsertItem($appointment, $service, $position + 1, $services->count() === 1 ? $duration : $service->duration_minutes);
+            }
             $this->createAppointmentSale->handle($actor, $context, $appointment);
             $this->recordHistory($appointment, $actor, null, $appointment->status, 'created');
             $this->events->record($actor, $context, 'appointment.created', $appointment, ['status' => $appointment->status]);
@@ -68,10 +85,10 @@ final class CreateAppointment extends OperationalAction
         }, 5);
     }
 
-    private function upsertItem(Appointment $appointment, Service $service, int $duration): void
+    private function upsertItem(Appointment $appointment, Service $service, int $position, int $duration): void
     {
         AppointmentItem::query()->updateOrCreate(
-            ['appointment_id' => $appointment->getKey(), 'position' => 1],
+            ['appointment_id' => $appointment->getKey(), 'position' => $position],
             ['id' => (string) Str::uuid7(), 'tenant_id' => $appointment->tenant_id, 'unit_id' => $appointment->unit_id, 'service_id' => $service->getKey(), 'professional_id' => $appointment->professional_id, 'service_name_snapshot' => $service->name, 'duration_minutes' => $duration, 'price_cents' => $service->price_cents, 'currency' => 'BRL'],
         );
     }

@@ -16,9 +16,9 @@ async function signInAsBookingOwner(page: Page): Promise<void> {
     await expect(page.locator('#app-loading')).toHaveCount(0, {
         timeout: 10000,
     });
-    await page.getByLabel('Email address').fill(fixtureEmail);
+    await page.getByLabel('E-mail').fill(fixtureEmail);
     await page.locator('input[name="password"]').fill(fixturePassword);
-    await page.getByRole('button', { name: 'Log in' }).click();
+    await page.locator('[data-test="login-button"]').click();
     await page.waitForURL((url) => !url.pathname.endsWith('/login'), {
         waitUntil: 'domcontentloaded',
     });
@@ -73,7 +73,7 @@ for (const viewport of viewports) {
             viewport: { width: viewport.width, height: viewport.height },
         });
 
-        test('searches services and professionals, supports keyboard selection and clear, and stays in the viewport', async ({
+        test('selects multiple services, sums duration, removes a chip, and stays in the viewport', async ({
             page,
         }) => {
             const dialog = await openAppointmentDialog(page);
@@ -90,13 +90,12 @@ for (const viewport of viewports) {
             }
 
             const service = dialog.getByRole('combobox', {
-                name: 'Selecione um serviço',
+                name: 'Serviço',
             });
             const professional = dialog.getByRole('combobox', {
-                name: 'Selecione um profissional',
+                name: 'Profissional',
             });
 
-            await service.click();
             const serviceRequest = page.waitForRequest((request) => {
                 const url = new URL(request.url());
 
@@ -110,22 +109,50 @@ for (const viewport of viewports) {
             await expect(
                 page.getByRole('option', { name: 'Corte clássico' }),
             ).toBeVisible();
-            await service.press('Enter');
-            await expect(service).toHaveValue('Corte clássico');
+            await page.getByRole('option', { name: 'Corte clássico' }).click();
+            await expect(service).toHaveValue('');
             await expect(
-                page.getByRole('option', { name: 'Corte clássico' }),
-            ).toHaveCount(0);
+                dialog.getByRole('button', {
+                    name: 'Remover Corte clássico',
+                }),
+            ).toBeVisible();
 
             await service.click();
-            await expect(
-                page.getByRole('option', { name: 'Selecione um serviço' }),
-            ).toBeVisible();
-            await page
-                .getByRole('option', { name: 'Selecione um serviço' })
-                .click();
-            await expect(service).toHaveValue('');
+            const secondServiceRequest = page.waitForRequest((request) => {
+                const url = new URL(request.url());
 
-            await professional.click();
+                return (
+                    url.pathname.endsWith('/selector-options/services') &&
+                    url.searchParams.get('search') === 'barba'
+                );
+            });
+            await service.fill('barba');
+            await secondServiceRequest;
+            await expect(
+                page.getByRole('option', { name: 'Barba clássica' }),
+            ).toBeVisible();
+            await page.getByRole('option', { name: 'Barba clássica' }).click();
+            await expect(
+                dialog.getByRole('button', {
+                    name: 'Remover Barba clássica',
+                }),
+            ).toBeVisible();
+            await expect(
+                dialog.getByText('Duração total: 75 min'),
+            ).toBeVisible();
+
+            await dialog
+                .getByRole('button', { name: 'Remover Barba clássica' })
+                .click();
+            await expect(
+                dialog.getByRole('button', {
+                    name: 'Remover Barba clássica',
+                }),
+            ).toHaveCount(0);
+            await expect(
+                dialog.getByText('Duração total: 45 min'),
+            ).toBeVisible();
+
             await professional.fill('joao');
             await expect(
                 page.getByRole('option', { name: 'João Costa' }),
@@ -134,15 +161,7 @@ for (const viewport of viewports) {
             await professional.press('Enter');
             await expect(professional).toHaveValue('João Costa');
 
-            await professional.click();
-            await expect(
-                page.getByRole('option', { name: 'Selecione um profissional' }),
-            ).toBeVisible();
-            await page
-                .getByRole('option', { name: 'Selecione um profissional' })
-                .click();
-            await expect(professional).toHaveValue('');
-
+            await service.click();
             await service.fill('servico-que-nao-existe');
             await expect(
                 page.getByText('Nenhum resultado encontrado.'),
@@ -157,6 +176,60 @@ for (const viewport of viewports) {
                             window.innerWidth,
                     ),
             ).resolves.toBe(true);
+        });
+
+        test('prompts for a professional before creating a service', async ({
+            page,
+        }) => {
+            const dialog = await openAppointmentDialog(page);
+            await expect(
+                dialog.getByText(
+                    'Selecione um profissional antes de cadastrar um serviço.',
+                ),
+            ).toBeVisible();
+            await expect(
+                dialog.getByRole('button', { name: '+ Novo Serviço' }),
+            ).toBeDisabled();
+        });
+
+        test('replaces the duration when a newly created service is removed', async ({
+            page,
+        }) => {
+            const dialog = await openAppointmentDialog(page);
+            const serviceName = `Serviço Removível ${viewport.name}`;
+
+            await dialog
+                .getByRole('combobox', { name: 'Profissional' })
+                .fill('joao');
+            await page.getByRole('option', { name: 'João Costa' }).click();
+            await expect(
+                dialog.getByRole('combobox', { name: 'Profissional' }),
+            ).toHaveValue('João Costa');
+            await dialog
+                .getByRole('button', { name: '+ Novo Serviço' })
+                .click();
+
+            const serviceDialog = page.getByRole('dialog', {
+                name: 'Novo Serviço',
+            });
+            await expect(serviceDialog).toBeVisible();
+            await serviceDialog.getByLabel('Nome do Serviço').fill(serviceName);
+            await serviceDialog.getByLabel('Preço (R$)').fill('50,00');
+            await serviceDialog.getByLabel('Duração (minutos)').fill('20');
+            await serviceDialog
+                .getByRole('button', { name: 'Cadastrar e Selecionar' })
+                .click();
+
+            await expect(serviceDialog).toBeHidden();
+            await expect(
+                dialog.getByText('Duração total: 20 min'),
+            ).toBeVisible();
+            await dialog
+                .getByRole('button', { name: `Remover ${serviceName}` })
+                .click();
+            await expect(
+                dialog.getByText('Duração total: 30 min'),
+            ).toBeVisible();
         });
 
         test('retries a failed remote professional search', async ({
@@ -212,7 +285,7 @@ for (const viewport of viewports) {
 
             const dialog = await openAppointmentDialog(page);
             const professional = dialog.getByRole('combobox', {
-                name: 'Selecione um profissional',
+                name: 'Profissional',
             });
 
             await professional.fill('retry');
@@ -268,7 +341,7 @@ for (const viewport of viewports) {
 
             const dialog = await openAppointmentDialog(page);
             const service = dialog.getByRole('combobox', {
-                name: 'Selecione um serviço',
+                name: 'Serviço',
             });
 
             await service.fill('long');

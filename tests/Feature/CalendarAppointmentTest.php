@@ -63,6 +63,64 @@ it('creates and cancels an appointment with history and idempotent replay', func
         ->and(AppointmentStatusHistory::query()->where('appointment_id', $appointment->getKey())->count())->toBe(2);
 });
 
+it('creates an appointment with multiple services and sums their duration', function () {
+    [$owner, $tenantId, $unitId, $customer, $professional, $service] = calendarWorkspace();
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'duration_minutes' => 25,
+        'price_cents' => 3500,
+    ]);
+    $professional->services()->attach($secondService, ['tenant_id' => $tenantId, 'unit_id' => $unitId]);
+
+    $this->withHeader('X-Tenant-Id', $tenantId)
+        ->withHeader('X-Unit-Id', $unitId)
+        ->withHeader('X-Idempotency-Key', 'appointment-multi-service-create')
+        ->actingAs($owner)
+        ->post(route('appointments.store'), [
+            'customer_id' => $customer->getKey(),
+            'service_ids' => [$service->getKey(), $secondService->getKey()],
+            'professional_id' => $professional->getKey(),
+            'starts_at' => '2030-02-10 10:00',
+        ])
+        ->assertRedirect();
+
+    $appointment = Appointment::query()->with('items')->firstOrFail();
+    expect($appointment->items)->toHaveCount(2)
+        ->and($appointment->items->pluck('service_id')->all())->toBe([$service->getKey(), $secondService->getKey()])
+        ->and($appointment->items->sum('duration_minutes'))->toBe(85)
+        ->and((int) $appointment->starts_at->diffInMinutes($appointment->ends_at))->toBe(85);
+});
+
+it('updates appointment service items and recalculates the total duration', function () {
+    [$owner, $tenantId, $unitId, $customer, $professional, $service] = calendarWorkspace();
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'duration_minutes' => 25,
+    ]);
+    $professional->services()->attach($secondService, ['tenant_id' => $tenantId, 'unit_id' => $unitId]);
+    $context = TenantContext::forUser($owner, $tenantId, $unitId);
+    $appointment = app(CreateAppointment::class)->handle($owner, $context, [
+        'customer_id' => $customer->getKey(),
+        'service_id' => $service->getKey(),
+        'professional_id' => $professional->getKey(),
+        'starts_at' => '2030-02-10 10:00',
+    ]);
+
+    $updated = app(UpdateAppointment::class)->handle($owner, $context, $appointment, [
+        'customer_id' => $customer->getKey(),
+        'service_ids' => [$service->getKey(), $secondService->getKey()],
+        'professional_id' => $professional->getKey(),
+        'starts_at' => '2030-02-10 10:00',
+        'lock_version' => 0,
+    ]);
+
+    expect($updated->items)->toHaveCount(2)
+        ->and($updated->items->sum('duration_minutes'))->toBe(85)
+        ->and((int) $updated->starts_at->diffInMinutes($updated->ends_at))->toBe(85);
+});
+
 it('rejects recurrence and overlapping active appointments', function () {
     [$owner, $tenantId, $unitId, $customer, $professional, $service] = calendarWorkspace();
     $payload = ['customer_id' => $customer->getKey(), 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'starts_at' => '2030-02-10 10:00', 'duration_minutes' => 60];

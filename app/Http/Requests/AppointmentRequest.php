@@ -21,6 +21,10 @@ final class AppointmentRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('service_ids')) {
+            $this->merge(['service_id' => null]);
+        }
+
         if ($this->has('reminder_enabled')) {
             $this->merge([
                 'reminder_enabled' => $this->boolean('reminder_enabled'),
@@ -39,7 +43,9 @@ final class AppointmentRequest extends FormRequest
     {
         return [
             'customer_id' => ['required', 'uuid'],
-            'service_id' => ['required', 'uuid'],
+            'service_id' => ['nullable', 'uuid', 'required_without:service_ids'],
+            'service_ids' => ['nullable', 'array', 'min:1', 'max:8', 'required_without:service_id'],
+            'service_ids.*' => ['required', 'uuid', 'distinct'],
             'professional_id' => ['required', 'uuid'],
             'starts_at' => ['required', 'date'],
             'duration_minutes' => ['sometimes', 'integer', 'min:5', 'max:1440'],

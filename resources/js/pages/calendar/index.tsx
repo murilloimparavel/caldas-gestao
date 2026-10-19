@@ -411,11 +411,14 @@ function AppointmentForm({
     const [selectedCustomer, setSelectedCustomer] = useState(
         appointment?.customer_id ?? appointment?.customer?.id ?? '',
     );
-    const [selectedService, setSelectedService] = useState(
-        appointment?.service_id ??
-            appointment?.service?.id ??
-            appointment?.items?.[0]?.service_id ??
-            '',
+    const [selectedServices, setSelectedServices] = useState<string[]>(
+        appointment?.service_ids ??
+            appointment?.items
+                ?.map((item) => item.service_id)
+                .filter((id): id is string => Boolean(id)) ??
+            ((appointment?.service_id ?? appointment?.service?.id)
+                ? [appointment.service_id ?? appointment.service?.id ?? '']
+                : []),
     );
     const [selectedProfessional, setSelectedProfessional] = useState(
         appointment?.professional_id ??
@@ -429,7 +432,10 @@ function AppointmentForm({
     );
     const [selectedDuration, setSelectedDuration] = useState<number>(
         appointment?.duration_minutes ??
-            appointment?.items?.[0]?.duration_minutes ??
+            appointment?.items?.reduce(
+                (total, item) => total + (item.duration_minutes ?? 0),
+                0,
+            ) ??
             defaultDurationMinutes ??
             30,
     );
@@ -504,31 +510,81 @@ function AppointmentForm({
 
     const handleServiceCreated = (created: CreatedEntity) => {
         rotateMutationKey();
-        const newOpt: CalendarOption = { id: created.id, name: created.name };
+        const newOpt: CalendarOption = {
+            id: created.id,
+            name: created.name,
+            duration_minutes: created.duration_minutes,
+        };
         setServiceList((prev) => [
             ...prev.filter((s) => s.id !== created.id),
             newOpt,
         ]);
-        setSelectedService(created.id);
+        setSelectedServices((current) => [
+            ...current.filter((id) => id !== created.id),
+            created.id,
+        ]);
+        setSelectedDuration(() => {
+            const currentServiceIds = [
+                ...selectedServices.filter(
+                    (serviceId) => serviceId !== created.id,
+                ),
+                created.id,
+            ];
 
-        if (created.duration_minutes) {
-            setSelectedDuration(created.duration_minutes);
-        }
+            return currentServiceIds.reduce((total, serviceId) => {
+                if (serviceId === created.id) {
+                    return total + (created.duration_minutes ?? 0);
+                }
+
+                const service =
+                    serviceList.find((item) => item.id === serviceId) ??
+                    appointment?.items?.find(
+                        (item) => item.service_id === serviceId,
+                    );
+
+                return total + (service?.duration_minutes ?? 0);
+            }, 0);
+        });
     };
 
     const handleServiceChange = (
         serviceId: string,
         selectedOption?: { duration_minutes?: number | null },
     ) => {
-        setSelectedService(serviceId);
-
-        const selectedServiceOption =
-            selectedOption ??
-            serviceList.find((service) => service.id === serviceId);
-
-        if (selectedServiceOption?.duration_minutes) {
-            setSelectedDuration(selectedServiceOption.duration_minutes);
+        if (!selectedOption || selectedServices.includes(serviceId)) {
+            return;
         }
+
+        const selectedDurationMinutes = selectedOption.duration_minutes ?? 0;
+        const isFirstService = selectedServices.length === 0;
+        setSelectedServices((current) => [...current, serviceId]);
+        setSelectedDuration((duration) =>
+            isFirstService
+                ? selectedDurationMinutes
+                : duration + selectedDurationMinutes,
+        );
+    };
+
+    const removeSelectedService = (serviceId: string) => {
+        const remainingServices = selectedServices.filter(
+            (selectedServiceId) => selectedServiceId !== serviceId,
+        );
+        setSelectedServices(remainingServices);
+        setSelectedDuration(
+            remainingServices.length === 0
+                ? (defaultDurationMinutes ?? 30)
+                : remainingServices.reduce((total, selectedServiceId) => {
+                      const service =
+                          serviceList.find(
+                              (item) => item.id === selectedServiceId,
+                          ) ??
+                          appointment?.items?.find(
+                              (item) => item.service_id === selectedServiceId,
+                          );
+
+                      return total + (service?.duration_minutes ?? 0);
+                  }, 0),
+        );
     };
 
     const handleProfessionalCreated = (created: CreatedEntity) => {
@@ -765,11 +821,14 @@ function AppointmentForm({
                                         name="customer_id"
                                         value={selectedCustomer}
                                     />
-                                    <input
-                                        type="hidden"
-                                        name="service_id"
-                                        value={selectedService}
-                                    />
+                                    {selectedServices.map((serviceId) => (
+                                        <input
+                                            key={`readonly-service-${serviceId}`}
+                                            type="hidden"
+                                            name="service_ids[]"
+                                            value={serviceId}
+                                        />
+                                    ))}
                                     <input
                                         type="hidden"
                                         name="professional_id"
@@ -832,14 +891,28 @@ function AppointmentForm({
                                 </div>
                                 <FormField
                                     label="Serviço"
-                                    name="service_id"
-                                    error={errors.service_id}
+                                    name="service_ids"
+                                    error={
+                                        errors.service_ids ??
+                                        errors['service_ids.0']
+                                    }
+                                    description={
+                                        !selectedProfessional
+                                            ? 'Selecione um profissional antes de cadastrar um serviço.'
+                                            : undefined
+                                    }
                                     action={
                                         !isCancelled && !isCompleted ? (
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    setQuickServiceOpen(true)
+                                                onClick={() => {
+                                                    setQuickServiceOpen(true);
+                                                }}
+                                                disabled={!selectedProfessional}
+                                                title={
+                                                    selectedProfessional
+                                                        ? undefined
+                                                        : 'Selecione um profissional antes de cadastrar um serviço.'
                                                 }
                                                 className="text-xs font-semibold text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
                                             >
@@ -849,23 +922,70 @@ function AppointmentForm({
                                     }
                                 >
                                     <RemoteOptionPicker
-                                        id="service_id"
-                                        name="service_id"
+                                        id="service_picker"
+                                        name="service_picker"
                                         options={serviceList}
-                                        placeholder="Selecione um serviço"
-                                        selectedOption={
-                                            appointment?.service ??
-                                            appointment?.items?.[0]?.service ??
-                                            undefined
-                                        }
+                                        placeholder="Busque e adicione serviços"
                                         resource="services"
-                                        value={selectedService}
+                                        value=""
                                         onChange={(value, option) =>
                                             handleServiceChange(value, option)
                                         }
                                         disabled={isCancelled || isCompleted}
-                                        required
+                                        isOptionSelected={(id) =>
+                                            selectedServices.includes(id)
+                                        }
+                                        submitValue={false}
+                                        keepOpenOnSelect={false}
                                     />
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {selectedServices.map((serviceId) => {
+                                            const service =
+                                                serviceList.find(
+                                                    (item) =>
+                                                        item.id === serviceId,
+                                                ) ??
+                                                appointment?.items?.find(
+                                                    (item) =>
+                                                        item.service_id ===
+                                                        serviceId,
+                                                )?.service;
+
+                                            return (
+                                                <span
+                                                    key={serviceId}
+                                                    className="inline-flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs"
+                                                >
+                                                    {service?.name ?? 'Serviço'}
+                                                    {!isCancelled &&
+                                                        !isCompleted && (
+                                                            <button
+                                                                type="button"
+                                                                aria-label={`Remover ${service?.name ?? 'serviço'}`}
+                                                                onClick={() =>
+                                                                    removeSelectedService(
+                                                                        serviceId,
+                                                                    )
+                                                                }
+                                                                className="font-bold text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        )}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedServices.length === 0 &&
+                                        !isCancelled &&
+                                        !isCompleted && (
+                                            <p className="mt-1 text-xs text-destructive">
+                                                Selecione pelo menos um serviço.
+                                            </p>
+                                        )}
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Duração total: {selectedDuration} min
+                                    </p>
                                 </FormField>
                                 <FormField
                                     label="Profissional"
@@ -924,26 +1044,20 @@ function AppointmentForm({
                                     />
                                 </FormField>
                                 <FormField
-                                    label="Duração"
+                                    label="Duração total"
                                     name="duration_minutes"
                                     error={errors.duration_minutes}
                                 >
-                                    <Input
-                                        id="duration_minutes"
-                                        name="duration_minutes"
-                                        type="number"
-                                        min={5}
-                                        max={1440}
-                                        step={5}
-                                        value={selectedDuration}
-                                        onChange={(e) =>
-                                            setSelectedDuration(
-                                                Number(e.target.value),
-                                            )
-                                        }
-                                        disabled={isCancelled || isCompleted}
-                                        required
-                                    />
+                                    {!isCancelled && !isCompleted && (
+                                        <input
+                                            type="hidden"
+                                            name="duration_minutes"
+                                            value={selectedDuration}
+                                        />
+                                    )}
+                                    <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground">
+                                        {selectedDuration} min
+                                    </div>
                                     {estimatedEndTime && (
                                         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                                             <Clock className="size-3.5 shrink-0 text-primary" />
@@ -956,6 +1070,16 @@ function AppointmentForm({
                                         </p>
                                     )}
                                 </FormField>
+                                {!isCancelled &&
+                                    !isCompleted &&
+                                    selectedServices.map((serviceId) => (
+                                        <input
+                                            key={serviceId}
+                                            type="hidden"
+                                            name="service_ids[]"
+                                            value={serviceId}
+                                        />
+                                    ))}
                                 <FormField
                                     label="Status"
                                     name="status"
@@ -1080,6 +1204,7 @@ function AppointmentForm({
                 open={quickServiceOpen}
                 onOpenChange={setQuickServiceOpen}
                 onSuccess={handleServiceCreated}
+                professionalId={selectedProfessional || undefined}
             />
 
             <QuickCreateProfessionalModal
@@ -1252,8 +1377,14 @@ function AppointmentSummaryHeader({
         );
     }, [services, appointment]);
 
+    const serviceNames =
+        appointment.services?.map((service) => service.name) ??
+        (serviceObj?.name ? [serviceObj.name] : []);
     const priceCents =
-        serviceObj?.price_cents ?? appointment.items?.[0]?.price_cents;
+        appointment.items?.reduce(
+            (total, item) => total + (item.price_cents ?? 0),
+            0,
+        ) ?? serviceObj?.price_cents;
     const formattedPrice = useMemo(
         () => formatPriceCents(priceCents),
         [priceCents],
@@ -1359,7 +1490,7 @@ function AppointmentSummaryHeader({
             <div className="grid grid-cols-1 gap-2 border-t border-border/60 pt-2.5 text-xs sm:grid-cols-2">
                 <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-semibold text-foreground">
-                        {serviceObj?.name || 'Serviço'}
+                        {serviceNames.join(' + ') || 'Serviço'}
                     </span>
                     {formattedPrice && (
                         <Badge
@@ -1917,7 +2048,7 @@ export default function CalendarIndex(props: CalendarProps) {
         props.options?.professionals,
         props.professionals,
     );
-    const services: CalendarOption[] = [];
+    const services = optionList(props.options?.services, props.services);
     const loadError = typeof props.error === 'string' ? props.error : undefined;
     const flashAutomationError = page.props.flash?.error ?? undefined;
     const flashAutomationIssue = flashAutomationError
