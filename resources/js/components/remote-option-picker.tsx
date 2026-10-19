@@ -480,7 +480,10 @@ export function RemoteOptionPicker({
                           }}
                           type="button"
                           role="option"
-                          aria-selected={isOptionSelected?.(option.id) ?? option.id === value}
+                          aria-selected={
+                              isOptionSelected?.(option.id) ??
+                              option.id === value
+                          }
                           className={`w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent ${index === safeActiveIndex ? 'bg-accent' : ''} ${isOptionSelected?.(option.id) ? 'font-medium text-primary' : ''}`}
                           onMouseDown={(event) => {
                               event.preventDefault();
@@ -492,7 +495,8 @@ export function RemoteOptionPicker({
                           }}
                           onClick={() => selectOption(option)}
                       >
-                          {isOptionSelected?.(option.id) ? '✓ ' : ''}{option.name}
+                          {isOptionSelected?.(option.id) ? '✓ ' : ''}
+                          {option.name}
                       </button>
                   ))}
                   {loading && (
