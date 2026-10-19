@@ -40,7 +40,7 @@ final class CreateAppointment extends OperationalAction
         }
         $servicesById = Service::query()->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->whereIn('id', $serviceIds)->get()->keyBy(fn (Service $service): string => (string) $service->getKey());
         $services = collect($serviceIds)->map(fn (string $serviceId): ?Service => $servicesById->get($serviceId));
-        if ($services->contains(null) || $services->isEmpty()) {
+        if ($serviceIds === [] || $services->contains(null)) {
             throw ValidationException::withMessages(['service_ids' => 'Selecione serviços ativos desta unidade.']);
         }
         $services = $services->filter()->values();

@@ -45,7 +45,7 @@ final class UpdateAppointment extends OperationalAction
         }
         $servicesById = Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->whereIn('id', $serviceIds)->get()->keyBy(fn (Service $service): string => (string) $service->getKey());
         $services = collect($serviceIds)->map(fn (string $serviceId): ?Service => $servicesById->get($serviceId));
-        if ($services->isEmpty() || $services->contains(null)) {
+        if ($serviceIds === [] || $services->contains(null)) {
             throw ValidationException::withMessages(['service_ids' => 'Selecione serviços ativos desta unidade.']);
         }
         $services = $services->filter()->values();
@@ -104,7 +104,7 @@ final class UpdateAppointment extends OperationalAction
                     'service_name_snapshot' => $service->name,
                     'duration_minutes' => $services->count() === 1 ? $duration : $service->duration_minutes,
                     'price_cents' => $service->price_cents,
-                    'currency' => $appointmentItem?->currency ?? 'BRL',
+                    'currency' => $appointmentItem->currency ?? 'BRL',
                     'position' => $position,
                 ];
 
