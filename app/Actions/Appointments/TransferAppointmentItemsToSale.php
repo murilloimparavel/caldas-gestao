@@ -19,6 +19,7 @@ final class TransferAppointmentItemsToSale extends OperationalAction
 {
     public function __construct(
         private readonly AddSaleItem $addSaleItem = new AddSaleItem,
+        private readonly ResolveCustomerPackageCoverage $resolveCoverage = new ResolveCustomerPackageCoverage,
     ) {
         parent::__construct();
     }
@@ -58,15 +59,29 @@ final class TransferAppointmentItemsToSale extends OperationalAction
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
             $existingItems = $lockedSale->items()->get();
 
+            $allocatedPackageCounts = [];
+
             foreach ($appointmentItems as $appointmentItem) {
                 if ($this->alreadyTransferred($existingItems, $appointmentItem)) {
                     continue;
+                }
+
+                $customerPackage = null;
+                if ($lockedSale->customer_id !== null) {
+                    $customerPackage = $this->resolveCoverage->resolve(
+                        $tenantId,
+                        $unitId,
+                        $lockedSale->customer_id,
+                        $appointmentItem->service_id,
+                        $allocatedPackageCounts,
+                    );
                 }
 
                 $this->addSaleItem->handle($actor, $context, $lockedSale, [
                     'item_type' => 'service',
                     'source_id' => $this->sourceId($tenantId, $unitId, $lockedSale, $appointmentItem),
                     'service_id' => $appointmentItem->service_id,
+                    'customer_package_id' => $customerPackage?->getKey(),
                     'professional_id' => $appointmentItem->professional_id,
                     'name_snapshot' => $appointmentItem->service_name_snapshot,
                     'unit_price_cents' => $appointmentItem->price_cents,

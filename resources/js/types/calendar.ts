@@ -38,6 +38,7 @@ export type CalendarAppointmentSale = {
     source?: string | null;
     status: string;
     synchronization_status?: 'active' | 'paused' | 'review' | string | null;
+    has_package_coverage?: boolean | null;
 };
 
 export type CalendarAppointmentSaleLink = {

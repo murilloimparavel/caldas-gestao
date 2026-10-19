@@ -251,6 +251,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('retention/inactive', [CustomerController::class, 'retentionIndex'])->name('retention.inactive');
         Route::get('retention/customers/inactive', [CustomerController::class, 'inactive'])->name('retention.customers.inactive');
         Route::patch('customers/{customer}/communication-preferences', [CustomerController::class, 'updateCommunicationPreference'])->name('customers.communication_preferences.update');
+        Route::get('customers/{customer}/active-packages', [CustomerPackageController::class, 'activeForCustomer'])->name('customers.active_packages');
         Route::post('customers/{customer}/retention/mark', [CustomerController::class, 'markAtRisk'])->name('customers.retention.mark');
         Route::post('customers/{customer}/retention/reactivate', [CustomerController::class, 'reactivateRetention'])->name('customers.retention.reactivate');
         Route::get('retention/campaigns', [RetentionCampaignController::class, 'index'])->name('retention.campaigns.index');
@@ -283,6 +284,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->except(['create', 'edit']);
         Route::patch('packages/{package_template}/reactivate', [PackageTemplateController::class, 'reactivate'])->name('packages.reactivate');
         Route::post('customer-packages', [CustomerPackageController::class, 'store'])->name('customer-packages.store');
+        Route::get('customer-packages/{customer_package}/history', [CustomerPackageController::class, 'history'])
+            ->name('customer-packages.history');
         Route::post('customer-packages/{customer_package}/consume', [CustomerPackageController::class, 'consume'])->name('customer-packages.consume');
         Route::post('customer-packages/{customer_package}/cancel', [CustomerPackageController::class, 'cancel'])->name('customer-packages.cancel');
         Route::post('customer-packages/{customer_package}/archive', [CustomerPackageController::class, 'archive'])->name('customer-packages.archive');

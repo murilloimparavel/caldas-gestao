@@ -8,6 +8,7 @@ import {
     Clock,
     Lock,
     MessageCircle,
+    Package as PackageIcon,
     Phone,
     Plus,
     Receipt,
@@ -83,6 +84,7 @@ import {
     update as updateAppointment,
 } from '@/routes/appointments';
 import { index as calendarIndex } from '@/routes/calendar';
+import { active_packages as activePackagesRoute } from '@/routes/customers';
 import googleCalendar from '@/routes/google_calendar';
 import sales from '@/routes/sales';
 import {
@@ -446,6 +448,124 @@ function AppointmentForm({
     const [reminderEnabled, setReminderEnabled] = useState(
         appointment?.reminder_enabled ?? true,
     );
+
+    const [activePackages, setActivePackages] = useState<
+        Array<{
+            id: string;
+            name: string;
+            available_sessions: number;
+            remaining_sessions: number;
+            services: Array<{
+                service_id: string;
+                service_name: string;
+                available_quantity: number;
+            }>;
+        }>
+    >([]);
+    const [loadingPackages, setLoadingPackages] = useState(false);
+
+    useEffect(() => {
+        if (!selectedCustomer) {
+            setActivePackages([]);
+            return;
+        }
+
+        const controller = new AbortController();
+        setLoadingPackages(true);
+
+        fetch(activePackagesRoute.url(selectedCustomer), {
+            signal: controller.signal,
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error('Falha ao buscar pacotes');
+                }
+                return res.json();
+            })
+            .then((json) => {
+                setActivePackages(json.data ?? []);
+            })
+            .catch((err) => {
+                if (err.name !== 'AbortError') {
+                    setActivePackages([]);
+                }
+            })
+            .finally(() => {
+                setLoadingPackages(false);
+            });
+
+        return () => {
+            controller.abort();
+        };
+    }, [selectedCustomer]);
+
+    // Calcula cobertura de pacotes para os serviços selecionados
+    const packageCoverage = useMemo(() => {
+        if (!selectedCustomer || selectedServices.length === 0 || activePackages.length === 0) {
+            return {
+                coveredServiceIds: new Set<string>(),
+                coveredServicesCount: 0,
+                coveredServiceDetails: [] as Array<{
+                    serviceId: string;
+                    serviceName: string;
+                    packageName: string;
+                }>,
+            };
+        }
+
+        const coveredSet = new Set<string>();
+        const details: Array<{
+            serviceId: string;
+            serviceName: string;
+            packageName: string;
+        }> = [];
+
+        // Manter saldos locais temporários para simular o consumo
+        const packageBalances = activePackages.map((pkg) => ({
+            id: pkg.id,
+            name: pkg.name,
+            availableSessions: pkg.available_sessions,
+            services: pkg.services.map((svc) => ({
+                serviceId: svc.service_id,
+                serviceName: svc.service_name,
+                availableQuantity: svc.available_quantity,
+            })),
+        }));
+
+        for (const sId of selectedServices) {
+            for (const pkg of packageBalances) {
+                if (pkg.availableSessions <= 0) {
+                    continue;
+                }
+
+                const svcBalance = pkg.services.find(
+                    (s) => s.serviceId === sId && s.availableQuantity > 0,
+                );
+
+                if (svcBalance) {
+                    coveredSet.add(sId);
+                    pkg.availableSessions -= 1;
+                    svcBalance.availableQuantity -= 1;
+                    details.push({
+                        serviceId: sId,
+                        serviceName: svcBalance.serviceName,
+                        packageName: pkg.name,
+                    });
+                    break;
+                }
+            }
+        }
+
+        return {
+            coveredServiceIds: coveredSet,
+            coveredServicesCount: coveredSet.size,
+            coveredServiceDetails: details,
+        };
+    }, [selectedCustomer, selectedServices, activePackages]);
 
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
     const [quickServiceOpen, setQuickServiceOpen] = useState(false);
@@ -931,61 +1051,67 @@ function AppointmentForm({
                                         onChange={(value, option) =>
                                             handleServiceChange(value, option)
                                         }
-                                        disabled={isCancelled || isCompleted}
-                                        isOptionSelected={(id) =>
-                                            selectedServices.includes(id)
-                                        }
+                                        keepOpenOnSelect
+                                        isOptionSelected={(id) => selectedServices.includes(id)}
                                         submitValue={false}
-                                        keepOpenOnSelect={false}
+                                        disabled={isCancelled || isCompleted}
                                     />
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {selectedServices.map((serviceId) => {
-                                            const service =
-                                                serviceList.find(
-                                                    (item) =>
-                                                        item.id === serviceId,
-                                                ) ??
-                                                appointment?.items?.find(
-                                                    (item) =>
-                                                        item.service_id ===
-                                                        serviceId,
-                                                )?.service;
-
+                                            const service = serviceList.find((item) => item.id === serviceId) ?? appointment?.items?.find((item) => item.service_id === serviceId)?.service;
+                                            const isCovered = packageCoverage.coveredServiceIds.has(serviceId);
                                             return (
-                                                <span
-                                                    key={serviceId}
-                                                    className="inline-flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs"
-                                                >
-                                                    {service?.name ?? 'Serviço'}
-                                                    {!isCancelled &&
-                                                        !isCompleted && (
-                                                            <button
-                                                                type="button"
-                                                                aria-label={`Remover ${service?.name ?? 'serviço'}`}
-                                                                onClick={() =>
-                                                                    removeSelectedService(
-                                                                        serviceId,
-                                                                    )
-                                                                }
-                                                                className="font-bold text-muted-foreground hover:text-foreground"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        )}
+                                                <span key={serviceId} className={cn(
+                                                    'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
+                                                    isCovered ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-muted'
+                                                )}>
+                                                    <span>{service?.name ?? 'Serviço'}</span>
+                                                    {isCovered && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="border-emerald-200 bg-emerald-100/80 px-1.5 py-0 text-3xs font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
+                                                        >
+                                                            Coberto por pacote (R$ 0,00)
+                                                        </Badge>
+                                                    )}
+                                                    {!isCancelled && !isCompleted && (
+                                                        <button
+                                                            type="button"
+                                                            aria-label={`Remover ${service?.name ?? 'serviço'}`}
+                                                            onClick={() => removeSelectedService(serviceId)}
+                                                            className="font-bold text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
                                                 </span>
                                             );
                                         })}
                                     </div>
-                                    {selectedServices.length === 0 &&
-                                        !isCancelled &&
-                                        !isCompleted && (
-                                            <p className="mt-1 text-xs text-destructive">
-                                                Selecione pelo menos um serviço.
-                                            </p>
+                                    {selectedServices.length === 0 && !isCancelled && !isCompleted && (
+                                        <p className="mt-1 text-xs text-destructive">Selecione pelo menos um serviço.</p>
+                                    )}
+                                    <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
+                                        <span>Duração total: {selectedDuration} min</span>
+                                        {packageCoverage.coveredServicesCount > 0 && (
+                                             <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                                 {packageCoverage.coveredServicesCount} {packageCoverage.coveredServicesCount === 1 ? 'serviço coberto' : 'serviços cobertos'} por pacote
+                                             </span>
                                         )}
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Duração total: {selectedDuration} min
-                                    </p>
+                                    </div>
+                                    {packageCoverage.coveredServicesCount > 0 && (
+                                        <div className="mt-2.5 flex items-start gap-2.5 rounded-lg border border-emerald-300 bg-emerald-50/80 p-2.5 text-xs text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                            <PackageIcon className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                            <div>
+                                                <p className="font-semibold">
+                                                    Coberto por pacote - R$ 0,00 na comanda
+                                                </p>
+                                                <p className="mt-0.5 text-2xs text-emerald-800/90 dark:text-emerald-300/80">
+                                                    {packageCoverage.coveredServiceDetails.map((detail) => `${detail.serviceName} (${detail.packageName})`).join(', ')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </FormField>
                                 <FormField
                                     label="Profissional"
@@ -1043,43 +1169,23 @@ function AppointmentForm({
                                         required
                                     />
                                 </FormField>
-                                <FormField
-                                    label="Duração total"
-                                    name="duration_minutes"
-                                    error={errors.duration_minutes}
-                                >
-                                    {!isCancelled && !isCompleted && (
-                                        <input
-                                            type="hidden"
-                                            name="duration_minutes"
-                                            value={selectedDuration}
-                                        />
-                                    )}
+                                <FormField label="Duração total" name="duration_minutes" error={errors.duration_minutes}>
                                     <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground">
                                         {selectedDuration} min
                                     </div>
+                                    {!isCancelled && !isCompleted && (
+                                        <input type="hidden" name="duration_minutes" value={selectedDuration} />
+                                    )}
                                     {estimatedEndTime && (
                                         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                                             <Clock className="size-3.5 shrink-0 text-primary" />
-                                            <span>
-                                                Término previsto:{' '}
-                                                <strong className="font-semibold text-foreground">
-                                                    {estimatedEndTime}
-                                                </strong>
-                                            </span>
+                                            <span>Término estimado às {estimatedEndTime}</span>
                                         </p>
                                     )}
                                 </FormField>
-                                {!isCancelled &&
-                                    !isCompleted &&
-                                    selectedServices.map((serviceId) => (
-                                        <input
-                                            key={serviceId}
-                                            type="hidden"
-                                            name="service_ids[]"
-                                            value={serviceId}
-                                        />
-                                    ))}
+                                {!isCancelled && !isCompleted && selectedServices.map((serviceId) => (
+                                    <input key={serviceId} type="hidden" name="service_ids[]" value={serviceId} />
+                                ))}
                                 <FormField
                                     label="Status"
                                     name="status"
@@ -1488,18 +1594,25 @@ function AppointmentSummaryHeader({
 
             {/* Serviço & Valor + Data & Horário */}
             <div className="grid grid-cols-1 gap-2 border-t border-border/60 pt-2.5 text-xs sm:grid-cols-2">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex flex-wrap min-w-0 items-center gap-2">
                     <span className="truncate font-semibold text-foreground">
                         {serviceNames.join(' + ') || 'Serviço'}
                     </span>
-                    {formattedPrice && (
+                    {linkedSale?.has_package_coverage ? (
+                        <Badge
+                            variant="secondary"
+                            className="shrink-0 border border-emerald-300 bg-emerald-50 text-xs font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        >
+                            Coberto por pacote (R$ 0,00)
+                        </Badge>
+                    ) : formattedPrice ? (
                         <Badge
                             variant="secondary"
                             className="shrink-0 border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
                         >
                             {formattedPrice}
                         </Badge>
-                    )}
+                    ) : null}
                 </div>
                 <div className="flex items-center gap-1.5 text-muted-foreground sm:justify-end">
                     <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
@@ -1540,6 +1653,14 @@ function AppointmentSummaryHeader({
                                 className="border-primary/20 bg-primary/10 px-1.5 py-0 text-2xs font-semibold text-primary"
                             >
                                 Automática
+                            </Badge>
+                        ) : null}
+                        {linkedSale.has_package_coverage ? (
+                            <Badge
+                                variant="secondary"
+                                className="border-emerald-200 bg-emerald-100/90 px-1.5 py-0 text-2xs font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
+                            >
+                                Coberto por pacote
                             </Badge>
                         ) : null}
                         <Badge
