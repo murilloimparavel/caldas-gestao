@@ -26,6 +26,7 @@ export type CalendarAppointmentItem = {
     price_cents?: number | null;
     service?: CalendarOption | null;
     service_id?: string | null;
+    position?: number | null;
 };
 
 export type CalendarAppointmentSale = {
@@ -58,6 +59,7 @@ export type CalendarAppointment = {
     ends_at: string;
     id: string;
     items?: CalendarAppointmentItem[];
+    services?: CalendarOption[];
     lock_version: number;
     notes?: string | null;
     online_booking?: boolean | null;
@@ -69,6 +71,7 @@ export type CalendarAppointment = {
     sale_links?: CalendarAppointmentSaleLink[];
     service?: CalendarOption | null;
     service_id?: string | null;
+    service_ids?: string[];
     source?: 'internal' | 'online' | 'imported' | string | null;
     starts_at: string;
     status: AppointmentStatus;

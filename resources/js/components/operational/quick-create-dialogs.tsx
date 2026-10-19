@@ -38,7 +38,11 @@ interface QuickCreateModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess: (created: CreatedEntity) => void;
+    professionalId?: string;
+    professionalOptions?: Array<{ id: string; name: string }>;
 }
+
+type QuickCreateServiceModalProps = QuickCreateModalProps;
 
 type CustomerFormData = {
     name: string;
@@ -196,6 +200,7 @@ type ServiceFormData = {
     name: string;
     priceFormatted: string;
     durationMinutes: string;
+    professional_id: string;
     price_cents?: number;
     duration_minutes?: number;
 };
@@ -204,7 +209,8 @@ export function QuickCreateServiceModal({
     open,
     onOpenChange,
     onSuccess,
-}: QuickCreateModalProps) {
+    professionalId,
+}: QuickCreateServiceModalProps) {
     const [mutationKey, setMutationKey] = useState(() =>
         createIdempotencyKey('service-quick-create'),
     );
@@ -212,6 +218,7 @@ export function QuickCreateServiceModal({
         name: '',
         priceFormatted: '',
         durationMinutes: '30',
+        professional_id: professionalId ?? '',
     });
 
     const handleClose = () => {
@@ -233,6 +240,9 @@ export function QuickCreateServiceModal({
             name: data.name,
             price_cents: priceCents,
             duration_minutes: duration,
+            ...(data.professional_id
+                ? { professional_ids: [data.professional_id] }
+                : {}),
         }));
 
         try {
@@ -268,6 +278,8 @@ export function QuickCreateServiceModal({
                     setMutationKey(
                         createIdempotencyKey('service-quick-create'),
                     );
+                    form.setData('professional_id', professionalId ?? '');
+                    form.clearErrors();
                 }
 
                 onOpenChange(nextOpen);

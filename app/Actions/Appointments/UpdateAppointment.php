@@ -39,18 +39,33 @@ final class UpdateAppointment extends OperationalAction
             throw new AuthorizationException('The appointment belongs to another workspace.');
         }
         $expectedVersion = (int) ($data['lock_version'] ?? -1);
-        $service = Service::query()->whereKey($data['service_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
+        $serviceIds = array_values(array_unique($data['service_ids'] ?? array_filter([$data['service_id'] ?? null], 'is_string')));
+        if (count($serviceIds) > 8) {
+            throw ValidationException::withMessages(['service_ids' => 'Selecione no máximo oito serviços por agendamento.']);
+        }
+        $servicesById = Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->whereIn('id', $serviceIds)->get()->keyBy(fn (Service $service): string => (string) $service->getKey());
+        $services = collect($serviceIds)->map(fn (string $serviceId): ?Service => $servicesById->get($serviceId));
+        if ($serviceIds === [] || $services->contains(null)) {
+            throw ValidationException::withMessages(['service_ids' => 'Selecione serviços ativos desta unidade.']);
+        }
+        $services = $services->filter()->values();
         Customer::query()->whereKey($data['customer_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
         $professional = Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
-        if (! $professional->services()->whereKey($service->getKey())->wherePivot('tenant_id', $context->tenant->getKey())->wherePivot('unit_id', $unit->getKey())->exists()) {
-            throw ValidationException::withMessages(['service_id' => 'The selected professional does not provide this service in the active unit.']);
+        $professionalServiceIds = $professional->services()->wherePivot('tenant_id', $context->tenant->getKey())->wherePivot('unit_id', $unit->getKey())->pluck('services.id');
+        if ($services->contains(fn (Service $service): bool => ! $professionalServiceIds->contains($service->getKey()))) {
+            throw ValidationException::withMessages(['service_ids' => 'O profissional selecionado não atende todos os serviços escolhidos.']);
         }
-        $duration = (int) ($data['duration_minutes'] ?? $service->duration_minutes);
+        $duration = $services->count() === 1
+            ? (int) ($data['duration_minutes'] ?? $services->sum('duration_minutes'))
+            : (int) $services->sum('duration_minutes');
+        if ($duration < 5 || $duration > 1440) {
+            throw ValidationException::withMessages(['duration_minutes' => 'A duração deve ficar entre 5 minutos e 24 horas.']);
+        }
         $timezone = (string) ($unit->timezone ?? config('app.timezone'));
         $startsAt = CarbonImmutable::parse((string) $data['starts_at'], $timezone);
         $endsAt = $startsAt->addMinutes($duration);
 
-        return DB::transaction(function () use ($actor, $context, $appointment, $data, $service, $expectedVersion, $startsAt, $endsAt, $timezone, $duration, $unit): Appointment {
+        return DB::transaction(function () use ($actor, $context, $appointment, $data, $services, $expectedVersion, $startsAt, $endsAt, $timezone, $unit, $duration): Appointment {
             $locked = Appointment::query()
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $unit->getKey())
@@ -68,34 +83,47 @@ final class UpdateAppointment extends OperationalAction
             $nextStatus = (string) ($data['status'] ?? $locked->status);
             $this->transitions->assertCanTransition($fromStatus, $nextStatus);
             $locked->forceFill(['customer_id' => $data['customer_id'], 'professional_id' => $data['professional_id'], 'starts_at' => $startsAt->utc(), 'ends_at' => $endsAt->utc(), 'timezone' => $timezone, 'status' => $nextStatus, 'source' => $data['source'] ?? $locked->source, 'color' => $data['color'] ?? $locked->color, 'reminder_enabled' => $data['reminder_enabled'] ?? $locked->reminder_enabled, 'fit_in' => $data['fit_in'] ?? $locked->fit_in, 'notes' => $data['notes'] ?? $locked->notes, 'lock_version' => $locked->lock_version + 1])->save();
-            $appointmentItem = AppointmentItem::query()
+            $existingItems = AppointmentItem::query()
                 ->where('tenant_id', $locked->tenant_id)
                 ->where('unit_id', $locked->unit_id)
                 ->where('appointment_id', $locked->getKey())
-                ->where('position', 1)
                 ->lockForUpdate()
-                ->first();
-            $appointmentItemAttributes = [
-                'tenant_id' => $locked->tenant_id,
-                'unit_id' => $locked->unit_id,
-                'service_id' => $service->getKey(),
-                'professional_id' => $locked->professional_id,
-                'service_name_snapshot' => $service->name,
-                'duration_minutes' => $duration,
-                'price_cents' => $service->price_cents,
-                'currency' => $appointmentItem === null ? 'BRL' : ($appointmentItem->currency ?? 'BRL'),
-            ];
+                ->orderBy('position')
+                ->get()
+                ->keyBy('position');
+            $syncedItemIds = [];
 
-            if ($appointmentItem === null) {
-                $appointmentItem = AppointmentItem::query()->create([
-                    'id' => (string) Str::uuid7(),
-                    'appointment_id' => $locked->getKey(),
-                    ...$appointmentItemAttributes,
-                ]);
-            } else {
-                $appointmentItem->forceFill($appointmentItemAttributes)->save();
+            foreach ($services as $index => $service) {
+                $position = $index + 1;
+                $appointmentItem = $existingItems->get($position);
+                $attributes = [
+                    'tenant_id' => $locked->tenant_id,
+                    'unit_id' => $locked->unit_id,
+                    'service_id' => $service->getKey(),
+                    'professional_id' => $locked->professional_id,
+                    'service_name_snapshot' => $service->name,
+                    'duration_minutes' => $services->count() === 1 ? $duration : $service->duration_minutes,
+                    'price_cents' => $service->price_cents,
+                    'currency' => $appointmentItem->currency ?? 'BRL',
+                    'position' => $position,
+                ];
+
+                if ($appointmentItem === null) {
+                    $appointmentItem = AppointmentItem::query()->create([
+                        'id' => (string) Str::uuid7(),
+                        'appointment_id' => $locked->getKey(),
+                        ...$attributes,
+                    ]);
+                } else {
+                    $appointmentItem->forceFill($attributes)->save();
+                }
+
+                $syncedItemIds[] = $appointmentItem->getKey();
+                $this->syncAutomaticSaleItem($actor, $context, $locked, $appointmentItem, $service, $unit->getKey());
             }
-            $this->syncAutomaticSaleItem($actor, $context, $locked, $appointmentItem, $service, $unit->getKey());
+
+            AppointmentItem::query()->where('appointment_id', $locked->getKey())->whereNotIn('id', $syncedItemIds)->delete();
+            $this->removeDeletedAutomaticSaleItems($actor, $context, $locked, $syncedItemIds, $unit->getKey());
             if ($fromStatus !== $locked->status) {
                 $locked->statusHistories()->create(['id' => (string) Str::uuid7(), 'tenant_id' => $locked->tenant_id, 'unit_id' => $locked->unit_id, 'actor_user_id' => $actor->getKey(), 'action' => 'status_changed', 'from_status' => $fromStatus, 'to_status' => $locked->status, 'occurred_at' => now()]);
             }
@@ -181,6 +209,54 @@ final class UpdateAppointment extends OperationalAction
                 'total_cents' => $saleItem->total_cents,
                 'lock_version' => $sale->lock_version,
             ]);
+        }
+    }
+
+    /** @param list<string> $retainedItemIds */
+    private function removeDeletedAutomaticSaleItems(User $actor, TenantContext $context, Appointment $appointment, array $retainedItemIds, string $unitId): void
+    {
+        $link = AppointmentSaleLink::query()
+            ->where('tenant_id', $context->tenant->getKey())
+            ->where('unit_id', $unitId)
+            ->where('appointment_id', $appointment->getKey())
+            ->lockForUpdate()
+            ->first();
+
+        if ($link === null) {
+            return;
+        }
+
+        $sale = Sale::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->whereKey($link->sale_id)->lockForUpdate()->first();
+        if ($sale === null || $sale->status !== 'open' || ! $this->isAutomaticSale($sale)) {
+            return;
+        }
+
+        $retainedSourceIds = AppointmentItem::query()->whereIn('id', $retainedItemIds)->get()->map(fn (AppointmentItem $item): string => $this->saleItemSourceId($context, $unitId, $item))->all();
+        $automaticItems = $sale->items()->where('item_type', 'service')->get()->filter(function (SaleItem $item) use ($retainedSourceIds): bool {
+            $metadata = $item->source_metadata;
+            $isAutomatic = Str::startsWith((string) $item->source_id, 'appointment-automation-item:')
+                || (is_array($metadata) && (($metadata['origin'] ?? null) === 'appointment_automation' || ($metadata['created_automatically'] ?? false) === true));
+
+            return $isAutomatic && ! in_array($item->source_id, $retainedSourceIds, true);
+        });
+
+        foreach ($automaticItems as $saleItem) {
+            $saleItem->delete();
+            $this->events->record($actor, $context, 'sale.appointment_item_removed', $sale, [
+                'appointment_id' => $appointment->getKey(),
+                'sale_id' => $sale->getKey(),
+                'sale_item_id' => $saleItem->getKey(),
+                'lock_version' => $sale->lock_version + 1,
+            ]);
+        }
+
+        if ($automaticItems->isNotEmpty()) {
+            $totalAmountCents = (int) $sale->items()->sum('total_cents');
+            $sale->forceFill([
+                'total_amount_cents' => $totalAmountCents,
+                'final_amount_cents' => max(0, $totalAmountCents - (int) $sale->discount_amount_cents),
+                'lock_version' => $sale->lock_version + 1,
+            ])->save();
         }
     }
 

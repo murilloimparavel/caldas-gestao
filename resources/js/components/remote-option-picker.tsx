@@ -48,6 +48,9 @@ type RemoteOptionPickerProps = {
     localOptionsOnly?: boolean;
     allowClear?: boolean;
     preferBelow?: boolean;
+    keepOpenOnSelect?: boolean;
+    isOptionSelected?: (optionId: string) => boolean;
+    submitValue?: boolean;
 };
 
 type PickerPosition = {
@@ -72,6 +75,9 @@ export function RemoteOptionPicker({
     localOptionsOnly = false,
     allowClear = true,
     preferBelow = false,
+    keepOpenOnSelect = false,
+    isOptionSelected,
+    submitValue = true,
 }: RemoteOptionPickerProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const listboxRef = useRef<HTMLDivElement>(null);
@@ -348,7 +354,7 @@ export function RemoteOptionPicker({
         setQuery('');
         setPage(1);
         setActiveIndex(0);
-        setOpen(false);
+        setOpen(keepOpenOnSelect);
     };
     const normalize = (value: string) =>
         value
@@ -474,8 +480,11 @@ export function RemoteOptionPicker({
                           }}
                           type="button"
                           role="option"
-                          aria-selected={option.id === value}
-                          className={`w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent ${index === safeActiveIndex ? 'bg-accent' : ''}`}
+                          aria-selected={
+                              isOptionSelected?.(option.id) ??
+                              option.id === value
+                          }
+                          className={`w-full rounded-sm px-2 py-1.5 text-left hover:bg-accent ${index === safeActiveIndex ? 'bg-accent' : ''} ${isOptionSelected?.(option.id) ? 'font-medium text-primary' : ''}`}
                           onMouseDown={(event) => {
                               event.preventDefault();
 
@@ -486,6 +495,7 @@ export function RemoteOptionPicker({
                           }}
                           onClick={() => selectOption(option)}
                       >
+                          {isOptionSelected?.(option.id) ? '✓ ' : ''}
                           {option.name}
                       </button>
                   ))}
@@ -535,7 +545,7 @@ export function RemoteOptionPicker({
                     {label}
                 </label>
             )}
-            <input type="hidden" name={name} value={value} />
+            {submitValue && <input type="hidden" name={name} value={value} />}
             <Input
                 id={id}
                 ref={inputRef}

@@ -14,6 +14,7 @@ use App\Models\Appointment;
 use App\Models\AvailabilityRule;
 use App\Models\Professional;
 use App\Models\ScheduleBlock;
+use App\Models\Service;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
@@ -52,7 +53,8 @@ final class CalendarController extends Controller
             ->get();
 
         $appointments = $appointments->map(function (Appointment $appointment): array {
-            $item = $appointment->items->first();
+            $items = $appointment->items->sortBy('position')->values();
+            $item = $items->first();
             $saleLink = $appointment->saleLinks->first();
             $saleMetadata = $saleLink?->sale?->source_metadata;
             $createdAutomatically = is_array($saleMetadata)
@@ -61,7 +63,14 @@ final class CalendarController extends Controller
 
             return [
                 ...$appointment->toArray(),
-                'duration_minutes' => $item?->duration_minutes,
+                'duration_minutes' => $items->sum('duration_minutes'),
+                'service_ids' => $items->pluck('service_id')->values(),
+                'services' => $items->map(fn ($appointmentItem): array => [
+                    'id' => $appointmentItem->service_id,
+                    'name' => $appointmentItem->service_name_snapshot,
+                    'duration_minutes' => $appointmentItem->duration_minutes,
+                    'price_cents' => $appointmentItem->price_cents,
+                ])->all(),
                 'service_id' => $item?->service_id,
                 'service' => $item?->service?->only(['id', 'name']),
                 'online_booking' => $appointment->source === 'online' || $appointment->online_booking_campaign_link_id !== null,
@@ -94,6 +103,7 @@ final class CalendarController extends Controller
                 'avatar_path' => $p->avatar_path,
                 'avatar_url' => $p->avatar_url,
             ]),
+            'services' => Service::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'duration_minutes', 'price_cents']),
             'timezone' => $unitTimezone,
             'statuses' => ['draft', 'scheduled', 'confirmed', 'checked_in', 'in_service', 'completed', 'no_show', 'cancelled'],
         ];
