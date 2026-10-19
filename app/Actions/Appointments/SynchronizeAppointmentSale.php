@@ -71,8 +71,9 @@ final class SynchronizeAppointmentSale extends OperationalAction
             return $sale;
         }
 
-        $discountCents = min((int) $saleItem->discount_cents, (int) $appointmentItem->price_cents);
-        $totalCents = max(0, (int) $appointmentItem->price_cents - $discountCents);
+        $isCoveredByPackage = $saleItem->customer_package_id !== null && (int) $saleItem->covered_quantity > 0;
+        $discountCents = $isCoveredByPackage ? 0 : min((int) $saleItem->discount_cents, (int) $appointmentItem->price_cents);
+        $totalCents = $isCoveredByPackage ? 0 : max(0, (int) $appointmentItem->price_cents - $discountCents);
         $metadata = array_merge($saleItem->source_metadata ?? [], [
             'origin' => 'appointment_automation',
             'created_automatically' => true,

@@ -42,6 +42,7 @@ final class CalendarController extends Controller
                 'professional:id,name',
                 'items.service:id,name',
                 'saleLinks.sale:id,status,reference_label',
+                'saleLinks.sale.items:id,sale_id,customer_package_id,covered_quantity',
             ])
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $unitId)
@@ -84,6 +85,9 @@ final class CalendarController extends Controller
                         'created_automatically' => $createdAutomatically,
                         'automatic' => $createdAutomatically,
                         'origin' => is_array($saleMetadata) ? ($saleMetadata['origin'] ?? null) : null,
+                        'has_package_coverage' => $saleLink->sale->items->contains(
+                            fn ($si): bool => $si->customer_package_id !== null || (int) $si->covered_quantity > 0
+                        ),
                     ] : null,
                 ] : null,
             ];

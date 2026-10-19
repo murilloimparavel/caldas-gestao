@@ -24,6 +24,7 @@ final class CreateAppointmentSale extends OperationalAction
     public function __construct(
         private readonly OpenSale $openSale = new OpenSale,
         private readonly AddSaleItem $addSaleItem = new AddSaleItem,
+        private readonly ResolveCustomerPackageCoverage $resolveCoverage = new ResolveCustomerPackageCoverage,
     ) {
         parent::__construct();
     }
@@ -129,11 +130,25 @@ final class CreateAppointmentSale extends OperationalAction
                 ],
             ], 'calendar.manage');
 
+            $allocatedPackageCounts = [];
+
             foreach ($appointmentItems as $appointmentItem) {
+                $customerPackage = null;
+                if ($lockedAppointment->customer_id !== null) {
+                    $customerPackage = $this->resolveCoverage->resolve(
+                        $context->tenant->getKey(),
+                        $unit->getKey(),
+                        $lockedAppointment->customer_id,
+                        $appointmentItem->service_id,
+                        $allocatedPackageCounts,
+                    );
+                }
+
                 $this->addSaleItem->handle($actor, $context, $sale, [
                     'item_type' => 'service',
                     'source_id' => $this->saleItemSourceId($context, $unit, $appointmentItem),
                     'service_id' => $appointmentItem->service_id,
+                    'customer_package_id' => $customerPackage?->getKey(),
                     'professional_id' => $appointmentItem->professional_id,
                     'name_snapshot' => $appointmentItem->service_name_snapshot,
                     'unit_price_cents' => $appointmentItem->price_cents,
