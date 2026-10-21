@@ -38,10 +38,12 @@ final class UpdateAppointment extends OperationalAction
         if ($appointment->tenant_id !== $context->tenant->getKey() || $appointment->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The appointment belongs to another workspace.');
         }
+        $this->assertOwnAppointment($context, $appointment);
         $expectedVersion = (int) ($data['lock_version'] ?? -1);
         $service = Service::query()->whereKey($data['service_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
         Customer::query()->whereKey($data['customer_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
         $professional = Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
+        $this->assertProfessional($context, (string) $professional->getKey());
         if (! $professional->services()->whereKey($service->getKey())->wherePivot('tenant_id', $context->tenant->getKey())->wherePivot('unit_id', $unit->getKey())->exists()) {
             throw ValidationException::withMessages(['service_id' => 'The selected professional does not provide this service in the active unit.']);
         }

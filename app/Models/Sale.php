@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $source_id
  * @property string $tenant_id
  * @property string $unit_id
+ * @property string|null $professional_id
  * @property string|null $customer_id
  * @property string $sale_category_id
  * @property string|null $category_key_snapshot
@@ -39,6 +40,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'source_id',
     'tenant_id',
     'unit_id',
+    'professional_id',
     'customer_id',
     'sale_category_id',
     'category_key_snapshot',
@@ -90,6 +92,12 @@ class Sale extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** @return BelongsTo<Professional, $this> */
+    public function professional(): BelongsTo
+    {
+        return $this->belongsTo(Professional::class);
     }
 
     /** @return BelongsTo<Customer, $this> */

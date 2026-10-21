@@ -90,6 +90,7 @@ final class GoogleCalendarController extends Controller
     private function authorizeConfiguration(TenantContext $context): void
     {
         abort_unless($context->unit !== null, 403, 'An active unit is required for Google Calendar.');
+        abort_if($context->membership->professional_id !== null, 403, 'Google Calendar is managed by the tenant administrator for professional-linked collaborators.');
         abort_unless($this->authorization->can($context->user, $context, 'calendar.configure', $context->unit), 403, 'You are not allowed to configure Google Calendar.');
     }
 

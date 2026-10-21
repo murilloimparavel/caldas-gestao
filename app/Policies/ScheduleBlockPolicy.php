@@ -5,12 +5,16 @@ namespace App\Policies;
 use App\Models\ScheduleBlock;
 use App\Models\User;
 use App\Support\AuthorizationService;
+use App\Support\ProfessionalScope;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 
 final class ScheduleBlockPolicy
 {
-    public function __construct(private readonly AuthorizationService $authorization) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization,
+        private readonly ProfessionalScope $professionalScope,
+    ) {}
 
     public function viewAny(User $user): bool
     {
@@ -46,6 +50,7 @@ final class ScheduleBlockPolicy
 
             return $context->user->is($user)
                 && ($scheduleBlock === null || $context->unit?->is($scheduleBlock->unit))
+                && ($scheduleBlock === null || $this->professionalScope->ownsScheduleBlock($context, $scheduleBlock))
                 && $this->authorization->can($user, $context, $permission, $context->unit);
         } catch (AuthorizationException|\LogicException) {
             return false;

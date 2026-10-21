@@ -8,6 +8,8 @@ use App\Models\Appointment;
 use App\Models\GoogleCalendarConnection;
 use App\Models\GoogleCalendarEvent;
 use App\Models\GoogleCalendarOAuthState;
+use App\Models\Membership;
+use App\Models\Professional;
 use App\Models\TenantDomain;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -152,6 +154,77 @@ test('creates a bound OAuth state and keeps secrets out of status responses', fu
         ->and($statusResponse->json('connection'))->not->toHaveKey('refresh_token')
         ->and($statusResponse->getContent())->not->toContain('access-secret')
         ->and($statusResponse->getContent())->not->toContain('refresh-secret');
+});
+
+test('blocks professional-linked collaborators from starting Google Calendar configuration', function (): void {
+    configureGoogleCalendar();
+    [$owner, $tenantId, $unitId] = googleCalendarWorkspace();
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'status' => 'active',
+    ]);
+    Membership::query()
+        ->where('tenant_id', $tenantId)
+        ->where('user_id', $owner->getKey())
+        ->update(['professional_id' => $professional->getKey()]);
+
+    $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'Accept' => 'application/json'])
+        ->actingAs($owner)
+        ->getJson(route('google_calendar.connect'))
+        ->assertForbidden();
+
+    GoogleCalendarConnection::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'status' => 'connected',
+        'google_account_email' => 'private-owner@example.test',
+        'calendar_name' => 'Private calendar',
+        'last_error' => 'private error details',
+        'scopes' => ['calendar.events'],
+    ]);
+
+    $status = $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId, 'Accept' => 'application/json'])
+        ->actingAs($owner)
+        ->getJson(route('google_calendar.status'))
+        ->assertOk();
+    expect($status->json('can_configure'))->toBeFalse()
+        ->and($status->json('connection'))->toBeNull()
+        ->and($status->getContent())->not->toContain('private-owner@example.test')
+        ->and($status->getContent())->not->toContain('Private calendar')
+        ->and($status->getContent())->not->toContain('private error details');
+});
+
+test('revalidates professional linkage when completing an existing Google OAuth state', function (): void {
+    configureGoogleCalendar();
+    [$owner, $tenantId, $unitId] = googleCalendarWorkspace();
+
+    $this->withHeaders(['X-Tenant-Id' => $tenantId, 'X-Unit-Id' => $unitId])
+        ->actingAs($owner)
+        ->getJson(route('google_calendar.connect'))
+        ->assertRedirect();
+    $state = GoogleCalendarOAuthState::query()->sole();
+    $rawState = Str::random(64);
+    $state->update(['state_hash' => hash('sha256', $rawState)]);
+
+    $professional = Professional::factory()->create([
+        'tenant_id' => $tenantId,
+        'unit_id' => $unitId,
+        'status' => 'active',
+    ]);
+    Membership::query()
+        ->where('tenant_id', $tenantId)
+        ->where('user_id', $owner->getKey())
+        ->update(['professional_id' => $professional->getKey()]);
+    Http::fake();
+
+    $this->withHeaders(['Accept' => 'application/json'])
+        ->getJson(route('google_calendar.callback', ['state' => $rawState, 'code' => 'authorization-code']))
+        ->assertForbidden()
+        ->assertJsonPath('message', 'Google Calendar is managed by the tenant administrator for professional-linked collaborators.');
+
+    expect(GoogleCalendarConnection::query()->count())->toBe(0);
+    Http::assertNothingSent();
 });
 
 test('completes OAuth once and rejects replayed state', function (): void {

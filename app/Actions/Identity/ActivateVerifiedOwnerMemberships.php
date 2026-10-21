@@ -4,6 +4,7 @@ namespace App\Actions\Identity;
 
 use App\Enums\MembershipRoleScope;
 use App\Enums\MembershipStatus;
+use App\Enums\UnitStatus;
 use App\Models\Membership;
 use App\Models\Tenant;
 use App\Models\User;
@@ -30,12 +31,15 @@ final class ActivateVerifiedOwnerMemberships
                 ->where('user_id', $event->user->getKey())
                 ->where('status', MembershipStatus::Invited->value)
                 ->whereHas('tenant', fn ($query) => $query->where('status', 'active'))
-                ->whereHas('membershipRoles', fn ($query) => $query
-                    ->whereNull('revoked_at')
-                    ->where('scope_kind', MembershipRoleScope::Tenant->value)
-                    ->whereHas('role', fn ($roleQuery) => $roleQuery
-                        ->where('key', 'owner')
-                        ->where('is_system', true)))
+                ->where(function ($query): void {
+                    $query->whereHas('membershipUnits.unit', fn ($unitQuery) => $unitQuery->where('status', UnitStatus::Active->value))
+                        ->orWhereHas('membershipRoles', fn ($roleQuery) => $roleQuery
+                            ->whereNull('revoked_at')
+                            ->where('scope_kind', MembershipRoleScope::Tenant->value)
+                            ->whereHas('role', fn ($roleQuery) => $roleQuery
+                                ->where('key', 'owner')
+                                ->where('is_system', true)));
+                })
                 ->with('tenant')
                 ->lockForUpdate()
                 ->get();

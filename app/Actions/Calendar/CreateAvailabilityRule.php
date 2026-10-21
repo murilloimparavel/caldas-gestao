@@ -25,6 +25,7 @@ final class CreateAvailabilityRule extends OperationalAction
             ->where('unit_id', $unitId)
             ->where('status', 'active')
             ->firstOrFail();
+        $this->assertProfessional($context, (string) $data['professional_id']);
 
         return DB::transaction(function () use ($actor, $context, $data, $tenantId, $unitId): AvailabilityRule {
             $rule = AvailabilityRule::query()->create([

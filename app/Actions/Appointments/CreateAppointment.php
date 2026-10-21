@@ -37,6 +37,7 @@ final class CreateAppointment extends OperationalAction
         $service = Service::query()->whereKey($data['service_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
         Customer::query()->whereKey($data['customer_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
         $professional = Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
+        $this->assertProfessional($context, (string) $professional->getKey());
         if (! $professional->services()->whereKey($service->getKey())->wherePivot('tenant_id', $tenantId)->wherePivot('unit_id', $unitId)->exists()) {
             throw ValidationException::withMessages(['service_id' => 'The selected professional does not provide this service in the active unit.']);
         }

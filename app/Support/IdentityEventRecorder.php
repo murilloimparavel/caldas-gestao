@@ -63,7 +63,7 @@ final class IdentityEventRecorder
             'payload' => [
                 'resource_type' => $resourceType,
                 'resource_id' => (string) $resourceId,
-                ...array_intersect_key($metadata, array_flip(['service_ids', 'professional_ids'])),
+                ...array_intersect_key($metadata, array_flip(['service_ids', 'professional_ids', 'permission_ids', 'membership_id', 'professional_id', 'previous_professional_id'])),
             ],
         ]);
     }

@@ -5,12 +5,16 @@ namespace App\Policies;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Support\AuthorizationService;
+use App\Support\ProfessionalScope;
 use App\Support\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
 
 final class AppointmentPolicy
 {
-    public function __construct(private readonly AuthorizationService $authorization) {}
+    public function __construct(
+        private readonly AuthorizationService $authorization,
+        private readonly ProfessionalScope $professionalScope,
+    ) {}
 
     public function viewAny(User $user): bool
     {
@@ -46,6 +50,7 @@ final class AppointmentPolicy
 
             return $context->user->is($user)
                 && ($appointment === null || $context->unit?->is($appointment->unit))
+                && ($appointment === null || $this->professionalScope->ownsAppointment($context, $appointment))
                 && $this->authorization->can($user, $context, $permission, $context->unit);
         } catch (AuthorizationException|\LogicException) {
             return false;

@@ -17,7 +17,7 @@ class DashboardController extends Controller
 
         $filters = $request->validated();
 
-        $snapshot = $getDashboardSnapshot->handle($tenant, $unit, $filters);
+        $snapshot = $getDashboardSnapshot->handle($tenant, $unit, $filters, $context->membership->professional_id);
 
         return Inertia::render('dashboard', [
             'dashboard' => $snapshot,

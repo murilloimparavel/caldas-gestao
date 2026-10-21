@@ -30,6 +30,7 @@ final class OpenSale extends OperationalAction
         $unit = $this->unit($actor, $context, $permission);
         $tenantId = $context->tenant->getKey();
         $unitId = $unit->getKey();
+        $professionalId = $this->assertProfessional($context, isset($data['professional_id']) ? (string) $data['professional_id'] : null);
 
         /** @var SaleCategory|null $category */
         $category = SaleCategory::query()
@@ -67,17 +68,19 @@ final class OpenSale extends OperationalAction
 
         $appointmentId = isset($data['appointment_id']) && ! empty($data['appointment_id']) ? (string) $data['appointment_id'] : null;
         if ($appointmentId !== null) {
-            $appointmentExists = Appointment::query()
+            $appointment = Appointment::query()
                 ->where('tenant_id', $tenantId)
                 ->where('unit_id', $unitId)
                 ->whereKey($appointmentId)
-                ->exists();
+                ->first();
 
-            if (! $appointmentExists) {
+            if ($appointment === null) {
                 throw ValidationException::withMessages([
                     'appointment_id' => 'O agendamento selecionado não pertence a esta unidade.',
                 ]);
             }
+
+            $this->assertOwnAppointment($context, $appointment);
         }
 
         $sourceId = isset($data['source_id']) && trim((string) $data['source_id']) !== ''
@@ -102,7 +105,7 @@ final class OpenSale extends OperationalAction
             default => null,
         };
 
-        return DB::transaction(function () use ($actor, $context, $category, $customerId, $appointmentId, $referenceLabel, $openContextKey, $sourceId, $data, $tenantId, $unitId): Sale {
+        return DB::transaction(function () use ($actor, $context, $category, $customerId, $appointmentId, $referenceLabel, $openContextKey, $sourceId, $data, $tenantId, $unitId, $professionalId): Sale {
             $isAutomaticAppointmentSale = is_array($data['source_metadata'] ?? null)
                 && (($data['source_metadata']['created_automatically'] ?? false) === true);
 
@@ -120,6 +123,8 @@ final class OpenSale extends OperationalAction
                         $existingSourceSale->restore();
                     }
 
+                    $this->assertOwnSale($context, $existingSourceSale);
+
                     return $this->transferManualAppointmentItems($actor, $context, $existingSourceSale, $appointmentId, $isAutomaticAppointmentSale);
                 }
             }
@@ -136,6 +141,8 @@ final class OpenSale extends OperationalAction
                     ->first();
 
                 if ($existingSale !== null) {
+                    $this->assertOwnSale($context, $existingSale);
+
                     return $this->transferManualAppointmentItems($actor, $context, $existingSale, $appointmentId, $isAutomaticAppointmentSale);
                 }
             }
@@ -146,6 +153,7 @@ final class OpenSale extends OperationalAction
                 'source_id' => $sourceId,
                 'tenant_id' => $tenantId,
                 'unit_id' => $unitId,
+                'professional_id' => $professionalId,
                 'customer_id' => $customerId,
                 'sale_category_id' => $category->getKey(),
                 'category_key_snapshot' => $category->key,

@@ -18,6 +18,9 @@ final class DeleteAvailabilityRule extends OperationalAction
         if ($rule->tenant_id !== $context->tenant->getKey() || $rule->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The availability rule belongs to another workspace.');
         }
+        if (! $this->professionalScope->ownsAvailabilityRule($context, $rule)) {
+            throw new AuthorizationException('A regra de disponibilidade não pertence ao profissional vinculado.');
+        }
 
         return DB::transaction(function () use ($actor, $context, $rule, $lockVersion): AvailabilityRule {
             $locked = AvailabilityRule::query()->whereKey($rule->getKey())->lockForUpdate()->firstOrFail();

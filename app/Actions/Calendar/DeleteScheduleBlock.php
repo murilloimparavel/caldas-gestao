@@ -18,6 +18,9 @@ final class DeleteScheduleBlock extends OperationalAction
         if ($block->tenant_id !== $context->tenant->getKey() || $block->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The schedule block belongs to another workspace.');
         }
+        if (! $this->professionalScope->ownsScheduleBlock($context, $block)) {
+            throw new AuthorizationException('O bloqueio não pertence ao profissional vinculado.');
+        }
 
         return DB::transaction(function () use ($actor, $context, $block, $lockVersion): ScheduleBlock {
             $locked = ScheduleBlock::query()->whereKey($block->getKey())->lockForUpdate()->firstOrFail();

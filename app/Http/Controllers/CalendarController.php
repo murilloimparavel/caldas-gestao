@@ -18,6 +18,7 @@ use App\Models\SaleCategory;
 use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Support\OperationalMutation;
+use App\Support\ProfessionalScope;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +28,10 @@ use Inertia\Response;
 
 final class CalendarController extends Controller
 {
-    public function __construct(private readonly OperationalMutation $mutation) {}
+    public function __construct(
+        private readonly OperationalMutation $mutation,
+        private readonly ProfessionalScope $professionalScope,
+    ) {}
 
     public function index(CalendarIndexRequest $request, TenantContext $context): Response
     {
@@ -37,7 +41,7 @@ final class CalendarController extends Controller
         $unitTimezone = $context->unit === null ? config('app.timezone') : ($context->unit->timezone ?? config('app.timezone'));
         $start = CarbonImmutable::parse((string) ($filters['date'] ?? now($unitTimezone)->toDateString()), $unitTimezone)->startOfDay();
         $end = $start->addDays(42);
-        $appointments = Appointment::query()
+        $appointmentsQuery = Appointment::query()
             ->with([
                 'customer:id,name,phone,notes',
                 'professional:id,name',
@@ -50,8 +54,8 @@ final class CalendarController extends Controller
             ->where('ends_at', '>', $start)
             ->when(isset($filters['professional_ids']), fn ($query) => $query->whereIn('professional_id', $filters['professional_ids']))
             ->when(isset($filters['status']), fn ($query) => $query->whereIn('status', $filters['status']))
-            ->orderBy('starts_at')
-            ->get();
+            ->orderBy('starts_at');
+        $appointments = $this->professionalScope->constrainAppointments($appointmentsQuery, $context)->get();
 
         $appointments = $appointments->map(function (Appointment $appointment): array {
             $item = $appointment->items->first();
@@ -83,8 +87,16 @@ final class CalendarController extends Controller
         })->values();
 
         $options = [
-            'customers' => Customer::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone', 'notes']),
-            'professionals' => Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'avatar_path'])->map(fn (Professional $p) => [
+            'customers' => $this->professionalScope->constrainCustomers(Customer::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $unitId)
+                ->where('status', 'active')
+                ->orderBy('name'), $context)
+                ->get(['id', 'name', 'phone', 'notes']),
+            'professionals' => $this->professionalScope->constrainProfessionals(
+                Professional::query()->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unitId)->where('status', 'active')->orderBy('name'),
+                $context,
+            )->get(['id', 'name', 'avatar_path'])->map(fn (Professional $p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'avatar_path' => $p->avatar_path,
@@ -97,12 +109,12 @@ final class CalendarController extends Controller
         ];
 
         $calendarSettings = [
-            'availability_rules' => AvailabilityRule::query()
+            'availability_rules' => $this->professionalScope->constrainAvailabilityRules(AvailabilityRule::query()
                 ->with('professional:id,name')
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $unitId)
                 ->orderBy('weekday')
-                ->orderBy('starts_at')
+                ->orderBy('starts_at'), $context)
                 ->get(['id', 'professional_id', 'weekday', 'starts_at', 'ends_at', 'timezone', 'status', 'lock_version'])
                 ->map(fn (AvailabilityRule $rule): array => [
                     'id' => $rule->getKey(), 'professional_id' => $rule->professional_id,
@@ -110,14 +122,14 @@ final class CalendarController extends Controller
                     'starts_at' => $rule->starts_at, 'ends_at' => $rule->ends_at,
                     'timezone' => $rule->timezone, 'status' => $rule->status, 'lock_version' => $rule->lock_version,
                 ])->values(),
-            'schedule_blocks' => ScheduleBlock::query()
+            'schedule_blocks' => $this->professionalScope->constrainScheduleBlocks(ScheduleBlock::query()
                 ->with('professional:id,name')
                 ->where('tenant_id', $context->tenant->getKey())
                 ->where('unit_id', $unitId)
                 ->where('status', 'active')
                 ->where('ends_at', '>', $start)
                 ->where('starts_at', '<', $end)
-                ->orderBy('starts_at')
+                ->orderBy('starts_at'), $context)
                 ->get(['id', 'professional_id', 'starts_at', 'ends_at', 'timezone', 'reason', 'status', 'lock_version'])
                 ->map(fn (ScheduleBlock $block): array => [
                     'id' => $block->getKey(), 'professional_id' => $block->professional_id,

@@ -17,6 +17,7 @@ export type SidebarNavItem = Omit<NavItem, 'href'> & {
     href?: NonNullable<InertiaLinkProps['href']>;
     disabled?: boolean;
     permission?: string;
+    permissions?: string[];
 };
 
 export type SidebarNavGroup = {
