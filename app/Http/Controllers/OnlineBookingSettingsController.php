@@ -258,7 +258,8 @@ final class OnlineBookingSettingsController extends Controller
                 if (is_array($existingAppearance)) {
                     $content['appearance'] = $existingAppearance;
                 }
-                $saveDraft->handle($request->user(), $context, $content, (int) $site->draft_revision);
+                $expectedDraftRevision = $site->draft?->revision ?? $site->draft_revision;
+                $saveDraft->handle($request->user(), $context, $content, $expectedDraftRevision);
 
                 return ['resource_id' => $unit->getKey(), 'resource_type' => 'unit'];
             });
