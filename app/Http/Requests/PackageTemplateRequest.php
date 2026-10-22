@@ -59,8 +59,13 @@ final class PackageTemplateRequest extends FormRequest
             return;
         }
 
+        $input = $this->input('service_quantities', []);
+        if (! is_array($input)) {
+            return;
+        }
+
         $quantities = [];
-        foreach ($this->input('service_quantities', []) as $serviceId => $quantity) {
+        foreach ($input as $serviceId => $quantity) {
             $quantities[(string) $serviceId] = (int) $quantity;
         }
 
@@ -80,8 +85,34 @@ final class PackageTemplateRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $quantities = $this->input('service_quantities', []);
-            if (! is_array($quantities) || $quantities === []) {
+            $serviceIds = $this->input('service_ids', []);
+            if (! is_array($serviceIds)) {
+                $validator->errors()->add('service_ids', 'Informe os serviços do pacote.');
+
                 return;
+            }
+
+            if (! is_array($quantities)) {
+                $validator->errors()->add('service_quantities', 'Informe as quantidades por serviço em formato válido.');
+
+                return;
+            }
+
+            if ($quantities === []) {
+                if (count($serviceIds) > 1) {
+                    $validator->errors()->add('service_quantities', 'Informe uma quantidade para cada serviço selecionado.');
+                }
+
+                return;
+            }
+
+            $serviceIds = array_map('strval', $serviceIds);
+            $quantityIds = array_map('strval', array_keys($quantities));
+            if (array_diff($serviceIds, $quantityIds) !== []) {
+                $validator->errors()->add('service_quantities', 'Informe uma quantidade para cada serviço selecionado.');
+            }
+            if (array_diff($quantityIds, $serviceIds) !== []) {
+                $validator->errors()->add('service_quantities', 'As quantidades devem corresponder aos serviços selecionados.');
             }
 
             $total = (int) $this->input('total_sessions', 0);

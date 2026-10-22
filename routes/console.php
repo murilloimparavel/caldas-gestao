@@ -15,3 +15,7 @@ Schedule::command('retention:campaign-dispatch')->hourly()->withoutOverlapping()
 Schedule::command('retention:campaign-process')->hourly()->withoutOverlapping()->onOneServer();
 Schedule::command('app:reconcile-tenant-domains')->everyFiveMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command('assistant:purge-conversations')->daily()->withoutOverlapping()->onOneServer();
+Schedule::command('packages:audit-balances --format=json --summary')
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();

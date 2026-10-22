@@ -88,11 +88,19 @@ final class UpdatePackageTemplate extends OperationalAction
 
         $serviceSync = [];
         foreach ($serviceIds as $serviceId) {
+            $quantity = array_key_exists($serviceId, $serviceQuantities)
+                ? max(1, (int) $serviceQuantities[$serviceId])
+                : (count($serviceIds) === 1 ? (int) $template->total_sessions : 1);
+
             $serviceSync[$serviceId] = [
                 'tenant_id' => $context->tenant->getKey(),
                 'unit_id' => $context->unit?->getKey(),
-                'included_quantity' => max(1, (int) ($serviceQuantities[$serviceId] ?? 1)),
+                'included_quantity' => $quantity,
             ];
+        }
+
+        if ($serviceSync !== [] && array_sum(array_column($serviceSync, 'included_quantity')) !== (int) $template->total_sessions) {
+            throw new \InvalidArgumentException('The sum of service quantities must match the package total sessions.');
         }
 
         $template->services()->sync($serviceSync);

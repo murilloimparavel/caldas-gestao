@@ -42,6 +42,13 @@ final class ReversePackageUsage extends OperationalAction
         }
 
         return DB::transaction(function () use ($actor, $context, $unit, $packageUsage, $reason): PackageUsage {
+            $reservation = PackageUsageReservation::query()
+                ->where('tenant_id', $context->tenant->getKey())
+                ->where('unit_id', $unit->getKey())
+                ->where('package_usage_id', $packageUsage->getKey())
+                ->lockForUpdate()
+                ->first();
+
             /** @var PackageUsage $usage */
             $usage = PackageUsage::query()
                 ->where('tenant_id', $context->tenant->getKey())
@@ -61,13 +68,6 @@ final class ReversePackageUsage extends OperationalAction
                 ->whereKey($usage->customer_package_id)
                 ->lockForUpdate()
                 ->firstOrFail();
-
-            $reservation = PackageUsageReservation::query()
-                ->where('tenant_id', $context->tenant->getKey())
-                ->where('unit_id', $unit->getKey())
-                ->where('package_usage_id', $usage->getKey())
-                ->lockForUpdate()
-                ->first();
 
             if ($reservation !== null && $reservation->status !== 'consumed') {
                 throw new ConflictHttpException('The reservation is not in a consumable state.');

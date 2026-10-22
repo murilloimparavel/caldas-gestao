@@ -153,6 +153,15 @@ export default function CustomerPackageHistory({
         props.workspace?.tenant.timezone ??
         'UTC';
     const historyUrl = customerPackageActions.history.url(customerPackage.id);
+    const isUnfiltered =
+        filters.from === '' &&
+        filters.to === '' &&
+        filters.service_id === '' &&
+        filters.status === 'all';
+    const balanceNeedsReview =
+        isUnfiltered &&
+        totals.consumed_sessions !==
+            customerPackage.total_sessions - customerPackage.remaining_sessions;
 
     return (
         <>
@@ -200,6 +209,43 @@ export default function CustomerPackageHistory({
                         </Button>
                     }
                 />
+
+                <section
+                    aria-label="Leitura do saldo"
+                    className="surface-panel flex items-start gap-3 p-4"
+                >
+                    <CircleAlert
+                        aria-hidden="true"
+                        className={
+                            balanceNeedsReview
+                                ? 'mt-0.5 size-5 text-amber-600 dark:text-amber-300'
+                                : 'mt-0.5 size-5 text-muted-foreground'
+                        }
+                    />
+                    <div className="space-y-1 text-sm">
+                        <p className="font-medium text-foreground">
+                            Saldo geral e rastreabilidade
+                        </p>
+                        <p className="text-muted-foreground">
+                            O saldo geral é a referência operacional do pacote.
+                            Os totais por serviço mostram registros de consumo e
+                            reversão; eles não confirmam, sozinhos,
+                            disponibilidade para um novo atendimento.
+                        </p>
+                        {balanceNeedsReview ? (
+                            <p className="font-medium text-amber-700 dark:text-amber-300">
+                                O histórico completo não fecha com o saldo
+                                geral. Faça uma conferência antes de prometer ou
+                                consumir sessões.
+                            </p>
+                        ) : (
+                            <p className="text-xs text-muted-foreground">
+                                Reservas em comandas abertas e regras de status
+                                podem alterar a disponibilidade efetiva.
+                            </p>
+                        )}
+                    </div>
+                </section>
 
                 <section
                     aria-label="Resumo do histórico"

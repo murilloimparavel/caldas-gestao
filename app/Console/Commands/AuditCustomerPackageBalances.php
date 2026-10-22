@@ -14,13 +14,18 @@ use App\Support\AuditEventWriter;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 #[Signature('packages:audit-balances
     {--tenant= : Restrict the audit to one tenant UUID}
     {--package= : Inspect or repair one customer package UUID}
     {--format=table : Output format: table or json}
+    {--summary : Emit aggregate totals without package identifiers}
+    {--fail-on-issues : Return failure when divergent or ambiguous packages exist}
     {--apply : Persist a repair; omitted means dry-run}
     {--actor= : User UUID responsible for an applied repair}
     {--reason= : Human-readable reason for an applied repair}')]
@@ -30,12 +35,17 @@ final class AuditCustomerPackageBalances extends Command
     /** @var list<string> */
     private const RESERVATION_STATUSES = ['reserved', 'consumed', 'released'];
 
+    /** @var Collection<string, SaleItem>|null */
+    private ?Collection $auditSaleItems = null;
+
     public function handle(AuditEventWriter $auditEvents): int
     {
         $format = strtolower((string) $this->option('format'));
         $apply = (bool) $this->option('apply');
         $packageId = $this->option('package');
         $tenantId = $this->option('tenant');
+        $summaryOnly = (bool) $this->option('summary');
+        $failOnIssues = (bool) $this->option('fail-on-issues');
         $actorId = $this->option('actor');
         $reason = $this->option('reason');
 
@@ -85,10 +95,34 @@ final class AuditCustomerPackageBalances extends Command
             $query->whereKey(trim($packageId));
         }
 
-        /** @var list<array<string, mixed>> $reports */
-        $reports = $query->get()->map(fn (CustomerPackage $package): array => $this->auditPackage($package))->values()->all();
+        $reports = [];
+        $totals = ['packages' => 0, 'repairable' => 0, 'divergent' => 0, 'ambiguous' => 0];
 
-        $this->renderReports($reports, $format, false, false);
+        $query->chunkById(100, function (Collection $packages) use (&$reports, &$totals, $summaryOnly): void {
+            $saleItemIds = $packages->flatMap(static fn (CustomerPackage $package): BaseCollection => $package->reservations->pluck('sale_item_id'))
+                ->filter()->unique()->values();
+            $this->auditSaleItems = $saleItemIds->isEmpty()
+                ? new Collection
+                : SaleItem::withTrashed()->whereIn('id', $saleItemIds->all())->with('sale')->get()->keyBy('id');
+
+            foreach ($packages as $package) {
+                $report = $this->auditPackage($package);
+                $totals['packages']++;
+                $totals['repairable'] += $report['repairable'] ? 1 : 0;
+                $totals['divergent'] += $report['has_mismatch'] ? 1 : 0;
+                $totals['ambiguous'] += $report['repairable'] ? 0 : 1;
+                if (! $summaryOnly) {
+                    $reports[] = $report;
+                }
+            }
+            $this->auditSaleItems = null;
+        });
+
+        $this->renderReports($reports, $format, false, false, $totals, $summaryOnly);
+
+        if ($failOnIssues && ($totals['divergent'] > 0 || $totals['ambiguous'] > 0)) {
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }
@@ -298,6 +332,18 @@ final class AuditCustomerPackageBalances extends Command
             'status' => $package->status,
             'repairable' => $issues === [],
             'has_mismatch' => $hasMismatch,
+            'classification' => $issues !== [] ? 'ambiguous' : ($hasMismatch ? 'repairable_divergence' : 'consistent'),
+            'cause' => $issues === [] && ! $hasMismatch ? 'none' : 'indeterminate',
+            'operator_message' => $issues === [] && $hasMismatch
+                ? 'A conta esperada pode ser calculada pelo ledger, mas o evento que causou a divergência não foi identificado.'
+                : ($issues !== []
+                    ? 'Há divergência ou evidência incompleta; a causa permanece indeterminada.'
+                    : 'Saldos e evidências conferem.'),
+            'safe_action' => $issues === [] && $hasMismatch
+                ? 'Revisar o pacote e autorizar eventual ajuste manual; não reparar automaticamente.'
+                : ($issues !== []
+                    ? 'Conferir o ledger e a comanda antes de qualquer ajuste; não reparar automaticamente.'
+                    : 'Nenhuma ação necessária.'),
             'issues' => $issues,
             'warnings' => $reservationReport['warnings'],
             'total_sessions' => (int) $package->total_sessions,
@@ -325,7 +371,9 @@ final class AuditCustomerPackageBalances extends Command
         $activeSessions = 0;
         $reservedByService = [];
         $usages = $package->usages->keyBy('id');
-        $saleItems = SaleItem::withTrashed()->whereIn('id', $package->reservations->pluck('sale_item_id')->filter()->all())->with('sale')->get()->keyBy('id');
+        $saleItems = $this->auditSaleItems ?? SaleItem::withTrashed()
+            ->whereIn('id', $package->reservations->pluck('sale_item_id')->filter()->all())
+            ->with('sale')->get()->keyBy('id');
 
         foreach ($package->reservations as $reservation) {
             if ($reservation->tenant_id !== $package->tenant_id || $reservation->unit_id !== $package->unit_id
@@ -474,21 +522,39 @@ final class AuditCustomerPackageBalances extends Command
     }
 
     /** @param list<array<string,mixed>> $reports */
-    private function renderReports(array $reports, string $format, bool $applyRequested, bool $changed): void
+    private function renderReports(array $reports, string $format, bool $applyRequested, bool $changed, ?array $totals = null, bool $summaryOnly = false): void
     {
+        $totals ??= [
+            'packages' => count($reports),
+            'repairable' => collect($reports)->where('repairable', true)->count(),
+            'divergent' => collect($reports)->where('has_mismatch', true)->count(),
+            'ambiguous' => collect($reports)->where('repairable', false)->count(),
+        ];
         $payload = [
             'read_only' => ! $applyRequested,
             'apply_requested' => $applyRequested,
             'applied' => $changed,
             'changed' => $changed,
-            'totals' => [
-                'packages' => count($reports),
-                'repairable' => collect($reports)->where('repairable', true)->count(),
-                'divergent' => collect($reports)->where('has_mismatch', true)->count(),
-                'ambiguous' => collect($reports)->where('repairable', false)->count(),
-            ],
-            'packages' => $reports,
+            'alert' => ($totals['divergent'] > 0 || $totals['ambiguous'] > 0) ? 'balance_review_required' : 'none',
+            'operator_message' => ($totals['divergent'] > 0 || $totals['ambiguous'] > 0)
+                ? 'Auditoria encontrou divergências ou evidências ambíguas; a causa não foi determinada.'
+                : 'Auditoria concluída sem divergências.',
+            'safe_action' => ($totals['divergent'] > 0 || $totals['ambiguous'] > 0)
+                ? 'Revisar os pacotes sinalizados em uma execução detalhada; nenhum reparo automático foi aplicado.'
+                : 'Nenhuma ação necessária.',
+            'totals' => $totals,
+            'packages' => $summaryOnly ? [] : $reports,
         ];
+
+        if ($summaryOnly && ($totals['divergent'] > 0 || $totals['ambiguous'] > 0)) {
+            Log::warning('customer_package.balance_audit_review_required', [
+                'packages' => $totals['packages'],
+                'divergent' => $totals['divergent'],
+                'ambiguous' => $totals['ambiguous'],
+                'message' => 'Auditoria de saldo encontrou divergências ou evidências ambíguas; a causa não foi determinada.',
+                'safe_action' => 'Revisar em execução detalhada; nenhum reparo automático foi aplicado.',
+            ]);
+        }
 
         if ($format === 'json') {
             $this->output->writeln((string) json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -496,8 +562,17 @@ final class AuditCustomerPackageBalances extends Command
             return;
         }
 
+        if ($summaryOnly) {
+            $this->line('Pacotes: '.$totals['packages'].' | Divergentes: '.$totals['divergent'].' | Ambíguos: '.$totals['ambiguous']);
+            if (! $applyRequested) {
+                $this->components->info('Dry-run: nenhum registro foi alterado.');
+            }
+
+            return;
+        }
+
         $this->table(
-            ['Pacote', 'Status', 'Esperado', 'Gravado', 'Serviços esperados', 'Serviços gravados', 'Reparo', 'Problemas', 'Avisos'],
+            ['Pacote', 'Status', 'Esperado', 'Gravado', 'Serviços esperados', 'Serviços gravados', 'Classificação', 'Encontrado', 'Causa', 'Ação segura', 'Códigos', 'Avisos'],
             collect($reports)->map(static fn (array $report): array => [
                 $report['customer_package_id'],
                 $report['status'],
@@ -505,7 +580,10 @@ final class AuditCustomerPackageBalances extends Command
                 $report['stored_remaining_sessions'],
                 $report['expected_service_balances'] === [] ? '—' : json_encode($report['expected_service_balances'], JSON_UNESCAPED_UNICODE),
                 $report['stored_service_balances'] === [] ? '—' : json_encode($report['stored_service_balances'], JSON_UNESCAPED_UNICODE),
-                $report['has_mismatch'] && $report['repairable'] ? 'sim' : 'não',
+                $report['classification'],
+                $report['operator_message'],
+                $report['cause'] === 'indeterminate' ? 'Indeterminada' : 'Sem causa a investigar',
+                $report['safe_action'],
                 $report['issues'] === [] ? '—' : implode(', ', $report['issues']),
                 $report['warnings'] === [] ? '—' : implode(', ', $report['warnings']),
             ])->all(),

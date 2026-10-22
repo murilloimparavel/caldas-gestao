@@ -34,6 +34,8 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -726,6 +728,85 @@ it('reverses a usage once, restores the balance, and records governance events',
     $this->actingAs($owner)
         ->post(route('customer-packages.usages.reverse', [$package, $usage]), ['reason' => 'Tentativa repetida'])
         ->assertStatus(409);
+});
+
+it('locks consumed package reservations before usage and package during reversal', function (): void {
+    [$owner, $tenant, $unit, $context] = packageIntegrityWorkspace();
+    $service = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'total_sessions' => 2,
+        'remaining_sessions' => 1,
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 2,
+        'remaining_quantity' => 1,
+    ]);
+    $sale = Sale::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'status' => 'open',
+    ]);
+    $saleItem = SaleItem::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'sale_id' => $sale->getKey(),
+        'item_type' => 'service',
+        'service_id' => $service->getKey(),
+        'covered_quantity' => 1,
+        'total_cents' => 0,
+    ]);
+    $usage = PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $saleItem->getKey(),
+        'sessions_consumed' => 1,
+        'user_id' => $owner->getKey(),
+    ]);
+    $reservation = PackageUsageReservation::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'sale_id' => $sale->getKey(),
+        'sale_item_id' => $saleItem->getKey(),
+        'service_id' => $service->getKey(),
+        'user_id' => $owner->getKey(),
+        'package_usage_id' => $usage->getKey(),
+        'sessions_reserved' => 1,
+        'status' => 'consumed',
+    ]);
+
+    $tables = [];
+    DB::listen(function (QueryExecuted $query) use (&$tables): void {
+        if (preg_match('/from "([^"]+)"/', strtolower($query->sql), $matches) === 1) {
+            $tables[] = $matches[1];
+        }
+    });
+
+    (new ReversePackageUsage)->handle($owner, $context, $usage, ['reason' => 'Correção de lançamento']);
+
+    $relevantTables = array_values(array_filter(
+        $tables,
+        static fn (string $table): bool => in_array($table, ['package_usage_reservations', 'package_usages', 'customer_packages'], true),
+    ));
+
+    expect($relevantTables)->toContain('package_usage_reservations')
+        ->and(array_search('package_usage_reservations', $relevantTables, true))
+        ->toBeLessThan(array_search('package_usages', $relevantTables, true))
+        ->and(array_search('package_usages', $relevantTables, true))
+        ->toBeLessThan(array_search('customer_packages', $relevantTables, true))
+        ->and($reservation->fresh()->status)->toBe('released');
 });
 
 it('does not reverse the aggregate package balance when the service balance is missing', function (): void {

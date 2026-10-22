@@ -102,6 +102,7 @@ it('allows creating, updating, viewing, and deactivating package templates', fun
         'total_sessions' => 5,
         'validity_days' => 90,
         'service_ids' => [$service1->getKey(), $service2->getKey()],
+        'service_quantities' => [$service1->getKey() => 3, $service2->getKey() => 2],
     ]);
 
     $response->assertSessionHasNoErrors();

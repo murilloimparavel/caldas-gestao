@@ -45,26 +45,21 @@ final class MutateCustomerPackageBalance
         }
 
         /** @var array<string, CustomerPackageService> $serviceBalances */
-        $serviceBalances = [];
+        $serviceBalances = $this->lockServiceBalances($tenantId, $unitId, $lockedPackage->getKey());
+        $this->assertAggregateMatchesServiceBalances($lockedPackage, $serviceBalances);
 
         foreach ($serviceQuantities as $serviceId => $serviceQuantity) {
             if ($serviceId === '' || $serviceQuantity < 1) {
                 throw new ConflictHttpException('Package service balance mutation requires valid quantities.');
             }
 
-            $serviceBalance = CustomerPackageService::query()
-                ->where('tenant_id', $tenantId)
-                ->where('unit_id', $unitId)
-                ->where('customer_package_id', $lockedPackage->getKey())
-                ->where('service_id', $serviceId)
-                ->lockForUpdate()
-                ->first();
+            $serviceBalance = $serviceBalances[$serviceId] ?? null;
 
             if ($serviceBalance === null) {
                 throw new ConflictHttpException('Package service balance is missing.');
             }
 
-            $reservedServiceQuantity = $reservedServiceQuantities[$serviceId] ?? 0;
+            $reservedServiceQuantity = (int) ($reservedServiceQuantities[$serviceId] ?? 0);
             $allocatedQuantity = filter_var($serviceBalance->getRawOriginal('allocated_quantity'), FILTER_VALIDATE_INT);
             $remainingQuantity = filter_var($serviceBalance->getRawOriginal('remaining_quantity'), FILTER_VALIDATE_INT);
             $availableServiceQuantity = is_int($remainingQuantity)
@@ -93,7 +88,7 @@ final class MutateCustomerPackageBalance
                 ->where('customer_package_id', $lockedPackage->getKey())
                 ->where('service_id', $serviceId)
                 ->update([
-                    'remaining_quantity' => $serviceBalances[$serviceId]->remaining_quantity - $serviceQuantity,
+                    'remaining_quantity' => (int) $serviceBalances[$serviceId]->remaining_quantity - $serviceQuantity,
                 ]);
         }
 
@@ -138,16 +133,16 @@ final class MutateCustomerPackageBalance
             throw new ConflictHttpException('Package session balance is inconsistent.');
         }
 
+        $serviceBalances = $this->lockServiceBalances($tenantId, $unitId, $lockedPackage->getKey());
+        if ($serviceBalances !== []) {
+            $this->assertAggregateMatchesServiceBalances($lockedPackage, $serviceBalances);
+        }
+
         $serviceBalance = null;
+        $remainingQuantity = null;
 
         if ($serviceId !== null && $serviceId !== '') {
-            $serviceBalance = CustomerPackageService::query()
-                ->where('tenant_id', $tenantId)
-                ->where('unit_id', $unitId)
-                ->where('customer_package_id', $lockedPackage->getKey())
-                ->where('service_id', $serviceId)
-                ->lockForUpdate()
-                ->first();
+            $serviceBalance = $serviceBalances[$serviceId] ?? null;
 
             if ($serviceBalance === null) {
                 throw new ConflictHttpException('Package service balance is missing.');
@@ -169,11 +164,7 @@ final class MutateCustomerPackageBalance
             ) {
                 throw new ConflictHttpException('Package service balance is missing or inconsistent.');
             }
-        } elseif (CustomerPackageService::query()
-            ->where('tenant_id', $tenantId)
-            ->where('unit_id', $unitId)
-            ->where('customer_package_id', $lockedPackage->getKey())
-            ->exists()) {
+        } elseif ($serviceBalances !== []) {
             throw new ConflictHttpException('Package usage has no matching service balance.');
         }
 
@@ -195,5 +186,42 @@ final class MutateCustomerPackageBalance
         ])->save();
 
         return $lockedPackage;
+    }
+
+    /** @return array<string, CustomerPackageService> */
+    private function lockServiceBalances(string $tenantId, string $unitId, string $packageId): array
+    {
+        return CustomerPackageService::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('customer_package_id', $packageId)
+            ->orderBy('service_id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('service_id')
+            ->all();
+    }
+
+    /** @param array<string, CustomerPackageService> $serviceBalances */
+    private function assertAggregateMatchesServiceBalances(CustomerPackage $package, array $serviceBalances): void
+    {
+        $allocatedTotal = 0;
+        $remainingTotal = 0;
+
+        foreach ($serviceBalances as $serviceBalance) {
+            $allocatedQuantity = filter_var($serviceBalance->getRawOriginal('allocated_quantity'), FILTER_VALIDATE_INT);
+            $remainingQuantity = filter_var($serviceBalance->getRawOriginal('remaining_quantity'), FILTER_VALIDATE_INT);
+
+            if (! is_int($allocatedQuantity) || ! is_int($remainingQuantity) || $allocatedQuantity < 0 || $remainingQuantity < 0 || $remainingQuantity > $allocatedQuantity) {
+                throw new ConflictHttpException('Package service balance is inconsistent or insufficient.');
+            }
+
+            $allocatedTotal += $allocatedQuantity;
+            $remainingTotal += $remainingQuantity;
+        }
+
+        if ($allocatedTotal !== (int) $package->total_sessions || $remainingTotal !== (int) $package->remaining_sessions) {
+            throw new ConflictHttpException('Package aggregate and service balances are inconsistent.');
+        }
     }
 }
