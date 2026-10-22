@@ -147,6 +147,7 @@ final class RemoveSaleItem extends OperationalAction
                         $packageUsage->service_id,
                         $packageUsage->sessions_consumed,
                         $package->status === 'review_required' ? 'review_required' : 'active',
+                        $packageUsage->getKey(),
                     );
                 } catch (ConflictHttpException $exception) {
                     throw ValidationException::withMessages([

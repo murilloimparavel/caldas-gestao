@@ -41,6 +41,19 @@ type PackageSummary = {
     remaining_sessions: number;
     status: string;
     total_sessions: number;
+    balance_integrity: {
+        message: string;
+        next_step: string;
+        services: {
+            allocated: number;
+            consumed: number;
+            delta: number | null;
+            expected_remaining: number;
+            name: string;
+            recorded_remaining: number | null;
+        }[];
+        status: 'consistent' | 'review' | 'inconclusive';
+    };
 };
 
 type Usage = {
@@ -153,15 +166,11 @@ export default function CustomerPackageHistory({
         props.workspace?.tenant.timezone ??
         'UTC';
     const historyUrl = customerPackageActions.history.url(customerPackage.id);
-    const isUnfiltered =
-        filters.from === '' &&
-        filters.to === '' &&
-        filters.service_id === '' &&
-        filters.status === 'all';
     const balanceNeedsReview =
-        isUnfiltered &&
-        totals.consumed_sessions !==
-            customerPackage.total_sessions - customerPackage.remaining_sessions;
+        customerPackage.balance_integrity.status !== 'consistent';
+    const servicesToReview = customerPackage.balance_integrity.services.filter(
+        (service) => service.delta !== 0,
+    );
 
     return (
         <>
@@ -214,35 +223,57 @@ export default function CustomerPackageHistory({
                     aria-label="Leitura do saldo"
                     className="surface-panel flex items-start gap-3 p-4"
                 >
-                    <CircleAlert
-                        aria-hidden="true"
-                        className={
-                            balanceNeedsReview
-                                ? 'mt-0.5 size-5 text-amber-600 dark:text-amber-300'
-                                : 'mt-0.5 size-5 text-muted-foreground'
-                        }
-                    />
-                    <div className="space-y-1 text-sm">
+                    {balanceNeedsReview ? (
+                        <CircleAlert
+                            aria-hidden="true"
+                            className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-300"
+                        />
+                    ) : (
+                        <CheckCircle2
+                            aria-hidden="true"
+                            className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-300"
+                        />
+                    )}
+                    <div className="min-w-0 space-y-2 text-sm">
                         <p className="font-medium text-foreground">
-                            Saldo geral e rastreabilidade
+                            Conferência dos saldos por serviço
                         </p>
-                        <p className="text-muted-foreground">
-                            O saldo geral é a referência operacional do pacote.
-                            Os totais por serviço mostram registros de consumo e
-                            reversão; eles não confirmam, sozinhos,
-                            disponibilidade para um novo atendimento.
+                        <p
+                            className={
+                                balanceNeedsReview
+                                    ? 'font-medium text-amber-800 dark:text-amber-200'
+                                    : 'text-muted-foreground'
+                            }
+                        >
+                            {customerPackage.balance_integrity.message}
                         </p>
-                        {balanceNeedsReview ? (
-                            <p className="font-medium text-amber-700 dark:text-amber-300">
-                                O histórico completo não fecha com o saldo
-                                geral. Faça uma conferência antes de prometer ou
-                                consumir sessões.
-                            </p>
-                        ) : (
-                            <p className="text-xs text-muted-foreground">
-                                Reservas em comandas abertas e regras de status
-                                podem alterar a disponibilidade efetiva.
-                            </p>
+                        <p className="text-xs text-muted-foreground">
+                            {customerPackage.balance_integrity.next_step}
+                        </p>
+                        {balanceNeedsReview && servicesToReview.length > 0 && (
+                            <ul className="mt-3 divide-y divide-amber-200 rounded-lg border border-amber-200 bg-background/60 dark:divide-amber-900 dark:border-amber-900">
+                                {servicesToReview.map((service, index) => (
+                                    <li
+                                        key={`${service.name}-${index}`}
+                                        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 py-2 text-xs"
+                                    >
+                                        <span className="font-medium text-foreground">
+                                            {service.name}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            Esperado pelo histórico:{' '}
+                                            <strong className="text-foreground">
+                                                {service.expected_remaining}
+                                            </strong>{' '}
+                                            · Saldo registrado:{' '}
+                                            <strong className="text-foreground">
+                                                {service.recorded_remaining ??
+                                                    'ausente'}
+                                            </strong>
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
                         )}
                     </div>
                 </section>

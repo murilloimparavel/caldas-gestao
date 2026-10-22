@@ -96,6 +96,7 @@ final class ReversePackageUsage extends OperationalAction
                 $usage->service_id,
                 $usage->sessions_consumed,
                 $package->status === 'review_required' ? 'review_required' : 'active',
+                $usage->getKey(),
             );
             $newRemaining = $package->remaining_sessions;
 

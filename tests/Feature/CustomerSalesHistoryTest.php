@@ -4,7 +4,9 @@ use App\Actions\Identity\OnboardTenant;
 use App\Models\Appointment;
 use App\Models\Customer;
 use App\Models\CustomerPackage;
+use App\Models\CustomerPackageService;
 use App\Models\PackageTemplate;
+use App\Models\PackageUsage;
 use App\Models\Professional;
 use App\Models\Sale;
 use App\Models\SaleCategory;
@@ -238,5 +240,83 @@ it('keeps the customer package history available before the finance link migrati
             ->component('customers/show')
             ->where('customer.customer_packages.0.id', $package->getKey())
             ->where('customer.customer_packages.0.status', 'active')
+        );
+});
+
+it('reports service balance drift using the complete ledger regardless of history filters', function () {
+    [$owner, $tenant, $unit] = customerHistoryTestWorkspace();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $template = PackageTemplate::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
+    $firstService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Corte',
+    ]);
+    $secondService = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'name' => 'Barba',
+    ]);
+    $package = CustomerPackage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_id' => $customer->getKey(),
+        'package_template_id' => $template->getKey(),
+        'total_sessions' => 4,
+        'remaining_sessions' => 2,
+        'eligible_services_snapshot' => [
+            ['id' => $firstService->getKey(), 'name' => 'Corte', 'quantity' => 2],
+            ['id' => $secondService->getKey(), 'name' => 'Barba', 'quantity' => 2],
+        ],
+        'status' => 'active',
+    ]);
+
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $firstService->getKey(),
+        'allocated_quantity' => 2,
+        'remaining_quantity' => 2,
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $secondService->getKey(),
+        'allocated_quantity' => 2,
+        'remaining_quantity' => 0,
+    ]);
+    PackageUsage::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $firstService->getKey(),
+        'sessions_consumed' => 2,
+        'user_id' => $owner->getKey(),
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('customer-packages.history', [
+            'customer_package' => $package,
+            'from' => now()->addDay()->toDateString(),
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('customer-packages/history')
+            ->where('totals.records', 0)
+            ->where('customerPackage.balance_integrity.status', 'review')
+            ->where('customerPackage.balance_integrity.services.0.name', 'Barba')
+            ->where('customerPackage.balance_integrity.services.0.expected_remaining', 2)
+            ->where('customerPackage.balance_integrity.services.0.recorded_remaining', 0)
+            ->where('customerPackage.balance_integrity.services.1.name', 'Corte')
+            ->where('customerPackage.balance_integrity.services.1.expected_remaining', 0)
+            ->where('customerPackage.balance_integrity.services.1.recorded_remaining', 2)
         );
 });

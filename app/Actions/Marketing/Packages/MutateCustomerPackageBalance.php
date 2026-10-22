@@ -4,6 +4,7 @@ namespace App\Actions\Marketing\Packages;
 
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageService;
+use App\Models\PackageUsage;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class MutateCustomerPackageBalance
@@ -47,6 +48,11 @@ final class MutateCustomerPackageBalance
         /** @var array<string, CustomerPackageService> $serviceBalances */
         $serviceBalances = $this->lockServiceBalances($tenantId, $unitId, $lockedPackage->getKey());
         $this->assertAggregateMatchesServiceBalances($lockedPackage, $serviceBalances);
+        $this->assertServiceLedgerMatchesBalances(
+            $lockedPackage,
+            $serviceBalances,
+            $this->loadPackageUsages($tenantId, $unitId, $lockedPackage->getKey()),
+        );
 
         foreach ($serviceQuantities as $serviceId => $serviceQuantity) {
             if ($serviceId === '' || $serviceQuantity < 1) {
@@ -109,6 +115,7 @@ final class MutateCustomerPackageBalance
         ?string $serviceId,
         int $sessionsToRestore,
         ?string $status = null,
+        ?string $usageIdBeingReversed = null,
     ): CustomerPackage {
         if ($sessionsToRestore < 1) {
             throw new ConflictHttpException('Package usage must contain at least one session.');
@@ -137,6 +144,8 @@ final class MutateCustomerPackageBalance
         if ($serviceBalances !== []) {
             $this->assertAggregateMatchesServiceBalances($lockedPackage, $serviceBalances);
         }
+
+        $usages = $this->loadPackageUsages($tenantId, $unitId, $lockedPackage->getKey());
 
         $serviceBalance = null;
         $remainingQuantity = null;
@@ -168,6 +177,15 @@ final class MutateCustomerPackageBalance
             throw new ConflictHttpException('Package usage has no matching service balance.');
         }
 
+        $this->assertServiceLedgerMatchesBalances(
+            $lockedPackage,
+            $serviceBalances,
+            $usages,
+            $usageIdBeingReversed,
+            $serviceId,
+            $sessionsToRestore,
+        );
+
         if ($serviceBalance !== null) {
             CustomerPackageService::query()
                 ->where('tenant_id', $tenantId)
@@ -186,6 +204,123 @@ final class MutateCustomerPackageBalance
         ])->save();
 
         return $lockedPackage;
+    }
+
+    /**
+     * The package row is locked by the caller before this read, serializing usage
+     * writers that follow the same package-first locking convention.
+     *
+     * @return list<PackageUsage>
+     */
+    private function loadPackageUsages(string $tenantId, string $unitId, string $packageId): array
+    {
+        return PackageUsage::query()
+            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
+            ->where('customer_package_id', $packageId)
+            ->orderBy('id')
+            ->get()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, CustomerPackageService>  $serviceBalances
+     * @param  list<PackageUsage>  $usages
+     */
+    private function assertServiceLedgerMatchesBalances(
+        CustomerPackage $package,
+        array $serviceBalances,
+        array $usages,
+        ?string $usageIdBeingReversed = null,
+        ?string $restoreServiceId = null,
+        int $sessionsToRestore = 0,
+    ): void {
+        $allocations = $this->snapshotAllocations($package);
+
+        $activeUsageByService = [];
+        $excludedUsageFound = false;
+        foreach ($usages as $usage) {
+            if ($usageIdBeingReversed !== null && $usage->getKey() === $usageIdBeingReversed) {
+                $excludedUsageFound = true;
+
+                continue;
+            }
+
+            if ($usage->reversed_at !== null) {
+                continue;
+            }
+
+            $serviceId = (string) ($usage->service_id ?? '');
+            if ($serviceId === '' || ! array_key_exists($serviceId, $allocations)) {
+                throw new ConflictHttpException('Package usage history does not match its service allocation.');
+            }
+
+            $activeUsageByService[$serviceId] = ($activeUsageByService[$serviceId] ?? 0) + (int) $usage->sessions_consumed;
+        }
+
+        if ($usageIdBeingReversed !== null && ! $excludedUsageFound) {
+            throw new ConflictHttpException('Package usage to reverse was not found in its balance ledger.');
+        }
+
+        $expectedRemaining = 0;
+        foreach ($allocations as $serviceId => $allocatedQuantity) {
+            $expectedServiceRemaining = $allocatedQuantity - ($activeUsageByService[$serviceId] ?? 0);
+            if ($expectedServiceRemaining < 0) {
+                throw new ConflictHttpException('Package usage history exceeds its service allocation.');
+            }
+
+            $expectedRemaining += $expectedServiceRemaining;
+            $serviceBalance = $serviceBalances[$serviceId] ?? null;
+            $storedRemaining = $serviceBalance === null
+                ? null
+                : filter_var($serviceBalance->getRawOriginal('remaining_quantity'), FILTER_VALIDATE_INT);
+            $projectedRemaining = $serviceId === $restoreServiceId && $sessionsToRestore > 0
+                ? (is_int($storedRemaining) ? $storedRemaining + $sessionsToRestore : null)
+                : $storedRemaining;
+
+            if (! is_int($projectedRemaining) || $projectedRemaining !== $expectedServiceRemaining) {
+                throw new ConflictHttpException('Package service balance does not match its snapshot and usage history.');
+            }
+        }
+
+        if (count($serviceBalances) !== count($allocations)) {
+            throw new ConflictHttpException('Package service balance does not match its service allocation.');
+        }
+
+        $projectedPackageRemaining = (int) $package->remaining_sessions + $sessionsToRestore;
+        if ($projectedPackageRemaining !== $expectedRemaining) {
+            throw new ConflictHttpException('Package balance does not match its usage history.');
+        }
+    }
+
+    /** @return array<string, int> */
+    private function snapshotAllocations(CustomerPackage $package): array
+    {
+        $snapshot = $package->eligible_services_snapshot;
+        if (! is_array($snapshot) || $snapshot === []) {
+            throw new ConflictHttpException('Package service allocation snapshot is missing.');
+        }
+
+        $allocations = [];
+        foreach ($snapshot as $service) {
+            if (! is_array($service) || ! array_key_exists('id', $service) || ! array_key_exists('quantity', $service)) {
+                throw new ConflictHttpException('Package service allocation snapshot is invalid.');
+            }
+
+            $serviceId = (string) $service['id'];
+            $quantity = filter_var($service['quantity'], FILTER_VALIDATE_INT);
+            if ($serviceId === '' || ! is_int($quantity) || $quantity < 1 || array_key_exists($serviceId, $allocations)) {
+                throw new ConflictHttpException('Package service allocation snapshot is invalid.');
+            }
+
+            $allocations[$serviceId] = $quantity;
+        }
+
+        if (array_sum($allocations) !== (int) $package->total_sessions) {
+            throw new ConflictHttpException('Package service allocation snapshot does not match the package total.');
+        }
+
+        return $allocations;
     }
 
     /** @return array<string, CustomerPackageService> */

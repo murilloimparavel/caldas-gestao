@@ -178,6 +178,8 @@ final class CustomerPackageController extends Controller
             'serviceBalances.service:id,name',
         ]);
 
+        $balanceIntegrity = $this->packageBalanceIntegrity($customer_package, $tenantId, $unitId);
+
         $filters = $request->validated();
         $from = $filters['from'] ?? null;
         $to = $filters['to'] ?? null;
@@ -362,6 +364,7 @@ final class CustomerPackageController extends Controller
                     'name' => $customer_package->customer->name,
                     'phone' => $customer_package->customer->phone,
                 ],
+                'balance_integrity' => $balanceIntegrity,
             ],
             'usages' => $usages,
             'totals' => $totals,
@@ -376,6 +379,118 @@ final class CustomerPackageController extends Controller
             'canViewSales' => Gate::allows('viewAny', Sale::class),
             'canViewClosingSessions' => Gate::allows('viewAny', ClosingSession::class),
         ]);
+    }
+
+    /** @return array{status:string,message:string,next_step:string,services:list<array{name:string,allocated:int,consumed:int,expected_remaining:int,recorded_remaining:int|null,delta:int|null}>} */
+    private function packageBalanceIntegrity(CustomerPackage $package, string $tenantId, ?string $unitId): array
+    {
+        $snapshot = $package->eligible_services_snapshot;
+        $allocations = [];
+        $inconclusive = ! is_array($snapshot) || $snapshot === [];
+
+        foreach (is_array($snapshot) ? $snapshot : [] as $entry) {
+            if (! is_array($entry)) {
+                $inconclusive = true;
+
+                continue;
+            }
+
+            $serviceId = (string) ($entry['id'] ?? '');
+            $quantity = filter_var($entry['quantity'] ?? null, FILTER_VALIDATE_INT);
+            if ($serviceId === '' || ! is_int($quantity) || $quantity <= 0 || isset($allocations[$serviceId])) {
+                $inconclusive = true;
+
+                continue;
+            }
+
+            $allocations[$serviceId] = [
+                'name' => (string) ($entry['name'] ?? 'Serviço não informado'),
+                'quantity' => $quantity,
+            ];
+        }
+
+        if (array_sum(array_column($allocations, 'quantity')) !== (int) $package->total_sessions) {
+            $inconclusive = true;
+        }
+
+        $activeUsageByService = PackageUsage::query()
+            ->where('tenant_id', $tenantId)
+            ->when($unitId !== null, fn ($query) => $query->where('unit_id', $unitId))
+            ->where('customer_package_id', $package->getKey())
+            ->whereNull('reversed_at')
+            ->selectRaw('service_id, SUM(sessions_consumed) AS sessions')
+            ->groupBy('service_id')
+            ->get()
+            ->mapWithKeys(static fn (PackageUsage $usage): array => [(string) $usage->service_id => (int) $usage->getAttribute('sessions')]);
+
+        $balances = $package->serviceBalances->keyBy('service_id');
+        $serviceIds = collect(array_keys($allocations))
+            ->merge($activeUsageByService->keys())
+            ->merge($balances->keys())
+            ->unique()
+            ->values();
+        $services = [];
+        $hasMismatch = (int) $package->remaining_sessions !== (int) $package->total_sessions - (int) $activeUsageByService->sum();
+
+        foreach ($serviceIds as $serviceId) {
+            if (! isset($allocations[$serviceId])) {
+                $inconclusive = true;
+
+                continue;
+            }
+
+            $allocation = $allocations[$serviceId];
+            $usageQuantity = (int) ($activeUsageByService[$serviceId] ?? 0);
+            $expectedRemaining = $allocation['quantity'] - $usageQuantity;
+            $balance = $balances->get($serviceId);
+            $recordedRemaining = $balance === null ? null : (int) $balance->remaining_quantity;
+
+            if ($balance === null || (int) $balance->allocated_quantity !== $allocation['quantity']
+                || $expectedRemaining < 0 || $recordedRemaining < 0 || $recordedRemaining > (int) $balance->allocated_quantity) {
+                $inconclusive = true;
+            }
+
+            $delta = $recordedRemaining === null ? null : $expectedRemaining - $recordedRemaining;
+            if ($delta !== 0) {
+                $hasMismatch = true;
+            }
+
+            $services[] = [
+                'name' => $balance?->service?->name ?? $allocation['name'],
+                'allocated' => $allocation['quantity'],
+                'consumed' => $usageQuantity,
+                'expected_remaining' => $expectedRemaining,
+                'recorded_remaining' => $recordedRemaining,
+                'delta' => $delta,
+            ];
+        }
+
+        usort($services, static fn (array $left, array $right): int => strcasecmp($left['name'], $right['name']));
+
+        if ($inconclusive) {
+            return [
+                'status' => 'inconclusive',
+                'message' => 'Não foi possível confirmar todos os saldos por serviço com os dados registrados.',
+                'next_step' => 'Confira os registros do pacote e os serviços incluídos antes de ajustar ou consumir sessões.',
+                'services' => $services,
+            ];
+        }
+
+        if ($hasMismatch) {
+            return [
+                'status' => 'review',
+                'message' => 'O saldo de um ou mais serviços não bate com o consumo registrado. A soma geral pode estar correta mesmo com sessões distribuídas no serviço errado.',
+                'next_step' => 'Confira os consumos por serviço abaixo e evite novas baixas até revisar a divergência.',
+                'services' => $services,
+            ];
+        }
+
+        return [
+            'status' => 'consistent',
+            'message' => 'Os saldos por serviço conferem com o pacote e os consumos registrados.',
+            'next_step' => 'Nenhuma revisão de saldo é necessária.',
+            'services' => $services,
+        ];
     }
 
     public function activeForCustomer(Request $request, TenantContext $context, Customer $customer): JsonResponse

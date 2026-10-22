@@ -240,6 +240,7 @@ final class AdjustSale extends OperationalAction
                         $package->status === 'cancelled'
                             ? 'cancelled'
                             : ($package->expires_at?->endOfDay()->isPast() === true ? 'expired' : 'active'),
+                        $usage->getKey(),
                     );
                 } catch (ConflictHttpException $exception) {
                     throw ValidationException::withMessages([

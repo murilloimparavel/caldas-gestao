@@ -504,7 +504,7 @@ it('restores consumed package balance when its sale is adjusted without reactiva
         'total_sessions' => 1,
         'expires_at' => now()->subDay()->toDateString(),
         'status' => 'expired',
-        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name]],
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 1]],
     ]);
     $serviceBalance = CustomerPackageService::query()->create([
         'tenant_id' => $tenant->getKey(),
@@ -700,16 +700,30 @@ it('scopes package idempotency to the customer package route resource', function
 
 it('reverses a usage once, restores the balance, and records governance events', function (): void {
     [$owner, $tenant, $unit] = packageIntegrityWorkspace();
+    $service = Service::factory()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+    ]);
     $package = CustomerPackage::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
         'total_sessions' => 2,
         'remaining_sessions' => 1,
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 2]],
+    ]);
+    CustomerPackageService::query()->create([
+        'tenant_id' => $tenant->getKey(),
+        'unit_id' => $unit->getKey(),
+        'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
+        'allocated_quantity' => 2,
+        'remaining_quantity' => 1,
     ]);
     $usage = PackageUsage::factory()->create([
         'tenant_id' => $tenant->getKey(),
         'unit_id' => $unit->getKey(),
         'customer_package_id' => $package->getKey(),
+        'service_id' => $service->getKey(),
         'sessions_consumed' => 1,
         'user_id' => $owner->getKey(),
     ]);
@@ -741,6 +755,7 @@ it('locks consumed package reservations before usage and package during reversal
         'unit_id' => $unit->getKey(),
         'total_sessions' => 2,
         'remaining_sessions' => 1,
+        'eligible_services_snapshot' => [['id' => $service->getKey(), 'name' => $service->name, 'quantity' => 2]],
     ]);
     CustomerPackageService::query()->create([
         'tenant_id' => $tenant->getKey(),
