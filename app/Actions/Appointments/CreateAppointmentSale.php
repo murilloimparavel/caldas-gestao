@@ -134,11 +134,12 @@ final class CreateAppointmentSale extends OperationalAction
 
             foreach ($appointmentItems as $appointmentItem) {
                 $customerPackage = null;
-                if ($lockedAppointment->customer_id !== null) {
+                $customerId = $lockedAppointment->getRawOriginal('customer_id');
+                if (is_string($customerId) && $customerId !== '') {
                     $customerPackage = $this->resolveCoverage->resolve(
                         $context->tenant->getKey(),
                         $unit->getKey(),
-                        $lockedAppointment->customer_id,
+                        $customerId,
                         $appointmentItem->service_id,
                         $allocatedPackageCounts,
                     );

@@ -521,7 +521,10 @@ final class AuditCustomerPackageBalances extends Command
         return is_array($snapshot) ? array_values($snapshot) : [];
     }
 
-    /** @param list<array<string,mixed>> $reports */
+    /**
+     * @param  list<array<string,mixed>>  $reports
+     * @param  array{packages:int,repairable:int,divergent:int,ambiguous:int}|null  $totals
+     */
     private function renderReports(array $reports, string $format, bool $applyRequested, bool $changed, ?array $totals = null, bool $summaryOnly = false): void
     {
         $totals ??= [

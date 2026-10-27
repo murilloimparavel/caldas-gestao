@@ -12,7 +12,7 @@ executável ainda segue as convenções Laravel em `app/Actions`, `app/Http`,
 As versões abaixo refletem as restrições do `composer.json`/`package.json` e o
 lockfile deste repositório:
 
-- PHP `^8.3` (CI usa PHP 8.5) e Laravel `^13.17` (lock atual 13.26.1);
+- PHP `^8.5.12` (CI usa PHP 8.5.12) e Laravel `^13.17` (lock atual 13.26.1);
 - React `^19.2` + TypeScript `^5.7` + Vite `^8.0`;
 - Inertia Laravel/React `^3.0`;
 - Tailwind CSS `^4.0`;
@@ -24,7 +24,7 @@ lockfile deste repositório:
 
 ## Requisitos
 
-- PHP 8.3 ou superior, com a extensão PDO SQLite habilitada;
+- PHP 8.5.12 ou superior, com a extensão PDO SQLite habilitada;
 - Composer 2;
 - Node.js 22 e npm;
 - Git.

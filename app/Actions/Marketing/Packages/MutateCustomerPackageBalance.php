@@ -214,13 +214,13 @@ final class MutateCustomerPackageBalance
      */
     private function loadPackageUsages(string $tenantId, string $unitId, string $packageId): array
     {
-        return PackageUsage::query()
+        return array_values(PackageUsage::query()
             ->where('tenant_id', $tenantId)
             ->where('unit_id', $unitId)
             ->where('customer_package_id', $packageId)
             ->orderBy('id')
             ->get()
-            ->all();
+            ->all());
     }
 
     /**
