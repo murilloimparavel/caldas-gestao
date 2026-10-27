@@ -501,7 +501,11 @@ function AppointmentForm({
 
     // Calcula cobertura de pacotes para os serviços selecionados
     const packageCoverage = useMemo(() => {
-        if (!selectedCustomer || selectedServices.length === 0 || activePackages.length === 0) {
+        if (
+            !selectedCustomer ||
+            selectedServices.length === 0 ||
+            activePackages.length === 0
+        ) {
             return {
                 coveredServiceIds: new Set<string>(),
                 coveredServicesCount: 0,
@@ -1048,63 +1052,113 @@ function AppointmentForm({
                                             handleServiceChange(value, option)
                                         }
                                         keepOpenOnSelect
-                                        isOptionSelected={(id) => selectedServices.includes(id)}
+                                        isOptionSelected={(id) =>
+                                            selectedServices.includes(id)
+                                        }
                                         submitValue={false}
                                         disabled={isCancelled || isCompleted}
                                     />
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {selectedServices.map((serviceId) => {
-                                            const service = serviceList.find((item) => item.id === serviceId) ?? appointment?.items?.find((item) => item.service_id === serviceId)?.service;
-                                            const isCovered = packageCoverage.coveredServiceIds.has(serviceId);
+                                            const service =
+                                                serviceList.find(
+                                                    (item) =>
+                                                        item.id === serviceId,
+                                                ) ??
+                                                appointment?.items?.find(
+                                                    (item) =>
+                                                        item.service_id ===
+                                                        serviceId,
+                                                )?.service;
+                                            const isCovered =
+                                                packageCoverage.coveredServiceIds.has(
+                                                    serviceId,
+                                                );
 
                                             return (
-                                                <span key={serviceId} className={cn(
-                                                    'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
-                                                    isCovered ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200' : 'bg-muted'
-                                                )}>
-                                                    <span>{service?.name ?? 'Serviço'}</span>
+                                                <span
+                                                    key={serviceId}
+                                                    className={cn(
+                                                        'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
+                                                        isCovered
+                                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
+                                                            : 'bg-muted',
+                                                    )}
+                                                >
+                                                    <span>
+                                                        {service?.name ??
+                                                            'Serviço'}
+                                                    </span>
                                                     {isCovered && (
                                                         <Badge
                                                             variant="secondary"
                                                             className="border-emerald-200 bg-emerald-100/80 px-1.5 py-0 text-3xs font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
                                                         >
-                                                            Coberto por pacote (R$ 0,00)
+                                                            Coberto por pacote
+                                                            (R$ 0,00)
                                                         </Badge>
                                                     )}
-                                                    {!isCancelled && !isCompleted && (
-                                                        <button
-                                                            type="button"
-                                                            aria-label={`Remover ${service?.name ?? 'serviço'}`}
-                                                            onClick={() => removeSelectedService(serviceId)}
-                                                            className="font-bold text-muted-foreground hover:text-foreground"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    )}
+                                                    {!isCancelled &&
+                                                        !isCompleted && (
+                                                            <button
+                                                                type="button"
+                                                                aria-label={`Remover ${service?.name ?? 'serviço'}`}
+                                                                onClick={() =>
+                                                                    removeSelectedService(
+                                                                        serviceId,
+                                                                    )
+                                                                }
+                                                                className="font-bold text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        )}
                                                 </span>
                                             );
                                         })}
                                     </div>
-                                    {selectedServices.length === 0 && !isCancelled && !isCompleted && (
-                                        <p className="mt-1 text-xs text-destructive">Selecione pelo menos um serviço.</p>
-                                    )}
+                                    {selectedServices.length === 0 &&
+                                        !isCancelled &&
+                                        !isCompleted && (
+                                            <p className="mt-1 text-xs text-destructive">
+                                                Selecione pelo menos um serviço.
+                                            </p>
+                                        )}
                                     <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
-                                        <span>Duração total: {selectedDuration} min</span>
-                                        {packageCoverage.coveredServicesCount > 0 && (
-                                             <span className="font-medium text-emerald-700 dark:text-emerald-400">
-                                                 {packageCoverage.coveredServicesCount} {packageCoverage.coveredServicesCount === 1 ? 'serviço coberto' : 'serviços cobertos'} por pacote
-                                             </span>
+                                        <span>
+                                            Duração total: {selectedDuration}{' '}
+                                            min
+                                        </span>
+                                        {packageCoverage.coveredServicesCount >
+                                            0 && (
+                                            <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                                                {
+                                                    packageCoverage.coveredServicesCount
+                                                }{' '}
+                                                {packageCoverage.coveredServicesCount ===
+                                                1
+                                                    ? 'serviço coberto'
+                                                    : 'serviços cobertos'}{' '}
+                                                por pacote
+                                            </span>
                                         )}
                                     </div>
-                                    {packageCoverage.coveredServicesCount > 0 && (
+                                    {packageCoverage.coveredServicesCount >
+                                        0 && (
                                         <div className="mt-2.5 flex items-start gap-2.5 rounded-lg border border-emerald-300 bg-emerald-50/80 p-2.5 text-xs text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
                                             <PackageIcon className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                             <div>
                                                 <p className="font-semibold">
-                                                    Coberto por pacote - R$ 0,00 na comanda
+                                                    Coberto por pacote - R$ 0,00
+                                                    na comanda
                                                 </p>
                                                 <p className="mt-0.5 text-2xs text-emerald-800/90 dark:text-emerald-300/80">
-                                                    {packageCoverage.coveredServiceDetails.map((detail) => `${detail.serviceName} (${detail.packageName})`).join(', ')}
+                                                    {packageCoverage.coveredServiceDetails
+                                                        .map(
+                                                            (detail) =>
+                                                                `${detail.serviceName} (${detail.packageName})`,
+                                                        )
+                                                        .join(', ')}
                                                 </p>
                                             </div>
                                         </div>
@@ -1166,23 +1220,41 @@ function AppointmentForm({
                                         required
                                     />
                                 </FormField>
-                                <FormField label="Duração total" name="duration_minutes" error={errors.duration_minutes}>
+                                <FormField
+                                    label="Duração total"
+                                    name="duration_minutes"
+                                    error={errors.duration_minutes}
+                                >
                                     <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground">
                                         {selectedDuration} min
                                     </div>
                                     {!isCancelled && !isCompleted && (
-                                        <input type="hidden" name="duration_minutes" value={selectedDuration} />
+                                        <input
+                                            type="hidden"
+                                            name="duration_minutes"
+                                            value={selectedDuration}
+                                        />
                                     )}
                                     {estimatedEndTime && (
                                         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                                             <Clock className="size-3.5 shrink-0 text-primary" />
-                                            <span>Término estimado às {estimatedEndTime}</span>
+                                            <span>
+                                                Término estimado às{' '}
+                                                {estimatedEndTime}
+                                            </span>
                                         </p>
                                     )}
                                 </FormField>
-                                {!isCancelled && !isCompleted && selectedServices.map((serviceId) => (
-                                    <input key={serviceId} type="hidden" name="service_ids[]" value={serviceId} />
-                                ))}
+                                {!isCancelled &&
+                                    !isCompleted &&
+                                    selectedServices.map((serviceId) => (
+                                        <input
+                                            key={serviceId}
+                                            type="hidden"
+                                            name="service_ids[]"
+                                            value={serviceId}
+                                        />
+                                    ))}
                                 <FormField
                                     label="Status"
                                     name="status"
@@ -1591,7 +1663,7 @@ function AppointmentSummaryHeader({
 
             {/* Serviço & Valor + Data & Horário */}
             <div className="grid grid-cols-1 gap-2 border-t border-border/60 pt-2.5 text-xs sm:grid-cols-2">
-                <div className="flex flex-wrap min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="truncate font-semibold text-foreground">
                         {serviceNames.join(' + ') || 'Serviço'}
                     </span>
