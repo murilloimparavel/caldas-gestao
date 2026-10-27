@@ -213,7 +213,7 @@ final class CustomerPackageController extends Controller
             ->get()
             ->map(fn (PackageUsage $usage): array => [
                 'id' => $usage->service_id,
-                'name' => $usage->service?->name ?? 'Serviço não informado',
+                'name' => data_get($usage->service, 'name', 'Serviço não informado'),
                 'sessions' => (int) $usage->getAttribute('sessions'),
                 'consumed_sessions' => (int) $usage->getAttribute('consumed_sessions'),
                 'reversed_sessions' => (int) $usage->getAttribute('reversed_sessions'),
@@ -249,7 +249,7 @@ final class CustomerPackageController extends Controller
             ->withQueryString()
             ->through(static function (PackageUsage $usage): array {
                 $appointment = $usage->sale?->appointmentLink?->appointment;
-                $closingSessions = ($usage->sale?->closingSessions ?? collect())
+                $closingSessions = ($usage->sale === null ? collect() : $usage->sale->closingSessions)
                     ->where('status', 'completed')
                     ->sortByDesc('created_at')
                     ->values();
@@ -291,8 +291,8 @@ final class CustomerPackageController extends Controller
                             'label' => 'Agendamento',
                             'appointment' => [
                                 'id' => $appointment->getKey(),
-                                'starts_at' => $appointment->starts_at?->toIso8601String(),
-                                'ends_at' => $appointment->ends_at?->toIso8601String(),
+                                'starts_at' => $appointment->starts_at->toIso8601String(),
+                                'ends_at' => $appointment->ends_at->toIso8601String(),
                                 'status' => $appointment->status,
                                 'professional' => $appointment->professional === null ? null : [
                                     'id' => $appointment->professional->getKey(),
@@ -353,7 +353,7 @@ final class CustomerPackageController extends Controller
         return Inertia::render('customer-packages/history', [
             'customerPackage' => [
                 'id' => $customer_package->getKey(),
-                'name' => $customer_package->name_snapshot ?: ($customer_package->packageTemplate?->name ?? 'Pacote de serviços'),
+                'name' => $customer_package->name_snapshot ?: data_get($customer_package->packageTemplate, 'name', 'Pacote de serviços'),
                 'status' => $customer_package->status,
                 'total_sessions' => $customer_package->total_sessions,
                 'remaining_sessions' => $customer_package->remaining_sessions,
@@ -443,7 +443,10 @@ final class CustomerPackageController extends Controller
             $usageQuantity = (int) ($activeUsageByService[$serviceId] ?? 0);
             $expectedRemaining = $allocation['quantity'] - $usageQuantity;
             $balance = $balances->get($serviceId);
-            $recordedRemaining = $balance === null ? null : (int) $balance->remaining_quantity;
+            $rawRecordedRemaining = $balance?->getRawOriginal('remaining_quantity');
+            $recordedRemaining = $balance === null || ! is_numeric($rawRecordedRemaining)
+                ? null
+                : (int) $rawRecordedRemaining;
 
             if ($balance === null || (int) $balance->allocated_quantity !== $allocation['quantity']
                 || $expectedRemaining < 0 || $recordedRemaining < 0 || $recordedRemaining > (int) $balance->allocated_quantity) {
@@ -456,7 +459,7 @@ final class CustomerPackageController extends Controller
             }
 
             $services[] = [
-                'name' => $balance?->service?->name ?? $allocation['name'],
+                'name' => data_get($balance?->service, 'name', $allocation['name']),
                 'allocated' => $allocation['quantity'],
                 'consumed' => $usageQuantity,
                 'expected_remaining' => $expectedRemaining,
@@ -569,7 +572,7 @@ final class CustomerPackageController extends Controller
                 if ($availableForService > 0) {
                     $services[] = [
                         'service_id' => $serviceId,
-                        'service_name' => $balance->service?->name ?? 'Serviço',
+                        'service_name' => data_get($balance->service, 'name', 'Serviço'),
                         'remaining_quantity' => $balance->remaining_quantity,
                         'reserved_quantity' => $reservedServiceQuantity,
                         'available_quantity' => $availableForService,
@@ -583,7 +586,7 @@ final class CustomerPackageController extends Controller
 
             $activePackages[] = [
                 'id' => $package->getKey(),
-                'name' => $package->name_snapshot ?: ($package->packageTemplate?->name ?? 'Pacote'),
+                'name' => $package->name_snapshot ?: data_get($package->packageTemplate, 'name', 'Pacote'),
                 'total_sessions' => $package->total_sessions,
                 'remaining_sessions' => $package->remaining_sessions,
                 'reserved_sessions' => $reservedPackageQuantity,

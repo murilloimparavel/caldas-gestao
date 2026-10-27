@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|Carbon|null $reversed_at
  * @property string|null $reversed_by_user_id
  * @property string|null $reversal_reason
+ * @property-read User|null $reversedByUser
  */
 #[Fillable([
     'tenant_id',
@@ -97,5 +98,11 @@ class PackageUsage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function reversedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reversed_by_user_id');
     }
 }

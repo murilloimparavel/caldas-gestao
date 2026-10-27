@@ -17,7 +17,7 @@ final class ResolveCustomerPackageCoverage
     ) {}
 
     /**
-     * @param  array<string, array{total?: int, services?: array<string, int>}>  $allocatedCounts  Contador em memória de sessões alocadas no mesmo agendamento [customer_package_id => ['total' => int, 'services' => [service_id => int]]]
+     * @param  array<string, array{total: int, services: array<string, int>}>  $allocatedCounts  Contador em memória de sessões alocadas no mesmo agendamento [customer_package_id => ['total' => int, 'services' => [service_id => int]]]
      */
     public function resolve(string $tenantId, string $unitId, string $customerId, string $serviceId, array &$allocatedCounts = []): ?CustomerPackage
     {
@@ -84,13 +84,36 @@ final class ResolveCustomerPackageCoverage
             $availableForPackage = max(0, $package->remaining_sessions - $reservedPackageQuantity - $alreadyAllocatedPackage);
 
             if ($availableForService > 0 && $availableForPackage > 0) {
-                $allocatedCounts[$package->getKey()]['total'] = $alreadyAllocatedPackage + 1;
-                $allocatedCounts[$package->getKey()]['services'][$serviceId] = $alreadyAllocatedService + 1;
+                $packageKey = $package->getKey();
+                $allocatedCounts = $this->recordAllocation(
+                    $allocatedCounts,
+                    $packageKey,
+                    $serviceId,
+                    $alreadyAllocatedPackage + 1,
+                    $alreadyAllocatedService + 1,
+                );
 
                 return $package;
             }
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, array{total: int, services: array<string, int>}>  $allocatedCounts
+     * @return array<string, array{total: int, services: array<string, int>}>
+     */
+    private function recordAllocation(array $allocatedCounts, string $packageKey, string $serviceId, int $total, int $serviceTotal): array
+    {
+        $allocatedCounts[$packageKey] = [
+            'total' => $total,
+            'services' => [
+                ...($allocatedCounts[$packageKey]['services'] ?? []),
+                $serviceId => $serviceTotal,
+            ],
+        ];
+
+        return $allocatedCounts;
     }
 }
