@@ -462,16 +462,14 @@ function AppointmentForm({
             }>;
         }>
     >([]);
-    const [loadingPackages, setLoadingPackages] = useState(false);
-
     useEffect(() => {
         if (!selectedCustomer) {
-            setActivePackages([]);
+            queueMicrotask(() => setActivePackages([]));
+
             return;
         }
 
         const controller = new AbortController();
-        setLoadingPackages(true);
 
         fetch(activePackagesRoute.url(selectedCustomer), {
             signal: controller.signal,
@@ -484,6 +482,7 @@ function AppointmentForm({
                 if (!res.ok) {
                     throw new Error('Falha ao buscar pacotes');
                 }
+
                 return res.json();
             })
             .then((json) => {
@@ -493,9 +492,6 @@ function AppointmentForm({
                 if (err.name !== 'AbortError') {
                     setActivePackages([]);
                 }
-            })
-            .finally(() => {
-                setLoadingPackages(false);
             });
 
         return () => {
@@ -1060,6 +1056,7 @@ function AppointmentForm({
                                         {selectedServices.map((serviceId) => {
                                             const service = serviceList.find((item) => item.id === serviceId) ?? appointment?.items?.find((item) => item.service_id === serviceId)?.service;
                                             const isCovered = packageCoverage.coveredServiceIds.has(serviceId);
+
                                             return (
                                                 <span key={serviceId} className={cn(
                                                     'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
