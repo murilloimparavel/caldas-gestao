@@ -2098,7 +2098,7 @@ function AtelierBarberView({
 
     return (
         <main
-            className="mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30 md:max-w-6xl md:bg-[#0e0e0e] md:pb-32"
+            className={`mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30 md:max-w-6xl md:bg-[#0e0e0e] md:pb-32 ${activeStep === 1 && !submitted ? 'lg:pb-10' : ''}`}
             data-booking-font={appearance.font_style}
             style={appearanceStyle(appearance)}
         >
@@ -2224,10 +2224,10 @@ function AtelierBarberView({
                     <form
                         onSubmit={onSubmit}
                         noValidate
-                        className="mx-auto space-y-5 px-4 md:max-w-5xl md:px-0"
+                        className={`mx-auto space-y-5 px-4 md:max-w-5xl md:px-0 ${activeStep === 1 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8 lg:space-y-0' : ''}`}
                     >
                         {activeStep === 1 ? (
-                            <section className="overflow-hidden bg-[#131313]">
+                            <section className="overflow-hidden bg-[#131313] lg:min-w-0">
                                 {unit.cover_image_url || unit.cover_url ? (
                                     <div className="relative h-32 overflow-hidden">
                                         <img
@@ -2280,7 +2280,7 @@ function AtelierBarberView({
                                             Seleção múltipla
                                         </AtelierSectionHeading>
                                     </div>
-                                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                    <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-1">
                                         {filteredServices.map((service) => (
                                             <button
                                                 type="button"
@@ -2880,44 +2880,92 @@ function AtelierBarberView({
                                 </div>
                             </section>
                         ) : null}
-                        {activeStep === 1 ? (
-                            <AtelierSelectionSummary
-                                count={selectedServices.length}
-                                totalCents={selectedTotalCents}
-                                totalMinutes={selectedTotalMinutes}
-                                formatMoney={money}
-                            />
-                        ) : null}
-                        <button
-                            type="submit"
-                            onClick={(event) => {
-                                if (activeStep < 4) {
-                                    event.preventDefault();
-                                    advanceStep();
-                                }
-                            }}
-                            disabled={
+                        <div
+                            className={
                                 activeStep === 1
-                                    ? !serviceId
-                                    : activeStep === 2
-                                      ? !professionalId
-                                      : activeStep === 3
-                                        ? !slot
-                                        : !customerName ||
-                                          !customerPhone ||
-                                          processing
+                                    ? 'lg:sticky lg:top-24 lg:space-y-5 lg:rounded-2xl lg:border lg:border-[#4d4635]/30 lg:bg-[#171612] lg:p-6'
+                                    : undefined
                             }
-                            className="fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-[390px] items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40 md:max-w-5xl md:rounded-t-2xl md:border-x md:px-10"
-                            style={{
-                                backgroundColor: 'var(--booking-primary)',
-                            }}
                         >
-                            {processing ? 'Confirmando…' : stepCta}
-                            <ChevronRight className="size-4" />
-                        </button>
+                            {activeStep === 1 ? (
+                                <div className="hidden lg:block">
+                                    <h2 className="font-['Bodoni_Moda'] text-2xl text-[#fdfbf7]">
+                                        Seu agendamento
+                                    </h2>
+                                    {selectedServices.length ? (
+                                        <ul className="mt-5 max-h-[40dvh] space-y-3 overflow-y-auto">
+                                            {selectedServices.map((service) => (
+                                                <li
+                                                    key={service.id}
+                                                    className="flex items-start justify-between gap-3 font-['Manrope'] text-xs text-[#d0c5af]"
+                                                >
+                                                    <span className="min-w-0 break-words">
+                                                        {service.name}
+                                                    </span>
+                                                    <span className="shrink-0 text-[#ffe9b0]">
+                                                        {money(
+                                                            service.price_cents,
+                                                        )}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="mt-3 font-['Manrope'] text-sm leading-6 text-[#a9a39a]">
+                                            Escolha os serviços para começar sua
+                                            reserva.
+                                        </p>
+                                    )}
+                                </div>
+                            ) : null}
+                            {activeStep === 1 ? (
+                                <AtelierSelectionSummary
+                                    desktopInline
+                                    count={selectedServices.length}
+                                    totalCents={selectedTotalCents}
+                                    totalMinutes={selectedTotalMinutes}
+                                    formatMoney={money}
+                                />
+                            ) : null}
+                            <button
+                                type="submit"
+                                onClick={(event) => {
+                                    if (activeStep < 4) {
+                                        event.preventDefault();
+                                        advanceStep();
+                                    }
+                                }}
+                                disabled={
+                                    activeStep === 1
+                                        ? !serviceId
+                                        : activeStep === 2
+                                          ? !professionalId
+                                          : activeStep === 3
+                                            ? !slot
+                                            : !customerName ||
+                                              !customerPhone ||
+                                              processing
+                                }
+                                className={`fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-[390px] items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40 md:max-w-5xl md:rounded-t-2xl md:border-x md:px-10 ${activeStep === 1 ? 'lg:static lg:z-auto lg:min-h-12 lg:max-w-none lg:rounded-xl lg:border-0 lg:px-4 lg:shadow-none' : ''}`}
+                                style={{
+                                    backgroundColor: 'var(--booking-primary)',
+                                }}
+                            >
+                                {processing ? 'Confirmando…' : stepCta}
+                                <ChevronRight className="size-4" />
+                            </button>
+                            {activeStep === 1 ? (
+                                <p className="hidden text-center font-['DM_Sans'] text-[11px] leading-5 text-[#a9a39a] lg:block">
+                                    Seus dados são usados somente para organizar
+                                    este atendimento.
+                                </p>
+                            ) : null}
+                        </div>
                     </form>
                 )}
-                <footer className="mt-10 text-center font-['DM_Sans'] text-[11px] text-[#6f6a61]">
+                <footer
+                    className={`mt-10 text-center font-['DM_Sans'] text-[11px] text-[#6f6a61] ${activeStep === 1 && !submitted ? 'lg:hidden' : ''}`}
+                >
                     Seus dados são usados somente para organizar este
                     atendimento.
                 </footer>
