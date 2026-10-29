@@ -139,6 +139,25 @@ class RunnerContracts(unittest.TestCase):
         result = json.loads(next((self.runner.state / 'incidents').glob('*/result.json')).read_text())
         self.assertEqual(result['execution_boundary'], 'external-docker-isolation')
 
+    def test_checkout_fetches_exact_sha_and_pins_a_cloneable_ref(self):
+        source = self.runner.state / 'fetch-fixture'
+        source.mkdir()
+        def git(*arguments):
+            return subprocess.run(['git', '-C', str(source), *arguments], text=True, capture_output=True, check=True).stdout.strip()
+        git('init', '--initial-branch=production')
+        (source / 'example.php').write_text('exact deployed source')
+        git('add', '.')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'fixture')
+        release = git('rev-parse', 'HEAD')
+        workspace = self.runner.state / 'fetched-workspace'
+        with patch.object(runner_module, 'REPOSITORY', source.as_uri()), patch.object(runner_module.os, 'chown'):
+            self.runner.checkout(release, workspace)
+        self.assertEqual((workspace / 'example.php').read_text(), 'exact deployed source')
+        actual = subprocess.run(['git', '-C', str(workspace), 'rev-parse', 'HEAD'], text=True, capture_output=True, check=True)
+        self.assertEqual(actual.stdout.strip(), release)
+        remotes = subprocess.run(['git', '-C', str(workspace), 'remote'], text=True, capture_output=True, check=True)
+        self.assertEqual(remotes.stdout.strip(), '')
+
     def test_exports_source_patch_using_trusted_git_and_preserves_excluded_baseline(self):
         source = self.runner.state / 'fixture-repository'
         source.mkdir()

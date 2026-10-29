@@ -309,6 +309,8 @@ class Runner:
         fetched = self.run(['git', '-C', str(mirror), 'rev-parse', 'FETCH_HEAD']).stdout.strip()
         if fetched != release:
             raise RunnerError('Fetched release differs from incident release')
+        # FETCH_HEAD alone is not advertised to clone; pin the verified commit explicitly.
+        self.run(['git', '-C', str(mirror), 'update-ref', 'refs/heads/incident-source', release])
         self.run(['git', 'clone', '--no-hardlinks', '--no-checkout', str(mirror), str(workspace)], timeout=180)
         self.run(['git', '-C', str(workspace), 'checkout', '--detach', release], timeout=60)
         self.run(['git', '-C', str(workspace), 'remote', 'remove', 'origin'])
