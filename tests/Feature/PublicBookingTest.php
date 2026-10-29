@@ -531,7 +531,8 @@ it('creates one appointment with multiple compatible services', function () {
 
     parse_str((string) parse_url($response->json('whatsapp_url'), PHP_URL_QUERY), $whatsappQuery);
     expect($response->json('whatsapp_url'))->toStartWith('https://wa.me/5511988880000?text=')
-        ->and($whatsappQuery['text'])->toContain('Profissional: João')
+        ->and($whatsappQuery['text'])->toContain('Cliente: Multi Service')
+        ->toContain('Profissional: João')
         ->toContain('Data e horário: '.$date->locale('pt_BR')->translatedFormat('l, d/m/Y \\à\\s 09:00').' ('.$unit->timezone.')')
         ->toContain($service->name)
         ->toContain($secondService->name)
@@ -600,7 +601,8 @@ it('returns a pending confirmation to delinquent customers without queuing Googl
         ->assertJsonPath('confirmation.message', 'Seu pedido de agendamento foi recebido. A barbearia ainda precisa confirmar o horário; aguarde nosso retorno.');
     parse_str((string) parse_url($first->json('whatsapp_url'), PHP_URL_QUERY), $whatsappQuery);
     expect($first->json('whatsapp_url'))->toStartWith('https://wa.me/5511977770000?text=')
-        ->and($whatsappQuery['text'])->toContain('Profissional: Rafael')
+        ->and($whatsappQuery['text'])->toContain('Cliente: Pending Confirmation')
+        ->toContain('Profissional: Rafael')
         ->toContain('ainda precisa confirmar o horário');
     Queue::assertNotPushed(SyncGoogleCalendarAppointment::class);
 
@@ -817,3 +819,86 @@ it('uses Carbon weekday keys for public hours with Monday enabled and Sunday dis
     expect($mondayAvailability->json('slots'))->not->toBeEmpty()
         ->and($sundayAvailability->json('slots'))->toBeEmpty();
 });
+
+it('intersects split public periods with professional availability without offering lunch', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $service->update(['duration_minutes' => 30]);
+    AvailabilityRule::query()->where('professional_id', $professional->getKey())->update(['ends_at' => '20:00:00']);
+    configurePublicBookingHours($tenant, $unit, $date);
+    OnlineBookingSetting::query()->where('unit_id', $unit->getKey())->update(['public_hours' => [
+        (string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '19:00', 'display_periods' => [
+            ['starts_at' => '09:00', 'ends_at' => '12:00'], ['starts_at' => '14:00', 'ends_at' => '19:00'],
+        ]],
+    ]]);
+    $response = $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString()]))->assertSuccessful();
+    $starts = collect($response->json('slots'))->map(fn (array $slot): string => CarbonImmutable::parse($slot['starts_at'])->setTimezone($unit->timezone)->format('H:i'));
+    expect($starts)->toContain('09:00', '11:30', '14:00', '18:30')
+        ->not->toContain('11:45', '12:00', '13:00', '13:45', '18:45', '19:00');
+});
+
+it('rejects direct bookings during lunch crossing a public period or off its grid', function (string $clock) {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $service->update(['duration_minutes' => 30]);
+    configurePublicBookingHours($tenant, $unit, $date);
+    OnlineBookingSetting::query()->where('unit_id', $unit->getKey())->update(['public_hours' => [
+        (string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '19:00', 'display_periods' => [
+            ['starts_at' => '09:00', 'ends_at' => '12:00'], ['starts_at' => '14:00', 'ends_at' => '19:00'],
+        ]],
+    ]]);
+    $this->withHeader('X-Idempotency-Key', 'split-'.Str::random(8))->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+        'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+        'starts_at' => CarbonImmutable::parse($date->toDateString().' '.$clock, $unit->timezone)->toIso8601String(),
+        'name' => 'Split Hours', 'phone' => '+55 11 96666-0000',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['starts_at']);
+    expect(Appointment::query()->count())->toBe(0);
+})->with(['12:00', '13:00', '11:45', '14:01', '18:45']);
+
+it('accepts public bookings entirely within morning and afternoon periods', function (int $hour) {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $service->update(['duration_minutes' => 30]);
+    configurePublicBookingHours($tenant, $unit, $date);
+    OnlineBookingSetting::query()->where('unit_id', $unit->getKey())->update(['public_hours' => [
+        (string) $date->dayOfWeek => ['enabled' => true, 'display_periods' => [
+            ['starts_at' => '09:00', 'ends_at' => '12:00'], ['starts_at' => '14:00', 'ends_at' => '19:00'],
+        ]],
+    ]]);
+    Queue::fake();
+    $this->withHeader('X-Idempotency-Key', 'valid-split-'.Str::random(8))->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+        'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+        'starts_at' => $date->setTime($hour, 0)->toIso8601String(), 'name' => 'Split Hours', 'phone' => '+55 11 96666-0000',
+    ])->assertCreated();
+    expect(Appointment::query()->count())->toBe(1);
+})->with([9, 14]);
+
+it('keeps Saturday lunch closed while preserving the professional morning limit', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $saturday = $date->next(Carbon::SATURDAY);
+    $service->update(['duration_minutes' => 30]);
+    AvailabilityRule::factory()->create([
+        'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'professional_id' => $professional->getKey(),
+        'weekday' => 6, 'starts_at' => '09:00:00', 'ends_at' => '13:00:00', 'timezone' => $unit->timezone,
+    ]);
+    configurePublicBookingHours($tenant, $unit, $saturday);
+    OnlineBookingSetting::query()->where('unit_id', $unit->getKey())->update(['public_hours' => [
+        '6' => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00', 'display_periods' => [
+            ['starts_at' => '09:00', 'ends_at' => '12:00'], ['starts_at' => '14:00', 'ends_at' => '18:00'],
+        ]],
+    ]]);
+    $response = $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $saturday->toDateString()]))->assertSuccessful();
+    $starts = collect($response->json('slots'))->map(fn (array $slot): string => CarbonImmutable::parse($slot['starts_at'])->setTimezone($unit->timezone)->format('H:i'));
+    expect($starts)->toContain('11:30')->not->toContain('11:45', '12:00', '12:30', '14:00');
+});
+
+it('fails closed for explicit empty or malformed public periods', function (mixed $periods) {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
+    OnlineBookingSetting::query()->where('unit_id', $unit->getKey())->update(['public_hours' => [
+        (string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00', 'display_periods' => $periods],
+    ]]);
+    $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(), 'date' => $date->toDateString()]))->assertSuccessful()->assertJsonPath('slots', []);
+    $this->withHeader('X-Idempotency-Key', 'bad-periods-'.Str::random(8))->postJson(route('public_booking.appointments.store', [$tenant, $unit]), [
+        'service_id' => $service->getKey(), 'professional_id' => $professional->getKey(),
+        'starts_at' => $date->setTime(9, 0)->toIso8601String(), 'name' => 'Malformed Hours', 'phone' => '+55 11 96666-0000',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['starts_at']);
+    expect(Appointment::query()->count())->toBe(0);
+})->with(['empty' => [[]], 'null' => [null], 'scalar' => ['09:00'], 'invalid clocks' => [[['starts_at' => '25:00', 'ends_at' => '26:00']]]]);

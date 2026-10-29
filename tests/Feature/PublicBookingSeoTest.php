@@ -71,3 +71,23 @@ it('supports legacy hours and falls back from blank SEO values', function (): vo
         ->and($meta['description'])->toBe('Agende seu horário em Roma.')
         ->and($meta['structured_data']['openingHoursSpecification'][0]['opens'])->toBe('09:00');
 });
+
+it('lists each valid display period without publishing lunch breaks or disabled days', function (): void {
+    $periods = [
+        ['starts_at' => '09:00', 'ends_at' => '12:00'],
+        ['starts_at' => '14:00', 'ends_at' => '18:00'],
+        ['starts_at' => '25:00', 'ends_at' => '26:00'],
+        ['starts_at' => '18:00', 'ends_at' => '09:00'],
+    ];
+    $meta = PublicBookingSeo::forUnit([
+        'name' => 'Roma',
+        'public_hours' => [
+            '1' => ['enabled' => true, 'starts_at' => '08:00', 'ends_at' => '19:00', 'display_periods' => $periods],
+            '2' => ['enabled' => false, 'display_periods' => $periods],
+            '3' => ['enabled' => true, 'starts_at' => '08:00', 'ends_at' => '19:00', 'display_periods' => []],
+        ],
+    ]);
+    expect($meta['structured_data']['openingHoursSpecification'])->toHaveCount(2)
+        ->and(array_column($meta['structured_data']['openingHoursSpecification'], 'opens'))->toBe(['09:00', '14:00'])
+        ->and(array_column($meta['structured_data']['openingHoursSpecification'], 'closes'))->toBe(['12:00', '18:00']);
+});

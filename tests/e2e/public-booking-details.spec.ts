@@ -230,6 +230,14 @@ test.describe('Public booking establishment details', () => {
                 (_match, opening: string, encoded: string, closing: string) => {
                     const payload = JSON.parse(encoded);
                     payload.props.unit.public_hours['0'].enabled = false;
+                    payload.props.unit.public_hours['0'].display_periods = [
+                        { starts_at: '08:00', ends_at: '12:00' },
+                    ];
+                    payload.props.unit.public_hours['1'].display_periods = [
+                        { starts_at: '09:00', ends_at: '12:00' },
+                        { starts_at: '14:00', ends_at: '18:00' },
+                        { starts_at: '25:00', ends_at: '26:00' },
+                    ];
 
                     return `${opening}${JSON.stringify(payload).replaceAll('<', '\\u003c')}${closing}`;
                 },
@@ -253,7 +261,18 @@ test.describe('Public booking establishment details', () => {
         ).toHaveAttribute('href', 'tel:+556434531234');
         await expect(
             page.getByRole('link', { name: 'WhatsApp', exact: true }),
-        ).toHaveAttribute('href', 'https://wa.me/5564999991234');
+        ).toHaveAttribute('href', /^https:\/\/wa.me\/5564999991234\?text=/);
+        const whatsappUrl = new URL(
+            (await page
+                .getByRole('link', { name: 'WhatsApp', exact: true })
+                .getAttribute('href'))!,
+        );
+        expect(whatsappUrl.searchParams.get('text')).toContain(
+            'Vim do agendamento online de',
+        );
+        expect(whatsappUrl.searchParams.get('text')).toContain(
+            'Poderia me ajudar',
+        );
 
         for (const [label, href] of [
             ['Instagram', 'https://www.instagram.com/romawear.e2e/'],
@@ -284,7 +303,7 @@ test.describe('Public booking establishment details', () => {
         ).toContainText('Fechado');
         await expect(
             page.getByText('Segunda-feira', { exact: true }).locator('..'),
-        ).toContainText('09:00 às 18:00');
+        ).toContainText('09:00 às 12:00 · 14:00 às 18:00');
         expect(
             await page.evaluate(
                 () => document.documentElement.scrollWidth <= window.innerWidth,
