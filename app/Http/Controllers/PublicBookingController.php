@@ -24,6 +24,7 @@ use App\Support\CalendarConflictException;
 use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
 use App\Support\PublicBookingConfirmation;
+use App\Support\PublicBookingHours;
 use App\Support\PublicBookingSeo;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
@@ -450,36 +451,36 @@ final class PublicBookingController extends Controller
         if ($from->lt($minimumStart)) {
             $from = $minimumStart->second(0);
         }
-        $publicWindow = $this->publicWindow($publicHours, $date->dayOfWeek);
-        if ($publicWindow === null) {
-            return response()->json(['date' => $date->toDateString(), 'timezone' => $timezone, 'slots' => []]);
-        }
-        $windowStart = CarbonImmutable::parse($date->toDateString().' '.$publicWindow['starts_at'], $timezone);
-        $windowEnd = CarbonImmutable::parse($date->toDateString().' '.$publicWindow['ends_at'], $timezone);
-        $from = $from->max($windowStart)->max($minimumStart);
-        $to = $to->min($windowEnd);
-        $secondsFromWindowStart = max(0, $from->getTimestamp() - $windowStart->getTimestamp());
-        $gridSteps = intdiv($secondsFromWindowStart + 899, 900);
-        $cursor = $windowStart->addMinutes($gridSteps * 15);
+        $periods = PublicBookingHours::periods($publicHours[(string) $date->dayOfWeek] ?? null);
         $slots = [];
-
-        for (; $cursor->addMinutes($duration)->lte($to); $cursor = $cursor->addMinutes(15)) {
-            try {
-                $this->availability->assertAvailable(
-                    (string) $tenant->getKey(),
-                    (string) $unit->getKey(),
-                    (string) $professional->getKey(),
-                    $cursor,
-                    $cursor->addMinutes($duration),
-                );
-                $slots[] = [
-                    'starts_at' => $cursor->toIso8601String(),
-                    'ends_at' => $cursor->addMinutes($duration)->toIso8601String(),
-                ];
-            } catch (CalendarConflictException) {
-                continue;
+        foreach ($periods as $period) {
+            $windowStart = CarbonImmutable::parse($date->toDateString().' '.$period['starts_at'], $timezone);
+            $windowEnd = CarbonImmutable::parse($date->toDateString().' '.$period['ends_at'], $timezone);
+            $periodFrom = $from->max($windowStart)->max($minimumStart);
+            $periodTo = $to->min($windowEnd);
+            $secondsFromWindowStart = max(0, $periodFrom->getTimestamp() - $windowStart->getTimestamp());
+            $gridSteps = intdiv($secondsFromWindowStart + 899, 900);
+            $cursor = $windowStart->addMinutes($gridSteps * 15);
+            for (; $cursor->addMinutes($duration)->lte($periodTo); $cursor = $cursor->addMinutes(15)) {
+                try {
+                    $this->availability->assertAvailable(
+                        (string) $tenant->getKey(),
+                        (string) $unit->getKey(),
+                        (string) $professional->getKey(),
+                        $cursor,
+                        $cursor->addMinutes($duration),
+                    );
+                    $slots[$cursor->getTimestamp()] = [
+                        'starts_at' => $cursor->toIso8601String(),
+                        'ends_at' => $cursor->addMinutes($duration)->toIso8601String(),
+                    ];
+                } catch (CalendarConflictException) {
+                    continue;
+                }
             }
         }
+        ksort($slots);
+        $slots = array_values($slots);
 
         return response()->json(['date' => $date->toDateString(), 'timezone' => $timezone, 'slots' => $slots]);
     }
@@ -536,7 +537,7 @@ final class PublicBookingController extends Controller
 
     private function whatsappUrl(string $appointmentId, Unit $unit, string $confirmationStatus, string $confirmationMessage): ?string
     {
-        $appointment = Appointment::query()->with(['professional', 'items'])->find($appointmentId);
+        $appointment = Appointment::query()->with(['professional', 'items', 'customer'])->find($appointmentId);
         $professionalPhone = $this->normalizePhone($appointment?->professional?->phone);
         $unitPhone = $this->normalizePhone($unit->onlineBookingSetting?->whatsapp_phone);
         $phone = $professionalPhone !== '' ? $professionalPhone : $unitPhone;
@@ -555,6 +556,7 @@ final class PublicBookingController extends Controller
         $dateTime = $weekday.', '.$startsAt->format('d/m/Y \\à\\s H:i');
         $message = implode("\n", [
             'Olá! Novo agendamento recebido pelo link online:',
+            'Cliente: '.$appointment->customer?->name,
             'Profissional: '.$appointment->professional->name,
             'Data e horário: '.$dateTime.' ('.$timezone.')',
             'Serviços:',
@@ -656,23 +658,6 @@ final class PublicBookingController extends Controller
         }
 
         return preg_match('/^[a-zA-Z0-9_-]{1,150}$/', $value) === 1 ? $value : null;
-    }
-
-    /**
-     * @param  array<int|string, mixed>  $hours
-     * @return array{starts_at: string, ends_at: string}|null
-     */
-    private function publicWindow(array $hours, int $weekday): ?array
-    {
-        $window = $hours[(string) $weekday] ?? $hours[$weekday] ?? null;
-        if (! is_array($window) || ($window['enabled'] ?? true) === false) {
-            return null;
-        }
-        if (! isset($window['starts_at'], $window['ends_at'])) {
-            return null;
-        }
-
-        return ['starts_at' => (string) $window['starts_at'], 'ends_at' => (string) $window['ends_at']];
     }
 
     /**

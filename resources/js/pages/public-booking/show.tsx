@@ -1,3 +1,8 @@
+import {
+    publicOpeningPeriods,
+    publicOpeningLabel,
+    type PublicOpeningDay,
+} from './public-opening-hours';
 import { Head, useHttp } from '@inertiajs/react';
 import {
     CheckCircle2,
@@ -91,16 +96,7 @@ export type Unit = {
         thumbnail_url?: string | null;
         alt_text?: string | null;
     }[];
-    public_hours?: Record<
-        string,
-        {
-            enabled?: boolean;
-            starts_at?: string;
-            ends_at?: string;
-            start?: string;
-            end?: string;
-        }
-    >;
+    public_hours?: Record<string, PublicOpeningDay>;
     booking_flow?: 'service_first' | 'professional_first';
     public_meta?: {
         title: string;
@@ -352,17 +348,6 @@ const dayNames = [
     'Sexta-feira',
     'Sábado',
 ];
-const clockMinutes = (value: string | undefined): number | null => {
-    if (!value) {
-        return null;
-    }
-
-    const [hours, minutes] = value.split(':').map(Number);
-
-    return Number.isFinite(hours) && Number.isFinite(minutes)
-        ? hours * 60 + minutes
-        : null;
-};
 const currentBusinessStatus = (
     unit: Unit,
 ): { label: string; open: boolean } => {
@@ -385,16 +370,16 @@ const currentBusinessStatus = (
         Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
     const hours =
         unit.public_hours[String(weekday)] ?? unit.public_hours[weekday];
-    const start = clockMinutes(hours?.starts_at ?? hours?.start);
-    const end = clockMinutes(hours?.ends_at ?? hours?.end);
-    const open = Boolean(
-        hours &&
-        hours.enabled !== false &&
-        start !== null &&
-        end !== null &&
-        current >= start &&
-        current < end,
-    );
+    const open = publicOpeningPeriods(hours).some((period) => {
+        const [startHour, startMinute] = period.starts_at
+            .split(':')
+            .map(Number);
+        const [endHour, endMinute] = period.ends_at.split(':').map(Number);
+        return (
+            current >= startHour * 60 + startMinute &&
+            current < endHour * 60 + endMinute
+        );
+    });
 
     return { label: open ? 'Aberto agora' : 'Fechado agora', open };
 };
@@ -1289,16 +1274,7 @@ export default function PublicBooking({
                                                     Number(second),
                                             )
                                             .map(([day, hours]) => {
-                                                const start =
-                                                    hours.starts_at ??
-                                                    hours.start;
-                                                const end =
-                                                    hours.ends_at ?? hours.end;
-
-                                                return hours.enabled !==
-                                                    false &&
-                                                    start &&
-                                                    end ? (
+                                                return (
                                                     <p
                                                         key={day}
                                                         className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800"
@@ -1309,10 +1285,12 @@ export default function PublicBooking({
                                                             ] ?? day}
                                                         </span>
                                                         <span className="font-medium text-slate-950 dark:text-white">
-                                                            {start} – {end}
+                                                            {publicOpeningLabel(
+                                                                hours,
+                                                            )}
                                                         </span>
                                                     </p>
-                                                ) : null;
+                                                );
                                             })}
                                         {!Object.keys(unit.public_hours ?? {})
                                             .length && (

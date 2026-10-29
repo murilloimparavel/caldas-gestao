@@ -1,3 +1,4 @@
+import { publicOpeningLabel } from '../public-opening-hours';
 import {
     ArrowUpRight,
     CalendarDays,
@@ -193,7 +194,7 @@ export function AtelierEstablishmentDetails({
                                 ) : null}
                                 {whatsappNumber ? (
                                     <ContactLink
-                                        href={`https://wa.me/${whatsappNumber}`}
+                                        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Olá! Vim do agendamento online de ${unit.name}. Poderia me ajudar, por gentileza?`)}`}
                                         label="WhatsApp"
                                         icon={
                                             <MessageCircle
@@ -265,16 +266,7 @@ export function AtelierEstablishmentDetails({
                                 {days.map((day, index) => {
                                     const hours =
                                         unit.public_hours?.[String(index)];
-                                    const start =
-                                        hours?.starts_at ?? hours?.start;
-                                    const end = hours?.ends_at ?? hours?.end;
-                                    const label = !hours
-                                        ? 'Não informado'
-                                        : hours.enabled === false
-                                          ? 'Fechado'
-                                          : start && end
-                                            ? `${start.slice(0, 5)} às ${end.slice(0, 5)}`
-                                            : 'Não informado';
+                                    const label = publicOpeningLabel(hours);
 
                                     return (
                                         <div

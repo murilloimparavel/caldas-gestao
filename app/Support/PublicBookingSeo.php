@@ -48,15 +48,12 @@ final class PublicBookingSeo
         $weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         $hours = [];
         foreach ((($unit['sections']['hours'] ?? true) !== false ? ($unit['public_hours'] ?? []) : []) as $day => $period) {
-            if (! is_array($period) || ($period['enabled'] ?? true) === false || ! isset($weekdays[$day])) {
+            if ((! is_int($day) && ! is_string($day)) || ! preg_match('/^[0-6]$/', (string) $day) || ! is_array($period) || ($period['enabled'] ?? true) === false) {
                 continue;
             }
-            $opens = $period['starts_at'] ?? $period['start'] ?? '';
-            $closes = $period['ends_at'] ?? $period['end'] ?? '';
-            if (! is_string($opens) || ! is_string($closes) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $opens) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $closes) || $opens >= $closes) {
-                continue;
+            foreach (PublicBookingHours::periods($period) as $openingPeriod) {
+                $hours[] = ['@type' => 'OpeningHoursSpecification', 'dayOfWeek' => 'https://schema.org/'.$weekdays[$day], 'opens' => $openingPeriod['starts_at'], 'closes' => $openingPeriod['ends_at']];
             }
-            $hours[] = ['@type' => 'OpeningHoursSpecification', 'dayOfWeek' => 'https://schema.org/'.$weekdays[$day], 'opens' => $opens, 'closes' => $closes];
         }
         if ($hours !== []) {
             $schema['openingHoursSpecification'] = $hours;
@@ -67,6 +64,11 @@ final class PublicBookingSeo
 
     private static function httpUrl(mixed $value): ?string
     {
-        return is_string($value) && filter_var($value, FILTER_VALIDATE_URL) && in_array(strtolower(parse_url($value, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true) ? $value : null;
+        if (! is_string($value) || ! filter_var($value, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+        $scheme = parse_url($value, PHP_URL_SCHEME);
+
+        return is_string($scheme) && in_array(strtolower($scheme), ['http', 'https'], true) ? $value : null;
     }
 }

@@ -19,6 +19,7 @@ use App\Support\CalendarAvailability;
 use App\Support\IdentityEventRecorder;
 use App\Support\OutboxEventStore;
 use App\Support\PublicBookingConfirmation;
+use App\Support\PublicBookingHours;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
@@ -89,23 +90,21 @@ final class CreatePublicAppointment
         $hours = array_key_exists('public_hours', $publicationContent ?? [])
             ? (array) $publicationContent['public_hours']
             : (array) ($setting instanceof OnlineBookingSetting ? ($setting->getAttribute('public_hours') ?? []) : []);
-        $window = $hours[(string) $startsAt->dayOfWeek] ?? $hours[$startsAt->dayOfWeek] ?? null;
-        if (! is_array($window) || ($window['enabled'] ?? true) === false || ! isset($window['starts_at'], $window['ends_at'])) {
-            throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
-        }
-        $windowStart = CarbonImmutable::parse($startsAt->toDateString().' '.$window['starts_at'], $timezone);
-        $windowEnd = CarbonImmutable::parse($startsAt->toDateString().' '.$window['ends_at'], $timezone);
-        $offsetFromWindowStart = $startsAt->getTimestamp() - $windowStart->getTimestamp();
-        if (
-            $offsetFromWindowStart < 0
-            || $offsetFromWindowStart % 900 !== 0
-            || $startsAt->format('s.u') !== '00.000000'
-            || $startsAt->addMinutes((int) $services->sum('duration_minutes'))->gt($windowEnd)
-        ) {
-            throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
-        }
         $duration = (int) $services->sum('duration_minutes');
         $endsAt = $startsAt->addMinutes($duration);
+        $withinPublicHours = false;
+        foreach (PublicBookingHours::periods($hours[(string) $startsAt->dayOfWeek] ?? null) as $period) {
+            $windowStart = CarbonImmutable::parse($startsAt->toDateString().' '.$period['starts_at'], $timezone);
+            $windowEnd = CarbonImmutable::parse($startsAt->toDateString().' '.$period['ends_at'], $timezone);
+            $offsetFromWindowStart = $startsAt->getTimestamp() - $windowStart->getTimestamp();
+            if ($offsetFromWindowStart >= 0 && $offsetFromWindowStart % 900 === 0 && $startsAt->format('s.u') === '00.000000' && $endsAt->lte($windowEnd)) {
+                $withinPublicHours = true;
+                break;
+            }
+        }
+        if (! $withinPublicHours) {
+            throw ValidationException::withMessages(['starts_at' => 'The selected time is outside public booking hours.']);
+        }
         $phone = $this->normalizePhone($data['phone']);
         $phoneCandidates = array_values(array_unique([
             $phone,
