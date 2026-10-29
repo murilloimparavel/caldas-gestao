@@ -6,13 +6,183 @@ const fixturePassword = 'CaldasE2E!2026';
 
 async function signInAsBookingOwner(page: Page) {
     await page.goto('/login');
-    await page.getByLabel('Email address').fill(fixtureEmail);
+    await page.locator('input[name="email"]').fill(fixtureEmail);
     await page.locator('input[name="password"]').fill(fixturePassword);
-    await page.getByRole('button', { name: 'Log in' }).click();
+    await page.locator('button[type="submit"]').click();
     await page.waitForURL((url) => !url.pathname.endsWith('/login'));
 }
 
 test.describe('Online booking settings panel', () => {
+    test('saves multiple opening periods through the editor without losing identity or catalog', async ({
+        page,
+    }, testInfo) => {
+        test.skip(
+            testInfo.project.name === 'mobile-chromium',
+            'One shared fixture writer; mobile navigation and layout are covered separately.',
+        );
+        await signInAsBookingOwner(page);
+        await page.goto('/online-booking');
+        await expect(page.locator('input[name="whatsapp_phone"]')).toHaveValue(
+            '(64) 99999-1234',
+        );
+        await expect(page.locator('input[name="instagram_url"]')).toHaveValue(
+            'https://www.instagram.com/romawear.e2e/',
+        );
+        const selectedCatalog = () =>
+            page
+                .locator(
+                    'input[name="service_ids[]"]:checked, input[name="professional_ids[]"]:checked',
+                )
+                .evaluateAll((inputs) =>
+                    inputs
+                        .map((input) => (input as HTMLInputElement).value)
+                        .sort(),
+                );
+        const initialCatalog = await selectedCatalog();
+        expect(initialCatalog.length).toBe(5);
+        const navigation = page.getByRole('navigation', {
+            name: 'Configuração do agendamento online',
+        });
+        await navigation
+            .getByRole('button', { name: 'Horários', exact: true })
+            .click();
+        await page
+            .getByLabel('Segunda-feira fim 1', { exact: true })
+            .fill('12:00');
+        await page
+            .getByRole('button', {
+                name: 'Adicionar período Segunda-feira',
+                exact: true,
+            })
+            .click();
+        await page
+            .getByLabel('Segunda-feira início 2', { exact: true })
+            .fill('14:00');
+        await page
+            .getByLabel('Segunda-feira fim 2', { exact: true })
+            .fill('18:00');
+        const saveDraft = async () => {
+            const previousLockVersion = await page
+                .locator('input[name="lock_version"]')
+                .inputValue();
+            const mutationResponse = page.waitForResponse(
+                (response) =>
+                    new URL(response.url()).pathname === '/online-booking' &&
+                    ['PATCH', 'POST'].includes(response.request().method()),
+                { timeout: 5000 },
+            );
+            const redirectedPage = page.waitForResponse(
+                (response) =>
+                    new URL(response.url()).pathname === '/online-booking' &&
+                    response.request().method() === 'GET' &&
+                    response
+                        .headers()
+                        ['content-type']?.includes('application/json'),
+                { timeout: 5000 },
+            );
+            await page
+                .getByRole('button', { name: 'Salvar rascunho', exact: true })
+                .click();
+            const mutation = await mutationResponse;
+            expect(mutation.status()).toBeLessThan(400);
+            const redirected = await redirectedPage;
+            await redirected.finished();
+            const payload = await redirected.json();
+            expect(payload.props.errors).toEqual({});
+            expect(payload.props.flash.error).toBeFalsy();
+            expect(payload.props.flash.success).toBe(
+                'Agendamento online atualizado.',
+            );
+            await expect(
+                page.locator('input[name="lock_version"]'),
+            ).not.toHaveValue(previousLockVersion);
+            await expect(
+                page.locator('input[name="lock_version"]'),
+            ).toHaveValue(String(payload.props.unit.lock_version));
+            return payload.props;
+        };
+        let savedSuccessfully = false;
+
+        try {
+            const saved = await saveDraft();
+            savedSuccessfully = true;
+            expect(saved.settings.public_hours['1'].display_periods).toEqual([
+                { starts_at: '09:00', ends_at: '12:00' },
+                { starts_at: '14:00', ends_at: '18:00' },
+            ]);
+            await page.reload();
+            await expect(
+                page.locator('input[name="whatsapp_phone"]'),
+            ).toHaveValue('(64) 99999-1234');
+            await expect(
+                page.locator('input[name="instagram_url"]'),
+            ).toHaveValue('https://www.instagram.com/romawear.e2e/');
+            expect(await selectedCatalog()).toEqual(initialCatalog);
+            await navigation
+                .getByRole('button', { name: 'Horários', exact: true })
+                .click();
+            await expect(
+                page.getByLabel('Segunda-feira início 1', { exact: true }),
+            ).toHaveValue('09:00');
+            await expect(
+                page.getByLabel('Segunda-feira fim 1', { exact: true }),
+            ).toHaveValue('12:00');
+            await expect(
+                page.getByLabel('Segunda-feira início 2', { exact: true }),
+            ).toHaveValue('14:00');
+            await expect(
+                page.getByLabel('Segunda-feira fim 2', { exact: true }),
+            ).toHaveValue('18:00');
+        } finally {
+            if (savedSuccessfully && !page.isClosed()) {
+                await page.goto('/online-booking');
+                await navigation
+                    .getByRole('button', { name: 'Horários', exact: true })
+                    .click();
+                if (
+                    await page
+                        .getByRole('button', {
+                            name: 'Remover período 2 Segunda-feira',
+                            exact: true,
+                        })
+                        .count()
+                ) {
+                    await page
+                        .getByRole('button', {
+                            name: 'Remover período 2 Segunda-feira',
+                            exact: true,
+                        })
+                        .click();
+                }
+                await page
+                    .getByLabel('Segunda-feira início 1', { exact: true })
+                    .fill('09:00');
+                await page
+                    .getByLabel('Segunda-feira fim 1', { exact: true })
+                    .fill('18:00');
+                await saveDraft();
+            }
+        }
+    });
+
+    test('opens the publication checklist from the settings navigation', async ({
+        page,
+    }) => {
+        await signInAsBookingOwner(page);
+        await page.goto('/online-booking');
+        const publication = page
+            .getByRole('navigation', {
+                name: 'Configuração do agendamento online',
+            })
+            .getByRole('button', { name: 'Publicação', exact: true });
+
+        await publication.click();
+        await expect(publication).toHaveAttribute('aria-current', 'page');
+        await expect(
+            page.getByText('Checklist de publicação', { exact: true }),
+        ).toBeVisible();
+    });
+
     test('keeps form text readable in both themes and desktop preview at desktop width', async ({
         page,
     }) => {
@@ -52,7 +222,10 @@ test.describe('Online booking settings panel', () => {
 
                     const rgba = (
                         color: string,
-                    ): { channels: [number, number, number]; alpha: number } => {
+                    ): {
+                        channels: [number, number, number];
+                        alpha: number;
+                    } => {
                         const canvas = document.createElement('canvas');
                         const context = canvas.getContext('2d');
 
@@ -188,13 +361,15 @@ test.describe('Online booking settings panel', () => {
                 .toBe('PASS');
         }
 
-        await page.getByRole('button', { name: 'Prévia em desktop' }).click();
+        await page
+            .getByRole('button', { name: 'Prévia em computador' })
+            .click();
         await expect(
-            page.getByRole('dialog', { name: 'Prévia em desktop' }),
+            page.getByRole('dialog', { name: 'Prévia em computador' }),
         ).toBeVisible();
 
         const desktopPreview = page.getByTitle(
-            'Prévia pública do agendamento online em desktop',
+            'Prévia pública do agendamento online em computador',
         );
         await expect(desktopPreview).toBeVisible();
         await expect
@@ -225,7 +400,7 @@ test.describe('Online booking settings panel', () => {
 
         const frameViewport = await page
             .frameLocator(
-                'iframe[title="Prévia pública do agendamento online em desktop"]',
+                'iframe[title="Prévia pública do agendamento online em computador"]',
             )
             .locator('html')
             .evaluate(() => window.innerWidth);
