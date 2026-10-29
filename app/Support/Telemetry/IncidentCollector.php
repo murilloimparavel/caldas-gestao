@@ -83,7 +83,7 @@ final class IncidentCollector
         try {
             return DB::transaction(function () use ($kind, $category, $class, $frames, $route, $release): ?TelemetryIncident {
                 $this->lock();
-                $fingerprint = hash('sha256', json_encode([now('UTC')->toDateString(), $release, $kind, $category, $class, $frames, $route], JSON_THROW_ON_ERROR));
+                $fingerprint = hash('sha256', json_encode([$release, $kind, $category, $class, $frames, $route], JSON_THROW_ON_ERROR));
                 $incident = TelemetryIncident::query()->where('fingerprint', $fingerprint)->lockForUpdate()->first();
                 if ($incident !== null) {
                     $incident->forceFill(['occurrences' => min(1000000, $incident->occurrences + 1), 'last_seen_at' => now()])->save();

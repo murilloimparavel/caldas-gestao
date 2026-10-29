@@ -98,7 +98,7 @@ it('leases once rejects stale acknowledgements and stops after two attempts', fu
         ->and($collector->claim())->toBeNull();
 });
 
-it('keeps completed and blocked incidents terminal for their daily fingerprint', function (string $result): void {
+it('keeps completed and blocked incidents terminal across days until the release changes', function (string $result): void {
     $collector = app(IncidentCollector::class);
     $exception = new RuntimeException;
     $incident = $collector->captureThrowable($exception);
@@ -107,6 +107,19 @@ it('keeps completed and blocked incidents terminal for their daily fingerprint',
     $collector->captureThrowable($exception);
     expect($collector->claim())->toBeNull()->and(TelemetryIncident::query()->count())->toBe(1);
     $this->travel(1)->days();
+    $repeated = $collector->captureThrowable($exception);
+    expect($repeated->id)->toBe($incident->id)
+        ->and($repeated->status)->toBe($result === 'completed' ? 'completed' : 'failed')
+        ->and($repeated->result)->toBe($result)
+        ->and($repeated->attempts)->toBe(1)
+        ->and($repeated->occurrences)->toBe(3)
+        ->and($repeated->last_seen_at->toDateString())->toBe(now()->toDateString())
+        ->and($collector->claim())->toBeNull();
+    $this->travel(30)->days();
+    expect($collector->captureThrowable($exception)->id)->toBe($incident->id)
+        ->and($collector->prune())->toBe(0)
+        ->and(TelemetryIncident::query()->count())->toBe(1);
+    config(['telemetry.release' => str_repeat('b', 40)]);
     expect($collector->captureThrowable($exception)->id)->not->toBe($incident->id)
         ->and($collector->claim())->not->toBeNull();
 })->with(['completed', 'blocked']);
