@@ -22,6 +22,7 @@ from dataclasses import dataclass
 REPOSITORY = 'https://github.com/murilloimparavel/caldas-gestao.git'
 SHA = re.compile(r'^[0-9a-f]{40}$')
 PREFIX = 'svurav3cvfovuz8adtv1fuwv'
+EXECUTION_BOUNDARY = 'external-docker-isolation'
 MAX_OUTPUT = 2 * 1024 * 1024
 TRUSTED_PROMPT = '''Diagnose the incident below against this exact deployed release. Prepare the smallest
 reviewable patch and meaningful targeted tests if the evidence supports a correction.
@@ -412,6 +413,10 @@ class Runner:
             self.run(self.docker_options(self.running_name, workspace, auth=False) + [self.config.image, '/opt/telemetry/prepare'], timeout=420)
             self.running_name = None
             self.running_name = 'caldas-telemetry-' + attempt.name
+            # Fixed externally sandboxed policy: this VPS cannot create nested namespaces.
+            # Docker enforces the boundary (UID, readonly root, only workspace/auth mounts,
+            # no capabilities/socket, private network with allowlisted proxy). This is NOT
+            # an automatic fallback, and no host namespace/sysctl/security setting changes.
             self.run(
                 self.docker_options(self.running_name, workspace, auth=True) + [
                     self.config.image,
@@ -420,7 +425,7 @@ class Runner:
                     '--ignore-user-config',
                     '--ephemeral',
                     '--sandbox',
-                    'workspace-write',
+                    'danger-full-access',
                     '--json',
                     '--output-schema',
                     '/opt/telemetry/result.schema.json',
@@ -430,8 +435,6 @@ class Runner:
                     'shell_environment_policy.inherit="none"',
                     '-c',
                     'shell_environment_policy.set={PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",HOME="/tmp/telemetry-test-home",APP_ENV="testing",APP_DEBUG="false",APP_KEY="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",DB_CONNECTION="sqlite",DB_DATABASE=":memory:",CACHE_STORE="array",SESSION_DRIVER="array",QUEUE_CONNECTION="sync",MAIL_MAILER="array"}',
-                    '-c',
-                    'sandbox_workspace_write.network_access=false',
                     '-',
                 ],
                 input=TRUSTED_PROMPT + json.dumps(incident, ensure_ascii=True),
@@ -447,7 +450,7 @@ class Runner:
             result_path.unlink()
             patch, changed = self.export_patch(workspace, incident['release'])
             prepared = isinstance(report, dict) and report.get('status') == 'prepared' and bool(changed)
-            output = {'incident_id': incident['id'], 'claim_id': incident['claim_id'], 'incident_release': incident['release'], 'active_release_at_claim': active_release, 'status': 'prepared_for_review' if prepared else 'blocked', 'changed_files': changed, 'patch_sha256': hashlib.sha256(patch.encode()).hexdigest(), 'agent_report': {key: re.sub(r'(?:sk-[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)', '[redacted]', str(report.get(key, ''))[:4000]) for key in ['status', 'summary', 'tests', 'limitations']}}
+            output = {'incident_id': incident['id'], 'claim_id': incident['claim_id'], 'incident_release': incident['release'], 'active_release_at_claim': active_release, 'execution_boundary': EXECUTION_BOUNDARY, 'status': 'prepared_for_review' if prepared else 'blocked', 'changed_files': changed, 'patch_sha256': hashlib.sha256(patch.encode()).hexdigest(), 'agent_report': {key: re.sub(r'(?:sk-[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)', '[redacted]', str(report.get(key, ''))[:4000]) for key in ['status', 'summary', 'tests', 'limitations']}}
             with (attempt / 'change.patch').open('x', encoding='utf-8') as handle:
                 os.chmod(attempt / 'change.patch', 0o600)
                 handle.write(patch)

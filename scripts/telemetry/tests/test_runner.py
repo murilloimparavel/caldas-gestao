@@ -112,6 +112,33 @@ class RunnerContracts(unittest.TestCase):
         self.runner.once()
         self.runner.app.assert_not_called()
 
+    def test_codex_uses_fixed_external_isolation_without_relaxing_docker(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'])
+        self.runner.checkout = Mock(side_effect=lambda _release, workspace: workspace.mkdir())
+        commands = []
+        def launch(argv, **_options):
+            commands.append(argv)
+            if 'codex' in argv and 'exec' in argv:
+                mount = next(value for value in argv if value.startswith('type=bind,src='))
+                workspace = Path(mount.split('src=', 1)[1].split(',dst=', 1)[0])
+                (workspace / 'telemetry-result.json').write_text(json.dumps({'status': 'prepared', 'summary': 'fixture', 'tests': [], 'limitations': []}))
+            return subprocess.CompletedProcess(argv, 0, '', '')
+        self.runner.run = Mock(side_effect=launch)
+        self.runner.export_patch = Mock(return_value=('fixture patch', ['app/Example.php']))
+        self.runner.once()
+        command = next(argv for argv in commands if 'codex' in argv and 'exec' in argv)
+        self.assertEqual(command[command.index('--sandbox') + 1], 'danger-full-access')
+        for option in ['--read-only', '--cap-drop', 'ALL', 'no-new-privileges:true', '10001:10001', self.runner.config.network]:
+            self.assertIn(option, command)
+        for forbidden in ['--privileged', '--cap-add', 'SYS_ADMIN', '--pid=host', '--network=host']:
+            self.assertNotIn(forbidden, command)
+        self.assertNotIn('/var/run/docker.sock', ' '.join(command))
+        self.assertNotIn('sandbox_workspace_write.network_access', ' '.join(command))
+        result = json.loads(next((self.runner.state / 'incidents').glob('*/result.json')).read_text())
+        self.assertEqual(result['execution_boundary'], 'external-docker-isolation')
+
     def test_exports_source_patch_using_trusted_git_and_preserves_excluded_baseline(self):
         source = self.runner.state / 'fixture-repository'
         source.mkdir()
