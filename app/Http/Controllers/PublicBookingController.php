@@ -24,6 +24,7 @@ use App\Support\CalendarConflictException;
 use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
 use App\Support\PublicBookingConfirmation;
+use App\Support\PublicBookingSeo;
 use App\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -145,6 +146,8 @@ final class PublicBookingController extends Controller
             ...$catalog,
             'settings' => ['appearance' => $appearance],
         ];
+
+        $payload['unit']['public_meta'] = PublicBookingSeo::forUnit($payload['unit']);
 
         if (! request()->expectsJson()) {
             return Inertia::render('public-booking/show', $payload);

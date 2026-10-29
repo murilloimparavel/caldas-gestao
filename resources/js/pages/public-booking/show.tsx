@@ -3,6 +3,7 @@ import {
     CheckCircle2,
     Clock3,
     ChevronRight,
+    ChevronDown,
     ArrowLeft,
     CalendarDays,
     Facebook,
@@ -14,7 +15,7 @@ import {
     UserRound,
     Globe2,
 } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,9 @@ import {
     AtelierServiceSummaryCard,
 } from '@/pages/public-booking/components/atelier-step-panels';
 
+import { BookingSeo } from './components/booking-seo';
+import { AtelierEstablishmentDetails } from './components/atelier-establishment-details';
+
 type Address = {
     street?: string;
     number?: string;
@@ -58,7 +62,7 @@ type BookingAppearance = {
     cta_label?: string | null;
     font_style?: 'editorial' | 'montserrat' | 'modern' | null;
 };
-type Unit = {
+export type Unit = {
     tenant_slug: string;
     slug: string;
     name: string;
@@ -98,6 +102,14 @@ type Unit = {
         }
     >;
     booking_flow?: 'service_first' | 'professional_first';
+    public_meta?: {
+        title: string;
+        description: string;
+        canonical_url: string | null;
+        robots: string;
+        image: string | null;
+        structured_data: Record<string, unknown>;
+    };
     seo?: { title?: string | null; description?: string | null };
     canonical_url?: string | null;
     is_preview?: boolean;
@@ -430,6 +442,16 @@ export default function PublicBooking({
     services,
     professionals = [],
 }: Props) {
+    useEffect(() => {
+        document.documentElement.classList.toggle(
+            'atelier-booking',
+            unit.template_key === 'atelier-barber',
+        );
+
+        return () =>
+            document.documentElement.classList.remove('atelier-booking');
+    }, [unit.template_key]);
+
     const appearance = resolveAppearance(unit);
     const [tab, setTab] = useState<Tab>('details');
     const [serviceId, setServiceId] = useState('');
@@ -1024,68 +1046,7 @@ export default function PublicBooking({
             appearance={appearance}
             logoUrl={unit.logo_image_url ?? unit.settings?.logo_image_url}
         >
-            <Head title={unit.seo?.title || `Agendar · ${unit.name}`}>
-                <meta
-                    name="description"
-                    content={
-                        unit.seo?.description ||
-                        unit.description ||
-                        `Agende seu horário em ${unit.name}.`
-                    }
-                />
-                {unit.canonical_url ? (
-                    <link rel="canonical" href={unit.canonical_url} />
-                ) : null}
-                {unit.is_preview ? (
-                    <meta name="robots" content="noindex,nofollow,noarchive" />
-                ) : null}
-                {unit.cover_image_url ? (
-                    <meta property="og:image" content={unit.cover_image_url} />
-                ) : null}
-                <meta
-                    property="og:title"
-                    content={unit.seo?.title || unit.name}
-                />
-                <meta
-                    property="og:description"
-                    content={
-                        unit.seo?.description ||
-                        unit.description ||
-                        `Agende seu horário em ${unit.name}.`
-                    }
-                />
-                <script type="application/ld+json">
-                    {JSON.stringify({
-                        '@context': 'https://schema.org',
-                        '@type': 'BeautySalon',
-                        name: unit.name,
-                        description:
-                            unit.seo?.description ||
-                            unit.description ||
-                            undefined,
-                        url: unit.canonical_url || undefined,
-                        image: unit.cover_image_url || undefined,
-                        telephone:
-                            unit.contacts?.phone ||
-                            unit.contacts?.whatsapp ||
-                            undefined,
-                        address: unit.address
-                            ? {
-                                  '@type': 'PostalAddress',
-                                  streetAddress: [
-                                      unit.address.street,
-                                      unit.address.number,
-                                  ]
-                                      .filter(Boolean)
-                                      .join(', '),
-                                  addressLocality: unit.address.city,
-                                  addressRegion: unit.address.state,
-                                  postalCode: unit.address.postal_code,
-                              }
-                            : undefined,
-                    })}
-                </script>
-            </Head>
+            <BookingSeo unit={unit} />
             <div className="mx-auto max-w-6xl space-y-6">
                 <header
                     className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900"
@@ -1977,6 +1938,11 @@ function AtelierBarberView({
     onSubmit,
 }: AtelierBarberViewProps) {
     const [activeStep, setActiveStep] = useState(submitted ? 4 : 1);
+    const [notesExpanded, setNotesExpanded] = useState(false);
+    const showNotes = notesExpanded || Boolean(fieldErrors.notes);
+    const [activeView, setActiveView] = useState<'booking' | 'details'>(
+        'booking',
+    );
     const isPendingConfirmation =
         bookingConfirmation?.status === 'pending_confirmation';
     const serviceProfessionals = professionals;
@@ -2098,11 +2064,12 @@ function AtelierBarberView({
 
     return (
         <main
-            className={`mx-auto min-h-dvh w-full max-w-[390px] bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30 md:max-w-6xl md:bg-[#0e0e0e] md:pb-32 ${activeStep === 1 && !submitted ? 'lg:pb-10' : ''}`}
+            className={`mx-auto min-h-dvh w-full max-w-none bg-[#131313] px-0 pb-36 text-[#f0e0d0] selection:bg-[#d4af37]/30 md:bg-[#0e0e0e] md:pb-32 lg:max-w-6xl ${activeStep === 1 && !submitted ? 'lg:pb-10' : ''}`}
             data-booking-font={appearance.font_style}
             style={appearanceStyle(appearance)}
         >
-            <Head title={`Agendar · ${unit.name}`}>
+            <BookingSeo unit={unit} />
+            <Head>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link
                     rel="preconnect"
@@ -2115,860 +2082,968 @@ function AtelierBarberView({
                 />
             </Head>
             <div className="w-full">
-                <header className="fixed top-0 right-0 left-0 z-40 mx-auto flex h-16 w-full max-w-[390px] items-center justify-between border-b border-[#4d4635]/20 bg-[#0e0e0e]/95 px-4 shadow-[0_12px_36px_rgba(0,0,0,0.65)] backdrop-blur-xl md:max-w-6xl md:px-10">
-                    <div className="flex items-center justify-between gap-4">
-                        {activeStep > 1 && !submitted ? (
-                            <button
-                                type="button"
-                                onClick={goBack}
-                                className="flex size-9 items-center justify-center rounded-full border border-[#4d4635]/30 bg-[#1f2020] text-[#d4af37] transition hover:border-[#d4af37] hover:text-[#d4af37]"
-                                aria-label="Voltar"
-                            >
-                                <ArrowLeft className="size-4" />
-                            </button>
-                        ) : (
-                            <span className="size-9" />
-                        )}
-                        <div className="text-center">
-                            {logoUrl ? (
-                                <img
-                                    src={logoUrl}
-                                    alt={appearance.brand_name}
-                                    className="mx-auto max-h-10 max-w-36 object-contain"
-                                />
+                <header className="fixed top-0 right-0 left-0 z-40 h-16 w-full border-b border-[#4d4635]/20 bg-[#0e0e0e]/95 shadow-[0_12px_36px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+                    <div className="mx-auto flex h-full w-full max-w-none items-center justify-between px-4 md:px-10 lg:max-w-6xl">
+                        <div className="flex items-center justify-between gap-4">
+                            {activeStep > 1 && !submitted ? (
+                                <button
+                                    type="button"
+                                    onClick={goBack}
+                                    className="flex size-9 items-center justify-center rounded-full border border-[#4d4635]/30 bg-[#1f2020] text-[#d4af37] transition hover:border-[#d4af37] hover:text-[#d4af37]"
+                                    aria-label="Voltar"
+                                >
+                                    <ArrowLeft className="size-4" />
+                                </button>
                             ) : (
-                                <p className="font-['Bodoni_Moda'] text-[18px] font-semibold tracking-[0.2em] text-[#ffe9b0] uppercase">
-                                    {appearance.brand_name}
-                                </p>
+                                <span className="size-9" />
                             )}
-                            <p className="mt-0.5 font-['Manrope'] text-[9px] tracking-[0.18em] text-[#e9c176] uppercase">
-                                agendamento online
-                            </p>
-                        </div>
-                        <span className="flex size-9 items-center justify-center rounded border border-[#d4af37]/30 bg-[#d4af37]/10 font-['Manrope'] text-[10px] font-semibold text-[#ffe9b0]">
-                            {activeStep}/4
-                        </span>
-                    </div>
-                    <div className="hidden" />
-                </header>
-                <div className="px-4 pt-20 md:px-10 md:pt-24">
-                    <AtelierProgress
-                        activeStep={activeStep}
-                        label={stepLabels[activeStep - 1]}
-                    />
-                </div>
-                {bookingError ? (
-                    <div
-                        role="alert"
-                        className="mx-4 mb-4 flex flex-col gap-3 rounded-xl border border-[#8b6530] bg-[#2b2114] p-4 font-['DM_Sans'] text-xs leading-5 text-[#f3dca4]"
-                    >
-                        <p>{bookingError}</p>
-                        <button
-                            type="button"
-                            onClick={handleRecoverBookingError}
-                            className="self-start rounded-lg border border-[#d4af37]/60 px-3 py-2 font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase transition hover:bg-[#d4af37]/10"
-                        >
-                            {bookingErrorKind === 'catalog'
-                                ? 'Escolher outro serviço'
-                                : bookingErrorKind === 'service_limit'
-                                  ? 'Continuar escolhendo serviços'
-                                  : 'Escolher outro horário'}
-                        </button>
-                    </div>
-                ) : null}
-                {submitted ? (
-                    <section className="rounded-xl border border-[#d4af37]/30 bg-[#1a181c] p-7 text-center shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-10">
-                        <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
-                            {isPendingConfirmation ? (
-                                <Clock3 className="size-8 text-[#d4af37]" />
-                            ) : (
-                                <CheckCircle2 className="size-8 text-[#d4af37]" />
-                            )}
-                        </div>
-                        <p className="mt-6 font-['Manrope'] text-[10px] font-semibold tracking-[0.24em] text-[#d4af37] uppercase">
-                            {isPendingConfirmation
-                                ? 'Aguardando confirmação'
-                                : 'Agendamento confirmado'}
-                        </p>
-                        <h2 className="mt-3 font-['Bodoni_Moda'] text-4xl text-[#f8f2e8]">
-                            {isPendingConfirmation
-                                ? 'Pedido recebido.'
-                                : 'Até breve.'}
-                        </h2>
-                        <p className="mx-auto mt-3 max-w-sm font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
-                            {selectedServiceLabel || selectedService?.name}{' '}
-                            {selectedProfessional
-                                ? `com ${selectedProfessional.name}`
-                                : ''}
-                            <br />
-                            {slot
-                                ? formatDateTimeSlot(slot, unit.timezone)
-                                : ''}
-                            <br />
-                            {bookingConfirmation?.message ||
-                                'Seu horário foi confirmado.'}
-                        </p>
-                        {finalWhatsappUrl ? (
-                            <a
-                                href={finalWhatsappUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-7 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#d4af37] px-5 font-['Space_Grotesk'] text-sm font-bold text-[#17140d] transition hover:bg-[#edca55] focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171612]"
-                            >
-                                <MessageCircle className="size-4" /> Falar pelo
-                                WhatsApp
-                            </a>
-                        ) : null}
-                    </section>
-                ) : (
-                    <form
-                        onSubmit={onSubmit}
-                        noValidate
-                        className={`mx-auto space-y-5 px-4 md:max-w-5xl md:px-0 ${activeStep === 1 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8 lg:space-y-0' : ''}`}
-                    >
-                        {activeStep === 1 ? (
-                            <section className="overflow-hidden bg-[#131313] lg:min-w-0">
-                                {unit.cover_image_url || unit.cover_url ? (
-                                    <div className="relative h-32 overflow-hidden">
-                                        <img
-                                            src={
-                                                unit.cover_image_url ??
-                                                unit.cover_url ??
-                                                undefined
-                                            }
-                                            alt=""
-                                            className="size-full object-cover opacity-55"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/95 via-[#0e0e0e]/65 to-transparent" />
-                                    </div>
-                                ) : null}
-                                <div className="pt-5">
-                                    <p className="font-['Manrope'] text-[10px] font-bold tracking-[0.18em] text-[#e9c176] uppercase">
+                            <div className="text-center">
+                                {logoUrl ? (
+                                    <img
+                                        src={logoUrl}
+                                        alt={appearance.brand_name}
+                                        className="mx-auto max-h-10 max-w-36 object-contain"
+                                    />
+                                ) : (
+                                    <p className="font-['Bodoni_Moda'] text-[18px] font-semibold tracking-[0.2em] text-[#ffe9b0] uppercase">
                                         {appearance.brand_name}
                                     </p>
-                                    <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] tracking-[0.04em] text-[#fdfbf7]">
-                                        {appearance.headline ||
-                                            'O que você quer fazer hoje?'}
-                                    </h1>
-                                    <p className="mt-2 font-['Manrope'] text-sm leading-6 text-[#d0c5af]">
-                                        {appearance.subheadline ||
-                                            'Escolha um ou mais serviços para o seu atendimento.'}
-                                    </p>
-                                    <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-                                        {serviceCategories.map((category) => (
-                                            <button
-                                                type="button"
-                                                key={category}
-                                                onClick={() => {
-                                                    onCategoryChange(category);
-
-                                                    if (category === 'Todos') {
-                                                        onQueryChange('');
-                                                    }
-                                                }}
-                                                aria-pressed={
-                                                    serviceCategory === category
-                                                }
-                                                className={`shrink-0 rounded-full px-4 py-2 font-['Manrope'] text-xs font-semibold transition ${serviceCategory === category ? 'bg-[#ffe9b0] text-[#261900]' : 'bg-[#1f2020] text-[#d0c5af] hover:bg-[#353535]'}`}
-                                            >
-                                                {category}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="mt-7">
-                                        <AtelierSectionHeading eyebrow="Mais escolhidos">
-                                            Seleção múltipla
-                                        </AtelierSectionHeading>
-                                    </div>
-                                    <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-1">
-                                        {filteredServices.map((service) => (
-                                            <button
-                                                type="button"
-                                                key={service.id}
-                                                onClick={() =>
-                                                    onServiceChange(service.id)
-                                                }
-                                                aria-pressed={selectedServiceIds.includes(
-                                                    service.id,
-                                                )}
-                                                className={`flex min-h-[122px] items-center gap-3 rounded-xl border p-4 text-left shadow-[0_4px_20px_rgba(5,4,3,0.55)] transition ${selectedServiceIds.includes(service.id) ? 'border-[#d4af37]/40 bg-[#353535]' : 'border-transparent bg-[#1f1f1f] hover:border-[#8b7635]'}`}
-                                            >
-                                                {service.thumbnail_url ||
-                                                service.image_url ? (
-                                                    <img
-                                                        src={
-                                                            service.thumbnail_url ||
-                                                            service.image_url ||
-                                                            undefined
-                                                        }
-                                                        alt=""
-                                                        className="size-14 shrink-0 rounded-lg object-cover"
-                                                    />
-                                                ) : (
-                                                    <span className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-[#4a4332]">
-                                                        <Star className="size-4 text-[#d4af37]" />
-                                                    </span>
-                                                )}
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="block truncate font-['Bodoni_Moda'] text-lg font-semibold text-[#fdfbf7]">
-                                                        {service.name}
-                                                    </span>
-                                                    <span className="mt-1 flex items-center gap-2 font-['Manrope'] text-xs text-[#d0c5af]">
-                                                        <Clock3 className="size-3" />
-                                                        {
-                                                            service.duration_minutes
-                                                        }{' '}
-                                                        min
-                                                    </span>
-                                                </span>
-                                                <span className="font-['Plus_Jakarta_Sans'] text-base font-extrabold text-[#ffe9b0]">
-                                                    {money(service.price_cents)}
-                                                </span>
-                                                <span
-                                                    className={`flex size-8 shrink-0 items-center justify-center rounded-full ${selectedServiceIds.includes(service.id) ? 'bg-[#ffe9b0] text-[#261900] shadow-[0_0_8px_rgba(242,202,80,0.5)]' : 'bg-[#353535] text-[#d0c5af]'}`}
-                                                >
-                                                    {selectedServiceIds.includes(
-                                                        service.id,
-                                                    ) ? (
-                                                        <CheckCircle2 className="size-5" />
-                                                    ) : (
-                                                        <span className="text-xl leading-none">
-                                                            +
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </section>
-                        ) : null}
-
-                        {activeStep === 2 ? (
-                            <section className="bg-[#131313] p-0">
-                                <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
-                                    Seu serviço
-                                </p>
-                                <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
-                                    Com quem você{' '}
-                                    <em className="text-[#d4af37]">prefere?</em>
-                                </h1>
-                                <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
-                                    Escolha um profissional ou encontre o
-                                    primeiro disponível.
-                                </p>
-                                <div className="mt-5">
-                                    <AtelierServiceSummaryCard
-                                        services={selectedServices}
-                                        professional={selectedProfessional}
-                                    />
-                                </div>
-                                <AtelierFirstAvailableCard
-                                    disabled={
-                                        !serviceId ||
-                                        serviceProfessionals.length === 0 ||
-                                        firstAvailableStatus === 'loading'
-                                    }
-                                    loading={firstAvailableStatus === 'loading'}
-                                    selected={
-                                        professionalMode === 'first_available'
-                                    }
-                                    onSelect={onFirstAvailableChange}
-                                />
-                                {firstAvailableStatus === 'found' &&
-                                professionalMode === 'first_available' ? (
-                                    <p
-                                        role="status"
-                                        className="mt-3 font-['DM_Sans'] text-xs text-[#d4af37]"
-                                    >
-                                        Primeiro horário encontrado para{' '}
-                                        {selectedProfessional?.name} em{' '}
-                                        {selectedDateLabel}.
-                                    </p>
-                                ) : null}
-                                {firstAvailableStatus === 'empty' ? (
-                                    <p
-                                        role="status"
-                                        className="mt-3 rounded-lg border border-[#39362f] bg-[#171612] p-3 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]"
-                                    >
-                                        Nenhum profissional tem horário
-                                        disponível nos próximos 7 dias. Escolha
-                                        um profissional e consulte outras datas.
-                                    </p>
-                                ) : null}
-                                {firstAvailableStatus === 'error' ? (
-                                    <div
-                                        role="alert"
-                                        className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#8b6530] bg-[#2b2114] p-3 font-['DM_Sans'] text-xs leading-5 text-[#f3dca4]"
-                                    >
-                                        <span>
-                                            Não foi possível consultar os
-                                            horários. Tente novamente.
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={onFirstAvailableChange}
-                                            className="shrink-0 font-semibold underline underline-offset-2"
-                                        >
-                                            Tentar novamente
-                                        </button>
-                                    </div>
-                                ) : null}
-                                <div className="mt-8 flex items-end justify-between gap-4">
-                                    <AtelierSectionHeading eyebrow="Profissionais para seus serviços">
-                                        {serviceProfessionals.length}{' '}
-                                        profissional
-                                        {serviceProfessionals.length === 1
-                                            ? ''
-                                            : 'is'}
-                                    </AtelierSectionHeading>
-                                </div>
-                                {serviceProfessionals.length > 0 ? (
-                                    <div className="mt-3 grid gap-3">
-                                        {serviceProfessionals.map((person) => (
-                                            <AtelierProfessionalCard
-                                                key={person.id}
-                                                professional={person}
-                                                selected={
-                                                    professionalId === person.id
-                                                }
-                                                onSelect={() =>
-                                                    onProfessionalChange(
-                                                        person.id,
-                                                    )
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="mt-3 rounded-lg border border-[#39362f] bg-[#171612] p-3 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
-                                        Nenhum profissional atende todos os
-                                        serviços selecionados. Volte e ajuste
-                                        sua seleção.
-                                    </p>
                                 )}
-                                <p className="mt-7 flex items-start gap-2 font-['DM_Sans'] text-xs leading-5 text-[#777168]">
-                                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#d4af37]" />
-                                    Padrão de excelência garantido em todas as
-                                    cadeiras.
+                                <p className="mt-0.5 font-['Manrope'] text-[9px] tracking-[0.18em] text-[#e9c176] uppercase">
+                                    agendamento online
                                 </p>
-                                {selectedSummary}
-                            </section>
-                        ) : null}
-
-                        {activeStep === 3 ? (
-                            <section className="bg-[#131313] p-0">
-                                <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
-                                    Escolha do horário
-                                </p>
-                                <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
-                                    Encontre o melhor{' '}
-                                    <em className="text-[#d4af37]">momento.</em>
-                                </h1>
-                                <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
-                                    Reserve seu intervalo exclusivo com
-                                    atendimento pontual.
-                                </p>
-                                <div className="mt-5 flex items-center justify-between rounded-xl border border-[#39362f] bg-[#151513] p-4">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#29251c] text-[#d4af37]">
-                                            <CalendarDays className="size-4" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="truncate font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
-                                                {selectedServiceLabel ||
-                                                    'Serviço selecionado'}{' '}
-                                                ·{' '}
-                                                {selectedProfessional?.name ||
-                                                    'Profissional'}
-                                            </p>
-                                            <p className="font-['DM_Sans'] text-xs text-[#a9a39a]">
-                                                {selectedTotalMinutes ||
-                                                    selectedService?.duration_minutes ||
-                                                    0}{' '}
-                                                min contínuos
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#918b80] uppercase">
-                                            Valor
-                                        </p>
-                                        <p className="font-['Bodoni_Moda'] text-xl text-[#d4af37]">
-                                            {money(
-                                                selectedTotalCents ||
-                                                    selectedService?.price_cents ||
-                                                    0,
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                {firstSlot ? (
-                                    <div className="mt-4 rounded-xl border border-[#8b7635] bg-[#211e17] p-4 shadow-[0_10px_30px_rgba(212,175,55,0.08)]">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <span className="rounded-full border border-[#8b7635] px-2 py-1 font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.14em] text-[#d4af37] uppercase">
-                                                    Sugestão ágil
-                                                </span>
-                                                <p className="mt-3 font-['Bodoni_Moda'] text-xl text-[#f8f2e8]">
-                                                    Próximo horário disponível
-                                                </p>
-                                                <p className="font-['DM_Sans'] text-xs text-[#a9a39a]">
-                                                    {selectedDateLabel} ·{' '}
-                                                    {selectedProfessional?.name ||
-                                                        'Profissional'}
-                                                </p>
-                                            </div>
-                                            <p className="font-['Bodoni_Moda'] text-3xl text-[#d4af37]">
-                                                {time(
-                                                    firstSlot.starts_at,
-                                                    availabilityTimezone,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onSlotChange(
-                                                    firstSlot.starts_at,
-                                                )
-                                            }
-                                            className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#d4af37] font-['Space_Grotesk'] text-xs font-bold tracking-[0.12em] text-[#17140d] uppercase transition hover:bg-[#edca55]"
-                                        >
-                                            Escolher{' '}
-                                            {time(
-                                                firstSlot.starts_at,
-                                                availabilityTimezone,
-                                            )}{' '}
-                                            agora{' '}
-                                            <ChevronRight className="size-4" />
-                                        </button>
-                                    </div>
-                                ) : null}
-                                <AtelierScheduleSlots
-                                    date={date}
-                                    dateChoices={dateChoices}
-                                    professionalId={professionalId}
-                                    slots={slots}
-                                    selectedSlot={slot}
-                                    timezone={availabilityTimezone}
-                                    onDateChange={onDateChange}
-                                    onSlotChange={onSlotChange}
-                                    today={today(unit.timezone)}
-                                    limit={limit(unit.timezone)}
-                                />
-                                {availabilityProcessing ? (
-                                    <p
-                                        role="status"
-                                        className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]"
-                                    >
-                                        Buscando horários disponíveis…
-                                    </p>
-                                ) : null}
-                                {professionalId &&
-                                date &&
-                                !availabilityProcessing &&
-                                !slots.length ? (
-                                    <p className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]">
-                                        Nenhum horário disponível para esta
-                                        data.
-                                    </p>
-                                ) : null}
-                                {slot ? (
-                                    <div className="mt-5 rounded-lg border border-[#8b7635] bg-[#211e17] p-3 font-['DM_Sans'] text-xs text-[#d6cfc2]">
-                                        <p className="font-semibold text-[#f4efe6]">
-                                            Horário de{' '}
-                                            {time(slot, availabilityTimezone)}{' '}
-                                            selecionado
-                                        </p>
-                                        <p className="mt-1">
-                                            Seu atendimento está temporariamente
-                                            reservado enquanto você finaliza a
-                                            confirmação.
-                                        </p>
-                                    </div>
-                                ) : null}
-                            </section>
-                        ) : null}
-
-                        {activeStep === 4 ? (
-                            <section className="bg-[#131313] p-0">
-                                <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
-                                    Revise os detalhes
-                                </p>
-                                <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
-                                    Confirme seu{' '}
-                                    <em className="text-[#d4af37]">
-                                        agendamento.
-                                    </em>
-                                </h1>
-                                <div className="mt-6 overflow-hidden rounded-xl border border-[#4a454e] bg-[#19171b]">
-                                    <div className="flex items-center justify-between border-b border-[#39362f] p-4">
-                                        <p className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.18em] text-[#c7bfce] uppercase">
-                                            Resumo da reserva
-                                        </p>
-                                        <span className="flex items-center gap-1.5 font-['DM_Sans'] text-xs text-[#d4af37]">
-                                            <ShieldCheck className="size-4" />{' '}
-                                            Vaga reservada
-                                        </span>
-                                    </div>
-                                    <div className="p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                    Serviços
-                                                </p>
-                                                <p className="mt-1 font-['DM_Sans'] text-base font-semibold text-[#f4efe6]">
-                                                    {selectedServiceLabel}
-                                                </p>
-                                                <p className="mt-1 font-['DM_Sans'] text-xs text-[#a9a39a]">
-                                                    {selectedTotalMinutes ||
-                                                        selectedService?.duration_minutes ||
-                                                        0}{' '}
-                                                    min de atendimento
-                                                </p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveStep(1)}
-                                                className="shrink-0 font-['Space_Grotesk'] text-xs font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
-                                            >
-                                                Alterar
-                                            </button>
-                                        </div>
-                                        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#373229] pt-4">
-                                            <div>
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                        Profissional
-                                                    </p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setActiveStep(2)
-                                                        }
-                                                        className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
-                                                    >
-                                                        Alterar
-                                                    </button>
-                                                </div>
-                                                <p className="mt-1 truncate font-['DM_Sans'] text-sm text-[#f4efe6]">
-                                                    {selectedProfessional?.name ||
-                                                        'Não selecionado'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
-                                                        Data e hora
-                                                    </p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setActiveStep(3)
-                                                        }
-                                                        className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
-                                                    >
-                                                        Alterar
-                                                    </button>
-                                                </div>
-                                                <p className="mt-1 font-['DM_Sans'] text-sm text-[#f4efe6]">
-                                                    {slot
-                                                        ? formatDateTimeSlot(
-                                                              slot,
-                                                              unit.timezone,
-                                                          )
-                                                        : 'Não selecionado'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-end justify-between border-t border-[#4a454e] p-4">
-                                        <div>
-                                            <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.16em] text-[#c7bfce] uppercase">
-                                                Total estimado
-                                            </p>
-                                            <p className="mt-1 flex items-center gap-1 font-['DM_Sans'] text-xs text-[#a9a39a]">
-                                                <span className="size-2 rounded-full bg-[#ffe9b0]" />{' '}
-                                                Pagamento no local após
-                                                atendimento
-                                            </p>
-                                        </div>
-                                        <p className="font-['Bodoni_Moda'] text-3xl text-[#ffe9b0]">
-                                            {money(
-                                                selectedTotalCents ||
-                                                    selectedService?.price_cents ||
-                                                    0,
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="mt-7">
-                                    <h2 className="font-['Bodoni_Moda'] text-2xl text-[#f8f2e8]">
-                                        Para quem reservamos?
-                                    </h2>
-                                    <p className="mt-1 font-['DM_Sans'] text-sm text-[#a9a39a]">
-                                        Identificação direta. Sem burocracia ou
-                                        senhas.
-                                    </p>
-                                </div>
-                                <div className="mt-5 grid gap-3">
-                                    <label
-                                        className="font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
-                                        htmlFor="atelier-name"
-                                    >
-                                        Nome{' '}
-                                        <span className="text-[#d4af37]">
-                                            *
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="atelier-name"
-                                        data-booking-field="name"
-                                        autoComplete="name"
-                                        maxLength={160}
-                                        value={customerName}
-                                        onChange={(event) =>
-                                            onCustomerChange(
-                                                'name',
-                                                event.target.value,
-                                            )
-                                        }
-                                        disabled={!slot}
-                                        required
-                                        placeholder="Seu nome"
-                                        aria-invalid={Boolean(fieldErrors.name)}
-                                        aria-describedby={
-                                            fieldErrors.name
-                                                ? 'atelier-name-error'
-                                                : undefined
-                                        }
-                                        className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
-                                    />
-                                    <BookingFieldError
-                                        id="atelier-name-error"
-                                        message={fieldErrors.name}
-                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
-                                    />
-                                    <label
-                                        className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
-                                        htmlFor="atelier-email"
-                                    >
-                                        E-mail{' '}
-                                        <span className="font-normal text-[#8f887b]">
-                                            (opcional)
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="atelier-email"
-                                        data-booking-field="email"
-                                        type="email"
-                                        autoComplete="email"
-                                        maxLength={255}
-                                        value={customerEmail}
-                                        onChange={(event) =>
-                                            onCustomerChange(
-                                                'email',
-                                                event.target.value,
-                                            )
-                                        }
-                                        disabled={!slot}
-                                        placeholder="E-mail (opcional)"
-                                        aria-invalid={Boolean(
-                                            fieldErrors.email,
-                                        )}
-                                        aria-describedby={
-                                            fieldErrors.email
-                                                ? 'atelier-email-error'
-                                                : undefined
-                                        }
-                                        className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
-                                    />
-                                    <BookingFieldError
-                                        id="atelier-email-error"
-                                        message={fieldErrors.email}
-                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
-                                    />
-                                    <AtelierBookingPolicy />
-                                    <label
-                                        className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
-                                        htmlFor="atelier-notes"
-                                    >
-                                        Observação{' '}
-                                        <span className="font-normal text-[#8f887b]">
-                                            (opcional)
-                                        </span>
-                                    </label>
-                                    <textarea
-                                        id="atelier-notes"
-                                        data-booking-field="notes"
-                                        value={customerNotes}
-                                        maxLength={500}
-                                        onChange={(event) =>
-                                            onCustomerChange(
-                                                'notes',
-                                                event.target.value,
-                                            )
-                                        }
-                                        disabled={!slot}
-                                        placeholder="Observação (opcional)"
-                                        rows={3}
-                                        aria-invalid={Boolean(
-                                            fieldErrors.notes,
-                                        )}
-                                        aria-describedby={
-                                            fieldErrors.notes
-                                                ? 'atelier-notes-error'
-                                                : undefined
-                                        }
-                                        className="rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 py-3 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
-                                    />
-                                    <BookingFieldError
-                                        id="atelier-notes-error"
-                                        message={fieldErrors.notes}
-                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
-                                    />
-                                    <label
-                                        className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
-                                        htmlFor="atelier-phone"
-                                    >
-                                        WhatsApp ou telefone{' '}
-                                        <span className="text-[#d4af37]">
-                                            *
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="atelier-phone"
-                                        data-booking-field="phone"
-                                        type="tel"
-                                        inputMode="tel"
-                                        autoComplete="tel"
-                                        maxLength={19}
-                                        value={customerPhone}
-                                        onChange={(event) =>
-                                            onCustomerChange(
-                                                'phone',
-                                                event.target.value,
-                                            )
-                                        }
-                                        disabled={!slot}
-                                        required
-                                        placeholder="(00) 00000-0000"
-                                        aria-invalid={Boolean(
-                                            fieldErrors.phone,
-                                        )}
-                                        aria-describedby={
-                                            fieldErrors.phone
-                                                ? 'atelier-phone-help atelier-phone-error'
-                                                : 'atelier-phone-help'
-                                        }
-                                        className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
-                                    />
-                                    <p
-                                        id="atelier-phone-help"
-                                        className="-mt-1 flex items-center gap-2 font-['DM_Sans'] text-xs text-[#a9a39a]"
-                                    >
-                                        <MessageCircle className="size-3 text-[#d4af37]" />{' '}
-                                        Usaremos este número para contato e
-                                        identificação do agendamento.
-                                    </p>
-                                    <BookingFieldError
-                                        id="atelier-phone-error"
-                                        message={fieldErrors.phone}
-                                        className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
-                                    />
-                                </div>
-                            </section>
-                        ) : null}
+                            </div>
+                            <span className="flex size-9 items-center justify-center rounded border border-[#d4af37]/30 bg-[#d4af37]/10 font-['Manrope'] text-[10px] font-semibold text-[#ffe9b0]">
+                                {activeStep}/4
+                            </span>
+                        </div>
+                        <div className="hidden" />
+                    </div>
+                </header>
+                <div className="px-4 pt-20 md:px-10 md:pt-24">
+                    <nav
+                        aria-label="Informações e agendamento"
+                        className="mb-6 flex gap-1 rounded-xl border border-[#39362f] bg-[#171612] p-1 font-['Manrope'] text-xs"
+                    >
+                        {(
+                            [
+                                ['booking', 'Agendar'],
+                                ['details', 'Sobre o estabelecimento'],
+                            ] as const
+                        ).map(([view, label]) => (
+                            <button
+                                key={view}
+                                type="button"
+                                aria-pressed={activeView === view}
+                                onClick={() => setActiveView(view)}
+                                className={`min-h-11 flex-1 rounded-lg px-3 py-2 font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffe9b0] ${activeView === view ? 'bg-[#ffe9b0] text-[#261900]' : 'text-[#bfb5a3] hover:bg-[#25231e] hover:text-[#ffe9b0]'}`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </nav>
+                    {activeView === 'booking' ? (
+                        <AtelierProgress
+                            activeStep={activeStep}
+                            label={stepLabels[activeStep - 1]}
+                        />
+                    ) : null}
+                </div>
+                {activeView === 'details' ? (
+                    <AtelierEstablishmentDetails
+                        unit={unit}
+                        status={currentBusinessStatus(unit)}
+                        onBook={() => setActiveView('booking')}
+                    />
+                ) : null}
+                <div hidden={activeView !== 'booking'}>
+                    {bookingError ? (
                         <div
-                            className={
-                                activeStep === 1
-                                    ? 'lg:sticky lg:top-24 lg:space-y-5 lg:rounded-2xl lg:border lg:border-[#4d4635]/30 lg:bg-[#171612] lg:p-6'
-                                    : undefined
-                            }
+                            role="alert"
+                            className="mx-4 mb-4 flex flex-col gap-3 rounded-xl border border-[#8b6530] bg-[#2b2114] p-4 font-['DM_Sans'] text-xs leading-5 text-[#f3dca4]"
+                        >
+                            <p>{bookingError}</p>
+                            <button
+                                type="button"
+                                onClick={handleRecoverBookingError}
+                                className="self-start rounded-lg border border-[#d4af37]/60 px-3 py-2 font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase transition hover:bg-[#d4af37]/10"
+                            >
+                                {bookingErrorKind === 'catalog'
+                                    ? 'Escolher outro serviço'
+                                    : bookingErrorKind === 'service_limit'
+                                      ? 'Continuar escolhendo serviços'
+                                      : 'Escolher outro horário'}
+                            </button>
+                        </div>
+                    ) : null}
+                    {submitted ? (
+                        <section className="rounded-xl border border-[#d4af37]/30 bg-[#1a181c] p-7 text-center shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-10">
+                            <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-[#d4af37]/50 bg-[#d4af37]/10">
+                                {isPendingConfirmation ? (
+                                    <Clock3 className="size-8 text-[#d4af37]" />
+                                ) : (
+                                    <CheckCircle2 className="size-8 text-[#d4af37]" />
+                                )}
+                            </div>
+                            <p className="mt-6 font-['Manrope'] text-[10px] font-semibold tracking-[0.24em] text-[#d4af37] uppercase">
+                                {isPendingConfirmation
+                                    ? 'Aguardando confirmação'
+                                    : 'Agendamento confirmado'}
+                            </p>
+                            <h2 className="mt-3 font-['Bodoni_Moda'] text-4xl text-[#f8f2e8]">
+                                {isPendingConfirmation
+                                    ? 'Pedido recebido.'
+                                    : 'Até breve.'}
+                            </h2>
+                            <p className="mx-auto mt-3 max-w-sm font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
+                                {selectedServiceLabel || selectedService?.name}{' '}
+                                {selectedProfessional
+                                    ? `com ${selectedProfessional.name}`
+                                    : ''}
+                                <br />
+                                {slot
+                                    ? formatDateTimeSlot(slot, unit.timezone)
+                                    : ''}
+                                <br />
+                                {bookingConfirmation?.message ||
+                                    'Seu horário foi confirmado.'}
+                            </p>
+                            {finalWhatsappUrl ? (
+                                <a
+                                    href={finalWhatsappUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-7 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#d4af37] px-5 font-['Space_Grotesk'] text-sm font-bold text-[#17140d] transition hover:bg-[#edca55] focus-visible:ring-2 focus-visible:ring-[#d4af37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171612]"
+                                >
+                                    <MessageCircle className="size-4" /> Falar
+                                    pelo WhatsApp
+                                </a>
+                            ) : null}
+                        </section>
+                    ) : (
+                        <form
+                            onSubmit={onSubmit}
+                            noValidate
+                            className={`mx-auto space-y-5 px-4 md:px-10 lg:max-w-5xl lg:px-0 ${activeStep === 1 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8 lg:space-y-0' : ''}`}
                         >
                             {activeStep === 1 ? (
-                                <div className="hidden lg:block">
-                                    <h2 className="font-['Bodoni_Moda'] text-2xl text-[#fdfbf7]">
-                                        Seu agendamento
-                                    </h2>
-                                    {selectedServices.length ? (
-                                        <ul className="mt-5 max-h-[40dvh] space-y-3 overflow-y-auto">
-                                            {selectedServices.map((service) => (
-                                                <li
+                                <section className="overflow-hidden bg-[#131313] lg:min-w-0">
+                                    {unit.cover_image_url || unit.cover_url ? (
+                                        <div className="relative h-32 overflow-hidden">
+                                            <img
+                                                src={
+                                                    unit.cover_image_url ??
+                                                    unit.cover_url ??
+                                                    undefined
+                                                }
+                                                alt=""
+                                                className="size-full object-cover opacity-55"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/95 via-[#0e0e0e]/65 to-transparent" />
+                                        </div>
+                                    ) : null}
+                                    <div className="pt-5">
+                                        <p className="font-['Manrope'] text-[10px] font-bold tracking-[0.18em] text-[#e9c176] uppercase">
+                                            {appearance.brand_name}
+                                        </p>
+                                        <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] tracking-[0.04em] text-[#fdfbf7]">
+                                            {appearance.headline ||
+                                                'O que você quer fazer hoje?'}
+                                        </h1>
+                                        <p className="mt-2 font-['Manrope'] text-sm leading-6 text-[#d0c5af]">
+                                            {appearance.subheadline ||
+                                                'Escolha um ou mais serviços para o seu atendimento.'}
+                                        </p>
+                                        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+                                            {serviceCategories.map(
+                                                (category) => (
+                                                    <button
+                                                        type="button"
+                                                        key={category}
+                                                        onClick={() => {
+                                                            onCategoryChange(
+                                                                category,
+                                                            );
+
+                                                            if (
+                                                                category ===
+                                                                'Todos'
+                                                            ) {
+                                                                onQueryChange(
+                                                                    '',
+                                                                );
+                                                            }
+                                                        }}
+                                                        aria-pressed={
+                                                            serviceCategory ===
+                                                            category
+                                                        }
+                                                        className={`shrink-0 rounded-full px-4 py-2 font-['Manrope'] text-xs font-semibold transition ${serviceCategory === category ? 'bg-[#ffe9b0] text-[#261900]' : 'bg-[#1f2020] text-[#d0c5af] hover:bg-[#353535]'}`}
+                                                    >
+                                                        {category}
+                                                    </button>
+                                                ),
+                                            )}
+                                        </div>
+                                        <div className="mt-7">
+                                            <AtelierSectionHeading eyebrow="Mais escolhidos">
+                                                Seleção múltipla
+                                            </AtelierSectionHeading>
+                                        </div>
+                                        <div className="mt-3 grid min-w-0 grid-cols-1 gap-3">
+                                            {filteredServices.map((service) => (
+                                                <button
+                                                    type="button"
                                                     key={service.id}
-                                                    className="flex items-start justify-between gap-3 font-['Manrope'] text-xs text-[#d0c5af]"
+                                                    onClick={() =>
+                                                        onServiceChange(
+                                                            service.id,
+                                                        )
+                                                    }
+                                                    aria-pressed={selectedServiceIds.includes(
+                                                        service.id,
+                                                    )}
+                                                    data-booking-service-card
+                                                    className={`grid min-h-[122px] min-w-0 grid-cols-[56px_minmax(0,1fr)_32px] items-center gap-3 rounded-xl border p-4 text-left shadow-[0_4px_20px_rgba(5,4,3,0.55)] transition sm:flex ${selectedServiceIds.includes(service.id) ? 'border-[#d4af37]/40 bg-[#353535]' : 'border-transparent bg-[#1f1f1f] hover:border-[#8b7635]'}`}
                                                 >
-                                                    <span className="min-w-0 break-words">
-                                                        {service.name}
+                                                    {service.thumbnail_url ||
+                                                    service.image_url ? (
+                                                        <img
+                                                            src={
+                                                                service.thumbnail_url ||
+                                                                service.image_url ||
+                                                                undefined
+                                                            }
+                                                            alt=""
+                                                            className="row-span-2 size-14 shrink-0 rounded-lg object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="row-span-2 flex size-12 shrink-0 items-center justify-center rounded-lg border border-[#4a4332]">
+                                                            <Star className="size-4 text-[#d4af37]" />
+                                                        </span>
+                                                    )}
+                                                    <span className="col-span-2 min-w-0 flex-1">
+                                                        <span
+                                                            data-booking-service-name
+                                                            className="line-clamp-2 block font-['Bodoni_Moda'] text-lg font-semibold break-words text-[#fdfbf7] sm:line-clamp-none sm:truncate"
+                                                        >
+                                                            {service.name}
+                                                        </span>
+                                                        <span className="mt-1 flex items-center gap-2 font-['Manrope'] text-xs text-[#d0c5af]">
+                                                            <Clock3 className="size-3" />
+                                                            {
+                                                                service.duration_minutes
+                                                            }{' '}
+                                                            min
+                                                        </span>
                                                     </span>
-                                                    <span className="shrink-0 text-[#ffe9b0]">
+                                                    <span
+                                                        data-booking-service-price
+                                                        className="col-start-2 font-['Plus_Jakarta_Sans'] text-base font-extrabold whitespace-nowrap text-[#ffe9b0] lg:whitespace-normal"
+                                                    >
                                                         {money(
                                                             service.price_cents,
                                                         )}
                                                     </span>
-                                                </li>
+                                                    <span
+                                                        data-booking-service-toggle
+                                                        className={`flex size-8 shrink-0 items-center justify-center rounded-full ${selectedServiceIds.includes(service.id) ? 'bg-[#ffe9b0] text-[#261900] shadow-[0_0_8px_rgba(242,202,80,0.5)]' : 'bg-[#353535] text-[#d0c5af]'}`}
+                                                    >
+                                                        {selectedServiceIds.includes(
+                                                            service.id,
+                                                        ) ? (
+                                                            <CheckCircle2 className="size-5" />
+                                                        ) : (
+                                                            <span className="text-xl leading-none">
+                                                                +
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </button>
                                             ))}
-                                        </ul>
+                                        </div>
+                                    </div>
+                                </section>
+                            ) : null}
+
+                            {activeStep === 2 ? (
+                                <section className="bg-[#131313] p-0">
+                                    <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
+                                        Seu serviço
+                                    </p>
+                                    <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
+                                        Com quem você{' '}
+                                        <em className="text-[#d4af37]">
+                                            prefere?
+                                        </em>
+                                    </h1>
+                                    <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
+                                        Escolha um profissional ou encontre o
+                                        primeiro disponível.
+                                    </p>
+                                    <div className="mt-5">
+                                        <AtelierServiceSummaryCard
+                                            services={selectedServices}
+                                            professional={selectedProfessional}
+                                        />
+                                    </div>
+                                    <AtelierFirstAvailableCard
+                                        disabled={
+                                            !serviceId ||
+                                            serviceProfessionals.length === 0 ||
+                                            firstAvailableStatus === 'loading'
+                                        }
+                                        loading={
+                                            firstAvailableStatus === 'loading'
+                                        }
+                                        selected={
+                                            professionalMode ===
+                                            'first_available'
+                                        }
+                                        onSelect={onFirstAvailableChange}
+                                    />
+                                    {firstAvailableStatus === 'found' &&
+                                    professionalMode === 'first_available' ? (
+                                        <p
+                                            role="status"
+                                            className="mt-3 font-['DM_Sans'] text-xs text-[#d4af37]"
+                                        >
+                                            Primeiro horário encontrado para{' '}
+                                            {selectedProfessional?.name} em{' '}
+                                            {selectedDateLabel}.
+                                        </p>
+                                    ) : null}
+                                    {firstAvailableStatus === 'empty' ? (
+                                        <p
+                                            role="status"
+                                            className="mt-3 rounded-lg border border-[#39362f] bg-[#171612] p-3 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]"
+                                        >
+                                            Nenhum profissional tem horário
+                                            disponível nos próximos 7 dias.
+                                            Escolha um profissional e consulte
+                                            outras datas.
+                                        </p>
+                                    ) : null}
+                                    {firstAvailableStatus === 'error' ? (
+                                        <div
+                                            role="alert"
+                                            className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-[#8b6530] bg-[#2b2114] p-3 font-['DM_Sans'] text-xs leading-5 text-[#f3dca4]"
+                                        >
+                                            <span>
+                                                Não foi possível consultar os
+                                                horários. Tente novamente.
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={onFirstAvailableChange}
+                                                className="shrink-0 font-semibold underline underline-offset-2"
+                                            >
+                                                Tentar novamente
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                    <div className="mt-8 flex items-end justify-between gap-4">
+                                        <AtelierSectionHeading eyebrow="Profissionais para seus serviços">
+                                            {serviceProfessionals.length}{' '}
+                                            profissional
+                                            {serviceProfessionals.length === 1
+                                                ? ''
+                                                : 'is'}
+                                        </AtelierSectionHeading>
+                                    </div>
+                                    {serviceProfessionals.length > 0 ? (
+                                        <div className="mt-3 grid gap-3">
+                                            {serviceProfessionals.map(
+                                                (person) => (
+                                                    <AtelierProfessionalCard
+                                                        key={person.id}
+                                                        professional={person}
+                                                        selected={
+                                                            professionalId ===
+                                                            person.id
+                                                        }
+                                                        onSelect={() =>
+                                                            onProfessionalChange(
+                                                                person.id,
+                                                            )
+                                                        }
+                                                    />
+                                                ),
+                                            )}
+                                        </div>
                                     ) : (
-                                        <p className="mt-3 font-['Manrope'] text-sm leading-6 text-[#a9a39a]">
-                                            Escolha os serviços para começar sua
-                                            reserva.
+                                        <p className="mt-3 rounded-lg border border-[#39362f] bg-[#171612] p-3 font-['DM_Sans'] text-xs leading-5 text-[#a9a39a]">
+                                            Nenhum profissional atende todos os
+                                            serviços selecionados. Volte e
+                                            ajuste sua seleção.
                                         </p>
                                     )}
-                                </div>
+                                    <p className="mt-7 flex items-start gap-2 font-['DM_Sans'] text-xs leading-5 text-[#777168]">
+                                        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#d4af37]" />
+                                        Padrão de excelência garantido em todas
+                                        as cadeiras.
+                                    </p>
+                                    {selectedSummary}
+                                </section>
                             ) : null}
-                            {activeStep === 1 ? (
-                                <AtelierSelectionSummary
-                                    desktopInline
-                                    count={selectedServices.length}
-                                    totalCents={selectedTotalCents}
-                                    totalMinutes={selectedTotalMinutes}
-                                    formatMoney={money}
-                                />
+
+                            {activeStep === 3 ? (
+                                <section className="bg-[#131313] p-0">
+                                    <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
+                                        Escolha do horário
+                                    </p>
+                                    <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
+                                        Encontre o melhor{' '}
+                                        <em className="text-[#d4af37]">
+                                            momento.
+                                        </em>
+                                    </h1>
+                                    <p className="mt-3 font-['DM_Sans'] text-sm leading-6 text-[#a9a39a]">
+                                        Reserve seu intervalo exclusivo com
+                                        atendimento pontual.
+                                    </p>
+                                    <div className="mt-5 flex items-center justify-between rounded-xl border border-[#39362f] bg-[#151513] p-4">
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#29251c] text-[#d4af37]">
+                                                <CalendarDays className="size-4" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="truncate font-['DM_Sans'] text-sm font-semibold text-[#f4efe6]">
+                                                    {selectedServiceLabel ||
+                                                        'Serviço selecionado'}{' '}
+                                                    ·{' '}
+                                                    {selectedProfessional?.name ||
+                                                        'Profissional'}
+                                                </p>
+                                                <p className="font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                    {selectedTotalMinutes ||
+                                                        selectedService?.duration_minutes ||
+                                                        0}{' '}
+                                                    min contínuos
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#918b80] uppercase">
+                                                Valor
+                                            </p>
+                                            <p className="font-['Bodoni_Moda'] text-xl text-[#d4af37]">
+                                                {money(
+                                                    selectedTotalCents ||
+                                                        selectedService?.price_cents ||
+                                                        0,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {firstSlot ? (
+                                        <div className="mt-4 rounded-xl border border-[#8b7635] bg-[#211e17] p-4 shadow-[0_10px_30px_rgba(212,175,55,0.08)]">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <span className="rounded-full border border-[#8b7635] px-2 py-1 font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.14em] text-[#d4af37] uppercase">
+                                                        Sugestão ágil
+                                                    </span>
+                                                    <p className="mt-3 font-['Bodoni_Moda'] text-xl text-[#f8f2e8]">
+                                                        Próximo horário
+                                                        disponível
+                                                    </p>
+                                                    <p className="font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                        {selectedDateLabel} ·{' '}
+                                                        {selectedProfessional?.name ||
+                                                            'Profissional'}
+                                                    </p>
+                                                </div>
+                                                <p className="font-['Bodoni_Moda'] text-3xl text-[#d4af37]">
+                                                    {time(
+                                                        firstSlot.starts_at,
+                                                        availabilityTimezone,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onSlotChange(
+                                                        firstSlot.starts_at,
+                                                    )
+                                                }
+                                                className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#d4af37] font-['Space_Grotesk'] text-xs font-bold tracking-[0.12em] text-[#17140d] uppercase transition hover:bg-[#edca55]"
+                                            >
+                                                Escolher{' '}
+                                                {time(
+                                                    firstSlot.starts_at,
+                                                    availabilityTimezone,
+                                                )}{' '}
+                                                agora{' '}
+                                                <ChevronRight className="size-4" />
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                    <AtelierScheduleSlots
+                                        date={date}
+                                        dateChoices={dateChoices}
+                                        professionalId={professionalId}
+                                        slots={slots}
+                                        selectedSlot={slot}
+                                        timezone={availabilityTimezone}
+                                        onDateChange={onDateChange}
+                                        onSlotChange={onSlotChange}
+                                        today={today(unit.timezone)}
+                                        limit={limit(unit.timezone)}
+                                    />
+                                    {availabilityProcessing ? (
+                                        <p
+                                            role="status"
+                                            className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]"
+                                        >
+                                            Buscando horários disponíveis…
+                                        </p>
+                                    ) : null}
+                                    {professionalId &&
+                                    date &&
+                                    !availabilityProcessing &&
+                                    !slots.length ? (
+                                        <p className="mt-4 font-['DM_Sans'] text-xs text-[#918b80]">
+                                            Nenhum horário disponível para esta
+                                            data.
+                                        </p>
+                                    ) : null}
+                                    {slot ? (
+                                        <div className="mt-5 rounded-lg border border-[#8b7635] bg-[#211e17] p-3 font-['DM_Sans'] text-xs text-[#d6cfc2]">
+                                            <p className="font-semibold text-[#f4efe6]">
+                                                Horário de{' '}
+                                                {time(
+                                                    slot,
+                                                    availabilityTimezone,
+                                                )}{' '}
+                                                selecionado
+                                            </p>
+                                            <p className="mt-1">
+                                                Seu atendimento está
+                                                temporariamente reservado
+                                                enquanto você finaliza a
+                                                confirmação.
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                </section>
                             ) : null}
-                            <button
-                                type="submit"
-                                onClick={(event) => {
-                                    if (activeStep < 4) {
-                                        event.preventDefault();
-                                        advanceStep();
-                                    }
-                                }}
-                                disabled={
+
+                            {activeStep === 4 ? (
+                                <section className="bg-[#131313] p-0">
+                                    <p className="font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.2em] text-[#d4af37] uppercase">
+                                        Revise os detalhes
+                                    </p>
+                                    <h1 className="mt-2 font-['Bodoni_Moda'] text-[28px] leading-[1.15] text-[#f8f2e8]">
+                                        Confirme seu{' '}
+                                        <em className="text-[#d4af37]">
+                                            agendamento.
+                                        </em>
+                                    </h1>
+                                    <div className="mt-6 overflow-hidden rounded-xl border border-[#4a454e] bg-[#19171b]">
+                                        <div className="flex items-center justify-between border-b border-[#39362f] p-4">
+                                            <p className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.18em] text-[#c7bfce] uppercase">
+                                                Resumo da reserva
+                                            </p>
+                                            <span className="flex items-center gap-1.5 font-['DM_Sans'] text-xs text-[#d4af37]">
+                                                <ShieldCheck className="size-4" />{' '}
+                                                Vaga reservada
+                                            </span>
+                                        </div>
+                                        <div className="p-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                        Serviços
+                                                    </p>
+                                                    <p className="mt-1 font-['DM_Sans'] text-base font-semibold text-[#f4efe6]">
+                                                        {selectedServiceLabel}
+                                                    </p>
+                                                    <p className="mt-1 font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                        {selectedTotalMinutes ||
+                                                            selectedService?.duration_minutes ||
+                                                            0}{' '}
+                                                        min de atendimento
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setActiveStep(1)
+                                                    }
+                                                    className="shrink-0 font-['Space_Grotesk'] text-xs font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
+                                                >
+                                                    Alterar
+                                                </button>
+                                            </div>
+                                            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#373229] pt-4">
+                                                <div>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                            Profissional
+                                                        </p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setActiveStep(2)
+                                                            }
+                                                            className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
+                                                        >
+                                                            Alterar
+                                                        </button>
+                                                    </div>
+                                                    <p className="mt-1 truncate font-['DM_Sans'] text-sm text-[#f4efe6]">
+                                                        {selectedProfessional?.name ||
+                                                            'Não selecionado'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.16em] text-[#8f887b] uppercase">
+                                                            Data e hora
+                                                        </p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setActiveStep(3)
+                                                            }
+                                                            className="font-['Space_Grotesk'] text-[10px] font-semibold tracking-[0.08em] text-[#ffe9b0] uppercase"
+                                                        >
+                                                            Alterar
+                                                        </button>
+                                                    </div>
+                                                    <p className="mt-1 font-['DM_Sans'] text-sm text-[#f4efe6]">
+                                                        {slot
+                                                            ? formatDateTimeSlot(
+                                                                  slot,
+                                                                  unit.timezone,
+                                                              )
+                                                            : 'Não selecionado'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-end justify-between border-t border-[#4a454e] p-4">
+                                            <div>
+                                                <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.16em] text-[#c7bfce] uppercase">
+                                                    Total estimado
+                                                </p>
+                                                <p className="mt-1 flex items-center gap-1 font-['DM_Sans'] text-xs text-[#a9a39a]">
+                                                    <span className="size-2 rounded-full bg-[#ffe9b0]" />{' '}
+                                                    Pagamento no local após
+                                                    atendimento
+                                                </p>
+                                            </div>
+                                            <p className="font-['Bodoni_Moda'] text-3xl text-[#ffe9b0]">
+                                                {money(
+                                                    selectedTotalCents ||
+                                                        selectedService?.price_cents ||
+                                                        0,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-7">
+                                        <h2 className="font-['Bodoni_Moda'] text-2xl text-[#f8f2e8]">
+                                            Para quem reservamos?
+                                        </h2>
+                                        <p className="mt-1 font-['DM_Sans'] text-sm text-[#a9a39a]">
+                                            Identificação direta. Sem burocracia
+                                            ou senhas.
+                                        </p>
+                                    </div>
+                                    <div className="mt-5 grid gap-3">
+                                        <label
+                                            className="font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
+                                            htmlFor="atelier-name"
+                                        >
+                                            Nome{' '}
+                                            <span className="text-[#d4af37]">
+                                                *
+                                            </span>
+                                        </label>
+                                        <input
+                                            id="atelier-name"
+                                            data-booking-field="name"
+                                            autoComplete="name"
+                                            maxLength={160}
+                                            value={customerName}
+                                            onChange={(event) =>
+                                                onCustomerChange(
+                                                    'name',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            disabled={!slot}
+                                            required
+                                            placeholder="Seu nome"
+                                            aria-invalid={Boolean(
+                                                fieldErrors.name,
+                                            )}
+                                            aria-describedby={
+                                                fieldErrors.name
+                                                    ? 'atelier-name-error'
+                                                    : undefined
+                                            }
+                                            className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                        />
+                                        <BookingFieldError
+                                            id="atelier-name-error"
+                                            message={fieldErrors.name}
+                                            className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                        />
+                                        <label
+                                            className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
+                                            htmlFor="atelier-phone"
+                                        >
+                                            WhatsApp{' '}
+                                            <span className="text-[#d4af37]">
+                                                *
+                                            </span>
+                                        </label>
+                                        <input
+                                            id="atelier-phone"
+                                            data-booking-field="phone"
+                                            type="tel"
+                                            inputMode="tel"
+                                            autoComplete="tel"
+                                            maxLength={19}
+                                            value={customerPhone}
+                                            onChange={(event) =>
+                                                onCustomerChange(
+                                                    'phone',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            disabled={!slot}
+                                            required
+                                            placeholder="(00) 00000-0000"
+                                            aria-invalid={Boolean(
+                                                fieldErrors.phone,
+                                            )}
+                                            aria-describedby={
+                                                fieldErrors.phone
+                                                    ? 'atelier-phone-help atelier-phone-error'
+                                                    : 'atelier-phone-help'
+                                            }
+                                            className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                        />
+                                        <p
+                                            id="atelier-phone-help"
+                                            className="-mt-1 flex items-center gap-2 font-['DM_Sans'] text-xs text-[#a9a39a]"
+                                        >
+                                            <MessageCircle className="size-3 text-[#d4af37]" />{' '}
+                                            Usaremos este número para contato e
+                                            identificação do agendamento.
+                                        </p>
+                                        <BookingFieldError
+                                            id="atelier-phone-error"
+                                            message={fieldErrors.phone}
+                                            className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                        />
+                                        <label
+                                            className="mt-2 font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af]"
+                                            htmlFor="atelier-email"
+                                        >
+                                            E-mail{' '}
+                                            <span className="font-normal text-[#8f887b]">
+                                                (opcional)
+                                            </span>
+                                        </label>
+                                        <input
+                                            id="atelier-email"
+                                            data-booking-field="email"
+                                            type="email"
+                                            autoComplete="email"
+                                            maxLength={255}
+                                            value={customerEmail}
+                                            onChange={(event) =>
+                                                onCustomerChange(
+                                                    'email',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            disabled={!slot}
+                                            placeholder="E-mail (opcional)"
+                                            aria-invalid={Boolean(
+                                                fieldErrors.email,
+                                            )}
+                                            aria-describedby={
+                                                fieldErrors.email
+                                                    ? 'atelier-email-error'
+                                                    : undefined
+                                            }
+                                            className="h-12 rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                        />
+                                        <BookingFieldError
+                                            id="atelier-email-error"
+                                            message={fieldErrors.email}
+                                            className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                        />
+                                        <div className="mt-2 rounded-xl border border-[#39362f] bg-[#0f0f0d]">
+                                            <button
+                                                type="button"
+                                                aria-expanded={showNotes}
+                                                aria-controls="atelier-notes-panel"
+                                                disabled={!slot}
+                                                onClick={() =>
+                                                    setNotesExpanded(!showNotes)
+                                                }
+                                                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left font-['Manrope'] text-xs font-semibold tracking-[0.08em] text-[#d0c5af] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4af37]"
+                                            >
+                                                <span>
+                                                    Observação{' '}
+                                                    <span className="font-normal text-[#8f887b]">
+                                                        (opcional)
+                                                    </span>
+                                                </span>
+                                                <ChevronDown
+                                                    aria-hidden="true"
+                                                    className={`size-4 shrink-0 text-[#d4af37] transition-transform ${showNotes ? 'rotate-180' : ''}`}
+                                                />
+                                            </button>
+                                            <div
+                                                id="atelier-notes-panel"
+                                                hidden={!showNotes}
+                                                className="grid gap-3 px-4 pb-4"
+                                            >
+                                                <label
+                                                    className="sr-only"
+                                                    htmlFor="atelier-notes"
+                                                >
+                                                    Observação{' '}
+                                                    <span className="font-normal text-[#8f887b]">
+                                                        (opcional)
+                                                    </span>
+                                                </label>
+                                                <textarea
+                                                    id="atelier-notes"
+                                                    data-booking-field="notes"
+                                                    value={customerNotes}
+                                                    maxLength={500}
+                                                    onChange={(event) =>
+                                                        onCustomerChange(
+                                                            'notes',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    disabled={!slot}
+                                                    placeholder="Observação (opcional)"
+                                                    rows={3}
+                                                    aria-invalid={Boolean(
+                                                        fieldErrors.notes,
+                                                    )}
+                                                    aria-describedby={
+                                                        fieldErrors.notes
+                                                            ? 'atelier-notes-error'
+                                                            : undefined
+                                                    }
+                                                    className="rounded-xl border border-[#39362f] bg-[#0f0f0d] px-4 py-3 font-['DM_Sans'] text-sm text-[#f4efe6] outline-none placeholder:text-[#6f6a61] focus:border-[#d4af37]"
+                                                />
+                                                <BookingFieldError
+                                                    id="atelier-notes-error"
+                                                    message={fieldErrors.notes}
+                                                    className="font-['DM_Sans'] text-xs text-[#f3a6a6]"
+                                                />
+                                            </div>
+                                        </div>
+                                        <AtelierBookingPolicy />
+                                    </div>
+                                </section>
+                            ) : null}
+                            <div
+                                className={
                                     activeStep === 1
-                                        ? !serviceId
-                                        : activeStep === 2
-                                          ? !professionalId
-                                          : activeStep === 3
-                                            ? !slot
-                                            : !customerName ||
-                                              !customerPhone ||
-                                              processing
+                                        ? 'lg:sticky lg:top-24 lg:space-y-5 lg:rounded-2xl lg:border lg:border-[#4d4635]/30 lg:bg-[#171612] lg:p-6'
+                                        : undefined
                                 }
-                                className={`fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-[390px] items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40 md:max-w-5xl md:rounded-t-2xl md:border-x md:px-10 ${activeStep === 1 ? 'lg:static lg:z-auto lg:min-h-12 lg:max-w-none lg:rounded-xl lg:border-0 lg:px-4 lg:shadow-none' : ''}`}
-                                style={{
-                                    backgroundColor: 'var(--booking-primary)',
-                                }}
                             >
-                                {processing ? 'Confirmando…' : stepCta}
-                                <ChevronRight className="size-4" />
-                            </button>
-                            {activeStep === 1 ? (
-                                <p className="hidden text-center font-['DM_Sans'] text-[11px] leading-5 text-[#a9a39a] lg:block">
-                                    Seus dados são usados somente para organizar
-                                    este atendimento.
-                                </p>
-                            ) : null}
-                        </div>
-                    </form>
-                )}
-                <footer
-                    className={`mt-10 text-center font-['DM_Sans'] text-[11px] text-[#6f6a61] ${activeStep === 1 && !submitted ? 'lg:hidden' : ''}`}
-                >
-                    Seus dados são usados somente para organizar este
-                    atendimento.
-                </footer>
+                                {activeStep === 1 ? (
+                                    <div className="hidden lg:block">
+                                        <h2 className="font-['Bodoni_Moda'] text-2xl text-[#fdfbf7]">
+                                            Seu agendamento
+                                        </h2>
+                                        {selectedServices.length ? (
+                                            <ul className="mt-5 max-h-[40dvh] space-y-3 overflow-y-auto">
+                                                {selectedServices.map(
+                                                    (service) => (
+                                                        <li
+                                                            key={service.id}
+                                                            className="flex items-start justify-between gap-3 font-['Manrope'] text-xs text-[#d0c5af]"
+                                                        >
+                                                            <span className="min-w-0 break-words">
+                                                                {service.name}
+                                                            </span>
+                                                            <span className="shrink-0 text-[#ffe9b0]">
+                                                                {money(
+                                                                    service.price_cents,
+                                                                )}
+                                                            </span>
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        ) : (
+                                            <p className="mt-3 font-['Manrope'] text-sm leading-6 text-[#a9a39a]">
+                                                Escolha os serviços para começar
+                                                sua reserva.
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : null}
+                                {activeStep === 1 ? (
+                                    <AtelierSelectionSummary
+                                        desktopInline
+                                        count={selectedServices.length}
+                                        totalCents={selectedTotalCents}
+                                        totalMinutes={selectedTotalMinutes}
+                                        formatMoney={money}
+                                    />
+                                ) : null}
+                                <button
+                                    type="submit"
+                                    onClick={(event) => {
+                                        if (activeStep < 4) {
+                                            event.preventDefault();
+                                            advanceStep();
+                                        }
+                                    }}
+                                    disabled={
+                                        activeStep === 1
+                                            ? !serviceId
+                                            : activeStep === 2
+                                              ? !professionalId
+                                              : activeStep === 3
+                                                ? !slot
+                                                : !customerName ||
+                                                  !customerPhone ||
+                                                  processing
+                                    }
+                                    className={`fixed right-0 bottom-0 left-0 z-40 mx-auto flex min-h-[76px] w-full max-w-none items-center justify-center gap-2 border-t border-[#4d4635]/30 bg-[#ffe9b0] px-6 font-['Manrope'] text-sm font-bold tracking-wide text-[#261900] shadow-[0_-12px_36px_rgba(0,0,0,0.65)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#d4af37] disabled:cursor-not-allowed disabled:opacity-40 md:rounded-t-2xl md:border-x md:px-10 lg:max-w-5xl ${activeStep === 1 ? 'lg:static lg:z-auto lg:min-h-12 lg:max-w-none lg:rounded-xl lg:border-0 lg:px-4 lg:shadow-none' : ''}`}
+                                    style={{
+                                        backgroundColor:
+                                            'var(--booking-primary)',
+                                    }}
+                                >
+                                    {processing ? 'Confirmando…' : stepCta}
+                                    <ChevronRight className="size-4" />
+                                </button>
+                                {activeStep === 1 ? (
+                                    <p className="hidden text-center font-['DM_Sans'] text-[11px] leading-5 text-[#a9a39a] lg:block">
+                                        Seus dados são usados somente para
+                                        organizar este atendimento.
+                                    </p>
+                                ) : null}
+                            </div>
+                        </form>
+                    )}
+                    <footer
+                        className={`mt-10 text-center font-['DM_Sans'] text-[11px] text-[#6f6a61] ${activeStep === 1 && !submitted ? 'lg:hidden' : ''}`}
+                    >
+                        Seus dados são usados somente para organizar este
+                        atendimento.
+                    </footer>
+                </div>
             </div>
         </main>
     );

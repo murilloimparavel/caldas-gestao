@@ -1,9 +1,14 @@
+@php
+    $publicUnit = ($page['component'] ?? null) === 'public-booking/show' ? ($page['props']['unit'] ?? []) : [];
+    $publicMeta = $publicUnit['public_meta'] ?? null;
+    $isAtelierBooking = ($publicUnit['template_key'] ?? null) === 'atelier-barber';
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['atelier-booking' => $isAtelierBooking, 'dark' => ($appearance ?? 'system') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-        <meta name="theme-color" content="#f5f3ee">
+        <meta name="theme-color" content="{{ $isAtelierBooking ? '#0e0e0e' : '#f5f3ee' }}">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -46,6 +51,15 @@
                 color: #f3f0ea;
             }
 
+            html.atelier-booking,
+            html.atelier-booking.dark,
+            html.atelier-booking body,
+            html.atelier-booking #app-loading,
+            html.atelier-booking.dark #app-loading {
+                background-color: #0e0e0e;
+                color: #eef5f2;
+            }
+
             #app-loading::before {
                 width: 1.25rem;
                 height: 1.25rem;
@@ -72,7 +86,29 @@
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Caldas Gestão') }}</title>
+            @if($publicMeta)
+                <title>{{ $publicMeta['title'] }}</title>
+                <meta data-inertia="description" name="description" content="{{ $publicMeta['description'] }}">
+                <meta data-inertia="robots" name="robots" content="{{ $publicMeta['robots'] }}">
+                <meta data-inertia="og:title" property="og:title" content="{{ $publicMeta['title'] }}">
+                <meta data-inertia="og:description" property="og:description" content="{{ $publicMeta['description'] }}">
+                <meta data-inertia="og:type" property="og:type" content="website">
+                <meta data-inertia="og:locale" property="og:locale" content="pt_BR">
+                <meta data-inertia="twitter:card" name="twitter:card" content="{{ $publicMeta['image'] ? 'summary_large_image' : 'summary' }}">
+                <meta data-inertia="twitter:title" name="twitter:title" content="{{ $publicMeta['title'] }}">
+                <meta data-inertia="twitter:description" name="twitter:description" content="{{ $publicMeta['description'] }}">
+                @if($publicMeta['canonical_url'])
+                    <link data-inertia="canonical" rel="canonical" href="{{ $publicMeta['canonical_url'] }}">
+                    <meta data-inertia="og:url" property="og:url" content="{{ $publicMeta['canonical_url'] }}">
+                @endif
+                @if($publicMeta['image'])
+                    <meta data-inertia="og:image" property="og:image" content="{{ $publicMeta['image'] }}">
+                    <meta data-inertia="twitter:image" name="twitter:image" content="{{ $publicMeta['image'] }}">
+                @endif
+                <script data-inertia="business-schema" type="application/ld+json">{!! json_encode($publicMeta['structured_data'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) !!}</script>
+            @else
+                <title>{{ config('app.name', 'Caldas Gestão') }}</title>
+            @endif
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

@@ -76,7 +76,8 @@ export function AtelierSelectionSummary({
 }): ReactNode {
     return (
         <div
-            className={`fixed right-0 bottom-[76px] left-0 z-40 mx-auto flex w-full max-w-[390px] items-center justify-between border-t border-[#4d4635]/30 bg-[#171612] px-4 py-3 md:max-w-5xl md:px-10 ${desktopInline ? 'lg:static lg:z-auto lg:max-w-none lg:px-0 lg:pt-5 lg:pb-0' : ''}`}
+            data-booking-selection-summary
+            className={`fixed right-0 bottom-[76px] left-0 z-40 mx-auto flex w-full max-w-none items-center justify-between border-t border-[#4d4635]/30 bg-[#171612] px-4 py-3 md:px-10 lg:max-w-5xl ${desktopInline ? 'lg:static lg:z-auto lg:max-w-none lg:px-0 lg:pt-5 lg:pb-0' : ''}`}
         >
             <div className="min-w-0">
                 <p className="truncate font-['Manrope'] text-[10px] font-bold tracking-[0.14em] text-[#d4af37] uppercase">

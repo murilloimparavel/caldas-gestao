@@ -86,6 +86,7 @@ export function AtelierFirstAvailableCard({
             type="button"
             disabled={disabled}
             onClick={onSelect}
+            aria-pressed={selected}
             className={`mt-3 flex w-full items-center gap-3 rounded-xl border p-4 text-left transition ${selected ? 'border-[#d4af37] bg-[#282317]' : 'border-[#4d4330] bg-[#171612] hover:border-[#d4af37]/70'}`}
         >
             <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-[#d4af37]/70 text-[#d4af37]">
@@ -218,7 +219,7 @@ export function AtelierScheduleSlots({
                     Horário local da unidade
                 </span>
             </div>
-            <div className="mt-3 grid grid-cols-5 gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 grid grid-cols-4 gap-2 pb-1 sm:grid-cols-7 lg:grid-cols-5 lg:overflow-x-auto">
                 {dateChoices.map((choice) => {
                     const [year, month, day] = choice.split('-').map(Number);
                     const option = new Date(Date.UTC(year, month - 1, day, 12));
@@ -230,7 +231,8 @@ export function AtelierScheduleSlots({
                             key={choice}
                             onClick={() => onDateChange(choice)}
                             disabled={!professionalId}
-                            className={`min-w-[62px] rounded-lg border px-2 py-2 text-center transition ${active ? 'border-[#d4af37] bg-[#272117]' : 'border-[#39362f] bg-[#171616] hover:border-[#8b7635]'}`}
+                            aria-pressed={active}
+                            className={`min-w-0 rounded-lg border px-2 py-2 text-center transition lg:min-w-[62px] ${active ? 'border-[#d4af37] bg-[#272117]' : 'border-[#39362f] bg-[#171616] hover:border-[#8b7635]'}`}
                         >
                             <span className="block font-['Space_Grotesk'] text-[9px] font-semibold tracking-[0.12em] text-[#d4af37] uppercase">
                                 {option
@@ -282,6 +284,7 @@ export function AtelierScheduleSlots({
                                 type="button"
                                 key={item.starts_at}
                                 onClick={() => onSlotChange(item.starts_at)}
+                                aria-pressed={selectedSlot === item.starts_at}
                                 className={`min-h-12 rounded-lg border px-2 font-['Space_Grotesk'] text-xs font-semibold transition ${selectedSlot === item.starts_at ? 'border-[#d4af37] bg-[#2a261e] text-[#d4af37]' : 'border-[#2b2925] bg-[#171616] text-[#f4efe6] hover:border-[#8b7635]'}`}
                             >
                                 {time(item.starts_at)}
