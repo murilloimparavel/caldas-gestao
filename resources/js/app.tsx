@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
+import { initializeTelemetry } from '@/lib/telemetry';
 
 const AppLayout = lazy(() => import('@/layouts/app-layout'));
 const AuthLayout = lazy(() => import('@/layouts/auth-layout'));
@@ -29,6 +30,8 @@ function AppBootstrap({ children }: { children: React.ReactNode }) {
 
     return children;
 }
+
+initializeTelemetry();
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

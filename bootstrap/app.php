@@ -7,6 +7,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Http\Middleware\ResolveTenantDomain;
+use App\Support\Telemetry\IncidentCollector;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -56,12 +57,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('telemetry:prune')->daily()->withoutOverlapping(10)->onOneServer();
         $schedule->command('outbox:pump')->everyMinute()->withoutOverlapping(2)->onOneServer();
         $schedule->command('inbox:reap')->everyMinute()->withoutOverlapping(2)->onOneServer();
         $schedule->command('app:expire-customer-packages')->daily()->withoutOverlapping(10)->onOneServer();
         $schedule->command('billing:reconcile')->hourly()->withoutOverlapping(2)->onOneServer();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->report(function (Throwable $exception): void {
+            try {
+                app(IncidentCollector::class)->captureThrowable($exception);
+            } catch (Throwable) {
+                // Telemetry must never replace the original exception's normal reporting.
+            }
+        });
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

@@ -18,6 +18,9 @@ RUN npm run build
 
 FROM php:8.5.12-cli-bookworm AS runtime
 
+ARG APP_RELEASE=unknown
+ENV APP_RELEASE=${APP_RELEASE}
+
 ENV APP_ENV=production \
     LOG_CHANNEL=stderr \
     PORT=8080

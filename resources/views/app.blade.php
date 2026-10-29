@@ -7,6 +7,9 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['atelier-booking' => $isAtelierBooking, 'dark' => ($appearance ?? 'system') == 'dark'])>
     <head>
         <meta charset="utf-8">
+        <meta name="telemetry-enabled" content="{{ config('telemetry.enabled', false) ? '1' : '0' }}">
+        <meta name="telemetry-release" content="{{ config('telemetry.release', 'unknown') }}">
+        <meta name="telemetry-probe" content="{{ (config('telemetry.probe', false) || request()->headers->has('X-Telemetry-Probe')) ? '1' : '0' }}">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="theme-color" content="{{ $isAtelierBooking ? '#0e0e0e' : '#f5f3ee' }}">
 

@@ -62,7 +62,9 @@ jobs:
         with:
           context: .
           push: true
-          build-args: WAYFINDER_SKIP_GENERATE=true
+          build-args: |
+            WAYFINDER_SKIP_GENERATE=true
+            APP_RELEASE=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
