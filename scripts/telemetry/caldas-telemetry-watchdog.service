@@ -1,0 +1,25 @@
+[Unit]
+Description=Remove only expired labelled Caldas incident job containers
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+StateDirectory=caldas-telemetry
+StateDirectoryMode=0700
+ExecStart=/usr/bin/python3 /opt/caldas-telemetry/runner.py --state-dir /var/lib/caldas-telemetry --image caldas-telemetry-runner:0.165.0 --watchdog
+TimeoutStartSec=90s
+KillMode=control-group
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/caldas-telemetry /run/docker.sock
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Environment=PYTHONDONTWRITEBYTECODE=1
+StandardOutput=journal
+StandardError=journal

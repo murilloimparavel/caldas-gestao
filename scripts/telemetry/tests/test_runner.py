@@ -22,6 +22,209 @@ class RunnerContracts(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.runner = runner_module.Runner(runner_module.Config(state_dir=Path(self.directory.name)))
 
+    def labelled_container(self, now=1700000000, age=1200, name=None, container_id='a' * 64):
+        job = INCIDENT['claim_id']
+        return {
+            'Id': container_id,
+            'Name': name or '/caldas-telemetry-' + job,
+            'Created': runner_module.dt.datetime.fromtimestamp(now - 5, runner_module.dt.timezone.utc).isoformat(),
+            'Config': {'Image': self.runner.config.image, 'Labels': {
+                runner_module.JOB_LABEL_PREFIX + 'owner': runner_module.JOB_OWNER,
+                runner_module.JOB_LABEL_PREFIX + 'purpose': 'incident',
+                runner_module.JOB_LABEL_PREFIX + 'job': job,
+                runner_module.JOB_LABEL_PREFIX + 'started': str(now - age),
+            }},
+        }
+
+    def test_watchdog_requires_strict_owner_job_image_name_and_age(self):
+        now = 1700000000
+        self.assertFalse(runner_module.managed_orphan(self.labelled_container(age=1199), now, self.runner.config.image))
+        self.assertTrue(runner_module.managed_orphan(self.labelled_container(age=1200), now, self.runner.config.image))
+        for field, value in [('owner', 'another-worker'), ('purpose', 'auth'), ('job', 'not-a-uuid'), ('started', str(now + 10)), ('started', '-1')]:
+            info = self.labelled_container()
+            info['Config']['Labels'][runner_module.JOB_LABEL_PREFIX + field] = value
+            with self.subTest(field=field, value=value):
+                self.assertFalse(runner_module.managed_orphan(info, now, self.runner.config.image))
+        for name in ['/telemetry-egress', '/caldas-telemetry-auth', '/caldas-telemetry-preflight-' + INCIDENT['claim_id']]:
+            self.assertFalse(runner_module.managed_orphan(self.labelled_container(name=name), now, self.runner.config.image))
+        info = self.labelled_container()
+        info['Config']['Image'] = 'another-image:latest'
+        self.assertFalse(runner_module.managed_orphan(info, now, self.runner.config.image))
+        self.assertFalse(runner_module.managed_orphan({}, now, self.runner.config.image))
+
+    def test_docker_nanoseconds_are_normalized_before_datetime_parsing(self):
+        info = self.labelled_container()
+        info['Created'] = '2023-11-14T22:13:15.123456789Z'
+        original = runner_module.dt.datetime
+        seen = []
+        class MicrosecondsOnly(original):
+            @classmethod
+            def fromisoformat(cls, value):
+                seen.append(value)
+                return original.fromisoformat(value)
+        with patch.object(runner_module.dt, 'datetime', MicrosecondsOnly):
+            self.assertTrue(runner_module.managed_orphan(info, 1700000000, self.runner.config.image))
+        self.assertEqual(seen, ['2023-11-14T22:13:15.123456+00:00'])
+
+    def test_a_young_owned_orphan_blocks_startup_without_removing_it(self):
+        self.runner.cleanup_orphans = Mock(return_value=0)
+        self.runner.incident_jobs = Mock(return_value=[self.labelled_container(age=120)])
+        self.runner.once = Mock()
+        self.runner.app = Mock()
+        with patch.object(runner_module, 'Runner', return_value=self.runner), patch.object(sys, 'argv', ['runner.py']):
+            self.assertEqual(runner_module.main(), 1)
+        self.runner.cleanup_orphans.assert_called_once()
+        self.runner.once.assert_not_called()
+        self.runner.app.assert_not_called()
+        self.assertEqual(self.runner.prerequisite_state()['failures'], 1)
+
+    def test_claim_failure_uses_backoff_and_successful_empty_queue_resets_it(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[runner_module.RunnerError('database unavailable'), 'null'])
+        with patch.object(runner_module.time, 'time', return_value=1700000000):
+            self.runner.once()
+        self.assertEqual(self.runner.prerequisite_state()['failures'], 1)
+        self.assertFalse((self.runner.state / 'attempts.json').exists())
+        with patch.object(runner_module.time, 'time', return_value=1700000899):
+            self.runner.once()
+        self.assertEqual(self.runner.app.call_count, 1)
+        with patch.object(runner_module.time, 'time', return_value=1700000900):
+            self.runner.once()
+        self.assertEqual(self.runner.prerequisite_state()['failures'], 0)
+        self.assertEqual(self.runner.app.call_count, 2)
+
+    def test_three_codex_failures_trip_a_persistent_pipeline_circuit(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'] * 3)
+        self.runner.checkout = Mock(side_effect=lambda _release, workspace: workspace.mkdir())
+        def launch(argv, **_options):
+            if 'codex' in argv:
+                raise runner_module.RunnerError('authentication failed')
+            return subprocess.CompletedProcess(argv, 0, '', '')
+        self.runner.run = Mock(side_effect=launch)
+        with patch.object(runner_module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
+            for _ in range(3):
+                self.runner.once()
+        self.assertEqual(self.runner.pipeline_state()['failures'], 3)
+        self.assertTrue(self.runner.paused())
+        self.assertEqual(self.runner.app.call_count, 6)
+        restarted = runner_module.Runner(self.runner.config)
+        restarted.app = Mock()
+        restarted.once()
+        restarted.app.assert_not_called()
+        self.assertEqual(restarted.pipeline_state()['failures'], 3)
+
+    def test_job_labels_share_start_across_preparation_and_diagnosis(self):
+        self.runner.job_started_at = 1700000000
+        name = 'caldas-telemetry-' + INCIDENT['claim_id']
+        first = self.runner.docker_options(name, self.runner.state / 'workspace', auth=False)
+        with patch.object(runner_module.time, 'time', return_value=1700000900):
+            second = self.runner.docker_options(name, self.runner.state / 'workspace', auth=True)
+        for key in ['owner', 'purpose', 'job', 'started']:
+            prefix = runner_module.JOB_LABEL_PREFIX + key + '='
+            self.assertEqual(next(item for item in first if item.startswith(prefix)), next(item for item in second if item.startswith(prefix)))
+        helper = self.runner.docker_options('caldas-telemetry-preflight-' + INCIDENT['claim_id'], self.runner.state / 'probe', auth=True)
+        self.assertNotIn('--label', helper)
+
+    def test_orphan_cleanup_removes_only_inspected_expired_jobs(self):
+        now = 1700000000
+        old, fresh, proxy, helper = ['a' * 64, 'b' * 64, 'c' * 64, 'd' * 64]
+        metadata = {
+            old: self.labelled_container(container_id=old),
+            fresh: self.labelled_container(container_id=fresh, age=1199),
+            proxy: self.labelled_container(container_id=proxy, name='/telemetry-egress'),
+            helper: self.labelled_container(container_id=helper, name='/caldas-telemetry-auth'),
+        }
+        commands = []
+        def launch(argv, **_options):
+            commands.append(argv)
+            if argv[1:3] == ['ps', '-a']:
+                output = '\n'.join([old, fresh, proxy, helper, '--malicious'])
+            elif argv[1] == 'inspect':
+                output = json.dumps([metadata[argv[2]]])
+            else:
+                output = ''
+            return subprocess.CompletedProcess(argv, 0, output, '')
+        self.runner.run = Mock(side_effect=launch)
+        with patch.object(runner_module.time, 'time', return_value=now):
+            self.assertEqual(self.runner.cleanup_orphans(), 1)
+        self.assertEqual([command for command in commands if command[1] == 'rm'], [['docker', 'rm', '-f', old]])
+
+    def test_prerequisite_failures_backoff_then_pause_without_claiming(self):
+        self.runner.check_isolation = Mock(side_effect=runner_module.RunnerError('unavailable'))
+        self.runner.app = Mock()
+        with patch.object(runner_module.time, 'time', return_value=1700000000):
+            self.runner.once()
+            self.assertEqual(self.runner.prerequisite_state()['failures'], 1)
+            self.assertEqual(self.runner.prerequisite_state()['retry_after'], 1700000900)
+        restarted = runner_module.Runner(self.runner.config)
+        self.assertEqual(restarted.prerequisite_state()['failures'], 1)
+        with patch.object(runner_module.time, 'time', return_value=1700000899):
+            self.runner.once()
+        self.assertEqual(self.runner.check_isolation.call_count, 1)
+        with patch.object(runner_module.time, 'time', return_value=1700000900):
+            self.runner.once()
+        with patch.object(runner_module.time, 'time', return_value=1700001800):
+            self.runner.once()
+        self.assertTrue(self.runner.paused())
+        self.assertEqual(self.runner.prerequisite_state()['failures'], 3)
+        with patch.object(runner_module.time, 'time', return_value=1700010000):
+            self.runner.once()
+        self.assertEqual(self.runner.check_isolation.call_count, 3)
+        self.runner.app.assert_not_called()
+        self.assertFalse((self.runner.state / 'attempts.json').exists())
+
+    def test_success_resets_backoff_and_operator_pause_survives_success(self):
+        self.runner.prerequisite_failure()
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(return_value='null')
+        with patch.object(runner_module.time, 'time', return_value=runner_module.time.time() + 901):
+            self.runner.once()
+        self.assertEqual(self.runner.prerequisite_state(), {'failures': 0, 'retry_after': 0})
+        self.runner.pause()
+        self.runner.prerequisite_success()
+        self.assertTrue(self.runner.paused())
+        self.runner.app.reset_mock()
+        self.runner.once()
+        self.runner.app.assert_not_called()
+        with patch.object(sys, 'argv', ['runner.py', '--state-dir', str(self.runner.state), '--resume']):
+            self.assertEqual(runner_module.main(), 0)
+        self.assertFalse(self.runner.paused())
+
+    def test_pause_arriving_during_preflight_prevents_claim(self):
+        self.runner.check_isolation = Mock(side_effect=lambda: self.runner.pause())
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock()
+        self.runner.once()
+        self.runner.app.assert_not_called()
+
+    def test_watchdog_uses_independent_lock_and_sweeps_while_paused(self):
+        self.runner.pause()
+        self.runner.cleanup_orphans = Mock(return_value=0)
+        self.runner.once = Mock()
+        with (self.runner.state / 'runner.lock').open('a') as worker_lock:
+            runner_module.fcntl.flock(worker_lock, runner_module.fcntl.LOCK_EX | runner_module.fcntl.LOCK_NB)
+            with patch.object(runner_module, 'Runner', return_value=self.runner), patch.object(sys, 'argv', ['runner.py', '--watchdog']):
+                self.assertEqual(runner_module.main(), 0)
+        self.runner.cleanup_orphans.assert_called_once()
+        self.runner.once.assert_not_called()
+
+    def test_startup_cleanup_runs_under_the_worker_lock(self):
+        def cleanup():
+            with (self.runner.state / 'runner.lock').open('a') as lock:
+                with self.assertRaises(BlockingIOError):
+                    runner_module.fcntl.flock(lock, runner_module.fcntl.LOCK_EX | runner_module.fcntl.LOCK_NB)
+        self.runner.cleanup_orphans = Mock(side_effect=cleanup)
+        self.runner.incident_jobs = Mock(return_value=[])
+        self.runner.once = Mock()
+        with patch.object(runner_module, 'Runner', return_value=self.runner), patch.object(sys, 'argv', ['runner.py']):
+            self.assertEqual(runner_module.main(), 0)
+        self.runner.cleanup_orphans.assert_called_once()
+        self.runner.once.assert_called_once()
+
     def test_requires_full_immutable_git_release(self):
         self.assertEqual(runner_module.validate_release('ghcr.io/org/app:' + SHA), SHA)
         self.assertEqual(runner_module.validate_release('ghcr.io/org/app:sha-' + SHA), SHA)
@@ -157,6 +360,25 @@ class RunnerContracts(unittest.TestCase):
         self.assertEqual(actual.stdout.strip(), release)
         remotes = subprocess.run(['git', '-C', str(workspace), 'remote'], text=True, capture_output=True, check=True)
         self.assertEqual(remotes.stdout.strip(), '')
+
+    def test_valid_blocked_report_resets_pipeline_failures(self):
+        self.runner.pipeline_failure()
+        self.runner.pipeline_failure()
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'])
+        self.runner.checkout = Mock(side_effect=lambda _release, workspace: workspace.mkdir())
+        def launch(argv, **_options):
+            if 'codex' in argv:
+                workspace = next((self.runner.state / 'incidents').glob('*/workspace'))
+                (workspace / 'telemetry-result.json').write_text(json.dumps({'status': 'blocked', 'summary': 'insufficient evidence', 'tests': [], 'limitations': ['no reproduction']}))
+            return subprocess.CompletedProcess(argv, 0, '', '')
+        self.runner.run = Mock(side_effect=launch)
+        self.runner.export_patch = Mock(return_value=('', []))
+        self.runner.once()
+        self.assertEqual(self.runner.pipeline_state()['failures'], 0)
+        self.assertFalse(self.runner.paused())
+        self.runner.app.assert_called_with('web', ['telemetry:finish', INCIDENT['id'], '--claim', INCIDENT['claim_id'], '--status', 'blocked', '--json'])
 
     def test_exports_source_patch_using_trusted_git_and_preserves_excluded_baseline(self):
         source = self.runner.state / 'fixture-repository'

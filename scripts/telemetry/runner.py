@@ -7,6 +7,7 @@ import datetime as dt
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -23,6 +24,10 @@ REPOSITORY = 'https://github.com/murilloimparavel/caldas-gestao.git'
 SHA = re.compile(r'^[0-9a-f]{40}$')
 PREFIX = 'svurav3cvfovuz8adtv1fuwv'
 EXECUTION_BOUNDARY = 'external-docker-isolation'
+JOB_OWNER = 'caldas-telemetry-runner-v1'
+JOB_LABEL_PREFIX = 'io.caldas.telemetry.'
+JOB_MAX_SECONDS = 1200
+PREREQUISITE_RETRY_SECONDS = 900
 MAX_OUTPUT = 2 * 1024 * 1024
 TRUSTED_PROMPT = '''Diagnose the incident below against this exact deployed release. Prepare the smallest
 reviewable patch and meaningful targeted tests if the evidence supports a correction.
@@ -92,6 +97,52 @@ def sanitize_incident(payload: object) -> dict:
     return {'id': incident_id, 'claim_id': claim_id, 'release': release, 'kind': label('kind'), 'category': label('category'), 'frames': frames, 'exception_class': safe_exception, 'route_name': safe_route, 'occurrences': occurrences if isinstance(occurrences, int) and not isinstance(occurrences, bool) and 0 < occurrences < 1000000000 else 1}
 
 
+def managed_incident(info: object, image: str) -> bool:
+    """Fail closed: only this worker's named, labelled incident jobs are recognized."""
+    if not isinstance(info, dict):
+        return False
+    config = info.get('Config')
+    if not isinstance(config, dict) or config.get('Image') != image:
+        return False
+    labels = config.get('Labels')
+    if not isinstance(labels, dict):
+        return False
+    if labels.get(JOB_LABEL_PREFIX + 'owner') != JOB_OWNER or labels.get(JOB_LABEL_PREFIX + 'purpose') != 'incident':
+        return False
+    job = labels.get(JOB_LABEL_PREFIX + 'job')
+    try:
+        if not isinstance(job, str) or str(uuid.UUID(job)) != job:
+            return False
+    except ValueError:
+        return False
+    if info.get('Name') != '/caldas-telemetry-' + job:
+        return False
+    started = labels.get(JOB_LABEL_PREFIX + 'started')
+    if not isinstance(started, str) or not re.fullmatch(r'[0-9]{1,12}', started):
+        return False
+    return int(started) > 0
+
+
+def managed_orphan(info: object, now: float, image: str) -> bool:
+    if not managed_incident(info, image):
+        return False
+    started = info['Config']['Labels'][JOB_LABEL_PREFIX + 'started']
+    created = info.get('Created')
+    try:
+        # Docker emits nanoseconds; Python 3.9 accepts microseconds only.
+        normalized = re.sub(r'(\.\d{6})\d+(?=Z|[+-]\d{2}:\d{2}$)', r'\1', created) if isinstance(created, str) else None
+        parsed = dt.datetime.fromisoformat(normalized.replace('Z', '+00:00')) if normalized is not None else None
+        if parsed is None or parsed.tzinfo is None:
+            return False
+        created_at = parsed.timestamp()
+    except (ValueError, OverflowError):
+        return False
+    started_at = int(started)
+    # Start belongs to the whole job, including preparation and diagnosis; the
+    # second phase must not buy another twenty minutes. Future/invalid clocks fail closed.
+    return started_at > 0 and started_at <= created_at + 60 and created_at <= now and now - started_at >= JOB_MAX_SECONDS
+
+
 def source_descriptor(root: Path, relative: str) -> int:
     """Reject symlinks in every path component, including excluded artifact parents."""
     parts = PurePosixPath(relative).parts
@@ -128,6 +179,7 @@ class Runner:
         self.state.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.deadline = time.monotonic() + config.timeout
         self.running_name: str | None = None
+        self.job_started_at = int(time.time())
 
     def run(self, argv: list[str], *, input: str | None = None, timeout: int = 120, cwd: Path | None = None) -> subprocess.CompletedProcess:
         remaining = max(1, min(timeout, int(self.deadline - time.monotonic())))
@@ -193,6 +245,81 @@ class Runner:
             raise RunnerError('Exactly one healthy release web container is required')
         return matches[0]
 
+    def paused(self) -> bool:
+        path = self.state / 'PAUSED'
+        return path.exists() or path.is_symlink()
+
+    def pause(self, reason: str = 'operator') -> None:
+        self.atomic_json(self.state / 'PAUSED', {'reason': reason, 'paused_at': int(time.time())})
+
+    def prerequisite_state(self) -> dict:
+        path = self.state / 'prerequisites.json'
+        state = json.loads(path.read_text()) if path.exists() else {'failures': 0, 'retry_after': 0}
+        if not isinstance(state, dict) or type(state.get('failures')) is not int or not 0 <= state['failures'] <= 3 or type(state.get('retry_after')) not in {int, float} or not math.isfinite(state['retry_after']) or state['retry_after'] < 0:
+            raise RunnerError('Invalid prerequisite state; manual inspection required')
+        return state
+
+    def prerequisites_ready(self) -> bool:
+        state = self.prerequisite_state()
+        if self.pipeline_state()['failures'] >= 3:
+            self.pause('pipeline_failures')
+            return False
+        if state['failures'] >= 3:
+            self.pause('prerequisite_failures')
+            return False
+        return time.time() >= state['retry_after']
+
+    def prerequisite_failure(self) -> None:
+        state = self.prerequisite_state()
+        failures = min(3, state['failures'] + 1)
+        self.atomic_json(self.state / 'prerequisites.json', {'failures': failures, 'retry_after': time.time() + PREREQUISITE_RETRY_SECONDS})
+        if failures >= 3:
+            self.pause('prerequisite_failures')
+
+    def prerequisite_success(self) -> None:
+        self.atomic_json(self.state / 'prerequisites.json', {'failures': 0, 'retry_after': 0})
+
+    def incident_jobs(self) -> list[dict]:
+        ids = self.run(['docker', 'ps', '-a', '--no-trunc', '--filter', f'label={JOB_LABEL_PREFIX}owner={JOB_OWNER}', '--filter', f'label={JOB_LABEL_PREFIX}purpose=incident', '--format', '{{.ID}}'], timeout=20).stdout.splitlines()
+        jobs = []
+        for container in ids:
+            if not re.fullmatch(r'[0-9a-f]{64}', container):
+                continue
+            inspected = json.loads(self.run(['docker', 'inspect', container], timeout=10).stdout)
+            if not isinstance(inspected, list) or len(inspected) != 1 or not isinstance(inspected[0], dict) or inspected[0].get('Id') != container:
+                continue
+            if managed_incident(inspected[0], self.config.image):
+                jobs.append(inspected[0])
+        return jobs
+
+    def cleanup_orphans(self) -> int:
+        removed = 0
+        for job in self.incident_jobs():
+            if managed_orphan(job, time.time(), self.config.image):
+                try:
+                    self.run(['docker', 'rm', '-f', job['Id']], timeout=20)
+                    removed += 1
+                except RunnerError:
+                    # The regular worker or another sweep may already have removed it.
+                    continue
+        return removed
+
+    def pipeline_state(self) -> dict:
+        path = self.state / 'pipeline.json'
+        state = json.loads(path.read_text()) if path.exists() else {'failures': 0}
+        if not isinstance(state, dict) or type(state.get('failures')) is not int or not 0 <= state['failures'] <= 3:
+            raise RunnerError('Invalid pipeline state; manual inspection required')
+        return state
+
+    def pipeline_failure(self) -> None:
+        failures = min(3, self.pipeline_state()['failures'] + 1)
+        self.atomic_json(self.state / 'pipeline.json', {'failures': failures})
+        if failures >= 3:
+            self.pause('pipeline_failures')
+
+    def pipeline_success(self) -> None:
+        self.atomic_json(self.state / 'pipeline.json', {'failures': 0})
+
     def app(self, container: str, arguments: list[str]) -> str:
         return self.run(['docker', 'exec', container, 'php', 'artisan', *arguments], timeout=30).stdout.strip()
 
@@ -250,6 +377,14 @@ class Runner:
             '--env',
             'NO_PROXY=localhost,127.0.0.1',
         ]
+        job = name.removeprefix('caldas-telemetry-')
+        try:
+            canonical_job = str(uuid.UUID(job))
+        except ValueError:
+            canonical_job = None
+        if canonical_job == job and name == 'caldas-telemetry-' + job:
+            for key, value in {'owner': JOB_OWNER, 'purpose': 'incident', 'job': job, 'started': str(self.job_started_at)}.items():
+                options += ['--label', JOB_LABEL_PREFIX + key + '=' + value]
         if auth:
             options += ['--mount', f'type=volume,src={self.config.auth_volume},dst=/codex-auth', '--env', 'CODEX_HOME=/codex-auth']
         return options
@@ -389,14 +524,26 @@ class Runner:
             return patch, changed
 
     def once(self) -> None:
-        self.prune()
-        if not self.budget():
+        if self.paused() or not self.prerequisites_ready():
             return
-        self.check_isolation()
-        if shutil.disk_usage(self.state).free < 2 * 1024 * 1024 * 1024:
-            raise RunnerError('At least 2 GiB of free disk is required')
-        container, active_release = self.web_container()
-        response = json.loads(self.app(container, ['telemetry:claim', '--json']))
+        try:
+            self.prune()
+            if not self.budget():
+                return
+            self.check_isolation()
+            if shutil.disk_usage(self.state).free < 2 * 1024 * 1024 * 1024:
+                raise RunnerError('At least 2 GiB of free disk is required')
+            container, active_release = self.web_container()
+            if self.paused():
+                return
+            response = json.loads(self.app(container, ['telemetry:claim', '--json']))
+            if response is not None:
+                sanitize_incident(response)
+        except (RunnerError, subprocess.TimeoutExpired, ValueError, OSError):
+            self.prerequisite_failure()
+            print('Telemetry prerequisites unavailable; persistent backoff applied before claim.', flush=True)
+            return
+        self.prerequisite_success()
         if response is None:
             return
         raw_id, raw_claim = (response.get('id'), response.get('claim_id')) if isinstance(response, dict) else (None, None)
@@ -406,6 +553,7 @@ class Runner:
         attempt.mkdir(mode=0o700)
         try:
             incident = sanitize_incident(response)
+            self.job_started_at = int(time.time())
             self.record_attempt()
             self.atomic_json(attempt / 'incident.json', incident)
             workspace = attempt / 'workspace'
@@ -458,7 +606,9 @@ class Runner:
                 handle.write(patch)
             self.atomic_json(attempt / 'result.json', output)
             status = 'completed' if prepared else 'blocked'
+            self.pipeline_success()
         except (RunnerError, subprocess.TimeoutExpired, ValueError, OSError):
+            self.pipeline_failure()
             self.atomic_json(attempt / 'result.json', {'status': 'blocked', 'reason': 'Isolated preparation failed; inspect local prerequisites without exposing credentials.'})
         finally:
             self.deadline = time.monotonic() + 45
@@ -484,16 +634,45 @@ def main() -> int:
     parser.add_argument('--auth-volume', default=Config.auth_volume)
     parser.add_argument('--network', default=Config.network)
     parser.add_argument('--proxy', default=Config.proxy)
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument('--pause', action='store_true')
+    actions.add_argument('--resume', action='store_true')
+    actions.add_argument('--watchdog', action='store_true')
     args = parser.parse_args()
-    config = Config(**vars(args))
+    options = vars(args).copy()
+    for key in ['pause', 'resume', 'watchdog']:
+        options.pop(key)
+    config = Config(**options)
     runner = Runner(config)
-    with (runner.state / 'runner.lock').open('a') as lock:
+    if args.pause:
+        runner.pause()
+        print('Telemetry paused persistently; current job continues, new claims are prevented.', flush=True)
+        return 0
+    if args.resume:
+        runner.prerequisite_success()
+        runner.pipeline_success()
+        (runner.state / 'PAUSED').unlink(missing_ok=True)
+        print('Telemetry pause and prerequisite backoff cleared.', flush=True)
+        return 0
+    lock_name = 'watchdog.lock' if args.watchdog else 'runner.lock'
+    with (runner.state / lock_name).open('a') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return 0
         try:
-            runner.once()
+            if not args.watchdog and (runner.paused() or not runner.prerequisites_ready()):
+                return 0
+            try:
+                runner.cleanup_orphans()
+                if not args.watchdog and runner.incident_jobs():
+                    raise RunnerError('An owned incident job still exists; no new claim is allowed')
+            except (RunnerError, subprocess.TimeoutExpired, ValueError, OSError):
+                if not args.watchdog:
+                    runner.prerequisite_failure()
+                raise
+            if not args.watchdog:
+                runner.once()
         except (RunnerError, subprocess.TimeoutExpired, ValueError, OSError):
             print('Telemetry runner prerequisite or finish failure; no production change applied.', flush=True)
             return 1

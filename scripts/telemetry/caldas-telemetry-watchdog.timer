@@ -1,0 +1,11 @@
+[Unit]
+Description=Check expired Caldas incident containers independently of the worker
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=1min
+Unit=caldas-telemetry-watchdog.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

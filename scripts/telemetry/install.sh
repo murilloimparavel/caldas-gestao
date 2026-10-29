@@ -25,6 +25,7 @@ chown root:root "$install_dir" "$state_dir"
 # Prevent an older timer from starting during an upgrade; preserve its output artifacts.
 systemctl disable --now caldas-telemetry.timer 2>/dev/null || true
 systemctl stop caldas-telemetry.service 2>/dev/null || true
+systemctl stop caldas-telemetry-watchdog.timer caldas-telemetry-watchdog.service 2>/dev/null || true
 docker image inspect "$app_image" >/dev/null
 docker build --build-arg "APP_IMAGE=$app_image" --file "$source_dir/Dockerfile.runner" --tag caldas-telemetry-runner:0.165.0 "$repo_dir"
 for file in runner.py prepare.sh result.schema.json egress.conf egress.compose.yml login.sh; do
@@ -39,5 +40,9 @@ docker run --rm --network none --user 0:0 --cap-drop ALL --cap-add CHOWN --secur
 docker compose --project-name caldas-telemetry --project-directory "$install_dir" --env-file "$install_dir/.env" --file "$install_dir/egress.compose.yml" up -d
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry.service" /etc/systemd/system/caldas-telemetry.service
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry.timer" /etc/systemd/system/caldas-telemetry.timer
+install -o root -g root -m 0644 "$source_dir/caldas-telemetry-watchdog.service" /etc/systemd/system/caldas-telemetry-watchdog.service
+install -o root -g root -m 0644 "$source_dir/caldas-telemetry-watchdog.timer" /etc/systemd/system/caldas-telemetry-watchdog.timer
 systemctl daemon-reload
+# Cleanup remains active even when incident claims are paused or their timer is disabled.
+systemctl enable --now caldas-telemetry-watchdog.timer
 printf '%s\n' 'Runner installed. The timer is disabled. Authenticate with /opt/caldas-telemetry/login.sh, then explicitly enable the timer after review.'
