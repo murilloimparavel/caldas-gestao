@@ -27,18 +27,17 @@ final class EnsureOnlineBookingSite
                 ['tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey()],
                 ['public_domain_id' => $publicDomainId, 'public_slug' => $publicSlug],
             );
-            $site->forceFill([
-                'public_domain_id' => $publicDomainId ?? $site->public_domain_id,
-                'public_slug' => $setting instanceof OnlineBookingSetting ? ($setting->public_slug ?? $site->public_slug) : $site->public_slug,
-                'template_key' => $site->template_key ?: 'essential',
-            ])->save();
+            if (! $site->template_key) {
+                $site->forceFill(['template_key' => 'essential'])->save();
+            }
 
             if (! $site->draft()->exists()) {
-                $content = $this->content($context, $site->template_key);
+                $publication = $site->activePublication;
+                $content = is_array($publication?->content) ? $publication->content : $this->content($context, $site->template_key);
                 $draft = new OnlineBookingDraft;
                 $draft->forceFill([
                     'tenant_id' => $context->tenant->getKey(), 'unit_id' => $unit->getKey(), 'site_id' => $site->getKey(),
-                    'revision' => 1, 'content' => $content, 'content_hash' => hash('sha256', json_encode($content, JSON_THROW_ON_ERROR)),
+                    'revision' => $publication->source_revision ?? 1, 'content' => $content, 'content_hash' => hash('sha256', json_encode($content, JSON_THROW_ON_ERROR)),
                     'updated_by' => $context->user->getKey(),
                 ])->save();
                 $site->forceFill(['draft_revision' => $draft->revision])->save();

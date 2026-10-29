@@ -51,7 +51,12 @@ export type PublicSettings = {
     public_slug?: string | null;
     public_hours?: Record<
         string,
-        { enabled?: boolean; starts_at?: string; ends_at?: string }
+        {
+            enabled?: boolean;
+            starts_at?: string;
+            ends_at?: string;
+            display_periods?: { starts_at: string; ends_at: string }[];
+        }
     > | null;
 };
 

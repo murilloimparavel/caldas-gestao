@@ -101,6 +101,8 @@ export function IdentitySettingsPanel({
                     router.reload({
                         only: [
                             'settings',
+                            'draft',
+                            'cover',
                             'gallery',
                             'publicUrl',
                             'canonicalUrl',

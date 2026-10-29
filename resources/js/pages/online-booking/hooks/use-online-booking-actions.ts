@@ -117,7 +117,13 @@ export function useOnlineBookingActions({
                         id: toastId,
                     });
                     router.reload({
-                        only: ['gallery'],
+                        only: [
+                            'gallery',
+                            'draft',
+                            'publication',
+                            'previewUrl',
+                            'draftDiff',
+                        ],
                         onError: () =>
                             toast.error(
                                 'A imagem foi enviada, mas a galeria não pôde ser atualizada. Recarregue a página.',
@@ -191,6 +197,14 @@ export function useOnlineBookingActions({
                         id: toastId,
                     });
                     requestSucceeded = true;
+                    router.reload({
+                        only: [
+                            'draft',
+                            'publication',
+                            'previewUrl',
+                            'draftDiff',
+                        ],
+                    });
                 },
                 onError: (errors) =>
                     toast.error(
@@ -231,6 +245,14 @@ export function useOnlineBookingActions({
                     setGalleryItems((items) =>
                         items.filter((item) => item.id !== id),
                     );
+                    router.reload({
+                        only: [
+                            'draft',
+                            'publication',
+                            'previewUrl',
+                            'draftDiff',
+                        ],
+                    });
                     toast.success('Imagem excluída da galeria.', {
                         id: toastId,
                     });
@@ -285,10 +307,19 @@ export function useOnlineBookingActions({
         const toastId = toast.loading('Salvando a ordem da galeria…');
         void galleryReorderRequest
             .post(galleryRoutes.reorder.url(), {
-                onSuccess: () =>
+                onSuccess: () => {
                     toast.success('Ordem da galeria atualizada.', {
                         id: toastId,
-                    }),
+                    });
+                    router.reload({
+                        only: [
+                            'draft',
+                            'publication',
+                            'previewUrl',
+                            'draftDiff',
+                        ],
+                    });
+                },
                 onError: () => {
                     setGalleryItems(previousItems);
                     toast.error(

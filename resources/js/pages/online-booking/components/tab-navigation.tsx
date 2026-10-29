@@ -5,6 +5,7 @@ import {
     Link2,
     Scissors,
     Settings2,
+    Send,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
@@ -19,6 +20,7 @@ export const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
     { key: 'gallery', label: 'Galeria', icon: GalleryHorizontalEnd },
     { key: 'services', label: 'Serviços', icon: Scissors },
     { key: 'hours', label: 'Horários', icon: Clock3 },
+    { key: 'publication', label: 'Publicação', icon: Send },
 ];
 
 const tabGroups: {

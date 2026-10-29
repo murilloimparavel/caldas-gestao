@@ -13,6 +13,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class OnlineBookingSettingsRequest extends FormRequest
 {
@@ -24,6 +25,17 @@ final class OnlineBookingSettingsRequest extends FormRequest
             $publicSlug = Str::slug($publicSlug);
         } else {
             $publicSlug = $this->attributes->get(TenantContext::class)?->unit?->slug;
+        }
+
+        $publicHours = $this->input('public_hours');
+        if (is_array($publicHours)) {
+            foreach ($publicHours as &$day) {
+                if (is_array($day) && array_key_exists('enabled', $day)) {
+                    $day['enabled'] = filter_var($day['enabled'], FILTER_VALIDATE_BOOLEAN);
+                }
+            }
+            unset($day);
+            $this->merge(['public_hours' => $publicHours]);
         }
 
         $this->merge([
@@ -65,6 +77,7 @@ final class OnlineBookingSettingsRequest extends FormRequest
                 Rule::exists(Professional::class, 'id')->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active'),
             ],
             'lock_version' => ['required', 'integer', 'min:0'],
+            'draft_revision' => ['sometimes', 'integer', 'min:0'],
             'public_slug' => ['required', 'string', 'min:3', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', new AvailableOnlineBookingHandle($tenantId, $unitId)],
             'public_domain_id' => ['nullable', 'uuid', Rule::exists(TenantDomain::class, 'id')->where('tenant_id', $tenantId)->where('kind', 'public')->where('status', 'active')],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -77,8 +90,49 @@ final class OnlineBookingSettingsRequest extends FormRequest
             'booking_flow' => ['nullable', Rule::in(['service_first', 'professional_first'])],
             'minimum_notice_minutes' => ['nullable', 'integer', 'min:0', 'max:10080'],
             'public_hours' => ['nullable', 'array'],
+            'public_hours.*' => ['array'],
+            'public_hours.*.enabled' => ['sometimes', 'boolean'],
+            'public_hours.*.starts_at' => ['nullable', 'date_format:H:i'],
+            'public_hours.*.ends_at' => ['nullable', 'date_format:H:i'],
+            'public_hours.*.display_periods' => ['sometimes', 'array', 'max:4'],
+            'public_hours.*.display_periods.*.starts_at' => ['nullable', 'date_format:H:i'],
+            'public_hours.*.display_periods.*.ends_at' => ['nullable', 'date_format:H:i'],
             'template_key' => ['required', Rule::in(['essential', 'atelier-barber'])],
         ];
+    }
+
+    /** @return list<\Closure(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            foreach ((array) $this->input('public_hours', []) as $key => $day) {
+                if (! is_array($day) || ($day['enabled'] ?? true) === false) {
+                    continue;
+                }
+                $periods = array_key_exists('display_periods', $day) ? $day['display_periods'] : [$day];
+                $valid = is_array($periods) && $periods !== [];
+                $ranges = [];
+                foreach (is_array($periods) ? $periods : [] as $period) {
+                    $start = is_array($period) ? ($period['starts_at'] ?? null) : null;
+                    $end = is_array($period) ? ($period['ends_at'] ?? null) : null;
+                    if (! is_string($start) || ! is_string($end) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $start) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $end) || $start >= $end) {
+                        $valid = false;
+
+                        continue;
+                    }
+                    $ranges[] = [$start, $end];
+                }
+                usort($ranges, fn (array $left, array $right): int => strcmp($left[0], $right[0]));
+                foreach ($ranges as $index => $range) {
+                    if ($index > 0 && $range[0] < $ranges[$index - 1][1]) {
+                        $valid = false;
+                    }
+                }
+                if (! $valid) {
+                    $validator->errors()->add('public_hours.'.$key.'.display_periods', 'Informe períodos completos, com início antes do fim e sem sobreposição.');
+                }
+            }
+        }];
     }
 
     /**
@@ -88,7 +142,16 @@ final class OnlineBookingSettingsRequest extends FormRequest
      */
     public function validated($key = null, $default = null): array
     {
-        /** @var array{online_booking_enabled: bool, service_ids: list<string>, professional_ids: list<string>, lock_version: int} */
-        return parent::validated($key, $default);
+        $data = parent::validated($key, $default);
+        foreach (['lock_version', 'draft_revision', 'minimum_notice_minutes'] as $field) {
+            if (isset($data[$field])) {
+                $data[$field] = (int) $data[$field];
+            }
+        }
+        if (array_key_exists('online_booking_enabled', $data)) {
+            $data['online_booking_enabled'] = filter_var($data['online_booking_enabled'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return $data;
     }
 }

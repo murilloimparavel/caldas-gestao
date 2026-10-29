@@ -26,6 +26,7 @@ use App\Models\Professional;
 use App\Models\Service;
 use App\Models\TenantDomain;
 use App\Models\Unit;
+use App\Support\Images\MediaUrl;
 use App\Support\Images\UploadedImageOptimizer;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
@@ -58,7 +59,6 @@ final class OnlineBookingSettingsController extends Controller
             ->where('unit_id', $context->unit->getKey())
             ->orderBy('name')
             ->get(['id', 'name', 'phone', 'status', 'online_booking_enabled', 'lock_version']);
-        $readiness = $this->readiness($context->unit, $services, $professionals);
         $setting = $context->unit->onlineBookingSetting;
         $site = $ensureSite->handle($context);
         $publicDomains = $context->tenant->domains()
@@ -73,6 +73,36 @@ final class OnlineBookingSettingsController extends Controller
             : null;
         $draftContent = is_array($site->draft?->content) ? $site->draft->content : [];
         $publishedContent = is_array($site->activePublication?->content) ? $site->activePublication->content : [];
+        $editorContent = array_replace($publishedContent, $draftContent);
+        $editorSettings = $setting?->toArray() ?? [];
+        foreach ([$publishedContent, $draftContent] as $document) {
+            foreach (['identity', 'theme', 'booking_policy'] as $section) {
+                $editorSettings = array_replace($editorSettings, is_array($document[$section] ?? null) ? $document[$section] : []);
+            }
+        }
+        $editorSettings['public_domain_id'] = $site->public_domain_id;
+        $editorSettings['public_slug'] = $site->public_slug;
+        $editorSettings['template_key'] = $site->template_key;
+        $editorSettings['appearance'] = $editorContent['appearance'] ?? null;
+        if (array_key_exists('public_hours', $editorContent)) {
+            $editorSettings['public_hours'] = $editorContent['public_hours'];
+        }
+        foreach (['whatsapp' => 'whatsapp_phone', 'instagram' => 'instagram_url', 'facebook' => 'facebook_url', 'website' => 'website_url'] as $alias => $key) {
+            $editorSettings[$alias] = $editorSettings[$key] ?? null;
+        }
+        foreach (['cover', 'logo'] as $asset) {
+            $path = $editorSettings[$asset.'_image_path'] ?? null;
+            $editorSettings[$asset.'_image_url'] = is_string($path) ? MediaUrl::for($path) : null;
+        }
+        foreach (['service_ids' => $services, 'professional_ids' => $professionals] as $key => $items) {
+            if (is_array($editorContent[$key] ?? null)) {
+                foreach ($items as $item) {
+                    $item->online_booking_enabled = in_array($item->getKey(), $editorContent[$key], true);
+                }
+            }
+        }
+        $readiness = $this->readiness($context->unit, $services, $professionals, $editorSettings['whatsapp'] ?? null);
+
         $diffLabels = [
             'identity' => 'Identidade e contato', 'theme' => 'Cores e aparência', 'sections' => 'Seções visíveis',
             'appearance' => 'Personalização visual',
@@ -83,10 +113,10 @@ final class OnlineBookingSettingsController extends Controller
 
         $props = [
             'unit' => $context->unit->only(['id', 'name', 'slug', 'online_booking_enabled', 'lock_version']),
-            'settings' => $setting,
+            'settings' => $editorSettings,
             'gallery' => $context->unit->onlineBookingGalleryImages,
-            'cover' => $setting?->cover_image_url,
-            'logo' => $setting?->logo_image_url,
+            'cover' => $editorSettings['cover_image_url'],
+            'logo' => $editorSettings['logo_image_url'],
             'tenant' => ['slug' => $context->tenant->slug],
             'publicUrl' => $publicUrl,
             'previewUrl' => $site->draft ? URL::temporarySignedRoute('online_booking.preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), [$context->tenant, $context->unit]) : null,
@@ -195,7 +225,7 @@ final class OnlineBookingSettingsController extends Controller
         $image = $request->file('image');
         $path = 'online-booking/'.$context->unit->getKey().'/cover/'.Str::random(40).'.webp';
         app(UploadedImageOptimizer::class)->storeWebp($image, Storage::disk((string) config('filesystems.media_disk')), $path);
-        $setting->forceFill(['cover_image_path' => $path])->save();
+        $this->syncDraftAsset($context, 'cover_image_path', $path);
 
         return response()->json(['cover' => $setting->fresh()->cover_image_url]);
     }
@@ -203,13 +233,8 @@ final class OnlineBookingSettingsController extends Controller
     public function destroyCover(TenantContext $context): JsonResponse
     {
         Gate::authorize('update', $context->unit);
-        $setting = $context->unit->onlineBookingSetting;
 
-        if (! $setting instanceof OnlineBookingSetting || $setting->cover_image_path === null) {
-            return response()->json(['cover' => null]);
-        }
-
-        $setting->forceFill(['cover_image_path' => null])->save();
+        $this->syncDraftAsset($context, 'cover_image_path', null);
 
         return response()->json(['cover' => null]);
     }
@@ -223,7 +248,7 @@ final class OnlineBookingSettingsController extends Controller
         $disk = Storage::disk((string) config('filesystems.media_disk'));
         $path = 'online-booking/'.$context->unit->getKey().'/logo/'.Str::random(40).'.webp';
         app(UploadedImageOptimizer::class)->storeWebp($request->file('image'), $disk, $path);
-        $setting->forceFill(['logo_image_path' => $path])->save();
+        $this->syncDraftAsset($context, 'logo_image_path', $path);
 
         return response()->json(['logo' => $setting->fresh()->logo_image_url]);
     }
@@ -231,37 +256,49 @@ final class OnlineBookingSettingsController extends Controller
     public function destroyLogo(TenantContext $context): JsonResponse
     {
         Gate::authorize('update', $context->unit);
-        $setting = $context->unit->onlineBookingSetting;
 
-        if (! $setting instanceof OnlineBookingSetting || $setting->logo_image_path === null) {
-            return response()->json(['logo' => null]);
-        }
-
-        $setting->forceFill(['logo_image_path' => null])->save();
+        $this->syncDraftAsset($context, 'logo_image_path', null);
 
         return response()->json(['logo' => null]);
+    }
+
+    private function syncDraftAsset(TenantContext $context, string $key, ?string $path): void
+    {
+        DB::transaction(function () use ($context, $key, $path): void {
+            $context->unit->onlineBookingSetting()->first()?->forceFill([$key => $path])->save();
+            $site = app(EnsureOnlineBookingSite::class)->handle($context);
+            $draft = $site->draft()->lockForUpdate()->firstOrFail();
+            $identity = array_replace($draft->content['identity'] ?? [], [$key => $path]);
+            app(SaveOnlineBookingDraft::class)->handle($context->user, $context, ['identity' => $identity], $draft->revision);
+        });
     }
 
     public function update(OnlineBookingSettingsRequest $request, TenantContext $context, UpdateOnlineBookingSettings $update, EnsureOnlineBookingSite $ensureSite, SaveOnlineBookingDraft $saveDraft, OperationalMutation $mutation): RedirectResponse
     {
         $data = $request->validated();
         try {
-            $mutation->execute($request, $context, $request->user(), $data, function () use ($update, $ensureSite, $saveDraft, $request, $context, $data): array {
-                $unit = $update->handle($request->user(), $context, $data);
+            $mutation->execute($request, $context, $request->user(), $data, fn (): array => DB::transaction(function () use ($update, $ensureSite, $saveDraft, $request, $context, $data): array {
                 $site = $ensureSite->handle($context);
-                $content = $ensureSite->content($context, $site->template_key);
-                $existingSections = $site->draft?->content['sections'] ?? null;
-                if (is_array($existingSections)) {
-                    $content['sections'] = $existingSections;
+                $draft = $site->draft()->lockForUpdate()->firstOrFail();
+                if (isset($data['draft_revision']) && $draft->revision !== (int) $data['draft_revision']) {
+                    throw new ConflictHttpException('O rascunho foi alterado em outra sessão.');
                 }
-                $existingAppearance = $site->draft?->content['appearance'] ?? null;
-                if (is_array($existingAppearance)) {
-                    $content['appearance'] = $existingAppearance;
+                $unit = $update->handle($request->user(), $context, $data);
+                $content = $draft->content;
+                $content['identity'] = array_replace($content['identity'] ?? [], array_intersect_key($data, array_flip(['description', 'whatsapp_phone', 'phone', 'instagram_url', 'facebook_url', 'website_url'])));
+                if (array_key_exists('brand_color', $data)) {
+                    $content['theme'] = array_replace($content['theme'] ?? [], ['brand_color' => $data['brand_color']]);
                 }
-                $saveDraft->handle($request->user(), $context, $content, (int) $site->draft_revision);
+                $content['booking_policy'] = array_replace($content['booking_policy'] ?? [], array_intersect_key($data, array_flip(['booking_flow', 'minimum_notice_minutes'])));
+                foreach (['service_ids', 'professional_ids', 'public_hours'] as $key) {
+                    if (array_key_exists($key, $data)) {
+                        $content[$key] = $data[$key];
+                    }
+                }
+                $saveDraft->handle($request->user(), $context, $content, $draft->revision);
 
                 return ['resource_id' => $unit->getKey(), 'resource_type' => 'unit'];
-            });
+            }));
         } catch (ConflictHttpException $exception) {
             if ($request->header('X-Inertia') === 'true') {
                 return to_route('online_booking.index')->with('error', 'Esta tela estava desatualizada. Recarregamos as configurações atuais; revise e salve novamente.');
@@ -282,10 +319,16 @@ final class OnlineBookingSettingsController extends Controller
         $optimizer = app(UploadedImageOptimizer::class);
         $optimizer->storeWebp($image, $disk, $path);
         $optimizer->storeSquareWebp($image, $disk, $thumbnailPath);
-        $gallery = $context->unit->onlineBookingGalleryImages()->create([
-            'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'path' => $path, 'thumbnail_path' => $thumbnailPath,
-            'alt_text' => $request->validated('alt_text'), 'position' => (int) $context->unit->onlineBookingGalleryImages()->max('position') + 1,
-        ]);
+        $gallery = DB::transaction(function () use ($context, $path, $thumbnailPath, $request): OnlineBookingGalleryImage {
+            $gallery = $context->unit->onlineBookingGalleryImages()->create([
+                'id' => (string) Str::uuid7(), 'tenant_id' => $context->tenant->getKey(), 'path' => $path, 'thumbnail_path' => $thumbnailPath,
+                'alt_text' => $request->validated('alt_text'), 'position' => (int) $context->unit->onlineBookingGalleryImages()->max('position') + 1,
+            ]);
+
+            $this->syncDraftGallery($context, fn (array $images): array => [...array_values(array_filter($images, fn (array $image): bool => ($image['path'] ?? null) !== $gallery->path)), ['path' => $gallery->path, 'thumbnail_path' => $gallery->thumbnail_path, 'alt_text' => $gallery->alt_text]]);
+
+            return $gallery;
+        });
 
         return response()->json(['gallery' => $gallery], 201);
     }
@@ -293,7 +336,10 @@ final class OnlineBookingSettingsController extends Controller
     public function updateGallery(OnlineBookingGalleryUpdateRequest $request, TenantContext $context, string $image): JsonResponse
     {
         $gallery = $this->galleryImage($context, $image);
-        $gallery->update($request->validated());
+        DB::transaction(function () use ($context, $gallery, $request): void {
+            $gallery->update($request->validated());
+            $this->syncDraftGallery($context, fn (array $images): array => array_map(fn (array $image): array => ($image['path'] ?? null) === $gallery->path ? array_replace($image, ['alt_text' => $gallery->alt_text]) : $image, $images));
+        });
 
         return response()->json(['gallery' => $gallery->fresh()]);
     }
@@ -302,7 +348,10 @@ final class OnlineBookingSettingsController extends Controller
     {
         Gate::authorize('update', $context->unit);
         $gallery = $this->galleryImage($context, $image);
-        $gallery->delete();
+        DB::transaction(function () use ($context, $gallery): void {
+            $gallery->delete();
+            $this->syncDraftGallery($context, fn (array $images): array => array_values(array_filter($images, fn (array $image): bool => ($image['path'] ?? null) !== $gallery->path)));
+        });
 
         return response()->json(['deleted' => true]);
     }
@@ -312,13 +361,29 @@ final class OnlineBookingSettingsController extends Controller
         $ids = $request->validated('image_ids');
         $images = $context->unit->onlineBookingGalleryImages()->whereIn('id', $ids)->get()->keyBy('id');
         abort_unless($images->count() === count($ids), 422, 'A galeria contém imagens inválidas.');
-        DB::transaction(function () use ($ids, $images): void {
+        DB::transaction(function () use ($ids, $images, $context): void {
             foreach ($ids as $position => $id) {
                 $images[$id]->update(['position' => $position]);
             }
+            $paths = array_map(fn (string $id): string => $images[$id]->path, $ids);
+            $this->syncDraftGallery($context, function (array $gallery) use ($paths): array {
+                $positions = array_flip($paths);
+                usort($gallery, fn (array $left, array $right): int => ($positions[$left['path']] ?? count($paths)) <=> ($positions[$right['path']] ?? count($paths)));
+
+                return $gallery;
+            });
         });
 
         return response()->json(['gallery' => $context->unit->onlineBookingGalleryImages()->get()]);
+    }
+
+    /** @param callable(list<array<string, mixed>>): list<array<string, mixed>> $transform */
+    private function syncDraftGallery(TenantContext $context, callable $transform): void
+    {
+        $site = app(EnsureOnlineBookingSite::class)->handle($context);
+        $draft = $site->draft()->lockForUpdate()->firstOrFail();
+        $gallery = $transform($draft->content['gallery'] ?? []);
+        app(SaveOnlineBookingDraft::class)->handle($context->user, $context, ['gallery' => $gallery], $draft->revision);
     }
 
     private function galleryImage(TenantContext $context, string $image): OnlineBookingGalleryImage
@@ -331,12 +396,13 @@ final class OnlineBookingSettingsController extends Controller
      * @param  Collection<int, Professional>  $professionals
      * @return array{unit_enabled: bool, has_active_service: bool, has_active_professional: bool, has_service_professional_pair: bool, has_whatsapp: bool, publishable: bool}
      */
-    private function readiness(Unit $unit, Collection $services, Collection $professionals): array
+    private function readiness(Unit $unit, Collection $services, Collection $professionals, ?string $whatsapp = null): array
     {
         $hasActiveService = $services->contains(fn (Service $service): bool => $service->status === 'active' && $service->online_booking_enabled);
         $hasActiveProfessional = $professionals->contains(fn (Professional $professional): bool => $professional->status === 'active' && $professional->online_booking_enabled);
-        $hasPair = $services->contains(fn (Service $service): bool => $service->status === 'active' && $service->online_booking_enabled && $service->professionals()->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->where('professionals.online_booking_enabled', true)->exists());
-        $hasWhatsapp = filled($unit->onlineBookingSetting?->whatsapp_phone) || $professionals->contains(fn (Professional $professional): bool => filled($professional->phone));
+        $selectedProfessionalIds = $professionals->filter(fn (Professional $professional): bool => $professional->status === 'active' && $professional->online_booking_enabled)->pluck('id')->all();
+        $hasPair = $services->contains(fn (Service $service): bool => $service->status === 'active' && $service->online_booking_enabled && $service->professionals()->where('professionals.unit_id', $unit->getKey())->where('professionals.status', 'active')->whereIn('professionals.id', $selectedProfessionalIds)->exists());
+        $hasWhatsapp = filled($whatsapp) || $professionals->contains(fn (Professional $professional): bool => filled($professional->phone));
 
         return [
             'unit_enabled' => $unit->online_booking_enabled,

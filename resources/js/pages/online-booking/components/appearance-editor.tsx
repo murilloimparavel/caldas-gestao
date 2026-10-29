@@ -224,7 +224,16 @@ export function AppearanceEditor({
                 <LogoEditor
                     url={logoUrl}
                     onUploaded={() =>
-                        router.reload({ only: ['settings', 'unit'] })
+                        router.reload({
+                            only: [
+                                'settings',
+                                'unit',
+                                'draft',
+                                'publication',
+                                'previewUrl',
+                                'draftDiff',
+                            ],
+                        })
                     }
                 />
                 {templateKey === 'atelier-barber' ? (
