@@ -1,0 +1,30 @@
+# Supply the immutable production app image (full release SHA or digest) at build time.
+ARG APP_IMAGE
+FROM node:22-bookworm-slim AS node
+FROM ${APP_IMAGE}
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git libsqlite3-dev \
+    && docker-php-ext-install pdo_sqlite \
+    && rm -rf /var/lib/apt/lists/* /var/www/html /root/.cache /root/.composer
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && npm install --global --ignore-scripts @openai/codex@0.165.0 \
+    && npm cache clean --force \
+    && groupadd --gid 10001 telemetry \
+    && useradd --uid 10001 --gid 10001 --home-dir /tmp/telemetry-home --no-create-home telemetry \
+    && mkdir -p /workspace /codex-auth \
+    && chown 10001:10001 /workspace /codex-auth
+COPY scripts/telemetry/prepare.sh /opt/telemetry/prepare
+COPY scripts/telemetry/result.schema.json /opt/telemetry/result.schema.json
+RUN chmod 0555 /opt/telemetry/prepare
+ENV APP_ENV=testing APP_DEBUG=false DB_CONNECTION=sqlite DB_DATABASE=:memory: \
+    CACHE_STORE=array SESSION_DRIVER=array QUEUE_CONNECTION=sync \
+    HOME=/tmp/telemetry-home CODEX_HOME=/codex-auth
+WORKDIR /workspace
+USER 10001:10001
+HEALTHCHECK NONE
+ENTRYPOINT []
+CMD ["codex", "--version"]

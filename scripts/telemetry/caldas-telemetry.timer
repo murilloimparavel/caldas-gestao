@@ -1,0 +1,12 @@
+[Unit]
+Description=Check sanitized Caldas incidents every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+RandomizedDelaySec=10s
+Unit=caldas-telemetry.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

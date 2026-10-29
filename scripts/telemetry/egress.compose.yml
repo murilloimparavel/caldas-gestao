@@ -1,0 +1,30 @@
+# Install independently; never attach the runner to any production Docker network.
+services:
+  telemetry-egress:
+    image: ${TELEMETRY_PROXY_IMAGE:?Set an independently verified immutable Squid image digest}
+    user: proxy
+    entrypoint: ["/usr/sbin/squid"]
+    command: ["-N", "-f", "/etc/squid/squid.conf"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /var/run:mode=1777
+      - /var/spool/squid:mode=1777
+      - /var/log/squid:mode=1777
+    volumes:
+      - ./egress.conf:/etc/squid/squid.conf:ro
+    networks:
+      caldas-telemetry-internal:
+        aliases: [telemetry-egress]
+      telemetry-egress-out: {}
+    mem_limit: 256m
+    pids_limit: 64
+    cpus: 0.5
+networks:
+  caldas-telemetry-internal:
+    name: caldas-telemetry-internal
+    internal: true
+  telemetry-egress-out:
+    name: caldas-telemetry-egress-out

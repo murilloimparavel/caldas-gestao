@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "tests", "limitations"],
+  "properties": {
+    "status": {"type": "string", "enum": ["prepared", "blocked"]},
+    "summary": {"type": "string", "maxLength": 4000},
+    "tests": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 1000}},
+    "limitations": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 1000}}
+  }
+}
