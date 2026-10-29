@@ -4,10 +4,7 @@ import process from 'node:process';
 
 const publicBookingPath =
     process.env.PLAYWRIGHT_PUBLIC_BOOKING_PATH ?? '/book/e2e-atelier';
-const templatePaths = [
-    '/book/e2e-atelier',
-    '/book/e2e-essential',
-];
+const templatePaths = ['/book/e2e-atelier', '/book/e2e-essential'];
 
 async function expectNoHorizontalPageOverflow(page: Page): Promise<void> {
     await expect
@@ -21,10 +18,20 @@ async function expectNoHorizontalPageOverflow(page: Page): Promise<void> {
 
 async function openCustomerDetails(page: Page, path: string): Promise<void> {
     await page.goto(path);
-    await page.getByRole('button', { name: /Corte clássico/ }).first().click();
+
+    if (path.includes('essential')) {
+        await page.getByRole('tab', { name: 'Serviços', exact: true }).click();
+    }
+
+    await page
+        .getByRole('button', { name: /Corte clássico/ })
+        .first()
+        .click();
 
     if (path.includes('atelier')) {
-        await page.getByRole('button', { name: 'Escolher profissional' }).click();
+        await page
+            .getByRole('button', { name: 'Escolher profissional' })
+            .click();
         await expect(
             page.getByRole('heading', { name: /Com quem você/ }),
         ).toBeVisible();
@@ -41,7 +48,9 @@ async function openCustomerDetails(page: Page, path: string): Promise<void> {
     const minimumDate = await dateInput.getAttribute('min');
 
     expect(minimumDate).toBeTruthy();
-    await dateInput.fill(minimumDate as string);
+    const nextDay = new Date(`${minimumDate as string}T12:00:00Z`);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    await dateInput.fill(nextDay.toISOString().slice(0, 10));
 
     if (path.includes('atelier')) {
         const suggestedTimeButton = page.getByRole('button', {
@@ -62,13 +71,9 @@ async function openCustomerDetails(page: Page, path: string): Promise<void> {
 
     if (path.includes('atelier')) {
         await page.getByRole('button', { name: 'Continuar' }).click();
-        await expect(
-            page.locator('[data-booking-field="name"]'),
-        ).toBeVisible();
+        await expect(page.locator('[data-booking-field="name"]')).toBeVisible();
     } else {
-        await expect(
-            page.locator('[data-booking-field="name"]'),
-        ).toBeEnabled();
+        await expect(page.locator('[data-booking-field="name"]')).toBeEnabled();
     }
 }
 
@@ -77,10 +82,18 @@ test.describe('Public Booking E2E Flow', () => {
         test(`loads ${path} without horizontal overflow`, async ({ page }) => {
             const response = await page.goto(path);
 
-            expect(response, `Expected ${path} to return a document response`).not.toBeNull();
-            expect(response?.status(), `Expected ${path} to load successfully`).toBe(200);
+            expect(
+                response,
+                `Expected ${path} to return a document response`,
+            ).not.toBeNull();
+            expect(
+                response?.status(),
+                `Expected ${path} to load successfully`,
+            ).toBe(200);
             await expect(page).toHaveTitle(/Matriz/);
-            await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+            await expect(
+                page.getByRole('heading', { level: 1 }).first(),
+            ).toBeVisible();
             await expectNoHorizontalPageOverflow(page);
         });
     }
@@ -114,8 +127,12 @@ test.describe('Public Booking E2E Flow', () => {
         await expect(page.getByText(/75 min/).first()).toBeVisible();
         await expect(page.getByText(/R\$\s?85,00/).first()).toBeVisible();
 
-        await page.getByRole('button', { name: 'Escolher profissional' }).click();
-        await expect(page.getByRole('heading', { name: /Com quem você/ })).toBeVisible();
+        await page
+            .getByRole('button', { name: 'Escolher profissional' })
+            .click();
+        await expect(
+            page.getByRole('heading', { name: /Com quem você/ }),
+        ).toBeVisible();
         await page.getByRole('button', { name: 'Voltar' }).click();
 
         await expect(
@@ -126,11 +143,15 @@ test.describe('Public Booking E2E Flow', () => {
         ).toHaveAttribute('aria-pressed', 'true');
 
         await page.getByRole('button', { name: 'Todos', exact: true }).click();
-        await page.getByRole('button', { name: 'Cuidados', exact: true }).click();
+        await page
+            .getByRole('button', { name: 'Cuidados', exact: true })
+            .click();
         const color = page.getByRole('button', { name: /Coloração discreta/ });
         await color.click();
         await page.getByRole('button', { name: 'Todos', exact: true }).click();
-        await page.getByRole('button', { name: 'Escolher profissional' }).click();
+        await page
+            .getByRole('button', { name: 'Escolher profissional' })
+            .click();
 
         await expect(page.getByText('Lucas Prado').first()).toBeVisible();
         await expect(page.getByText('João Costa')).toHaveCount(0);
@@ -177,47 +198,63 @@ test.describe('Public Booking E2E Flow', () => {
 
             void availabilityResponse.json().then((body) => {
                 availabilityByCandidate.set(`${date}:${professionalId}`, [
-                    ...(availabilityByCandidate.get(`${date}:${professionalId}`) ?? []),
-                    ...body.slots.map(({ starts_at }: { starts_at: string }) => ({
-                        professionalId,
-                        startsAt: starts_at,
-                    })),
+                    ...(availabilityByCandidate.get(
+                        `${date}:${professionalId}`,
+                    ) ?? []),
+                    ...body.slots.map(
+                        ({ starts_at }: { starts_at: string }) => ({
+                            professionalId,
+                            startsAt: starts_at,
+                        }),
+                    ),
                 ]);
             });
         });
 
         await page.getByRole('button', { name: /Corte clássico/ }).click();
-        await page.getByRole('button', { name: 'Escolher profissional' }).click();
-        await expect(page.getByRole('heading', { name: /Com quem você/ })).toBeVisible();
+        await page
+            .getByRole('button', { name: 'Escolher profissional' })
+            .click();
+        await expect(
+            page.getByRole('heading', { name: /Com quem você/ }),
+        ).toBeVisible();
         await page.getByRole('button', { name: /Primeiro disponível/ }).click();
 
         const selectedProfessionalNotice = page.getByRole('status');
         await expect(selectedProfessionalNotice).toContainText(
             /Primeiro horário encontrado para/,
         );
-        const selectedProfessionalName = (await selectedProfessionalNotice.textContent())
-            ?.match(/para (.+?) em /)?.[1];
+        const selectedProfessionalName = (
+            await selectedProfessionalNotice.textContent()
+        )?.match(/para (.+?) em /)?.[1];
         expect(selectedProfessionalName).toBeTruthy();
         await page.getByRole('button', { name: 'Escolher horário' }).click();
-        await expect(page.getByRole('heading', { name: /Encontre o melhor/ })).toBeVisible();
-        const dateInput = page.getByLabel(/^(Data|Escolher outra data)$/i).first();
+        await expect(
+            page.getByRole('heading', { name: /Encontre o melhor/ }),
+        ).toBeVisible();
+        const dateInput = page
+            .getByLabel(/^(Data|Escolher outra data)$/i)
+            .first();
         const selectedDate = await dateInput.inputValue();
 
         await expect
-            .poll(() =>
-                pageProps.professionals.filter((professional) =>
-                    (availabilityByCandidate.get(
-                        `${selectedDate}:${professional.id}`,
-                    )?.length ?? 0) > 0,
-                ).length,
+            .poll(
+                () =>
+                    pageProps.professionals.filter(
+                        (professional) =>
+                            (availabilityByCandidate.get(
+                                `${selectedDate}:${professional.id}`,
+                            )?.length ?? 0) > 0,
+                    ).length,
             )
             .toBe(2);
 
         const earliestCandidateSlot = pageProps.professionals
-            .flatMap((professional) =>
-                availabilityByCandidate.get(
-                    `${selectedDate}:${professional.id}`,
-                ) ?? [],
+            .flatMap(
+                (professional) =>
+                    availabilityByCandidate.get(
+                        `${selectedDate}:${professional.id}`,
+                    ) ?? [],
             )
             .sort(
                 (first, second) =>
@@ -226,7 +263,9 @@ test.describe('Public Booking E2E Flow', () => {
         expect(earliestCandidateSlot).toBeDefined();
 
         if (!earliestCandidateSlot) {
-            throw new Error('No candidate availability was returned for the selected date.');
+            throw new Error(
+                'No candidate availability was returned for the selected date.',
+            );
         }
 
         expect(selectedProfessionalName).toBe(
@@ -247,6 +286,41 @@ test.describe('Public Booking E2E Flow', () => {
         ).toBeVisible();
     });
 
+    test('atelier contact fields follow the expected order and preserve observation disclosure text', async ({
+        page,
+    }) => {
+        await openCustomerDetails(page, '/book/e2e-atelier');
+        const name = page.locator('#atelier-name');
+        const phone = page.locator('#atelier-phone');
+        const email = page.locator('#atelier-email');
+        const notes = page.locator('#atelier-notes');
+        const disclosure = page.getByRole('button', { name: /Observação/ });
+
+        await expect(name).toHaveAttribute('required', '');
+        await expect(phone).toHaveAttribute('required', '');
+        await expect(email).not.toHaveAttribute('required');
+        await expect(notes).not.toHaveAttribute('required');
+        await expect(
+            page.getByLabel('WhatsApp *', { exact: true }),
+        ).toBeVisible();
+        await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+        await expect(notes).toBeHidden();
+        await name.focus();
+        await page.keyboard.press('Tab');
+        await expect(phone).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(email).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(disclosure).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+        await notes.fill('Prefiro um corte com tesoura.');
+        await disclosure.click();
+        await expect(notes).toBeHidden();
+        await disclosure.click();
+        await expect(notes).toHaveValue('Prefiro um corte com tesoura.');
+    });
+
     for (const path of templatePaths) {
         test(`${path} exposes usable contact fields`, async ({ page }) => {
             await openCustomerDetails(page, path);
@@ -259,9 +333,15 @@ test.describe('Public Booking E2E Flow', () => {
             await expect(name).toBeVisible();
             await expect(phone).toBeVisible();
             await expect(email).toBeVisible();
+
+            if (path.includes('atelier')) {
+                await expect(notes).toBeHidden();
+                await page.getByRole('button', { name: /Observação/ }).click();
+            }
+
             await expect(notes).toBeVisible();
             await expect(page.getByLabel(/Nome/)).toBeVisible();
-            await expect(page.getByLabel(/WhatsApp ou telefone/)).toBeVisible();
+            await expect(page.getByLabel(/WhatsApp/)).toBeVisible();
             await expect(page.getByLabel(/E-mail/)).toBeVisible();
             await expect(page.getByLabel(/Observação/)).toBeVisible();
 

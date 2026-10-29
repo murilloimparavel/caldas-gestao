@@ -45,7 +45,17 @@ final class PublicBookingE2ESeeder extends Seeder
                 'timezone' => 'America/Sao_Paulo',
             ]);
             $atelierUnit = $atelierTenant->units()->firstOrFail();
-            $atelierUnit->update(['online_booking_enabled' => true]);
+            $atelierUnit->update([
+                'online_booking_enabled' => true,
+                'address' => [
+                    'street' => 'Rua das Flores',
+                    'number' => '120',
+                    'neighborhood' => 'Centro',
+                    'city' => 'Caldas Novas',
+                    'state' => 'GO',
+                    'postal_code' => '75690-000',
+                ],
+            ]);
 
             $this->seedCatalog($atelierTenant, $atelierUnit, 'atelier-barber', 'e2e-atelier', $owner);
 
@@ -113,6 +123,12 @@ final class PublicBookingE2ESeeder extends Seeder
             'unit_id' => $unit->getKey(),
             'public_slug' => $publicSlug,
             'minimum_notice_minutes' => 0,
+            'description' => 'Cuidado e estilo no centro de Caldas Novas.',
+            'phone' => '(64) 3453-1234',
+            'whatsapp_phone' => '(64) 99999-1234',
+            'instagram_url' => 'https://www.instagram.com/romawear.e2e/',
+            'facebook_url' => 'https://www.facebook.com/romawear.e2e/',
+            'website_url' => 'https://example.com/romawear',
             'public_hours' => $hours,
         ]);
         $site = OnlineBookingSite::query()->create([
