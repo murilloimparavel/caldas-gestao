@@ -31,7 +31,7 @@ chown root:root "$install_dir" "$state_dir"
 # Prevent an older timer from starting during an upgrade; preserve its output artifacts.
 systemctl disable --now caldas-telemetry.timer 2>/dev/null || true
 systemctl stop caldas-telemetry.service 2>/dev/null || true
-systemctl stop caldas-telemetry-watchdog.timer caldas-telemetry-watchdog.service 2>/dev/null || true
+systemctl stop caldas-telemetry-health.timer caldas-telemetry-health.service caldas-telemetry-watchdog.timer caldas-telemetry-watchdog.service 2>/dev/null || true
 if [ -n "$runner_image" ]; then
     docker pull "$runner_image"
     docker tag "$runner_image" caldas-telemetry-runner:0.165.0
@@ -43,7 +43,7 @@ else
     # A locally rebuilt image cannot silently restore an older registry version later.
     rm -f "$install_dir/runner-image.json"
 fi
-for file in runner.py prepare.sh result.schema.json egress.conf egress.compose.yml login.sh; do
+for file in runner.py health.py prepare.sh result.schema.json egress.conf egress.compose.yml login.sh; do
     install -o root -g root -m 0644 "$source_dir/$file" "$install_dir/$file"
 done
 chmod 0755 "$install_dir/login.sh"
@@ -57,7 +57,9 @@ install -o root -g root -m 0644 "$source_dir/caldas-telemetry.service" /etc/syst
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry.timer" /etc/systemd/system/caldas-telemetry.timer
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry-watchdog.service" /etc/systemd/system/caldas-telemetry-watchdog.service
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry-watchdog.timer" /etc/systemd/system/caldas-telemetry-watchdog.timer
+install -o root -g root -m 0644 "$source_dir/caldas-telemetry-health.service" /etc/systemd/system/caldas-telemetry-health.service
+install -o root -g root -m 0644 "$source_dir/caldas-telemetry-health.timer" /etc/systemd/system/caldas-telemetry-health.timer
 systemctl daemon-reload
 # Cleanup remains active even when incident claims are paused or their timer is disabled.
-systemctl enable --now caldas-telemetry-watchdog.timer
+systemctl enable --now caldas-telemetry-watchdog.timer caldas-telemetry-health.timer
 printf '%s\n' 'Runner installed. The timer is disabled. Authenticate with /opt/caldas-telemetry/login.sh, then explicitly enable the timer after review.'

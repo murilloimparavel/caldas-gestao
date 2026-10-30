@@ -433,7 +433,7 @@ class Runner:
         self.atomic_json(path, {'retry_after': time.time() + IMAGE_RECOVERY_RETRY_SECONDS})
         self.run(['docker', 'pull', image], timeout=180)
         inspected = json.loads(self.run(['docker', 'image', 'inspect', image], timeout=15).stdout)
-        if not isinstance(inspected, list) or len(inspected) != 1 or image not in inspected[0].get('RepoDigests', []):
+        if not isinstance(inspected, list) or len(inspected) != 1 or not isinstance(inspected[0], dict) or image not in inspected[0].get('RepoDigests', []):
             raise RunnerError('Pulled image digest does not match the trusted pin')
         self.run(['docker', 'tag', image, self.config.image], timeout=15)
         self.run(['docker', 'image', 'inspect', self.config.image], timeout=15)
@@ -711,6 +711,8 @@ def main() -> int:
         except BlockingIOError:
             return 0
         try:
+            if not args.watchdog:
+                runner.atomic_json(runner.state / 'worker-heartbeat.json', {'at': int(time.time())})
             if not args.watchdog and (runner.paused() or not runner.prerequisites_ready()):
                 return 0
             try:
