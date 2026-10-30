@@ -225,6 +225,47 @@ class RunnerContracts(unittest.TestCase):
         self.runner.cleanup_orphans.assert_called_once()
         self.runner.once.assert_called_once()
 
+    def test_registry_recovery_accepts_only_the_approved_digest(self):
+        image = runner_module.REGISTRY_IMAGE + '@sha256:' + 'a' * 64
+        self.assertEqual(runner_module.trusted_registry_image(image), image)
+        for invalid in [runner_module.REGISTRY_IMAGE + ':latest', runner_module.REGISTRY_IMAGE + ':sha-' + SHA, 'ghcr.io/other/runner@sha256:' + 'a' * 64, 'evil.example/runner@sha256:' + 'a' * 64, image + ';whoami']:
+            with self.subTest(invalid=invalid), self.assertRaises(runner_module.RunnerError):
+                runner_module.trusted_registry_image(invalid)
+
+    def test_missing_image_recovers_only_a_verified_digest_and_throttles_pulls(self):
+        image = runner_module.REGISTRY_IMAGE + '@sha256:' + 'a' * 64
+        self.runner.registry_pin = Mock(return_value=image)
+        calls = []
+        def launch(argv, **_options):
+            calls.append(argv)
+            if argv == ['docker', 'image', 'inspect', self.runner.config.image] and sum(call == argv for call in calls) == 1:
+                raise runner_module.RunnerError('missing')
+            value = json.dumps([{'RepoDigests': [image]}]) if argv == ['docker', 'image', 'inspect', image] else ''
+            return subprocess.CompletedProcess(argv, 0, value, '')
+        self.runner.run = Mock(side_effect=launch)
+        with patch.object(runner_module.time, 'time', return_value=1700000000):
+            self.runner.ensure_image()
+        self.assertIn(['docker', 'pull', image], calls)
+        self.assertIn(['docker', 'tag', image, self.runner.config.image], calls)
+        self.assertEqual(json.loads((self.runner.state / 'image-recovery.json').read_text())['retry_after'], 1700003600)
+        self.runner.run = Mock(side_effect=lambda argv, **_options: (_ for _ in ()).throw(runner_module.RunnerError('missing')) if argv[1:3] == ['image', 'inspect'] else subprocess.CompletedProcess(argv, 0, '', ''))
+        with patch.object(runner_module.time, 'time', return_value=1700000001), self.assertRaises(runner_module.RunnerError):
+            self.runner.ensure_image()
+        self.assertFalse(any(call.args[0][1] == 'pull' for call in self.runner.run.call_args_list))
+
+    def test_registry_digest_mismatch_is_not_tagged_as_a_trusted_local_image(self):
+        image = runner_module.REGISTRY_IMAGE + '@sha256:' + 'a' * 64
+        self.runner.registry_pin = Mock(return_value=image)
+        def launch(argv, **_options):
+            if argv == ['docker', 'image', 'inspect', self.runner.config.image]:
+                raise runner_module.RunnerError('missing')
+            value = json.dumps([{'RepoDigests': ['ghcr.io/other/image@sha256:' + 'b' * 64]}]) if argv == ['docker', 'image', 'inspect', image] else ''
+            return subprocess.CompletedProcess(argv, 0, value, '')
+        self.runner.run = Mock(side_effect=launch)
+        with self.assertRaises(runner_module.RunnerError):
+            self.runner.ensure_image()
+        self.assertFalse(any(call.args[0][1] == 'tag' for call in self.runner.run.call_args_list))
+
     def test_requires_full_immutable_git_release(self):
         self.assertEqual(runner_module.validate_release('ghcr.io/org/app:' + SHA), SHA)
         self.assertEqual(runner_module.validate_release('ghcr.io/org/app:sha-' + SHA), SHA)

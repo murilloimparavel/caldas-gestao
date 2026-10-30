@@ -28,6 +28,8 @@ JOB_OWNER = 'caldas-telemetry-runner-v1'
 JOB_LABEL_PREFIX = 'io.caldas.telemetry.'
 JOB_MAX_SECONDS = 1200
 PREREQUISITE_RETRY_SECONDS = 900
+REGISTRY_IMAGE = 'ghcr.io/murilloimparavel/caldas-gestao-telemetry-runner'
+IMAGE_RECOVERY_RETRY_SECONDS = 3600
 MAX_OUTPUT = 2 * 1024 * 1024
 TRUSTED_PROMPT = '''Diagnose the incident below against this exact deployed release. Prepare the smallest
 reviewable patch and meaningful targeted tests if the evidence supports a correction.
@@ -55,6 +57,12 @@ def validate_release(image_ref: str) -> str:
     if not SHA.fullmatch(release):
         raise RunnerError('An immutable full Git SHA release is required')
     return release
+
+
+def trusted_registry_image(value: object) -> str:
+    if not isinstance(value, str) or not re.fullmatch(re.escape(REGISTRY_IMAGE) + r'@sha256:[0-9a-f]{64}', value):
+        raise RunnerError('Only the approved GHCR repository with a full digest is allowed')
+    return value
 
 
 def bounded_budget(timestamps: list[float], now: float) -> bool:
@@ -163,6 +171,7 @@ def source_descriptor(root: Path, relative: str) -> int:
 class Config:
     state_dir: Path = Path('/var/lib/caldas-telemetry')
     image: str = 'caldas-telemetry-runner:0.165.0'
+    image_lock: Path = Path('/opt/caldas-telemetry/runner-image.json')
     auth_volume: str = 'caldas-telemetry-codex-auth'
     network: str = 'caldas-telemetry-internal'
     proxy: str = 'http://telemetry-egress:3128'
@@ -328,6 +337,8 @@ class Runner:
             'docker',
             'run',
             '--rm',
+            '--pull',
+            'never',
             '-i',
             '--name',
             name,
@@ -389,18 +400,56 @@ class Runner:
             options += ['--mount', f'type=volume,src={self.config.auth_volume},dst=/codex-auth', '--env', 'CODEX_HOME=/codex-auth']
         return options
 
+    def registry_pin(self) -> str | None:
+        path = self.config.image_lock
+        if not path.exists():
+            return None
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_mode & 0o022 or metadata.st_uid != os.geteuid() or metadata.st_size > 4096:
+            raise RunnerError('Registry pin must be a small file owned and writable only by the runner operator')
+        document = json.loads(path.read_text())
+        if not isinstance(document, dict) or set(document) != {'image'}:
+            raise RunnerError('Invalid registry pin document')
+        return trusted_registry_image(document['image'])
+
+    def ensure_image(self) -> None:
+        try:
+            self.run(['docker', 'image', 'inspect', self.config.image], timeout=15)
+            return
+        except RunnerError:
+            # Confirm the daemon before treating any inspection error as a missing image.
+            self.run(['docker', 'info', '--format', '{{.ServerVersion}}'], timeout=15)
+        image = self.registry_pin()
+        if image is None:
+            raise RunnerError('Runner image missing; no trusted recovery digest configured')
+        path = self.state / 'image-recovery.json'
+        recovery = json.loads(path.read_text()) if path.exists() else {'retry_after': 0}
+        retry_after = recovery.get('retry_after') if isinstance(recovery, dict) else None
+        if type(retry_after) not in {int, float} or not math.isfinite(retry_after) or retry_after < 0:
+            raise RunnerError('Invalid image recovery state')
+        if time.time() < retry_after:
+            raise RunnerError('Registry recovery is waiting for its persistent retry window')
+        # Record before network access; failed registry pulls cannot loop every minute.
+        self.atomic_json(path, {'retry_after': time.time() + IMAGE_RECOVERY_RETRY_SECONDS})
+        self.run(['docker', 'pull', image], timeout=180)
+        inspected = json.loads(self.run(['docker', 'image', 'inspect', image], timeout=15).stdout)
+        if not isinstance(inspected, list) or len(inspected) != 1 or image not in inspected[0].get('RepoDigests', []):
+            raise RunnerError('Pulled image digest does not match the trusted pin')
+        self.run(['docker', 'tag', image, self.config.image], timeout=15)
+        self.run(['docker', 'image', 'inspect', self.config.image], timeout=15)
+
     def check_isolation(self) -> None:
         network = json.loads(self.run(['docker', 'network', 'inspect', self.config.network]).stdout)[0]
         if network.get('Internal') is not True:
             raise RunnerError('Runner network must be internal; direct outbound connections are forbidden')
         self.run(['docker', 'volume', 'inspect', self.config.auth_volume])
-        self.run(['docker', 'image', 'inspect', self.config.image])
+        self.ensure_image()
         self.auth_probe()
         if not re.fullmatch(r'http://[a-zA-Z0-9_-]+:3128', self.config.proxy):
             raise RunnerError('Only the dedicated allowlist proxy is supported')
 
     def auth_probe(self) -> None:
-        self.run(['docker', 'run', '--rm', '--network', 'none', '--user', '10001:10001', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', '--read-only', '--memory', '128m', '--pids-limit', '32', '--mount', f'type=volume,src={self.config.auth_volume},dst=/codex-auth,readonly', self.config.image, 'test', '-s', '/codex-auth/auth.json'], timeout=20)
+        self.run(['docker', 'run', '--rm', '--pull', 'never', '--network', 'none', '--user', '10001:10001', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', '--read-only', '--memory', '128m', '--pids-limit', '32', '--mount', f'type=volume,src={self.config.auth_volume},dst=/codex-auth,readonly', self.config.image, 'test', '-s', '/codex-auth/auth.json'], timeout=20)
 
     def budget(self) -> bool:
         path = self.state / 'attempts.json'
@@ -631,6 +680,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-dir', type=Path, default=Config.state_dir)
     parser.add_argument('--image', default=Config.image)
+    parser.add_argument('--image-lock', type=Path, default=Config.image_lock)
     parser.add_argument('--auth-volume', default=Config.auth_volume)
     parser.add_argument('--network', default=Config.network)
     parser.add_argument('--proxy', default=Config.proxy)
