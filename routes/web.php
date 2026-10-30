@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\PlatformPlanController;
 use App\Http\Controllers\Admin\PlatformUserController;
+use App\Http\Controllers\Admin\TelemetryIncidentController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
@@ -147,6 +148,9 @@ Route::get('/admin/login', [AdminController::class, 'login'])->name('admin.login
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/incidents', [TelemetryIncidentController::class, 'index'])->name('incidents.index');
+        Route::get('/incidents/{incident}', [TelemetryIncidentController::class, 'show'])->name('incidents.show');
+        Route::patch('/incidents/{incident}', [TelemetryIncidentController::class, 'update'])->name('incidents.update');
         Route::get('/audit', [AdminController::class, 'audit'])->name('audit');
         Route::get('/plans', [PlatformPlanController::class, 'index'])->name('plans.index');
         Route::post('/plans', [PlatformPlanController::class, 'store'])->name('plans.store');

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { index as incidentsIndex } from '@/routes/admin/incidents';
 
 export function AdminPageHeader({
     title,
@@ -35,6 +36,12 @@ export function AdminPageHeader({
                 <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                     {description}
                 </p>
+                <Link
+                    href={incidentsIndex.url()}
+                    className="inline-flex min-h-9 items-center text-sm font-medium text-primary hover:underline"
+                >
+                    Central de incidentes
+                </Link>
             </div>
             {actionHref && actionLabel ? (
                 <Button asChild>
