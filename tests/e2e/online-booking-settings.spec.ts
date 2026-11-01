@@ -13,6 +13,59 @@ async function signInAsBookingOwner(page: Page) {
 }
 
 test.describe('Online booking settings panel', () => {
+    test('renders opening hours in browsers without Array.prototype.toSorted', async ({
+        page,
+    }) => {
+        await page.addInitScript(() => {
+            Reflect.deleteProperty(Array.prototype, 'toSorted');
+        });
+
+        const pageErrors: string[] = [];
+        page.on('pageerror', (error) => pageErrors.push(error.message));
+
+        await signInAsBookingOwner(page);
+        await page.goto('/online-booking');
+        await page
+            .getByRole('navigation', {
+                name: 'Configuração do agendamento online',
+            })
+            .getByRole('button', { name: 'Horários', exact: true })
+            .click();
+
+        await page
+            .getByLabel('Segunda-feira início 1', { exact: true })
+            .fill('18:00');
+        await page
+            .getByLabel('Segunda-feira fim 1', { exact: true })
+            .fill('20:00');
+        await page
+            .getByRole('button', {
+                name: 'Adicionar período Segunda-feira',
+                exact: true,
+            })
+            .click();
+        await page
+            .getByLabel('Segunda-feira início 2', { exact: true })
+            .fill('09:00');
+        await page
+            .getByLabel('Segunda-feira fim 2', { exact: true })
+            .fill('12:00');
+
+        await expect(
+            page.getByLabel('Segunda-feira início 1', { exact: true }),
+        ).toHaveValue('18:00');
+        await expect(
+            page.getByLabel('Segunda-feira início 2', { exact: true }),
+        ).toHaveValue('09:00');
+        await expect(
+            page.locator('input[name="public_hours[1][starts_at]"]'),
+        ).toHaveValue('09:00');
+        await expect(
+            page.locator('input[name="public_hours[1][ends_at]"]'),
+        ).toHaveValue('20:00');
+        expect(pageErrors).toEqual([]);
+    });
+
     test('saves multiple opening periods through the editor without losing identity or catalog', async ({
         page,
     }, testInfo) => {
