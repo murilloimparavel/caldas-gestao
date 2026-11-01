@@ -200,7 +200,7 @@ it('renders a signed preview from the draft without requiring publication', func
         'professional_ids' => [],
     ], 0);
 
-    $response = $this->actingAs($owner)->get(URL::signedRoute('online_booking.preview', [$tenant, $unit]));
+    $response = $this->actingAs($owner)->get(URL::signedRoute('online_booking.preview', [$tenant, $unit], absolute: false));
 
     $response->assertSuccessful()
         ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
@@ -216,16 +216,47 @@ it('renders a signed preview of an immutable publication', function () {
     $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [$service->getKey()], 'professional_ids' => [$professional->getKey()]], 0);
     $publication = app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
 
-    $this->actingAs($owner)->get(URL::signedRoute('online_booking.publication_preview', ['publication' => $publication->getKey()]))
+    $this->actingAs($owner)->get(URL::signedRoute('online_booking.publication_preview', ['publication' => $publication->getKey()], absolute: false))
         ->assertSuccessful()
         ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+});
+
+it('validates relative preview signatures independently of proxy scheme while rejecting tampering', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $draft = app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [$service->getKey()], 'professional_ids' => [$professional->getKey()]], 0);
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $draft->revision);
+
+    $response = $this->actingAs($owner)->getJson('https://localhost/online-booking')->assertSuccessful();
+    $preview = $response->json('previewUrl');
+    $publicationPreview = $response->json('publicationHistory.0.preview_url');
+
+    foreach ([$preview, $publicationPreview] as $url) {
+        expect($url)->toStartWith('/');
+        $this->get('http://localhost'.$url)->assertSuccessful();
+        $this->get('http://localhost'.$url.'&unexpected=1')->assertForbidden();
+    }
+
+    $this->travel(31)->minutes();
+    foreach ([$preview, $publicationPreview] as $url) {
+        $this->get('http://localhost'.$url)->assertForbidden();
+    }
+
+    $this->travelBack();
+    auth()->logout();
+    foreach ([$preview, $publicationPreview] as $url) {
+        $this->get('http://localhost'.$url)->assertRedirect();
+    }
 });
 
 it('rejects an expired online booking preview URL', function () {
     [$owner, $tenant, $unit] = onlineBookingWorkspace();
 
     $this->actingAs($owner)
-        ->get(URL::temporarySignedRoute('online_booking.preview', now()->subMinute(), [$tenant, $unit]))
+        ->get(URL::temporarySignedRoute('online_booking.preview', now()->subMinute(), [$tenant, $unit], absolute: false))
         ->assertForbidden();
 });
 

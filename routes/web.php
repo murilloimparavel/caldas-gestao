@@ -215,12 +215,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('online-booking/publications', [OnlineBookingSettingsController::class, 'index'])->name('online_booking.publications.index');
         Route::get('online-booking/preview/{tenant:slug}/{unit:slug}', [PublicBookingController::class, 'preview'])
             ->scopeBindings()
-            ->middleware(['signed', PreventOnlineBookingPreviewCaching::class])
+            ->middleware(['signed:relative', PreventOnlineBookingPreviewCaching::class])
             ->name('online_booking.preview');
         Route::get('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.campaign_links.index');
         Route::get('online-booking/publications/{publication}/preview', [PublicBookingController::class, 'previewPublication'])
             ->middleware(PreventOnlineBookingPreviewCaching::class)
-            ->middleware('signed')
+            ->middleware('signed:relative')
             ->name('online_booking.publication_preview');
         Route::get('online-booking/links', [OnlineBookingCampaignLinkController::class, 'index'])->name('online_booking.links');
         Route::post('online-booking/campaign-links', [OnlineBookingCampaignLinkController::class, 'store'])->name('online_booking.campaign_links.store');
