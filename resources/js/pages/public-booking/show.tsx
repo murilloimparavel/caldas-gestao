@@ -1,4 +1,7 @@
-import { publicOpeningPeriods, publicOpeningLabel } from './public-opening-hours';
+import {
+    publicOpeningPeriods,
+    publicOpeningLabel,
+} from './public-opening-hours';
 import type { PublicOpeningDay } from './public-opening-hours';
 import { Head, useHttp } from '@inertiajs/react';
 import {
