@@ -63,7 +63,22 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create(['is_super_admin' => true]);
 
         $this->get(route('admin.login'));
-        $response = $this->post(route('login.store'), [
+        $response = $this->post(route('admin.login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'remember' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.dashboard', absolute: false));
+        $response->assertSessionMissing('admin_login_intent');
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_dedicated_admin_login_route_redirects_super_administrators_without_session_intent(): void
+    {
+        $user = User::factory()->create(['is_super_admin' => true]);
+
+        $response = $this->post(route('admin.login.store'), [
             'email' => $user->email,
             'password' => 'password',
         ]);
@@ -72,14 +87,16 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_admin_login_redirects_super_administrators_when_the_session_intent_is_missing()
+    public function test_admin_login_route_with_remember_checked_keeps_super_administrators_on_the_admin_dashboard(): void
     {
         $user = User::factory()->create(['is_super_admin' => true]);
 
-        $response = $this->post(route('login.store'), [
+        $this->get(route('admin.login'));
+        $this->withSession(['admin_login_intent' => false]);
+        $response = $this->post(route('admin.login.store'), [
             'email' => $user->email,
             'password' => 'password',
-            'admin_login_intent' => '1',
+            'remember' => '1',
         ]);
 
         $response->assertRedirect(route('admin.dashboard', absolute: false));
@@ -91,7 +108,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->get(route('admin.login'));
-        $response = $this->post(route('login.store'), [
+        $response = $this->post(route('admin.login.store'), [
             'email' => $user->email,
             'password' => 'password',
         ]);
@@ -113,10 +130,26 @@ class AuthenticationTest extends TestCase
         $response = $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'password',
+            'remember' => '1',
         ]);
 
         $this->assertAuthenticated();
+        $this->assertAuthenticatedAs($user);
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_super_administrators_using_the_regular_login_keep_the_default_redirect(): void
+    {
+        $user = User::factory()->create(['is_super_admin' => true]);
+
+        $response = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'remember' => '1',
+        ]);
+
+        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_users_can_authenticate_with_a_canonically_equivalent_email(): void
