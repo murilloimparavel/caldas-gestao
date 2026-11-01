@@ -84,6 +84,8 @@ class PublisherTests(unittest.TestCase):
         payload = next(payload for method, path, payload in self.calls if method == 'POST' and path == '/issues')
         self.assertIn(INCIDENT, payload['title'])
         self.assertIn('/build/assets/app-ABCDEFGH.js:1', payload['body'])
+        self.assertIn('\n### Evidências sanitizadas\n', payload['body'])
+        self.assertNotIn('\\n', payload['body'])
         self.assertNotIn('private customer token', payload['body'])
         self.assertNotIn(CLAIM, payload['body'])
 
@@ -160,6 +162,7 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(pr['base'], 'production')
         self.assertNotIn('after', pr['body'])
         self.assertIn('issue #7', pr['body'])
+        self.assertNotIn('\\n', pr['body'])
         self.assertIn('\n', pr['body'])
 
     def test_existing_branch_and_pr_are_reused_and_not_force_updated(self):
