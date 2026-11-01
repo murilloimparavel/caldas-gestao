@@ -14,10 +14,12 @@ final class AdminAwareLoginResponse implements LoginResponseContract, PasskeyLog
 {
     public function toResponse($request): Response
     {
-        $adminLogin = $request->boolean('admin_login_intent')
-            || (bool) $request->session()->pull('admin_login_intent', false);
+        $requestedAdminLogin = $request->boolean('admin_login_intent');
+        $sessionAdminLogin = (bool) $request->session()->pull('admin_login_intent', false);
+        $adminLogin = $request->routeIs('admin.login.store') || $requestedAdminLogin || $sessionAdminLogin;
+        $isPlatformAdmin = $request->user()?->isSuperAdmin() === true;
 
-        if ($adminLogin && ! $request->user()?->isSuperAdmin()) {
+        if ($adminLogin && ! $isPlatformAdmin) {
             $this->logout($request);
 
             if ($request->is('passkeys/login') && $request->wantsJson()) {

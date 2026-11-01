@@ -45,6 +45,7 @@ use App\Models\OnlineBookingSite;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
 Route::post('/webhooks/lastlink', LastlinkWebhookController::class)
     ->middleware('throttle:30,1')
@@ -147,6 +148,9 @@ Route::redirect('/signup', '/register')->name('signup');
 Route::get('/admin/login', [AdminController::class, 'login'])
     ->middleware(PreventAdminLoginCaching::class)
     ->name('admin.login');
+Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])
+    ->middleware(['guest:web', 'throttle:login'])
+    ->name('admin.login.store');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
