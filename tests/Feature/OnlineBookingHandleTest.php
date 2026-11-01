@@ -36,6 +36,7 @@ it('reserves a draft handle and rejects a handle reserved by another unit', func
 });
 
 it('turns the published handle into a three-day redirect when a new handle is published', function () {
+    $this->freezeTime();
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
     $unit->update(['online_booking_enabled' => true]);
     $service->update(['online_booking_enabled' => true]);
