@@ -477,8 +477,28 @@ class RunnerContracts(unittest.TestCase):
         self.runner.app.assert_called_with('web', ['telemetry:finish', INCIDENT['id'], '--claim', INCIDENT['claim_id'], '--status', 'blocked', '--json'])
         results = list((self.runner.state / 'incidents').glob('*/result.json'))
         self.assertEqual(len(results), 1)
-        self.assertEqual(json.loads(results[0].read_text())['status'], 'blocked')
+        result = json.loads(results[0].read_text())
+        self.assertEqual(result['status'], 'blocked')
+        self.assertEqual(result['failure_stage'], 'checkout')
+        self.assertEqual(result['failure_class'], 'runtime')
+        self.assertNotIn('unavailable', json.dumps(result))
         self.assertFalse(list((self.runner.state / 'incidents').glob('*/workspace')))
+
+    def test_codex_timeout_records_only_safe_stage_and_class(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'])
+        self.runner.checkout = Mock(side_effect=lambda _release, workspace: workspace.mkdir())
+        def launch(argv, **_options):
+            if 'codex' in argv:
+                raise subprocess.TimeoutExpired('sensitive command', 10)
+            return subprocess.CompletedProcess(argv, 0, '', '')
+        self.runner.run = Mock(side_effect=launch)
+        with patch.object(runner_module.subprocess, 'run'):
+            self.runner.once()
+        result = json.loads(next((self.runner.state / 'incidents').glob('*/result.json')).read_text())
+        self.assertEqual((result['failure_stage'], result['failure_class']), ('codex', 'timeout'))
+        self.assertNotIn('sensitive command', json.dumps(result))
 
 
 if __name__ == '__main__':

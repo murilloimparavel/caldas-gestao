@@ -605,15 +605,18 @@ class Runner:
         status = 'blocked'
         attempt = self.state / 'incidents' / str(uuid.uuid4())
         attempt.mkdir(mode=0o700)
+        stage = 'claim_validation'
         try:
             incident = sanitize_incident(response)
             self.job_started_at = int(time.time())
             self.record_attempt()
             self.atomic_json(attempt / 'incident.json', incident)
             workspace = attempt / 'workspace'
+            stage = 'checkout'
             self.checkout(incident['release'], workspace)
             # Dependencies are prepared before mounting any authentication material.
             self.running_name = 'caldas-telemetry-' + attempt.name
+            stage = 'prepare'
             self.run(self.docker_options(self.running_name, workspace, auth=False) + [self.config.image, '/opt/telemetry/prepare'], timeout=420)
             self.running_name = None
             self.running_name = 'caldas-telemetry-' + attempt.name
@@ -621,6 +624,7 @@ class Runner:
             # Docker enforces the boundary (UID, readonly root, only workspace/auth mounts,
             # no capabilities/socket, private network with allowlisted proxy). This is NOT
             # an automatic fallback, and no host namespace/sysctl/security setting changes.
+            stage = 'codex'
             self.run(
                 self.docker_options(self.running_name, workspace, auth=True) + [
                     self.config.image,
@@ -654,6 +658,7 @@ class Runner:
                 timeout=self.config.timeout,
             )
             self.running_name = None
+            stage = 'report'
             result_path = workspace / 'telemetry-result.json'
             if result_path.is_symlink() or not result_path.is_file() or result_path.stat().st_size > 65536:
                 raise RunnerError('Missing bounded agent report')
@@ -661,18 +666,24 @@ class Runner:
             if not isinstance(report, dict) or report.get('status') not in {'prepared', 'blocked'}:
                 raise RunnerError('Invalid structured agent report')
             result_path.unlink()
+            stage = 'export'
             patch, changed = self.export_patch(workspace, incident['release'])
             prepared = isinstance(report, dict) and report.get('status') == 'prepared' and bool(changed)
             output = {'incident_id': incident['id'], 'claim_id': incident['claim_id'], 'incident_release': incident['release'], 'active_release_at_claim': active_release, 'execution_boundary': EXECUTION_BOUNDARY, 'status': 'prepared_for_review' if prepared else 'blocked', 'changed_files': changed, 'patch_sha256': hashlib.sha256(patch.encode()).hexdigest(), 'agent_report': {key: re.sub(r'(?:sk-[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)', '[redacted]', str(report.get(key, ''))[:4000]) for key in ['status', 'summary', 'tests', 'limitations']}}
+            stage = 'save_result'
             with (attempt / 'change.patch').open('x', encoding='utf-8') as handle:
                 os.chmod(attempt / 'change.patch', 0o600)
                 handle.write(patch)
             self.atomic_json(attempt / 'result.json', output)
             status = 'completed' if prepared else 'blocked'
             self.pipeline_success()
-        except (RunnerError, subprocess.TimeoutExpired, ValueError, OSError):
+        except (RunnerError, subprocess.TimeoutExpired, ValueError, OSError) as error:
+            failure_class = ('timeout' if isinstance(error, subprocess.TimeoutExpired) else
+                             'runtime' if isinstance(error, RunnerError) else
+                             'io' if isinstance(error, OSError) else 'invalid_data')
             self.pipeline_failure()
-            self.atomic_json(attempt / 'result.json', {'status': 'blocked', 'reason': 'Isolated preparation failed; inspect local prerequisites without exposing credentials.'})
+            self.atomic_json(attempt / 'result.json', {'status': 'blocked', 'reason': 'Isolated preparation failed; inspect local prerequisites without exposing credentials.', 'failure_stage': stage, 'failure_class': failure_class})
+            print(f'Telemetry diagnostic failed: stage={stage} class={failure_class}', flush=True)
         finally:
             self.deadline = time.monotonic() + 45
             if self.running_name:
