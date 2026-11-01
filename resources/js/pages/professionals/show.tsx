@@ -81,6 +81,7 @@ type Professional = {
     id: string;
     lock_version: number;
     name: string;
+    notification_membership_id?: string | null;
     phone: string | null;
     schedule_blocks?: ScheduleBlockSummary[];
     scheduleBlocks?: ScheduleBlockSummary[];
@@ -457,6 +458,8 @@ function AvailabilityEditor({
 }
 
 type Props = {
+    canManageNotificationLink?: boolean;
+    notificationMemberships?: { id: string; name: string; email: string }[];
     hasServiceOptions?: boolean;
     options?: {
         services?: RelationOption[];
@@ -467,6 +470,8 @@ type Props = {
 
 export default function ProfessionalShow({
     professional,
+    notificationMemberships = [],
+    canManageNotificationLink = false,
     options,
     serviceOptions,
     hasServiceOptions = false,
@@ -723,6 +728,75 @@ export default function ProfessionalShow({
                                 )}
                             </Form>
                         </section>
+                        {canManageNotificationLink && (
+                            <section className="surface-panel space-y-4 p-5 sm:p-6">
+                                <div>
+                                    <h2 className="text-base font-semibold">
+                                        Conta que recebe os avisos
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Vincule uma conta de acesso desta
+                                        empresa ao profissional. Essa pessoa
+                                        poderá escolher os avisos em suas
+                                        configurações.
+                                    </p>
+                                </div>
+                                <Form
+                                    {...professionals.notificationMembership.form(
+                                        professional.id,
+                                    )}
+                                    options={{ preserveScroll: true }}
+                                >
+                                    {({ processing, errors }) => (
+                                        <div className="space-y-4">
+                                            <FormField
+                                                label="Usuário responsável"
+                                                name="membership_id"
+                                                error={errors.membership_id}
+                                            >
+                                                <select
+                                                    id="membership_id"
+                                                    name="membership_id"
+                                                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                                                    defaultValue={
+                                                        professional.notification_membership_id ??
+                                                        ''
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        Sem conta vinculada
+                                                    </option>
+                                                    {notificationMemberships.map(
+                                                        (membership) => (
+                                                            <option
+                                                                key={
+                                                                    membership.id
+                                                                }
+                                                                value={
+                                                                    membership.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    membership.name
+                                                                }{' '}
+                                                                (
+                                                                {
+                                                                    membership.email
+                                                                }
+                                                                )
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                            </FormField>
+                                            <Button disabled={processing}>
+                                                Salvar vínculo de notificações
+                                            </Button>
+                                        </div>
+                                    )}
+                                </Form>
+                            </section>
+                        )}
 
                         <section className="surface-panel p-5 sm:p-6">
                             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

@@ -14,6 +14,7 @@ use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Support\AgendaNotifications;
 use App\Support\AuditEventWriter;
 use App\Support\CalendarAvailability;
 use App\Support\IdentityEventRecorder;
@@ -35,6 +36,7 @@ final class CreatePublicAppointment
         private readonly CreateAppointmentSale $createAppointmentSale = new CreateAppointmentSale,
         private readonly IdentityEventRecorder $events = new IdentityEventRecorder(new AuditEventWriter, new OutboxEventStore),
         private readonly PublicBookingConfirmation $confirmation = new PublicBookingConfirmation,
+        private readonly AgendaNotifications $notifications = new AgendaNotifications,
     ) {}
 
     /** @param array{service_id?: string|null, service_ids?: list<string>, professional_id: string, starts_at: string, name: string, phone: string, email?: string|null, notes?: string|null, online_booking_campaign_link_id?: string|null} $data */
@@ -219,6 +221,7 @@ final class CreatePublicAppointment
                     'occurred_at' => now(),
                 ]);
                 $this->events->recordForTenant(null, $tenant, 'appointment.created', $appointment, ['status' => $appointment->status], $unit->getKey());
+                $this->notifications->record($appointment, 'new_appointments');
                 if ($this->confirmation->allowsCalendarSync($tenant)) {
                     SyncGoogleCalendarAppointment::dispatch((string) $appointment->getKey())->afterCommit();
                 }

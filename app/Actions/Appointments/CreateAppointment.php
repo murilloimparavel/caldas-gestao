@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\AgendaNotifications;
 use App\Support\AppointmentStatusTransition;
 use App\Support\CalendarAvailability;
 use App\Support\TenantContext;
@@ -24,6 +25,7 @@ final class CreateAppointment extends OperationalAction
         private readonly CalendarAvailability $availability,
         private readonly AppointmentStatusTransition $transitions = new AppointmentStatusTransition,
         private readonly CreateAppointmentSale $createAppointmentSale = new CreateAppointmentSale,
+        private readonly AgendaNotifications $notifications = new AgendaNotifications,
     ) {
         parent::__construct();
     }
@@ -79,6 +81,7 @@ final class CreateAppointment extends OperationalAction
             $this->createAppointmentSale->handle($actor, $context, $appointment);
             $this->recordHistory($appointment, $actor, null, $appointment->status, 'created');
             $this->events->record($actor, $context, 'appointment.created', $appointment, ['status' => $appointment->status]);
+            $this->notifications->record($appointment, 'new_appointments', (string) $actor->getKey());
             SyncGoogleCalendarAppointment::dispatch((string) $appointment->getKey())->afterCommit();
 
             return $appointment->fresh(['items.service', 'customer', 'professional']);

@@ -5,6 +5,10 @@ use App\Http\Controllers\Integrations\IntegrationCredentialController;
 use App\Http\Controllers\Integrations\IntegrationOAuthGrantController;
 use App\Http\Controllers\Integrations\ProposedOperationController;
 use App\Http\Controllers\Integrations\StepUpPasskeyController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationSettingsController;
+use App\Http\Controllers\ProfessionalController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Settings\ApiController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
@@ -123,3 +127,17 @@ Route::get('.well-known/passkey-endpoints', function () {
         'manage' => route('security.edit'),
     ]);
 })->name('well-known.passkeys');
+
+Route::middleware(['auth', 'verified', 'tenant.context', 'saas.access', 'first.login.complete'])->group(function (): void {
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->whereUuid('notification')->name('notifications.read');
+    Route::get('notifications/{notification}/open', [NotificationController::class, 'open'])->whereUuid('notification')->name('notifications.open');
+    Route::get('settings/notifications', [NotificationSettingsController::class, 'edit'])->name('notification-settings.edit');
+    Route::patch('settings/notifications', [NotificationSettingsController::class, 'update'])->name('notification-settings.update');
+    Route::post('settings/notifications/invitation/dismiss', [NotificationSettingsController::class, 'dismissInvitation'])->middleware('throttle:5,1')->name('notification-settings.invitation.dismiss');
+    Route::post('settings/notifications/subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:10,1')->name('push-subscriptions.store');
+    Route::delete('settings/notifications/subscriptions/{subscription}', [PushSubscriptionController::class, 'destroy'])->whereUuid('subscription')->name('push-subscriptions.destroy');
+    Route::post('settings/notifications/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:3,1')->name('push-subscriptions.test');
+    Route::patch('professionals/{professional}/notification-membership', [ProfessionalController::class, 'notificationMembership'])->whereUuid('professional')->name('professionals.notification-membership');
+});

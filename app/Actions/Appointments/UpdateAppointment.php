@@ -14,6 +14,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Service;
 use App\Models\User;
+use App\Support\AgendaNotifications;
 use App\Support\AppointmentStatusTransition;
 use App\Support\CalendarAvailability;
 use App\Support\TenantContext;
@@ -26,7 +27,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class UpdateAppointment extends OperationalAction
 {
-    public function __construct(private readonly CalendarAvailability $availability, private readonly AppointmentStatusTransition $transitions = new AppointmentStatusTransition, private readonly RecordCustomerActivity $recordCustomerActivity = new RecordCustomerActivity)
+    public function __construct(private readonly CalendarAvailability $availability, private readonly AppointmentStatusTransition $transitions = new AppointmentStatusTransition, private readonly RecordCustomerActivity $recordCustomerActivity = new RecordCustomerActivity, private readonly AgendaNotifications $notifications = new AgendaNotifications)
     {
         parent::__construct();
     }
@@ -79,6 +80,11 @@ final class UpdateAppointment extends OperationalAction
                 throw ValidationException::withMessages(['appointment' => 'Cancelled appointments cannot be edited.']);
             }
             $this->availability->assertAvailable((string) $locked->tenant_id, (string) $locked->unit_id, (string) $data['professional_id'], $startsAt, $endsAt, (string) $locked->getKey());
+            $previousProfessionalId = (string) $locked->professional_id;
+            $meaningfulChange = $locked->professional_id !== $data['professional_id']
+                || ! $locked->starts_at->eq($startsAt)
+                || ! $locked->ends_at->eq($endsAt)
+                || $locked->items()->orderBy('position')->pluck('service_id')->all() !== $services->map(fn (Service $service): string => (string) $service->getKey())->all();
             $fromStatus = $locked->status;
             $nextStatus = (string) ($data['status'] ?? $locked->status);
             $this->transitions->assertCanTransition($fromStatus, $nextStatus);
@@ -128,6 +134,9 @@ final class UpdateAppointment extends OperationalAction
                 $locked->statusHistories()->create(['id' => (string) Str::uuid7(), 'tenant_id' => $locked->tenant_id, 'unit_id' => $locked->unit_id, 'actor_user_id' => $actor->getKey(), 'action' => 'status_changed', 'from_status' => $fromStatus, 'to_status' => $locked->status, 'occurred_at' => now()]);
             }
             $this->events->record($actor, $context, 'appointment.updated', $locked, ['status' => $locked->status, 'lock_version' => $locked->lock_version]);
+            if ($meaningfulChange) {
+                $this->notifications->record($locked, 'changes', (string) $actor->getKey(), $previousProfessionalId);
+            }
             SyncGoogleCalendarAppointment::dispatch((string) $locked->getKey())->afterCommit();
 
             if ($fromStatus !== 'completed' && $locked->status === 'completed') {
