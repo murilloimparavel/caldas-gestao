@@ -380,6 +380,9 @@ class RunnerContracts(unittest.TestCase):
         self.assertIn('agents.default_subagent_model="gpt-6-luna"', command)
         self.assertIn('agents.default_subagent_reasoning_effort="low"', command)
         self.assertIn('agents.max_concurrent_threads_per_session=2', command)
+        shell_policy = next(value for value in command if value.startswith('shell_environment_policy.set='))
+        self.assertIn('PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers"', shell_policy)
+        self.assertIn('NO_PROXY="localhost,127.0.0.1"', shell_policy)
         self.assertIn('delegate that task once to gpt-6.1-sol', runner_module.TRUSTED_PROMPT)
         for option in ['--read-only', '--cap-drop', 'ALL', 'no-new-privileges:true', '10001:10001', self.runner.config.network]:
             self.assertIn(option, command)

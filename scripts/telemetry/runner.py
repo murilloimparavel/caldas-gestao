@@ -665,7 +665,7 @@ class Runner:
                     '-c',
                     'shell_environment_policy.inherit="none"',
                     '-c',
-                    'shell_environment_policy.set={PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",HOME="/tmp/telemetry-test-home",APP_ENV="testing",APP_DEBUG="false",APP_KEY="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",DB_CONNECTION="sqlite",DB_DATABASE=":memory:",CACHE_STORE="array",SESSION_DRIVER="array",QUEUE_CONNECTION="sync",MAIL_MAILER="array"}',
+                    'shell_environment_policy.set={PATH="/opt/telemetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",HOME="/tmp/telemetry-test-home",APP_ENV="testing",APP_DEBUG="false",APP_KEY="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",DB_CONNECTION="sqlite",DB_DATABASE=":memory:",CACHE_STORE="array",SESSION_DRIVER="array",QUEUE_CONNECTION="sync",MAIL_MAILER="array",PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers",NO_PROXY="localhost,127.0.0.1",CI="true"}',
                     '-',
                 ],
                 input=TRUSTED_PROMPT + json.dumps({**incident, 'issue_number': issue['number'], 'issue_url': issue['url']}, ensure_ascii=True),
