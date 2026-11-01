@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
             $explicitUnit = null;
         }
 
-        if ($context === null && $user !== null) {
+        if ($context === null && $user !== null && ! $request->routeIs('admin.*')) {
             try {
                 $context = TenantContext::fromRequest($request);
             } catch (AuthorizationException) {
