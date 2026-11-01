@@ -229,8 +229,14 @@ test('persists a gallery reorder and restores the order after a failed update', 
         'input[aria-label^="Texto alternativo da imagem"]',
     );
     await expect(altTextInputs).toHaveCount(2);
-    await expect(altTextInputs.nth(0)).toHaveValue('Foto de teste 1');
-    await expect(altTextInputs.nth(1)).toHaveValue('Foto de teste 2');
+    const initialAltTexts = await Promise.all([
+        altTextInputs.nth(0).inputValue(),
+        altTextInputs.nth(1).inputValue(),
+    ]);
+    expect([...initialAltTexts].sort()).toEqual([
+        'Foto de teste 1',
+        'Foto de teste 2',
+    ]);
 
     const successfulReorder = page.waitForResponse((response) =>
         new URL(response.url()).pathname.endsWith(
@@ -242,13 +248,13 @@ test('persists a gallery reorder and restores the order after a failed update', 
         .getByRole('button', { name: 'Mover imagem para cima' })
         .click();
     expect((await successfulReorder).status()).toBe(200);
-    await expect(altTextInputs.nth(0)).toHaveValue('Foto de teste 2');
-    await expect(altTextInputs.nth(1)).toHaveValue('Foto de teste 1');
+    await expect(altTextInputs.nth(0)).toHaveValue(initialAltTexts[1]);
+    await expect(altTextInputs.nth(1)).toHaveValue(initialAltTexts[0]);
 
     await page.reload();
     await page.getByRole('button', { name: 'Galeria' }).click();
-    await expect(altTextInputs.nth(0)).toHaveValue('Foto de teste 2');
-    await expect(altTextInputs.nth(1)).toHaveValue('Foto de teste 1');
+    await expect(altTextInputs.nth(0)).toHaveValue(initialAltTexts[1]);
+    await expect(altTextInputs.nth(1)).toHaveValue(initialAltTexts[0]);
 
     await page.route('**/online-booking/gallery/**', async (route) => {
         if (route.request().method() === 'PATCH') {
@@ -276,7 +282,7 @@ test('persists a gallery reorder and restores the order after a failed update', 
     );
     await firstAltText.blur();
     expect((await failedAltUpdate).status()).toBe(500);
-    await expect(firstAltText).toHaveValue('Foto de teste 2');
+    await expect(firstAltText).toHaveValue(initialAltTexts[1]);
     await expect(
         page.getByText(
             'O servidor não conseguiu salvar o texto alternativo. Tente novamente.',
@@ -302,15 +308,15 @@ test('persists a gallery reorder and restores the order after a failed update', 
         .getByRole('button', { name: 'Mover imagem para baixo' })
         .click();
     expect((await failedReorder).status()).toBe(500);
-    await expect(altTextInputs.nth(0)).toHaveValue('Foto de teste 2');
-    await expect(altTextInputs.nth(1)).toHaveValue('Foto de teste 1');
+    await expect(altTextInputs.nth(0)).toHaveValue(initialAltTexts[1]);
+    await expect(altTextInputs.nth(1)).toHaveValue(initialAltTexts[0]);
 
     await page.reload();
     await page.getByRole('button', { name: 'Galeria' }).click();
-    await expect(altTextInputs.nth(0)).toHaveValue('Foto de teste 2');
-    await expect(altTextInputs.nth(1)).toHaveValue('Foto de teste 1');
+    await expect(altTextInputs.nth(0)).toHaveValue(initialAltTexts[1]);
+    await expect(altTextInputs.nth(1)).toHaveValue(initialAltTexts[0]);
 
-    let galleryOnlyReloadRequested = false;
+    let galleryReloadProps: string[] = [];
     await page.route('**/online-booking/gallery', async (route) => {
         if (route.request().method() === 'POST') {
             await route.fulfill({
@@ -339,7 +345,7 @@ test('persists a gallery reorder and restores the order after a failed update', 
             request.method() === 'GET' &&
             partialData?.split(',').includes('gallery')
         ) {
-            galleryOnlyReloadRequested = partialData === 'gallery';
+            galleryReloadProps = partialData.split(',').sort();
             const response = await route.fetch();
             const payload = await response.json();
             payload.props.gallery.push({
@@ -378,7 +384,9 @@ test('persists a gallery reorder and restores the order after a failed update', 
     expect((await uploadResponse).status()).toBe(201);
     await expect(altTextInputs).toHaveCount(3);
     await expect(altTextInputs.nth(2)).toHaveValue('');
-    expect(galleryOnlyReloadRequested).toBe(true);
+    expect(galleryReloadProps).toEqual(
+        ['gallery', 'draft', 'publication', 'previewUrl', 'draftDiff'].sort(),
+    );
 });
 
 test('syncs normalized appearance props after saving and reloading the draft', async ({

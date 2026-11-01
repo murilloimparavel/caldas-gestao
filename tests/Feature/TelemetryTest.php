@@ -176,9 +176,13 @@ it('bounds record growth and prunes old incidents while protecting live leases',
 });
 
 it('fails safely when incident storage is unavailable', function (): void {
-    config(['database.connections.telemetry_invalid' => ['driver' => 'missing'], 'database.default' => 'telemetry_invalid']);
-    expect(app(IncidentCollector::class)->captureThrowable(new RuntimeException('must not escape')))->toBeNull();
-    config(['database.default' => 'sqlite']);
+    $originalConnection = config('database.default');
+    try {
+        config(['database.connections.telemetry_invalid' => ['driver' => 'missing'], 'database.default' => 'telemetry_invalid']);
+        expect(app(IncidentCollector::class)->captureThrowable(new RuntimeException('must not escape')))->toBeNull();
+    } finally {
+        config(['database.default' => $originalConnection]);
+    }
 });
 
 it('exposes claim and finish through validated machine-readable console commands', function (): void {
