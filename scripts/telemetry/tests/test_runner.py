@@ -374,6 +374,12 @@ class RunnerContracts(unittest.TestCase):
         self.runner.once()
         command = next(argv for argv in commands if 'codex' in argv and 'exec' in argv)
         self.assertEqual(command[command.index('--sandbox') + 1], 'danger-full-access')
+        self.assertEqual(command[command.index('--model') + 1], 'gpt-6.1-terra')
+        self.assertIn('--strict-config', command)
+        self.assertIn('agents.default_subagent_model="gpt-6-luna"', command)
+        self.assertIn('agents.default_subagent_reasoning_effort="low"', command)
+        self.assertIn('agents.max_concurrent_threads_per_session=2', command)
+        self.assertIn('delegate that task once to gpt-6.1-sol', runner_module.TRUSTED_PROMPT)
         for option in ['--read-only', '--cap-drop', 'ALL', 'no-new-privileges:true', '10001:10001', self.runner.config.network]:
             self.assertIn(option, command)
         for forbidden in ['--privileged', '--cap-add', 'SYS_ADMIN', '--pid=host', '--network=host']:
