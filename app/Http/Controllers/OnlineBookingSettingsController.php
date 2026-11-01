@@ -143,7 +143,7 @@ final class OnlineBookingSettingsController extends Controller
             'logo' => $editorSettings['logo_image_url'],
             'tenant' => ['slug' => $context->tenant->slug],
             'publicUrl' => $publicUrl,
-            'previewUrl' => $site->draft ? URL::temporarySignedRoute('online_booking.preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), [$context->tenant, $context->unit]) : null,
+            'previewUrl' => $site->draft ? URL::temporarySignedRoute('online_booking.preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), [$context->tenant, $context->unit], absolute: false) : null,
             'canonicalUrl' => $activePublication instanceof OnlineBookingPublication ? $publicUrl : null,
             'publicDomains' => $publicDomains,
             'services' => $services,
@@ -156,7 +156,7 @@ final class OnlineBookingSettingsController extends Controller
             'activePublication' => $site->activePublication?->only(['id', 'version', 'source_revision', 'published_at', 'template_key']),
             'publicationHistory' => $site->publications()->with('publishedBy:id,name')->latest('version')->limit(10)->get(['id', 'version', 'source_revision', 'template_key', 'published_by', 'published_at', 'superseded_at'])->map(fn (OnlineBookingPublication $publication): array => [
                 ...$publication->toArray(),
-                'preview_url' => URL::temporarySignedRoute('online_booking.publication_preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), ['publication' => $publication->getKey()]),
+                'preview_url' => URL::temporarySignedRoute('online_booking.publication_preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), ['publication' => $publication->getKey()], absolute: false),
             ]),
             'draftDiff' => $draftDiff,
             'draftDiffDetails' => $draftDiffDetails,
