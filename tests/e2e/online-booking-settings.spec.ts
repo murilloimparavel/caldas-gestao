@@ -239,7 +239,7 @@ test.describe('Online booking settings panel', () => {
         ).toBeVisible();
     });
 
-    test('keeps form text readable in both themes and desktop preview at desktop width', async ({
+    test('keeps form text readable in both themes and offers the draft preview in a new tab', async ({
         page,
     }) => {
         await signInAsBookingOwner(page);
@@ -417,49 +417,13 @@ test.describe('Online booking settings panel', () => {
                 .toBe('PASS');
         }
 
-        await page
-            .getByRole('button', { name: 'Prévia em computador' })
-            .click();
         await expect(
-            page.getByRole('dialog', { name: 'Prévia em computador' }),
-        ).toBeVisible();
-
-        const desktopPreview = page.getByTitle(
-            'Prévia pública do agendamento online em computador',
-        );
-        await expect(desktopPreview).toBeVisible();
-        await expect
-            .poll(() =>
-                desktopPreview.evaluate((iframe) =>
-                    Math.round(iframe.getBoundingClientRect().width),
-                ),
-            )
-            .toBe(1280);
-
-        const desktopScrollArea = page.getByTestId(
-            'desktop-preview-scroll-area',
-        );
-        const scrollDimensions = await desktopScrollArea.evaluate(
-            (element) => ({
-                clientWidth: element.clientWidth,
-                scrollWidth: element.scrollWidth,
-            }),
-        );
-        expect(scrollDimensions.scrollWidth).toBeGreaterThan(
-            scrollDimensions.clientWidth,
-        );
-        expect(
-            await page.evaluate(
-                () => document.documentElement.scrollWidth <= window.innerWidth,
+            page.getByRole('link', { name: 'Prévia do rascunho' }),
+        ).toHaveAttribute('target', '_blank');
+        await expect(
+            page.locator(
+                'iframe[title^="Prévia pública do agendamento online"]',
             ),
-        ).toBe(true);
-
-        const frameViewport = await page
-            .frameLocator(
-                'iframe[title="Prévia pública do agendamento online em computador"]',
-            )
-            .locator('html')
-            .evaluate(() => window.innerWidth);
-        expect(frameViewport).toBeGreaterThanOrEqual(1024);
+        ).toHaveCount(0);
     });
 });

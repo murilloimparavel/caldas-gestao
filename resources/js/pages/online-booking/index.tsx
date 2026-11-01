@@ -20,7 +20,6 @@ import onlineBooking from '@/routes/online_booking';
 import coverRoutes from '@/routes/online_booking/cover';
 import type { SharedPageProps } from '@/types';
 import { AppearanceEditor } from './components/appearance-editor';
-import { PublicPreview } from './components/public-preview';
 import { TabNavigation } from './components/tab-navigation';
 import { bookingUi } from './components/design-tokens';
 import { BookingHero } from './components/booking-hero';
@@ -365,10 +364,6 @@ export default function OnlineBookingIndex({
                                     )}
                                 </div>
                                 <aside className="min-w-0 space-y-5 xl:self-start">
-                                    <PublicPreview
-                                        key={draft?.revision ?? 'empty'}
-                                        previewUrl={signedPreviewUrl}
-                                    />
                                     <Card>
                                         <CardHeader>
                                             <CardTitle className="text-base">
