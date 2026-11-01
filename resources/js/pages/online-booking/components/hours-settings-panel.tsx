@@ -56,9 +56,7 @@ export function HoursSettingsPanel({ settings }: { settings: PublicSettings }) {
                     const day = days[key];
                     const valid = day.periods
                         .filter((period) => period.starts_at && period.ends_at)
-                        .sort((a, b) =>
-                            a.starts_at.localeCompare(b.starts_at),
-                        );
+                        .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
                     return (
                         <div
