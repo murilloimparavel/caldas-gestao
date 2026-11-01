@@ -66,6 +66,13 @@ export type SharedPageProps = {
     branding: Branding;
     auth: Auth;
     workspace: Workspace | null;
+    notificationInvitation: {
+        eligible: boolean;
+        available: boolean;
+        registeredEndpointHashes: string[];
+        dismissed: boolean;
+        publicKey: string | null;
+    };
     flash: Flash;
     ui: Ui;
     sidebarOpen: boolean;

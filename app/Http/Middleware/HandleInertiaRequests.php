@@ -4,11 +4,15 @@ namespace App\Http\Middleware;
 
 use App\Enums\UnitStatus;
 use App\Models\Entitlement;
+use App\Models\NotificationPreference;
+use App\Models\PushSubscription;
 use App\Models\Unit;
 use App\Support\AuthorizationService;
 use App\Support\EntitlementService;
+use App\Support\NotificationInbox;
 use App\Support\PayloadGovernance;
 use App\Support\TenantContext;
+use App\Support\WebPushSender;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -145,6 +149,8 @@ class HandleInertiaRequests extends Middleware
                     && Gate::forUser($user)->allows('manage-integrations'),
             ],
             'workspace' => $workspace,
+            'notificationUnreadCount' => fn (): int => $context === null ? 0 : app(NotificationInbox::class)->query($context)->whereNull('read_at')->count(),
+            'notificationInvitation' => fn (): array => $context === null ? ['eligible' => false, 'available' => false, 'registeredEndpointHashes' => [], 'dismissed' => true, 'publicKey' => null] : $this->notificationInvitation($context),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'info' => $request->session()->get('info'),
@@ -177,5 +183,29 @@ class HandleInertiaRequests extends Middleware
         $value = is_string($value) ? trim($value) : '';
 
         return $value !== '' && (Str::isUuid($value) || Str::isUlid($value)) ? $value : null;
+    }
+
+    /** @return array{eligible: bool, available: bool, registeredEndpointHashes: list<string>, dismissed: bool, publicKey: ?string} */
+    private function notificationInvitation(TenantContext $context): array
+    {
+        $preference = NotificationPreference::query()
+            ->where('tenant_id', $context->tenant->id)
+            ->where('user_id', $context->user->id)
+            ->first();
+        $dismissed = $preference?->push_invitation_dismissed_at !== null;
+        $publicKey = config('webpush.vapid.public_key');
+        $available = app(WebPushSender::class)->available();
+        $registeredEndpointHashes = PushSubscription::query()
+            ->where('tenant_id', $context->tenant->id)
+            ->where('user_id', $context->user->id)
+            ->pluck('endpoint_hash')->all();
+
+        return [
+            'available' => $available && is_string($publicKey) && $publicKey !== '',
+            'registeredEndpointHashes' => $registeredEndpointHashes,
+            'eligible' => ! $dismissed && $registeredEndpointHashes === [] && $available && is_string($publicKey) && $publicKey !== '',
+            'dismissed' => $dismissed,
+            'publicKey' => is_string($publicKey) && $publicKey !== '' ? $publicKey : null,
+        ];
     }
 }

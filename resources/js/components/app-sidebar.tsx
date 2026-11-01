@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeftRight,
     Banknote,
+    Bell,
     Bot,
     Boxes,
     CalendarDays,
@@ -20,6 +21,7 @@ import {
     Users,
     WalletCards,
 } from 'lucide-react';
+import { index as notificationIndex } from '@/routes/notifications';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -63,6 +65,7 @@ const mainNavGroups: SidebarNavGroup[] = [
                 href: dashboard(),
                 icon: LayoutDashboard,
             },
+            { title: 'Notificações', href: notificationIndex(), icon: Bell },
         ],
     },
     {
