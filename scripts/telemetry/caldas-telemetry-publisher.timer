@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for prepared telemetry patches awaiting a draft pull request
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+Unit=caldas-telemetry-publisher.service
+
+[Install]
+WantedBy=timers.target

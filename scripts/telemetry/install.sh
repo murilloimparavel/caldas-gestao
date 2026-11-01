@@ -24,6 +24,8 @@ source_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH='' cd -- "$source_dir/../.." && pwd)
 install_dir=/opt/caldas-telemetry
 state_dir=/var/lib/caldas-telemetry
+publisher_was_enabled=false
+if systemctl is-enabled --quiet caldas-telemetry-publisher.timer 2>/dev/null; then publisher_was_enabled=true; fi
 mkdir -p "$install_dir" "$state_dir"
 chmod 0755 "$install_dir"
 chmod 0700 "$state_dir"
@@ -31,7 +33,7 @@ chown root:root "$install_dir" "$state_dir"
 # Prevent an older timer from starting during an upgrade; preserve its output artifacts.
 systemctl disable --now caldas-telemetry.timer 2>/dev/null || true
 systemctl stop caldas-telemetry.service 2>/dev/null || true
-systemctl stop caldas-telemetry-health.timer caldas-telemetry-health.service caldas-telemetry-watchdog.timer caldas-telemetry-watchdog.service 2>/dev/null || true
+systemctl stop caldas-telemetry-publisher.timer caldas-telemetry-publisher.service caldas-telemetry-health.timer caldas-telemetry-health.service caldas-telemetry-watchdog.timer caldas-telemetry-watchdog.service 2>/dev/null || true
 if [ -n "$runner_image" ]; then
     docker pull "$runner_image"
     docker tag "$runner_image" caldas-telemetry-runner:0.165.0
@@ -43,7 +45,7 @@ else
     # A locally rebuilt image cannot silently restore an older registry version later.
     rm -f "$install_dir/runner-image.json"
 fi
-for file in runner.py health.py prepare.sh result.schema.json egress.conf egress.compose.yml login.sh; do
+for file in runner.py health.py publisher.py prepare.sh result.schema.json egress.conf egress.compose.yml login.sh; do
     install -o root -g root -m 0644 "$source_dir/$file" "$install_dir/$file"
 done
 chmod 0755 "$install_dir/login.sh"
@@ -59,7 +61,15 @@ install -o root -g root -m 0644 "$source_dir/caldas-telemetry-watchdog.service" 
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry-watchdog.timer" /etc/systemd/system/caldas-telemetry-watchdog.timer
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry-health.service" /etc/systemd/system/caldas-telemetry-health.service
 install -o root -g root -m 0644 "$source_dir/caldas-telemetry-health.timer" /etc/systemd/system/caldas-telemetry-health.timer
+install -o root -g root -m 0644 "$source_dir/caldas-telemetry-publisher.service" /etc/systemd/system/caldas-telemetry-publisher.service
+install -o root -g root -m 0644 "$source_dir/caldas-telemetry-publisher.timer" /etc/systemd/system/caldas-telemetry-publisher.timer
 systemctl daemon-reload
 # Cleanup remains active even when incident claims are paused or their timer is disabled.
 systemctl enable --now caldas-telemetry-watchdog.timer caldas-telemetry-health.timer
+# Preserve an existing enabled publisher only when its credential still exists.
+if [ "$publisher_was_enabled" = true ] && [ -f "$install_dir/github-token" ] && [ ! -L "$install_dir/github-token" ]; then
+    systemctl enable --now caldas-telemetry-publisher.timer
+else
+    systemctl disable --now caldas-telemetry-publisher.timer 2>/dev/null || true
+fi
 printf '%s\n' 'Runner installed. The timer is disabled. Authenticate with /opt/caldas-telemetry/login.sh, then explicitly enable the timer after review.'
