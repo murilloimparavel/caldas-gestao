@@ -17,9 +17,13 @@ import { bookingTokens, bookingUi } from './design-tokens';
 export function SelectionCard({
     item,
     group,
+    onSelectionChange,
+    selected,
 }: {
     item: BookingItem;
     group: string;
+    onSelectionChange?: (checked: boolean) => void;
+    selected?: boolean;
 }) {
     const active = item.status === 'active';
     const id = `${group}-${item.id}`;
@@ -34,8 +38,11 @@ export function SelectionCard({
                 name={`${group}_ids[]`}
                 type="checkbox"
                 value={item.id}
-                defaultChecked={active && item.online_booking_enabled}
+                defaultChecked={
+                    active && (selected ?? item.online_booking_enabled)
+                }
                 disabled={!active}
+                onChange={(event) => onSelectionChange?.(event.target.checked)}
                 className="size-5 rounded border-input accent-primary focus-visible:ring-2 focus-visible:ring-ring"
             />
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">

@@ -18,6 +18,10 @@ export function PublicationToolbar({
     onPublish,
     onUnpublish,
     canPublish,
+    version,
+    draftDiff,
+    draftDiffDetails,
+    unlinkedServices,
 }: {
     status?: PublicationStatus;
     publicationLabel: string;
@@ -29,6 +33,10 @@ export function PublicationToolbar({
     onPublish: () => void;
     onUnpublish: () => void;
     canPublish: boolean;
+    version?: number;
+    draftDiff: string[];
+    draftDiffDetails: { label: string; added: string[]; removed: string[] }[];
+    unlinkedServices: { id: string; name: string }[];
 }) {
     const isPublished = status === 'published';
 
@@ -58,7 +66,10 @@ export function PublicationToolbar({
                     <p className="mt-1 text-sm text-muted-foreground">
                         {isPublished && !hasPendingChanges
                             ? 'Seus clientes estão vendo a última versão publicada.'
-                            : 'Suas alterações ficam no rascunho até você publicar.'}
+                            : 'Alterações salvas no rascunho ainda não aparecem para seus clientes.'}
+                        {isPublished && version
+                            ? ` Versão pública: ${version}.`
+                            : ''}
                     </p>
                 </div>
             </div>
@@ -78,21 +89,36 @@ export function PublicationToolbar({
                     </Link>
                 </Button>
                 <Button
+                    asChild
                     type="button"
                     variant="outline"
-                    onClick={() =>
-                        publicUrl &&
-                        window.open(
-                            previewUrl ?? publicUrl,
-                            '_blank',
-                            'noopener,noreferrer',
-                        )
-                    }
-                    disabled={!publicUrl}
+                    disabled={!previewUrl}
                 >
-                    <ExternalLink aria-hidden="true" />
-                    Visualizar página
+                    {previewUrl ? (
+                        <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <ExternalLink aria-hidden="true" />
+                            Prévia do rascunho
+                        </a>
+                    ) : (
+                        <span>Prévia do rascunho</span>
+                    )}
                 </Button>
+                {publicUrl ? (
+                    <Button asChild type="button" variant="outline">
+                        <a
+                            href={publicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <ExternalLink aria-hidden="true" />
+                            Ver site publicado
+                        </a>
+                    </Button>
+                ) : null}
                 {isPublished ? (
                     <Button
                         type="button"
@@ -102,16 +128,64 @@ export function PublicationToolbar({
                     >
                         Retirar do ar
                     </Button>
-                ) : (
+                ) : null}
+                {!isPublished || hasPendingChanges ? (
                     <Button
                         type="button"
                         onClick={onPublish}
                         disabled={!canPublish || processing}
                     >
-                        Publicar página
+                        {isPublished
+                            ? 'Publicar alterações'
+                            : 'Publicar página'}
                     </Button>
-                )}
+                ) : null}
             </div>
+            {hasPendingChanges ? (
+                <div
+                    role="status"
+                    className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 lg:col-span-2 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                >
+                    <p className="font-semibold">
+                        Alterações salvas, ainda não publicadas
+                    </p>
+                    <p className="mt-1">
+                        A publicação aplicará o rascunho salvo. Salve as edições
+                        atuais antes de publicar.
+                    </p>
+                    {draftDiff.length ? (
+                        <p className="mt-1">
+                            Áreas alteradas: {draftDiff.join(', ')}.
+                        </p>
+                    ) : null}
+                    {draftDiffDetails.map((detail) => (
+                        <div key={detail.label} className="mt-2">
+                            <p className="font-medium">{detail.label}</p>
+                            {detail.added.length ? (
+                                <p>Adicionados: {detail.added.join(', ')}</p>
+                            ) : null}
+                            {detail.removed.length ? (
+                                <p>Removidos: {detail.removed.join(', ')}</p>
+                            ) : null}
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+            {unlinkedServices.length ? (
+                <div
+                    role="status"
+                    className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 lg:col-span-2 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                >
+                    Serviços do rascunho sem profissional ativo selecionado e
+                    vinculado não aparecerão no site:{' '}
+                    <strong>
+                        {unlinkedServices
+                            .map((service) => service.name)
+                            .join(', ')}
+                    </strong>
+                    .
+                </div>
+            ) : null}
         </div>
     );
 }

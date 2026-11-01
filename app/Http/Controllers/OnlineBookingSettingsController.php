@@ -28,6 +28,7 @@ use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Support\Images\MediaUrl;
 use App\Support\Images\UploadedImageOptimizer;
+use App\Support\OnlineBookingReadiness;
 use App\Support\OperationalMutation;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -44,7 +45,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class OnlineBookingSettingsController extends Controller
 {
-    public function index(TenantContext $context, EnsureOnlineBookingSite $ensureSite): Response|JsonResponse
+    public function index(TenantContext $context, EnsureOnlineBookingSite $ensureSite, OnlineBookingReadiness $draftReadiness): Response|JsonResponse
     {
         abort_unless($context->unit instanceof Unit, 403);
         Gate::authorize('view', $context->unit);
@@ -52,6 +53,7 @@ final class OnlineBookingSettingsController extends Controller
         $services = Service::query()
             ->where('tenant_id', $context->tenant->getKey())
             ->where('unit_id', $context->unit->getKey())
+            ->with(['professionals' => fn ($query) => $query->select('professionals.id')->where('professionals.tenant_id', $context->tenant->getKey())->where('professionals.unit_id', $context->unit->getKey())->where('professionals.status', 'active')])
             ->orderBy('name')
             ->get(['id', 'name', 'status', 'online_booking_enabled', 'lock_version']);
         $professionals = Professional::query()
@@ -110,6 +112,28 @@ final class OnlineBookingSettingsController extends Controller
             'public_hours' => 'Horários', 'booking_policy' => 'Regras de agendamento', 'seo' => 'SEO',
         ];
         $draftDiff = collect($diffLabels)->filter(fn (string $label, string $key): bool => ($draftContent[$key] ?? null) !== ($publishedContent[$key] ?? null))->values()->all();
+        $draftDiffDetails = collect(['service_ids' => ['Serviços', $services], 'professional_ids' => ['Profissionais', $professionals]])
+            ->map(function (array $config, string $key) use ($draftContent, $publishedContent): array {
+                [$label, $items] = $config;
+                $draftIds = is_array($draftContent[$key] ?? null) ? $draftContent[$key] : [];
+                $publishedIds = is_array($publishedContent[$key] ?? null) ? $publishedContent[$key] : [];
+
+                return [
+                    'label' => $label,
+                    'added' => $items->whereIn('id', array_diff($draftIds, $publishedIds))->pluck('name')->values()->all(),
+                    'removed' => $items->whereIn('id', array_diff($publishedIds, $draftIds))->pluck('name')->values()->all(),
+                ];
+            })->filter(fn (array $change): bool => $change['added'] !== [] || $change['removed'] !== [])->values()->all();
+        $selectedServiceIds = is_array($draftContent['service_ids'] ?? null) ? $draftContent['service_ids'] : [];
+        $selectedProfessionalIds = is_array($draftContent['professional_ids'] ?? null) ? $draftContent['professional_ids'] : [];
+        $unlinkedServices = $services->filter(fn (Service $service): bool => $service->status === 'active'
+            && in_array($service->id, $selectedServiceIds, true)
+            && $service->professionals->pluck('id')->intersect($selectedProfessionalIds)->isEmpty())
+            ->map(fn (Service $service): array => ['id' => $service->id, 'name' => $service->name])->values()->all();
+        $services->each(function (Service $service): void {
+            $service->setAttribute('active_professional_ids', $service->professionals->pluck('id')->values()->all());
+            $service->unsetRelation('professionals');
+        });
 
         $props = [
             'unit' => $context->unit->only(['id', 'name', 'slug', 'online_booking_enabled', 'lock_version']),
@@ -125,6 +149,7 @@ final class OnlineBookingSettingsController extends Controller
             'services' => $services,
             'professionals' => $professionals,
             'readiness' => $readiness,
+            'draftPublishable' => $draftReadiness->check($context, $site, $draftContent)['publishable'],
             'publication' => $site->only(['id', 'status', 'draft_revision', 'published_at', 'unpublished_at', 'lock_version']),
             'template_key' => $site->template_key,
             'draft' => $site->draft,
@@ -134,6 +159,8 @@ final class OnlineBookingSettingsController extends Controller
                 'preview_url' => URL::temporarySignedRoute('online_booking.publication_preview', now()->addMinutes((int) config('online_booking.preview_ttl_minutes', 30)), ['publication' => $publication->getKey()]),
             ]),
             'draftDiff' => $draftDiff,
+            'draftDiffDetails' => $draftDiffDetails,
+            'unlinkedServices' => $unlinkedServices,
         ];
 
         return request()->expectsJson()
