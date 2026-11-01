@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\OnlineBooking\EnsureOnlineBookingSite;
 use App\Actions\OnlineBooking\PublishOnlineBookingSite;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
 use App\Enums\TenantDomainKind;
@@ -12,6 +13,49 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Support\TenantContext;
 use Inertia\Testing\AssertableInertia as Assert;
+
+it('shows selected catalog changes and services without selected active professionals', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => true]);
+    $professional->update(['online_booking_enabled' => true]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $site = app(EnsureOnlineBookingSite::class)->handle($context);
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, ['service_ids' => [$service->id], 'professional_ids' => [$professional->id]], $site->draft->revision);
+    $site->refresh()->load('draft');
+    app(PublishOnlineBookingSite::class)->handle($owner, $context, $site->draft->revision);
+    $unlinked = Service::factory()->create(['tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'name' => 'Corte']);
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'service_ids' => [$service->id, $unlinked->id],
+        'professional_ids' => [$professional->id],
+    ], $site->draft->revision);
+
+    $this->actingAs($owner)->getJson(route('online_booking.index'))->assertSuccessful()
+        ->assertJsonPath('draftDiffDetails.0.label', 'Serviços')
+        ->assertJsonPath('draftDiffDetails.0.added.0', 'Corte')
+        ->assertJsonPath('unlinkedServices.0.id', $unlinked->id)
+        ->assertJsonFragment(['active_professional_ids' => [$professional->id]]);
+});
+
+it('determines draft publication readiness from the saved selection rather than legacy flags', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $unit->update(['online_booking_enabled' => true]);
+    $service->update(['online_booking_enabled' => false]);
+    $professional->update(['online_booking_enabled' => false]);
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $site = app(EnsureOnlineBookingSite::class)->handle($context);
+    app(SaveOnlineBookingDraft::class)->handle($owner, $context, [
+        'service_ids' => [$service->id],
+        'professional_ids' => [$professional->id],
+    ], $site->draft->revision);
+
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertSuccessful()->assertJsonPath('draftPublishable', true);
+
+    $professional->services()->detach($service);
+    $this->actingAs($owner)->getJson(route('online_booking.index'))
+        ->assertSuccessful()->assertJsonPath('draftPublishable', false);
+});
 
 it('requires authentication and exposes scoped readiness to the owner', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();

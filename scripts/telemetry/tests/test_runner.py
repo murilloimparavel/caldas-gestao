@@ -21,6 +21,7 @@ class RunnerContracts(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.runner = runner_module.Runner(runner_module.Config(state_dir=Path(self.directory.name)))
+        self.runner.ensure_issue = Mock(return_value={'number': 12, 'url': 'https://github.com/murilloimparavel/caldas-gestao/issues/12'})
 
     def labelled_container(self, now=1700000000, age=1200, name=None, container_id='a' * 64):
         job = INCIDENT['claim_id']
@@ -374,6 +375,12 @@ class RunnerContracts(unittest.TestCase):
         self.runner.once()
         command = next(argv for argv in commands if 'codex' in argv and 'exec' in argv)
         self.assertEqual(command[command.index('--sandbox') + 1], 'danger-full-access')
+        self.assertEqual(command[command.index('--model') + 1], 'gpt-6.1-terra')
+        self.assertIn('--strict-config', command)
+        self.assertIn('agents.default_subagent_model="gpt-6-luna"', command)
+        self.assertIn('agents.default_subagent_reasoning_effort="low"', command)
+        self.assertIn('agents.max_concurrent_threads_per_session=2', command)
+        self.assertIn('delegate that task once to gpt-6.1-sol', runner_module.TRUSTED_PROMPT)
         for option in ['--read-only', '--cap-drop', 'ALL', 'no-new-privileges:true', '10001:10001', self.runner.config.network]:
             self.assertIn(option, command)
         for forbidden in ['--privileged', '--cap-add', 'SYS_ADMIN', '--pid=host', '--network=host']:
@@ -390,6 +397,9 @@ class RunnerContracts(unittest.TestCase):
             return subprocess.run(['git', '-C', str(source), *arguments], text=True, capture_output=True, check=True).stdout.strip()
         git('init', '--initial-branch=production')
         (source / 'example.php').write_text('exact deployed source')
+        (source / '.agents').mkdir()
+        (source / '.agents' / 'rules.txt').write_text('protected\n')
+        (source / '.agent').symlink_to('.agents', target_is_directory=True)
         git('add', '.')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'fixture')
         release = git('rev-parse', 'HEAD')
@@ -432,6 +442,9 @@ class RunnerContracts(unittest.TestCase):
         (source / 'app' / 'Example.php').write_text('original source\n')
         (source / 'graphify-out').mkdir()
         (source / 'graphify-out' / 'graph.json').write_text('{"fixture":true}\n')
+        (source / '.agents').mkdir()
+        (source / '.agents' / 'rules.txt').write_text('protected\n')
+        (source / '.agent').symlink_to('.agents', target_is_directory=True)
         git('add', '.')
         git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'fixture')
         release = git('rev-parse', 'HEAD')
@@ -451,16 +464,75 @@ class RunnerContracts(unittest.TestCase):
         self.assertIn('+changed source', exported)
         self.assertNotIn('graphify-out', exported)
         self.assertFalse(marker.exists())
+        (workspace / '.agent').unlink()
+        (workspace / '.agent').symlink_to('/etc', target_is_directory=True)
+        with self.assertRaisesRegex(runner_module.RunnerError, '[Pp]rotected'):
+            self.runner.export_patch(workspace, release)
+        (workspace / '.agent').unlink()
+        (workspace / '.agent').symlink_to('.agents', target_is_directory=True)
+        (workspace / 'malicious-alias').symlink_to('/etc', target_is_directory=True)
+        with self.assertRaisesRegex(runner_module.RunnerError, '[Ss]ymbolic'):
+            self.runner.export_patch(workspace, release)
+        (workspace / 'malicious-alias').unlink()
         for call in run.call_args_list:
             self.assertNotIn(str(workspace), call.args[0])
         (workspace / 'graphify-out' / 'graph.json').write_text('{"modified":true}\n')
-        with self.assertRaisesRegex(runner_module.RunnerError, '[Pp]rotected'):
-            self.runner.export_patch(workspace, release)
+        (workspace / 'graphify-out' / 'nested-link').symlink_to('/etc', target_is_directory=True)
+        patch_text, paths = self.runner.export_patch(workspace, release)
+        self.assertEqual(paths, ['app/Example.php'])
+        self.assertNotIn('graphify-out', patch_text)
+        self.assertNotIn('modified', patch_text)
+        (workspace / 'graphify-out' / 'nested-link').unlink()
         (workspace / 'graphify-out' / 'graph.json').write_text('{"fixture":true}\n')
         (workspace / 'app' / 'Example.php').unlink()
         (workspace / 'app' / 'Example.php').symlink_to('/etc/passwd')
         with self.assertRaises((OSError, runner_module.RunnerError)):
             self.runner.export_patch(workspace, release)
+
+    def test_issue_failure_stops_before_checkout_or_codex(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'])
+        self.runner.ensure_issue = Mock(side_effect=runner_module.RunnerError('sensitive token'))
+        self.runner.checkout = Mock()
+        with patch.object(runner_module.subprocess, 'run'):
+            self.runner.once()
+        self.runner.checkout.assert_not_called()
+        result = json.loads(next((self.runner.state / 'incidents').glob('*/result.json')).read_text())
+        self.assertEqual((result['failure_stage'], result['failure_class']), ('issue', 'runtime'))
+        self.assertNotIn('sensitive token', json.dumps(result))
+        self.assertEqual(self.runner.prerequisite_state()['failures'], 1)
+        self.assertFalse(self.runner.prerequisites_ready())
+        self.runner.app.assert_called_with('web', ['telemetry:finish', INCIDENT['id'], '--claim', INCIDENT['claim_id'], '--status', 'failed', '--json'])
+
+    def test_issue_can_retry_after_backoff_without_running_codex_on_first_failure(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}', json.dumps(INCIDENT), '{}'])
+        self.runner.ensure_issue = Mock(side_effect=[runner_module.RunnerError('temporary'), {'number': 12, 'url': 'https://github.com/murilloimparavel/caldas-gestao/issues/12'}])
+        self.runner.checkout = Mock(side_effect=runner_module.RunnerError('stop after verified retry'))
+        with patch.object(runner_module.subprocess, 'run'):
+            self.runner.once()
+            self.runner.checkout.assert_not_called()
+            self.assertFalse(self.runner.prerequisites_ready())
+            self.runner.prerequisite_success()
+            self.runner.once()
+        self.assertEqual(self.runner.ensure_issue.call_count, 2)
+        self.runner.checkout.assert_called_once()
+        first_finish = self.runner.app.call_args_list[1].args[1]
+        self.assertEqual(first_finish[-2:], ['failed', '--json'])
+
+    def test_issue_is_created_before_checkout(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'])
+        self.runner.checkout = Mock(side_effect=runner_module.RunnerError('stop after issue'))
+        events = []
+        self.runner.ensure_issue = Mock(side_effect=lambda *_: events.append('issue') or {'number': 12, 'url': 'https://github.com/murilloimparavel/caldas-gestao/issues/12'})
+        self.runner.checkout.side_effect = lambda *_: events.append('checkout') or (_ for _ in ()).throw(runner_module.RunnerError('stop'))
+        with patch.object(runner_module.subprocess, 'run'):
+            self.runner.once()
+        self.assertEqual(events, ['issue', 'checkout'])
 
     def test_failed_checkout_acknowledges_only_its_own_lease_as_blocked(self):
         self.runner.check_isolation = Mock()
@@ -471,8 +543,28 @@ class RunnerContracts(unittest.TestCase):
         self.runner.app.assert_called_with('web', ['telemetry:finish', INCIDENT['id'], '--claim', INCIDENT['claim_id'], '--status', 'blocked', '--json'])
         results = list((self.runner.state / 'incidents').glob('*/result.json'))
         self.assertEqual(len(results), 1)
-        self.assertEqual(json.loads(results[0].read_text())['status'], 'blocked')
+        result = json.loads(results[0].read_text())
+        self.assertEqual(result['status'], 'blocked')
+        self.assertEqual(result['failure_stage'], 'checkout')
+        self.assertEqual(result['failure_class'], 'runtime')
+        self.assertNotIn('unavailable', json.dumps(result))
         self.assertFalse(list((self.runner.state / 'incidents').glob('*/workspace')))
+
+    def test_codex_timeout_records_only_safe_stage_and_class(self):
+        self.runner.check_isolation = Mock()
+        self.runner.web_container = Mock(return_value=('web', SHA))
+        self.runner.app = Mock(side_effect=[json.dumps(INCIDENT), '{}'])
+        self.runner.checkout = Mock(side_effect=lambda _release, workspace: workspace.mkdir())
+        def launch(argv, **_options):
+            if 'codex' in argv:
+                raise subprocess.TimeoutExpired('sensitive command', 10)
+            return subprocess.CompletedProcess(argv, 0, '', '')
+        self.runner.run = Mock(side_effect=launch)
+        with patch.object(runner_module.subprocess, 'run'):
+            self.runner.once()
+        result = json.loads(next((self.runner.state / 'incidents').glob('*/result.json')).read_text())
+        self.assertEqual((result['failure_stage'], result['failure_class']), ('codex', 'timeout'))
+        self.assertNotIn('sensitive command', json.dumps(result))
 
 
 if __name__ == '__main__':

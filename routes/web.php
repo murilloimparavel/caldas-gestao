@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\PlatformPlanController;
 use App\Http\Controllers\Admin\PlatformUserController;
+use App\Http\Controllers\Admin\TelemetryIncidentController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalendarAvailabilityController;
 use App\Http\Controllers\CalendarController;
@@ -38,11 +39,13 @@ use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
 use App\Http\Middleware\EnsureSharedBookingHost;
+use App\Http\Middleware\PreventAdminLoginCaching;
 use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
 use App\Models\OnlineBookingSite;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
 Route::post('/webhooks/lastlink', LastlinkWebhookController::class)
     ->middleware('throttle:30,1')
@@ -142,11 +145,19 @@ Route::get('/', function () {
 
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
-Route::get('/admin/login', [AdminController::class, 'login'])->name('admin.login');
+Route::get('/admin/login', [AdminController::class, 'login'])
+    ->middleware(PreventAdminLoginCaching::class)
+    ->name('admin.login');
+Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])
+    ->middleware(['guest:web', 'throttle:login'])
+    ->name('admin.login.store');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/incidents', [TelemetryIncidentController::class, 'index'])->name('incidents.index');
+        Route::get('/incidents/{incident}', [TelemetryIncidentController::class, 'show'])->name('incidents.show');
+        Route::patch('/incidents/{incident}', [TelemetryIncidentController::class, 'update'])->name('incidents.update');
         Route::get('/audit', [AdminController::class, 'audit'])->name('audit');
         Route::get('/plans', [PlatformPlanController::class, 'index'])->name('plans.index');
         Route::post('/plans', [PlatformPlanController::class, 'store'])->name('plans.store');

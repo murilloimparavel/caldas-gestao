@@ -46,11 +46,14 @@ export default function OnlineBookingIndex({
     services,
     professionals,
     readiness,
+    draftPublishable = false,
     publication = null,
     draft = null,
     activePublication = null,
     publicationHistory = [],
     draftDiff = [],
+    draftDiffDetails = [],
+    unlinkedServices = [],
     settings: rootSettings,
     gallery = [],
     cover,
@@ -62,6 +65,7 @@ export default function OnlineBookingIndex({
     const effectiveTemplateKey =
         rootTemplateKey ?? settings.template_key ?? 'essential';
     const [activeTab, setActiveTab] = useState<TabKey>('details');
+    const [catalogReset, setCatalogReset] = useState(0);
     const {
         copied,
         publicationError,
@@ -124,7 +128,11 @@ export default function OnlineBookingIndex({
                     processing={publicationProcessing}
                     onPublish={publishDraft}
                     onUnpublish={unpublishSite}
-                    canPublish={Boolean(draft && readiness.publishable)}
+                    canPublish={Boolean(draft && draftPublishable)}
+                    version={activePublication?.version}
+                    draftDiff={draftDiff}
+                    draftDiffDetails={draftDiffDetails}
+                    unlinkedServices={unlinkedServices}
                 />
                 <Form
                     key={unit.lock_version}
@@ -299,8 +307,20 @@ export default function OnlineBookingIndex({
                                     )}
                                     <div hidden={activeTab !== 'services'}>
                                         <CatalogSettingsPanel
+                                            key={JSON.stringify([
+                                                catalogReset,
+                                                draft?.content?.service_ids,
+                                                draft?.content
+                                                    ?.professional_ids,
+                                            ])}
                                             services={services}
                                             professionals={professionals}
+                                            serviceIds={
+                                                draft?.content?.service_ids
+                                            }
+                                            professionalIds={
+                                                draft?.content?.professional_ids
+                                            }
                                         />
                                     </div>
                                     <div hidden={activeTab !== 'hours'}>
@@ -331,7 +351,14 @@ export default function OnlineBookingIndex({
                                                         publicationId,
                                                     ),
                                                     {},
-                                                    { preserveScroll: true },
+                                                    {
+                                                        preserveScroll: true,
+                                                        onSuccess: () =>
+                                                            setCatalogReset(
+                                                                (value) =>
+                                                                    value + 1,
+                                                            ),
+                                                    },
                                                 )
                                             }
                                         />

@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Caldas telemetry operational health every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=1min
+Unit=caldas-telemetry-health.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

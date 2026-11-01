@@ -162,7 +162,14 @@ export function AppearanceEditor({
             hasUnsavedChanges.current = false;
             setSaved(true);
             router.reload({
-                only: ['draft', 'publication', 'draftDiff', 'previewUrl'],
+                only: [
+                    'draft',
+                    'publication',
+                    'draftDiff',
+                    'draftDiffDetails',
+                    'unlinkedServices',
+                    'previewUrl',
+                ],
                 onError: () =>
                     setError(
                         'A aparência foi salva, mas não foi possível atualizar os dados exibidos. Recarregue a página.',

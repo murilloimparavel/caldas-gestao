@@ -10,9 +10,11 @@ import billing from '@/routes/billing';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { api as editApi } from '@/routes/settings';
+import { edit as editNotifications } from '@/routes/notification-settings';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
+    { title: 'Notificações', href: editNotifications(), icon: null },
     {
         title: 'Perfil',
         href: edit(),

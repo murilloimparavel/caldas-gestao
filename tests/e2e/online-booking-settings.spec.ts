@@ -152,6 +152,7 @@ test.describe('Online booking settings panel', () => {
             await expect(
                 page.locator('input[name="lock_version"]'),
             ).toHaveValue(String(payload.props.unit.lock_version));
+
             return payload.props;
         };
         let savedSuccessfully = false;
@@ -192,6 +193,7 @@ test.describe('Online booking settings panel', () => {
                 await navigation
                     .getByRole('button', { name: 'Horários', exact: true })
                     .click();
+
                 if (
                     await page
                         .getByRole('button', {
@@ -207,6 +209,7 @@ test.describe('Online booking settings panel', () => {
                         })
                         .click();
                 }
+
                 await page
                     .getByLabel('Segunda-feira início 1', { exact: true })
                     .fill('09:00');

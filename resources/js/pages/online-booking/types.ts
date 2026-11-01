@@ -4,6 +4,7 @@ export type BookingItem = {
     status: 'active' | 'inactive';
     online_booking_enabled: boolean;
     lock_version: number;
+    active_professional_ids?: string[];
     description?: string | null;
     duration_minutes?: number;
     price_cents?: number;
@@ -97,6 +98,7 @@ export type OnlineBookingProps = {
     services: BookingItem[];
     professionals: BookingItem[];
     readiness: Readiness;
+    draftPublishable?: boolean;
     publication?: {
         id: string;
         status: 'unpublished' | 'published';
@@ -108,6 +110,8 @@ export type OnlineBookingProps = {
     draft?: {
         revision: number;
         content?: {
+            service_ids?: string[];
+            professional_ids?: string[];
             schema_version?: number;
             sections?: { key: string; enabled: boolean }[];
             appearance?: BookingAppearance | null;
@@ -122,6 +126,8 @@ export type OnlineBookingProps = {
     } | null;
     publicationHistory?: PublicationHistoryItem[];
     draftDiff?: string[];
+    draftDiffDetails?: { label: string; added: string[]; removed: string[] }[];
+    unlinkedServices?: { id: string; name: string }[];
     settings?: PublicSettings | null;
     cover?: string | null;
     coverUploadUrl?: string | null;

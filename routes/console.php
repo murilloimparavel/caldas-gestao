@@ -19,3 +19,5 @@ Schedule::command('packages:audit-balances --format=json --summary')
     ->daily()
     ->withoutOverlapping()
     ->onOneServer();
+
+Schedule::command('agenda:dispatch-notifications')->everyMinute()->withoutOverlapping(5)->onOneServer()->runInBackground();
