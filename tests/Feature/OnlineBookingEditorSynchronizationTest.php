@@ -8,6 +8,19 @@ use App\Support\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
+function normalizeBookingJsonObjectKeys(mixed $value): mixed
+{
+    if (! is_array($value)) {
+        return $value;
+    }
+
+    if (! array_is_list($value)) {
+        ksort($value);
+    }
+
+    return array_map(normalizeBookingJsonObjectKeys(...), $value);
+}
+
 it('loads editor fields and catalog from the draft instead of stale legacy settings', function () {
     [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
     OnlineBookingSetting::query()->create([
@@ -50,7 +63,7 @@ it('loads editor fields and catalog from the draft instead of stale legacy setti
         ->assertJsonPath('settings.instagram', 'https://instagram.com/current-profile')
         ->assertJsonPath('settings.facebook', null)
         ->assertJsonPath('settings.website', 'https://romawear.example.com')
-        ->assertJsonPath('settings.public_hours', $hours)
+        ->assertJsonPath('settings.public_hours', fn ($value): bool => normalizeBookingJsonObjectKeys($value) === normalizeBookingJsonObjectKeys($hours))
         ->assertJsonPath('services.0.online_booking_enabled', true)
         ->assertJsonPath('professionals.0.online_booking_enabled', true);
 
@@ -78,7 +91,7 @@ it('recovers published editor content when its draft is missing', function () {
         ->assertSuccessful()
         ->assertJsonPath('settings.description', 'Identidade publicada')
         ->assertJsonPath('settings.phone', '6434531234')
-        ->assertJsonPath('settings.public_hours', $hours)
+        ->assertJsonPath('settings.public_hours', fn ($value): bool => normalizeBookingJsonObjectKeys($value) === normalizeBookingJsonObjectKeys($hours))
         ->assertJsonPath('draft.content.identity.description', 'Identidade publicada')
         ->assertJsonPath('draft.content.service_ids', [$service->getKey()]);
 
@@ -130,7 +143,7 @@ it('saves editor fields without erasing publication metadata assets hours or cat
         ->and($content['gallery'])->toBe($gallery)
         ->and($content['sections'])->toBe([['key' => 'contact', 'enabled' => true]])
         ->and($content['appearance']['headline'])->toBe('Reserve no RomaWear')
-        ->and($content['public_hours'])->toBe($hours)
+        ->and(normalizeBookingJsonObjectKeys($content['public_hours']))->toBe(normalizeBookingJsonObjectKeys($hours))
         ->and($content['service_ids'])->toBe([$service->getKey()])
         ->and($content['professional_ids'])->toBe([$professional->getKey()]);
 });
@@ -309,7 +322,7 @@ it('synchronizes gallery mutations to the draft while preserving metadata and th
         ->and($draft->fresh()->content['identity']['description'])->toBe('Identidade preservada')
         ->and($draft->fresh()->content['seo']['title'])->toBe('SEO preservado')
         ->and($draft->fresh()->content['service_ids'])->toBe([$service->getKey()])
-        ->and($publication->fresh()->content['gallery'])->toBe($publishedGallery);
+        ->and(normalizeBookingJsonObjectKeys($publication->fresh()->content['gallery']))->toBe(normalizeBookingJsonObjectKeys($publishedGallery));
 });
 
 it('accepts string lock versions and booleans submitted by the browser settings form', function (): void {
