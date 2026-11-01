@@ -1,8 +1,8 @@
 import {
     publicOpeningPeriods,
     publicOpeningLabel,
-    type PublicOpeningDay,
 } from './public-opening-hours';
+import type { PublicOpeningDay } from './public-opening-hours';
 import { Head, useHttp } from '@inertiajs/react';
 import {
     CheckCircle2,
@@ -375,6 +375,7 @@ const currentBusinessStatus = (
             .split(':')
             .map(Number);
         const [endHour, endMinute] = period.ends_at.split(':').map(Number);
+
         return (
             current >= startHour * 60 + startMinute &&
             current < endHour * 60 + endMinute

@@ -3,6 +3,8 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -28,10 +30,32 @@ class AuthenticationTest extends TestCase
         $response = $this->get(route('admin.login'));
 
         $response->assertOk();
+        $response->assertHeader('Cache-Control', 'max-age=0, no-store, private');
         $response->assertInertia(fn (Assert $page) => $page
             ->component('auth/admin-login')
             ->where('canResetPassword', true),
         );
+    }
+
+    public function test_admin_login_does_not_resolve_tenant_context_for_an_authenticated_super_administrator(): void
+    {
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $membershipQueries = [];
+
+        DB::listen(function (QueryExecuted $query) use (&$membershipQueries): void {
+            if (str_contains(strtolower($query->sql), 'membership')) {
+                $membershipQueries[] = $query->sql;
+            }
+        });
+
+        $response = $this->actingAs($user)->get(route('admin.login'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('auth/admin-login')
+            ->where('workspace', null),
+        );
+        $this->assertSame([], $membershipQueries);
     }
 
     public function test_admin_login_redirects_super_administrators_to_the_admin_dashboard()

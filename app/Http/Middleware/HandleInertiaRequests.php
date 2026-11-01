@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
             $explicitUnit = null;
         }
 
-        if ($context === null && $user !== null) {
+        if ($context === null && $user !== null && ! $request->routeIs('admin.*')) {
             try {
                 $context = TenantContext::fromRequest($request);
             } catch (AuthorizationException) {
@@ -195,17 +195,21 @@ class HandleInertiaRequests extends Middleware
         $dismissed = $preference?->push_invitation_dismissed_at !== null;
         $publicKey = config('webpush.vapid.public_key');
         $available = app(WebPushSender::class)->available();
-        $registeredEndpointHashes = PushSubscription::query()
-            ->where('tenant_id', $context->tenant->id)
-            ->where('user_id', $context->user->id)
-            ->pluck('endpoint_hash')->all();
+        $registeredEndpointHashes = array_values(array_map(
+            static fn (mixed $endpointHash): string => (string) $endpointHash,
+            PushSubscription::query()
+                ->where('tenant_id', $context->tenant->id)
+                ->where('user_id', $context->user->id)
+                ->pluck('endpoint_hash')
+                ->all(),
+        ));
 
         return [
             'available' => $available && is_string($publicKey) && $publicKey !== '',
             'registeredEndpointHashes' => $registeredEndpointHashes,
             'eligible' => ! $dismissed && $registeredEndpointHashes === [] && $available && is_string($publicKey) && $publicKey !== '',
             'dismissed' => $dismissed,
-            'publicKey' => is_string($publicKey) && $publicKey !== '' ? $publicKey : null,
+            'publicKey' => is_string($publicKey) && $publicKey !== '' ? sprintf('%s', $publicKey) : null,
         ];
     }
 }

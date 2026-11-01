@@ -39,6 +39,7 @@ use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TenantDomainController;
 use App\Http\Middleware\EnsureSharedBookingHost;
+use App\Http\Middleware\PreventAdminLoginCaching;
 use App\Http\Middleware\PreventOnlineBookingPreviewCaching;
 use App\Models\OnlineBookingSite;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -143,7 +144,9 @@ Route::get('/', function () {
 
 Route::redirect('/signin', '/login')->name('signin');
 Route::redirect('/signup', '/register')->name('signup');
-Route::get('/admin/login', [AdminController::class, 'login'])->name('admin.login');
+Route::get('/admin/login', [AdminController::class, 'login'])
+    ->middleware(PreventAdminLoginCaching::class)
+    ->name('admin.login');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
