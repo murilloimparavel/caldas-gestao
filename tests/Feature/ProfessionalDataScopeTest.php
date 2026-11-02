@@ -343,7 +343,7 @@ it('blocks payment reversal for a closing session containing another professiona
     $category = SaleCategory::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey()]);
     $ownSale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'sale_category_id' => $category->getKey(), 'professional_id' => $ownProfessional->getKey()]);
     $foreignSale = Sale::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'sale_category_id' => $category->getKey(), 'professional_id' => $foreignProfessional->getKey()]);
-    $session = ClosingSession::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'closed']);
+    $session = ClosingSession::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'status' => 'completed']);
     $session->sales()->attach([$ownSale->getKey(), $foreignSale->getKey()]);
     $payment = ClosingSessionPayment::query()->create([
         'tenant_id' => $tenant->getKey(), 'unit_id' => $unit->getKey(), 'closing_session_id' => $session->getKey(),

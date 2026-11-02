@@ -33,6 +33,7 @@ type Props = {
     permissions: Permission[];
     professionals: Professional[];
     canManage: boolean;
+    canManageTenant: boolean;
 };
 
 const statusLabels: Record<string, string> = {
@@ -75,6 +76,7 @@ export default function Collaborators({
     permissions,
     professionals,
     canManage,
+    canManageTenant,
 }: Props) {
     const [showRole, setShowRole] = useState(false);
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
@@ -82,6 +84,7 @@ export default function Collaborators({
     );
     const { props } = usePage<SharedPageProps>();
     const flash = props.flash;
+    const activeUnitId = props.workspace?.activeUnit?.id;
 
     return (
         <>
@@ -168,7 +171,7 @@ export default function Collaborators({
                     </Card>
                 )}
 
-                {canManage && (
+                {canManageTenant && (
                     <Card className="mb-6">
                         <CardHeader>
                             <CardTitle>Adicionar colaborador</CardTitle>
@@ -220,7 +223,7 @@ export default function Collaborators({
                     </Card>
                 )}
 
-                {canManage && roles.length > 0 && (
+                {canManageTenant && roles.length > 0 && (
                     <Card className="mb-6">
                         <CardHeader>
                             <CardTitle>Perfis existentes</CardTitle>
@@ -350,11 +353,8 @@ export default function Collaborators({
                                                         </option>
                                                     ))}
                                                 </select>
-                                                <input
-                                                    type="hidden"
-                                                    name="scope_kind"
-                                                    value="tenant"
-                                                />
+                                                <input type="hidden" name="scope_kind" value={canManageTenant ? 'tenant' : 'unit'} />
+                                                {!canManageTenant && activeUnitId && <input type="hidden" name="unit_id" value={activeUnitId} />}
                                                 <Button type="submit" size="sm">
                                                     <ShieldCheck /> Atribuir
                                                 </Button>

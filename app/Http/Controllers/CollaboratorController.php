@@ -39,13 +39,14 @@ final class CollaboratorController extends Controller
 
     public function index(TenantContext $context, Request $request): Response
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
         $tenantId = $context->tenant->getKey();
 
         return Inertia::render('settings/collaborators', [
             'memberships' => Membership::query()
                 ->with(['user:id,name,email', 'professional:id,name,unit_id', 'roles:id,name'])
                 ->where('tenant_id', $tenantId)
+                ->when(! $tenantWide, fn ($query) => $query->whereHas('membershipUnits', fn ($unitQuery) => $unitQuery->where('unit_id', $context->unit?->getKey())))
                 ->where('user_id', '!=', $request->user()->getKey())
                 ->orderByDesc('created_at')->get()
                 ->map(fn (Membership $membership): array => [
@@ -64,14 +65,16 @@ final class CollaboratorController extends Controller
             'permissions' => Permission::query()->whereIn('key', $this->delegablePermissionKeys($request->user(), $context))->orderBy('key')->get(['id', 'key', 'description'])->map(fn (Permission $permission): array => [
                 'id' => $permission->getKey(), 'key' => $permission->key, 'description' => $permission->description,
             ])->values()->all(),
-            'professionals' => Professional::query()->where('tenant_id', $tenantId)->where('status', 'active')->orderBy('name')->get(['id', 'name', 'unit_id']),
+            'professionals' => Professional::query()->where('tenant_id', $tenantId)->when(! $tenantWide, fn ($query) => $query->where('unit_id', $context->unit?->getKey()))->where('status', 'active')->orderBy('name')->get(['id', 'name', 'unit_id']),
             'canManage' => $this->authorization->can($request->user(), $context, 'role.manage'),
+            'canManageTenant' => $tenantWide,
         ]);
     }
 
     public function storeRole(Request $request, TenantContext $context): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
+        abort_unless($tenantWide, 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],
@@ -101,7 +104,8 @@ final class CollaboratorController extends Controller
 
     public function updateRole(Request $request, Role $role, TenantContext $context): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
+        abort_unless($tenantWide, 403);
         abort_unless($role->tenant_id === $context->tenant->getKey() && ! $role->is_system, 404);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'], 'description' => ['nullable', 'string', 'max:500'],
@@ -128,7 +132,8 @@ final class CollaboratorController extends Controller
 
     public function store(Request $request, TenantContext $context, InviteMembership $invite, ActivateMembership $activate): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
+        abort_unless($tenantWide, 403);
         $data = $request->validate(['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email:rfc', 'max:320']]);
         $email = strtolower(trim($data['email']));
         $existingUser = User::query()->where('email_normalized', $email)->first();
@@ -172,8 +177,10 @@ final class CollaboratorController extends Controller
 
     public function resendAccess(Request $request, Membership $membership, TenantContext $context, ActivateMembership $activate): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
         abort_unless($membership->tenant_id === $context->tenant->getKey(), 404);
+        $this->assertMembershipScope($membership, $context, $tenantWide);
+        $this->assertExclusiveUnitScope($membership, $context, $tenantWide);
         abort_unless($membership->status->value === 'invited', 422);
         $membership->loadMissing('user');
         if ($membership->user?->email_verified_at !== null && $context->unit !== null) {
@@ -189,7 +196,9 @@ final class CollaboratorController extends Controller
 
     public function assignRole(Request $request, Membership $membership, TenantContext $context, AssignRole $assign): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
+        abort_unless($membership->tenant_id === $context->tenant->getKey(), 404);
+        $this->assertMembershipScope($membership, $context, $tenantWide);
         $data = $request->validate(['role_id' => ['required', 'uuid', Rule::exists('roles', 'id')], 'scope_kind' => ['required', Rule::in(['tenant', 'unit'])], 'unit_id' => ['nullable', 'uuid']]);
         $roleId = (string) $data['role_id'];
         $role = Role::query()->where('tenant_id', $context->tenant->getKey())->whereKey($roleId)->firstOrFail();
@@ -199,6 +208,9 @@ final class CollaboratorController extends Controller
         if ($data['scope_kind'] === 'unit') {
             $unit = $context->tenant->units()->whereKey((string) $data['unit_id'])->firstOrFail();
         }
+        if (! $tenantWide) {
+            abort_unless($data['scope_kind'] === 'unit' && $unit?->is($context->unit), 403);
+        }
         $assign->handle($request->user(), $context, $membership, $role, MembershipRoleScope::from($data['scope_kind']), $unit);
 
         return back()->with('success', 'Perfil atribuído.');
@@ -206,14 +218,17 @@ final class CollaboratorController extends Controller
 
     public function linkProfessional(Request $request, Membership $membership, TenantContext $context): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
         abort_unless($membership->tenant_id === $context->tenant->getKey(), 404);
+        $this->assertMembershipScope($membership, $context, $tenantWide);
+        $this->assertExclusiveUnitScope($membership, $context, $tenantWide);
         $data = $request->validate(['professional_id' => ['nullable', 'uuid']]);
         $professional = null;
         if ($data['professional_id'] !== null) {
             $professional = Professional::query()->where('tenant_id', $context->tenant->getKey())->whereKey((string) $data['professional_id'])->firstOrFail();
         }
         if ($professional !== null) {
+            abort_unless($tenantWide || $professional->unit_id === $context->unit?->getKey(), 404);
             abort_unless($membership->membershipUnits()->where('unit_id', $professional->unit_id)->exists(), 422, 'O profissional precisa pertencer a uma unidade liberada para o colaborador.');
         }
         DB::transaction(function () use ($context, $membership, $professional, $request): void {
@@ -245,16 +260,34 @@ final class CollaboratorController extends Controller
 
     public function revoke(Request $request, Membership $membership, TenantContext $context, RevokeMembership $revoke): RedirectResponse
     {
-        $this->authorizeAccess($context, $request->user());
+        $tenantWide = $this->authorizeAccess($context, $request->user());
         abort_unless($membership->tenant_id === $context->tenant->getKey(), 404);
+        $this->assertMembershipScope($membership, $context, $tenantWide);
+        $this->assertExclusiveUnitScope($membership, $context, $tenantWide);
         $revoke->handle($request->user(), $context, $membership);
 
         return to_route('settings.collaborators')->with('success', 'Acesso do colaborador revogado.');
     }
 
-    private function authorizeAccess(TenantContext $context, User $user): void
+    private function authorizeAccess(TenantContext $context, User $user): bool
     {
         abort_unless($this->authorization->can($user, $context, 'role.manage') && $this->authorization->can($user, $context, 'membership.manage'), 403);
+
+        return $this->authorization->can($user, $context, 'tenant.manage');
+    }
+
+    private function assertMembershipScope(Membership $membership, TenantContext $context, bool $tenantWide): void
+    {
+        abort_unless($tenantWide || ($context->unit !== null && $membership->membershipUnits()->where('unit_id', $context->unit->getKey())->exists()), 404);
+    }
+
+    private function assertExclusiveUnitScope(Membership $membership, TenantContext $context, bool $tenantWide): void
+    {
+        if (! $tenantWide) {
+            abort_unless($context->unit !== null && ! $membership->membershipUnits()
+                ->where('unit_id', '!=', $context->unit->getKey())
+                ->exists(), 404);
+        }
     }
 
     /** @return array{sent: bool, partial: bool} */

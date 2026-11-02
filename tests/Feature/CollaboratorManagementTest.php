@@ -274,3 +274,105 @@ it('allows an authorized manager to revoke collaborator access', function () {
 
     expect($membership->fresh()->status->value)->toBe('revoked');
 });
+
+it('limits unit managers to memberships and professionals in their selected unit', function () {
+    [$owner, $tenant, $unitA] = collaboratorWorkspace();
+    $unitB = Unit::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Unidade B']);
+    $manager = User::factory()->create(['email_verified_at' => now()]);
+    $managerMembership = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $manager->getKey(), 'status' => 'active']);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $managerMembership->getKey(), 'unit_id' => $unitA->getKey(), 'is_primary' => true]);
+    $unitRole = Role::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Admin unidade A']);
+    foreach (['role.manage', 'membership.manage', 'calendar.view'] as $key) {
+        $permission = Permission::query()->where('key', $key)->firstOrFail();
+        RolePermission::query()->create(['tenant_id' => $tenant->getKey(), 'role_id' => $unitRole->getKey(), 'permission_id' => $permission->getKey()]);
+    }
+    $managerMembership->membershipRoles()->create([
+        'tenant_id' => $tenant->getKey(), 'role_id' => $unitRole->getKey(), 'scope_kind' => 'unit',
+        'assignment_scope' => 'unit:'.$unitA->getKey(), 'unit_id' => $unitA->getKey(), 'lock_version' => 0,
+    ]);
+
+    $memberA = User::factory()->create(['email_verified_at' => now()]);
+    $membershipA = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $memberA->getKey(), 'status' => 'active']);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $membershipA->getKey(), 'unit_id' => $unitA->getKey(), 'is_primary' => true]);
+    $memberB = User::factory()->create(['email_verified_at' => now()]);
+    $membershipB = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $memberB->getKey(), 'status' => 'invited']);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $membershipB->getKey(), 'unit_id' => $unitB->getKey(), 'is_primary' => true]);
+    $professionalB = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unitB->getKey()]);
+    $targetRole = Role::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Perfil comum']);
+
+    $headers = ['X-Tenant-Id' => $tenant->getKey(), 'X-Unit-Id' => $unitA->getKey()];
+    $this->actingAs($manager)->withHeaders($headers)->get(route('settings.collaborators'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canManageTenant', false)
+            ->where('memberships', fn ($memberships) => collect($memberships)->pluck('id')->contains($membershipA->getKey())
+                && ! collect($memberships)->pluck('id')->contains($membershipB->getKey()))
+            ->where('professionals', fn ($professionals) => collect($professionals)->pluck('id')->doesntContain($professionalB->getKey())));
+
+    $this->actingAs($manager)->withHeaders($headers)->delete(route('settings.collaborators.revoke', $membershipB))->assertNotFound();
+    $this->actingAs($manager)->withHeaders($headers)->post(route('settings.collaborators.access.resend', $membershipB))->assertNotFound();
+    $this->actingAs($manager)->withHeaders($headers)->patch(route('settings.collaborators.professional.update', $membershipA), ['professional_id' => $professionalB->getKey()])->assertNotFound();
+    $this->actingAs($manager)->withHeaders($headers)->post(route('settings.collaborators.role.assign', $membershipA), [
+        'role_id' => $targetRole->getKey(), 'scope_kind' => 'unit', 'unit_id' => $unitB->getKey(),
+    ])->assertForbidden();
+    $this->actingAs($manager)->withHeaders($headers)->post(route('settings.collaborators.role.assign', $membershipA), [
+        'role_id' => $targetRole->getKey(), 'scope_kind' => 'tenant',
+    ])->assertForbidden();
+    $this->actingAs($manager)->withHeaders($headers)->post(route('settings.collaborators.role.assign', $membershipA), [
+        'role_id' => $targetRole->getKey(), 'scope_kind' => 'unit', 'unit_id' => $unitA->getKey(),
+    ])->assertRedirect();
+    expect($membershipA->fresh()->membershipRoles()->where('role_id', $targetRole->getKey())->where('unit_id', $unitA->getKey())->exists())->toBeTrue();
+});
+
+it('prevents unit managers from changing memberships shared with another unit', function () {
+    Notification::fake();
+    [$owner, $tenant, $unitA] = collaboratorWorkspace();
+    $unitB = Unit::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Unidade B']);
+    $manager = User::factory()->create(['email_verified_at' => now()]);
+    $managerMembership = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $manager->getKey(), 'status' => 'active']);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $managerMembership->getKey(), 'unit_id' => $unitA->getKey(), 'is_primary' => true]);
+    $unitRole = Role::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Admin unidade A']);
+    foreach (['role.manage', 'membership.manage'] as $key) {
+        $permission = Permission::query()->where('key', $key)->firstOrFail();
+        RolePermission::query()->create(['tenant_id' => $tenant->getKey(), 'role_id' => $unitRole->getKey(), 'permission_id' => $permission->getKey()]);
+    }
+    $managerMembership->membershipRoles()->create([
+        'tenant_id' => $tenant->getKey(), 'role_id' => $unitRole->getKey(), 'scope_kind' => 'unit',
+        'assignment_scope' => 'unit:'.$unitA->getKey(), 'unit_id' => $unitA->getKey(), 'lock_version' => 0,
+    ]);
+
+    $sharedUser = User::factory()->create(['email_verified_at' => now()]);
+    $sharedMembership = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $sharedUser->getKey(), 'status' => 'invited']);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $sharedMembership->getKey(), 'unit_id' => $unitA->getKey(), 'is_primary' => true]);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $sharedMembership->getKey(), 'unit_id' => $unitB->getKey(), 'is_primary' => false]);
+    $professionalA = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unitA->getKey()]);
+    $headers = ['X-Tenant-Id' => $tenant->getKey(), 'X-Unit-Id' => $unitA->getKey()];
+
+    $this->actingAs($manager)->withHeaders($headers)->post(route('settings.collaborators.access.resend', $sharedMembership))->assertNotFound();
+    $this->actingAs($manager)->withHeaders($headers)->patch(route('settings.collaborators.professional.update', $sharedMembership), ['professional_id' => $professionalA->getKey()])->assertNotFound();
+    $this->actingAs($manager)->withHeaders($headers)->delete(route('settings.collaborators.revoke', $sharedMembership))->assertNotFound();
+
+    expect($sharedMembership->fresh()->status->value)->toBe('invited')
+        ->and($sharedMembership->fresh()->professional_id)->toBeNull()
+        ->and($sharedMembership->membershipUnits()->count())->toBe(2);
+});
+
+it('keeps tenant managers able to manage collaborators across units', function () {
+    [$owner, $tenant, $unitA] = collaboratorWorkspace();
+    $unitB = Unit::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Unidade B']);
+    $targetUser = User::factory()->create(['email_verified_at' => now()]);
+    $target = Membership::factory()->create(['tenant_id' => $tenant->getKey(), 'user_id' => $targetUser->getKey(), 'status' => 'active']);
+    MembershipUnit::factory()->create(['tenant_id' => $tenant->getKey(), 'membership_id' => $target->getKey(), 'unit_id' => $unitB->getKey(), 'is_primary' => true]);
+    $professionalB = Professional::factory()->create(['tenant_id' => $tenant->getKey(), 'unit_id' => $unitB->getKey()]);
+    $role = Role::factory()->create(['tenant_id' => $tenant->getKey(), 'name' => 'Perfil tenant']);
+
+    $headers = ['X-Tenant-Id' => $tenant->getKey(), 'X-Unit-Id' => $unitA->getKey()];
+    $this->actingAs($owner)->withHeaders($headers)->get(route('settings.collaborators'))
+        ->assertSuccessful()->assertInertia(fn (Assert $page) => $page->where('canManageTenant', true)->has('memberships', 1));
+    $this->actingAs($owner)->withHeaders($headers)->patch(route('settings.collaborators.professional.update', $target), ['professional_id' => $professionalB->getKey()])->assertRedirect();
+    $this->actingAs($owner)->withHeaders($headers)->post(route('settings.collaborators.role.assign', $target), [
+        'role_id' => $role->getKey(), 'scope_kind' => 'tenant',
+    ])->assertRedirect();
+    $this->actingAs($owner)->withHeaders($headers)->delete(route('settings.collaborators.revoke', $target))->assertRedirect();
+    expect($target->fresh()->status->value)->toBe('revoked');
+});
