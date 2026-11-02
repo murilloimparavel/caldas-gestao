@@ -3,6 +3,7 @@
 use App\Actions\OnlineBooking\EnsureOnlineBookingSite;
 use App\Actions\OnlineBooking\PublishOnlineBookingSite;
 use App\Actions\OnlineBooking\SaveOnlineBookingDraft;
+use App\Actions\OnlineBooking\UpdateOnlineBookingSettings;
 use App\Enums\TenantDomainKind;
 use App\Enums\TenantDomainStatus;
 use App\Models\OnlineBookingSite;
@@ -157,6 +158,46 @@ it('rejects stale versions and cross-scope selections', function () {
 
     $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertRedirect();
     $this->actingAs($owner)->patch(route('online_booking.update'), $payload)->assertStatus(409);
+});
+
+it('normalizes a string lock version before comparing it with the unit version', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+
+    $updatedUnit = app(UpdateOnlineBookingSettings::class)->handle($owner, $context, [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_slug' => $unit->slug,
+        'template_key' => 'essential',
+        'lock_version' => (string) $unit->lock_version,
+    ]);
+
+    expect($updatedUnit->lock_version)->toBe(1)
+        ->and($updatedUnit->online_booking_enabled)->toBeTrue();
+});
+
+it('updates settings from the actual draft revision when the site revision is stale', function () {
+    [$owner, $tenant, $unit, $service, $professional] = onlineBookingWorkspace();
+    $context = TenantContext::forUser($owner, $tenant->getKey(), $unit->getKey());
+    $site = app(EnsureOnlineBookingSite::class)->handle($context);
+    $draft = $site->draft;
+
+    $draft->forceFill(['revision' => 4])->save();
+    $site->forceFill(['draft_revision' => 3])->save();
+
+    $this->actingAs($owner)->patch(route('online_booking.update'), [
+        'online_booking_enabled' => true,
+        'service_ids' => [$service->getKey()],
+        'professional_ids' => [$professional->getKey()],
+        'public_slug' => $unit->slug,
+        'template_key' => 'essential',
+        'lock_version' => (string) $unit->lock_version,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($draft->fresh()->revision)->toBe(5)
+        ->and($site->fresh()->draft_revision)->toBe(5)
+        ->and($unit->fresh()->lock_version)->toBe(1);
 });
 
 it('uses an active public tenant domain for the booking link', function () {
