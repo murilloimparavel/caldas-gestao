@@ -14,6 +14,7 @@ use App\Support\AuthorizationService;
 use App\Support\IdentityEventRecorder;
 use App\Support\OutboxEventStore;
 use App\Support\TenantContext;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 
 final class AssignRole
@@ -28,6 +29,11 @@ final class AssignRole
         $scope = $scope instanceof MembershipRoleScope ? $scope : MembershipRoleScope::from($scope);
 
         $this->authorization->assertRoleManager($actor, $context, $membership, $role);
+        $hasTenantWideRole = $this->authorization->can($actor, $context, 'tenant.manage');
+
+        if (! $hasTenantWideRole && ($scope !== MembershipRoleScope::Unit || $context->unit === null || $unit?->isNot($context->unit))) {
+            throw new AuthorizationException('Unit-scoped managers may only assign roles within their current unit.');
+        }
 
         if ($role->is_system) {
             throw new \LogicException('System roles are assigned only by the platform onboarding flow.');

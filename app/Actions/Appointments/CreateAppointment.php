@@ -48,6 +48,7 @@ final class CreateAppointment extends OperationalAction
         $services = $services->filter()->values();
         Customer::query()->whereKey($data['customer_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
         $professional = Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
+        $this->assertProfessional($context, (string) $professional->getKey());
         $professionalServiceIds = $professional->services()->wherePivot('tenant_id', $tenantId)->wherePivot('unit_id', $unitId)->pluck('services.id');
         if ($services->contains(fn (Service $service): bool => ! $professionalServiceIds->contains($service->getKey()))) {
             throw ValidationException::withMessages(['service_ids' => 'O profissional selecionado não atende todos os serviços escolhidos.']);

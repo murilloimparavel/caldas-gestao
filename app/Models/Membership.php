@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property MembershipStatus $status
  * @property int $lock_version
  */
-#[Fillable(['tenant_id', 'user_id', 'status', 'joined_at', 'revoked_at'])]
+#[Fillable(['tenant_id', 'user_id', 'professional_id', 'status', 'joined_at', 'revoked_at'])]
 class Membership extends Model
 {
     /** @use HasFactory<MembershipFactory> */
@@ -48,6 +48,12 @@ class Membership extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return BelongsTo<Professional, $this> */
+    public function professional(): BelongsTo
+    {
+        return $this->belongsTo(Professional::class);
     }
 
     /** @return HasMany<MembershipUnit, $this> */

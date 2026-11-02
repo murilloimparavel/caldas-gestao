@@ -125,6 +125,7 @@ final class SelectorOptionsService
             }, function (Builder $unitQuery) use ($unitId): void {
                 $unitQuery->where('unit_id', $unitId);
             })
+            ->when($resource === 'professionals' && $context->membership->professional_id !== null, fn (Builder $professionalQuery): Builder => $professionalQuery->whereKey($context->membership->professional_id))
             ->when(
                 in_array($resource, ['services', 'products'], true) ? ($filters['category_id'] ?? null) : null,
                 fn (Builder $categoryQuery, string $categoryId): Builder => $categoryQuery->where('category_id', $categoryId),

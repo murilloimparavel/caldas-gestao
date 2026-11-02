@@ -39,6 +39,7 @@ final class UpdateAppointment extends OperationalAction
         if ($appointment->tenant_id !== $context->tenant->getKey() || $appointment->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The appointment belongs to another workspace.');
         }
+        $this->assertOwnAppointment($context, $appointment);
         $expectedVersion = (int) ($data['lock_version'] ?? -1);
         $serviceIds = array_values(array_unique($data['service_ids'] ?? array_filter([$data['service_id'] ?? null], 'is_string')));
         if (count($serviceIds) > 8) {
@@ -52,6 +53,7 @@ final class UpdateAppointment extends OperationalAction
         $services = $services->filter()->values();
         Customer::query()->whereKey($data['customer_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
         $professional = Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
+        $this->assertProfessional($context, (string) $professional->getKey());
         $professionalServiceIds = $professional->services()->wherePivot('tenant_id', $context->tenant->getKey())->wherePivot('unit_id', $unit->getKey())->pluck('services.id');
         if ($services->contains(fn (Service $service): bool => ! $professionalServiceIds->contains($service->getKey()))) {
             throw ValidationException::withMessages(['service_ids' => 'O profissional selecionado não atende todos os serviços escolhidos.']);

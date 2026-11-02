@@ -40,6 +40,8 @@ final class RemoveSaleItem extends OperationalAction
             throw new AuthorizationException('A comanda pertence a outra unidade ou workspace.');
         }
 
+        $this->assertOwnSale($context, $sale);
+
         if ($item->sale_id !== $sale->getKey() || $item->tenant_id !== $tenantId || $item->unit_id !== $unitId) {
             throw new AuthorizationException('O item não pertence a esta comanda.');
         }
@@ -47,6 +49,7 @@ final class RemoveSaleItem extends OperationalAction
         return DB::transaction(function () use ($actor, $context, $sale, $item, $expectedVersion, $tenantId, $unitId): Sale {
             /** @var Sale $lockedSale */
             $lockedSale = Sale::query()->whereKey($sale->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertOwnSale($context, $lockedSale);
 
             if ($expectedVersion !== null && $lockedSale->lock_version !== $expectedVersion) {
                 throw new ConflictHttpException('A comanda foi modificada concorrentemente.');

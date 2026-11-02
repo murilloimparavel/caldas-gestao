@@ -22,6 +22,8 @@ final class CreateScheduleBlock extends OperationalAction
         if ($data['professional_id'] !== null) {
             Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $tenantId)->where('unit_id', $unitId)->where('status', 'active')->firstOrFail();
         }
+        $professionalId = $this->assertProfessional($context, $data['professional_id'] === null ? null : (string) $data['professional_id']);
+        $data['professional_id'] = $professionalId;
 
         $timezone = (string) $data['timezone'];
         $startsAt = CarbonImmutable::parse((string) $data['starts_at'], $timezone)->utc();

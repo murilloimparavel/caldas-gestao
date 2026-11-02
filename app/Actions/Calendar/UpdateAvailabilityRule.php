@@ -21,7 +21,11 @@ final class UpdateAvailabilityRule extends OperationalAction
         if ($rule->tenant_id !== $context->tenant->getKey() || $rule->unit_id !== $unit->getKey()) {
             throw new AuthorizationException('The availability rule belongs to another workspace.');
         }
+        if (! $this->professionalScope->ownsAvailabilityRule($context, $rule)) {
+            throw new AuthorizationException('A regra de disponibilidade não pertence ao profissional vinculado.');
+        }
         Professional::query()->whereKey($data['professional_id'])->where('tenant_id', $context->tenant->getKey())->where('unit_id', $unit->getKey())->where('status', 'active')->firstOrFail();
+        $this->assertProfessional($context, (string) $data['professional_id']);
 
         return DB::transaction(function () use ($actor, $context, $rule, $data): AvailabilityRule {
             $locked = AvailabilityRule::query()->whereKey($rule->getKey())->lockForUpdate()->firstOrFail();

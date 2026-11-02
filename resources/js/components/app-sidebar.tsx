@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import calendar from '@/routes/calendar';
+import { collaborators as collaboratorsIndex } from '@/routes/settings';
 import cashShifts from '@/routes/cash_shifts';
 import categories from '@/routes/categories';
 import commissions from '@/routes/commissions';
@@ -209,6 +210,12 @@ const mainNavGroups: SidebarNavGroup[] = [
                 icon: Bot,
                 adminOnly: true,
             },
+            {
+                title: 'Colaboradores',
+                href: collaboratorsIndex(),
+                icon: Users,
+                permissions: ['membership.manage', 'role.manage'],
+            },
         ],
     },
 ];
@@ -223,7 +230,11 @@ export function AppSidebar() {
                 (item) =>
                     (!item.permission || permissions.has(item.permission)) &&
                     (!item.adminOnly ||
-                        props.auth.canManageIntegrations === true),
+                        props.auth.canManageIntegrations === true) &&
+                    (!item.permissions ||
+                        item.permissions.every((permission) =>
+                            permissions.has(permission),
+                        )),
             ),
         }))
         .filter((group) => group.items.length > 0);
