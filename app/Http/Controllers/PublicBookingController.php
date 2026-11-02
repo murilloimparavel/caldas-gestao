@@ -20,7 +20,6 @@ use App\Models\Tenant;
 use App\Models\TenantDomain;
 use App\Models\Unit;
 use App\Support\CalendarAvailability;
-use App\Support\CalendarConflictException;
 use App\Support\IdempotencyService;
 use App\Support\Images\MediaUrl;
 use App\Support\PublicBookingConfirmation;
@@ -462,25 +461,12 @@ final class PublicBookingController extends Controller
             $gridSteps = intdiv($secondsFromWindowStart + 899, 900);
             $cursor = $windowStart->addMinutes($gridSteps * 15);
             for (; $cursor->addMinutes($duration)->lte($periodTo); $cursor = $cursor->addMinutes(15)) {
-                try {
-                    $this->availability->assertAvailable(
-                        (string) $tenant->getKey(),
-                        (string) $unit->getKey(),
-                        (string) $professional->getKey(),
-                        $cursor,
-                        $cursor->addMinutes($duration),
-                    );
-                    $slots[$cursor->getTimestamp()] = [
-                        'starts_at' => $cursor->toIso8601String(),
-                        'ends_at' => $cursor->addMinutes($duration)->toIso8601String(),
-                    ];
-                } catch (CalendarConflictException) {
-                    continue;
-                }
+                $slots[$cursor->getTimestamp()] = ['starts_at' => $cursor, 'ends_at' => $cursor->addMinutes($duration)];
             }
         }
         ksort($slots);
-        $slots = array_values($slots);
+        $slots = $this->availability->availableCandidates((string) $tenant->getKey(), (string) $unit->getKey(), (string) $professional->getKey(), array_values($slots));
+        $slots = array_map(fn (array $slot): array => ['starts_at' => $slot['starts_at']->toIso8601String(), 'ends_at' => $slot['ends_at']->toIso8601String()], $slots);
 
         return response()->json(['date' => $date->toDateString(), 'timezone' => $timezone, 'slots' => $slots]);
     }

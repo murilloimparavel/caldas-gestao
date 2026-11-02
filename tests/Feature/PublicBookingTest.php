@@ -21,9 +21,12 @@ use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\CalendarAvailability;
+use App\Support\CalendarConflictException;
 use App\Support\TenantContext;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 
@@ -55,6 +58,90 @@ function configurePublicBookingHours(Tenant $tenant, Unit $unit, CarbonImmutable
         'public_hours' => [(string) $date->dayOfWeek => ['enabled' => true, 'starts_at' => '09:00', 'ends_at' => '18:00']],
     ]);
 }
+
+it('calculates public slots with a fixed number of calendar queries and preserves conflict boundaries', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    configurePublicBookingHours($tenant, $unit, $date);
+    ScheduleBlock::factory()->create([
+        'tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'professional_id' => null,
+        'starts_at' => $date->setTime(10, 0)->utc(), 'ends_at' => $date->setTime(11, 0)->utc(), 'status' => 'active',
+    ]);
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $response = $this->getJson(route('public_booking.availability', [$tenant, $unit, 'service_id' => $service->id, 'professional_id' => $professional->id, 'date' => $date->toDateString()]))->assertSuccessful();
+    $queries = collect(DB::getQueryLog())->pluck('query')->filter(fn (string $sql): bool => str_contains(strtolower($sql), 'appointments') || str_contains(strtolower($sql), 'schedule_blocks') || str_contains(strtolower($sql), 'availability_rules'));
+    DB::disableQueryLog();
+    $slots = collect($response->json('slots'));
+    expect($slots->count())->toBeGreaterThan(10)
+        ->and($queries)->toHaveCount(3)
+        ->and($slots->contains(fn (array $slot): bool => CarbonImmutable::parse($slot['starts_at'])->lt($date->setTime(11, 0)) && CarbonImmutable::parse($slot['ends_at'])->gt($date->setTime(10, 0))))->toBeFalse()
+        ->and($slots->contains(fn (array $slot): bool => CarbonImmutable::parse($slot['starts_at'])->equalTo($date->setTime(11, 0))))->toBeTrue();
+});
+
+it('matches individual availability checks across appointments, blocks and boundaries', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    Appointment::factory()->create([
+        'tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'professional_id' => $professional->id,
+        'starts_at' => $date->setTime(10, 0)->utc(), 'ends_at' => $date->setTime(10, 30)->utc(), 'status' => 'confirmed',
+    ]);
+    ScheduleBlock::factory()->create([
+        'tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'professional_id' => null,
+        'starts_at' => $date->setTime(12, 0)->utc(), 'ends_at' => $date->setTime(13, 0)->utc(), 'status' => 'active',
+    ]);
+    $availability = app(CalendarAvailability::class);
+    $candidates = [];
+    for ($start = $date->setTime(8, 30); $start->lt($date->setTime(18, 30)); $start = $start->addMinutes(15)) {
+        $candidates[] = ['starts_at' => $start, 'ends_at' => $start->addMinutes(30)];
+    }
+    $expected = [];
+    foreach ($candidates as $candidate) {
+        try {
+            $availability->assertAvailable($tenant->id, $unit->id, $professional->id, $candidate['starts_at'], $candidate['ends_at']);
+            $expected[] = $candidate;
+        } catch (CalendarConflictException) {
+        }
+    }
+    expect($availability->availableCandidates($tenant->id, $unit->id, $professional->id, $candidates))->toEqual($expected);
+});
+
+it('preserves timezones, ignored appointment statuses and exact boundaries when calculating candidates', function () {
+    [$tenant, $unit, $service, $professional, $date] = publicBookingWorkspace();
+    $unit->update(['timezone' => 'America/Sao_Paulo']);
+    $date = $date->setTimezone('America/Sao_Paulo')->startOfDay();
+    AvailabilityRule::query()->where('professional_id', $professional->id)->update([
+        'weekday' => $date->dayOfWeek, 'starts_at' => '12:00:00', 'ends_at' => '15:00:00', 'timezone' => 'UTC',
+    ]);
+    foreach ([['cancelled', 9], ['no_show', 9.5], ['confirmed', 10]] as [$status, $hour]) {
+        $start = $date->setTime((int) $hour, $hour === 9.5 ? 30 : 0);
+        Appointment::factory()->create([
+            'tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'professional_id' => $professional->id,
+            'starts_at' => $start->utc(), 'ends_at' => $start->addMinutes(30)->utc(), 'status' => $status,
+        ]);
+    }
+    ScheduleBlock::factory()->create([
+        'tenant_id' => $tenant->id, 'unit_id' => $unit->id, 'professional_id' => null,
+        'starts_at' => $date->setTime(11, 0)->utc(), 'ends_at' => $date->setTime(11, 30)->utc(), 'status' => 'active',
+    ]);
+    $candidates = collect(['08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00'])
+        ->map(function (string $time) use ($date): array {
+            $start = CarbonImmutable::parse($date->toDateString().' '.$time, 'America/Sao_Paulo');
+
+            return ['starts_at' => $start, 'ends_at' => $start->addMinutes(30)];
+        })->all();
+    $availability = app(CalendarAvailability::class);
+    $available = $availability->availableCandidates($tenant->id, $unit->id, $professional->id, $candidates);
+    expect(collect($available)->map(fn (array $slot): string => $slot['starts_at']->format('H:i'))->all())
+        ->toBe(['09:00', '09:30', '10:30', '11:30']);
+    foreach ($candidates as $candidate) {
+        try {
+            $availability->assertAvailable($tenant->id, $unit->id, $professional->id, $candidate['starts_at'], $candidate['ends_at']);
+            $allowed = true;
+        } catch (CalendarConflictException) {
+            $allowed = false;
+        }
+        expect(in_array($candidate, $available, true))->toBe($allowed);
+    }
+});
 
 it('publishes only opted-in catalog data and isolates tenant units', function () {
     [$tenant, $unit, $service, $professional] = publicBookingWorkspace();
