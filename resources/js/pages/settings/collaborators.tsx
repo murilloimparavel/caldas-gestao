@@ -353,8 +353,23 @@ export default function Collaborators({
                                                         </option>
                                                     ))}
                                                 </select>
-                                                <input type="hidden" name="scope_kind" value={canManageTenant ? 'tenant' : 'unit'} />
-                                                {!canManageTenant && activeUnitId && <input type="hidden" name="unit_id" value={activeUnitId} />}
+                                                <input
+                                                    type="hidden"
+                                                    name="scope_kind"
+                                                    value={
+                                                        canManageTenant
+                                                            ? 'tenant'
+                                                            : 'unit'
+                                                    }
+                                                />
+                                                {!canManageTenant &&
+                                                    activeUnitId && (
+                                                        <input
+                                                            type="hidden"
+                                                            name="unit_id"
+                                                            value={activeUnitId}
+                                                        />
+                                                    )}
                                                 <Button type="submit" size="sm">
                                                     <ShieldCheck /> Atribuir
                                                 </Button>
