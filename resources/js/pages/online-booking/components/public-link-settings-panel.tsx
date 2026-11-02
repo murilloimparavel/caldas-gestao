@@ -20,7 +20,7 @@ export function PublicLinkSettingsPanel({
     publicDomains: { id: string; hostname: string }[];
     publicUrl: string | null;
     copied: boolean;
-    onCopy: () => void;
+    onCopy: (url: string | null) => void;
 }) {
     const [selectedDomainId, setSelectedDomainId] = useState(
         settings.public_domain_id ?? '',
@@ -102,7 +102,7 @@ export function PublicLinkSettingsPanel({
                     type="button"
                     variant="outline"
                     className="flex-1"
-                    onClick={onCopy}
+                    onClick={() => onCopy(displayedPublicUrl)}
                     disabled={!displayedPublicUrl}
                 >
                     {copied ? (
