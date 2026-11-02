@@ -209,7 +209,7 @@ final class CollaboratorController extends Controller
             $unit = $context->tenant->units()->whereKey((string) $data['unit_id'])->firstOrFail();
         }
         if (! $tenantWide) {
-            abort_unless($data['scope_kind'] === 'unit' && $unit !== null && $unit->is($context->unit), 403);
+            abort_unless($data['scope_kind'] === 'unit' && $unit->is($context->unit), 403);
         }
         $assign->handle($request->user(), $context, $membership, $role, MembershipRoleScope::from($data['scope_kind']), $unit);
 
