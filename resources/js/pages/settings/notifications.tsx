@@ -2,6 +2,17 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import IosInstallGuide from '@/components/ios-install-guide';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { readIosInstallationRequired } from '@/lib/ios-installation';
+import { notificationDeviceState } from '@/lib/notification-device-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,7 +64,15 @@ export default function Notifications({
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState('');
     const [installRequired, setInstallRequired] = useState(false);
+    const [deviceReady, setDeviceReady] = useState(false);
+    const [installGuideOpen, setInstallGuideOpen] = useState(false);
     useEffect(() => {
+        const displayMode = window.matchMedia('(display-mode: standalone)');
+        const refreshInstallation = () =>
+            setInstallRequired(readIosInstallationRequired());
+        refreshInstallation();
+        displayMode.addEventListener('change', refreshInstallation);
+        window.addEventListener('pageshow', refreshInstallation);
         const supported =
             window.isSecureContext &&
             'Notification' in window &&
@@ -66,26 +85,49 @@ export default function Notifications({
             const subscription =
                 await registration?.pushManager.getSubscription();
             setPermission(supported ? Notification.permission : 'unsupported');
-            const ios =
-                /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === 'MacIntel' &&
-                    navigator.maxTouchPoints > 1);
-            setInstallRequired(
-                ios && !window.matchMedia('(display-mode: standalone)').matches,
-            );
+            setInstallRequired(readIosInstallationRequired());
             setEndpoint(
                 subscription ? await hashEndpoint(subscription.endpoint) : null,
             );
+            setDeviceReady(true);
         };
         void readDevice().catch(() =>
             setMessage(
                 'Não foi possível consultar este aparelho. Atualize a página.',
             ),
         );
+
+        return () => {
+            displayMode.removeEventListener('change', refreshInstallation);
+            window.removeEventListener('pageshow', refreshInstallation);
+        };
     }, []);
     const current = subscriptions.find(
         (subscription) => subscription.endpoint_hash === endpoint,
     );
+    const deviceState = notificationDeviceState({
+        ready: deviceReady,
+        installRequired,
+        permission,
+        available: push.available,
+        registered: !!current,
+    });
+    const deviceStatus = {
+        loading: 'Consultando este aparelho…',
+        install:
+            'Primeiro, adicione o Caldas à Tela de Início. Depois, abra pelo novo ícone para ativar os avisos.',
+        blocked:
+            'Notificações bloqueadas. Libere a permissão nas configurações do navegador ou do iPhone e atualize esta página.',
+        unsupported:
+            'Este navegador não oferece notificações. Use um navegador compatível com uma conexão HTTPS.',
+        unavailable:
+            'O envio de notificações ainda não foi habilitado pela administração. Sua central continua disponível.',
+        active: 'Notificações ativadas neste aparelho. Você pode receber avisos mesmo com o sistema fechado.',
+        reconnect:
+            'A permissão já foi concedida. Reconecte este aparelho para voltar a receber avisos nesta empresa.',
+        activate:
+            'Ative as notificações e permita o envio quando o navegador perguntar.',
+    }[deviceState];
     async function enable() {
         setBusy(true);
         setMessage('');
@@ -151,7 +193,7 @@ export default function Notifications({
                     subscription_id: subscription.id,
                 });
                 setMessage(
-                    'Teste enfileirado. O recebimento depende da conexão e das permissões do aparelho.',
+                    'Teste solicitado. Aguarde cerca de 1 minuto. Se não aparecer, confira a conexão e a permissão de notificações nas configurações do iPhone ou do navegador.',
                 );
             } else {
                 await pushRequest(destroy.url(subscription.id), 'DELETE');
@@ -200,40 +242,53 @@ export default function Notifications({
                     <h2 id="device-title" className="font-medium">
                         Neste aparelho
                     </h2>
-                    <p className="text-sm text-muted-foreground">
-                        {current
-                            ? 'Ativado. Você pode receber avisos mesmo com o sistema fechado.'
-                            : 'Ative para receber os avisos importantes da agenda.'}
+                    <p role="status" className="text-sm text-muted-foreground">
+                        {deviceStatus}
                     </p>
-                    {!push.available && (
-                        <p className="text-sm text-muted-foreground">
-                            O envio de push ainda não foi habilitado pela
-                            administração. Sua central de notificações continua
-                            disponível.
-                        </p>
-                    )}
-                    {installRequired && (
-                        <p className="text-sm text-muted-foreground">
-                            No iPhone ou iPad, use Compartilhar → Adicionar à
-                            Tela de Início no Safari. Abra o Caldas pelo ícone e
-                            ative as notificações (iOS 16.4 ou posterior).
-                        </p>
-                    )}
-                    {permission === 'unsupported' && !installRequired && (
-                        <p className="text-sm text-muted-foreground">
-                            Este navegador não oferece notificações push. Use um
-                            navegador compatível e uma conexão HTTPS.
-                        </p>
-                    )}
-                    {permission === 'denied' && (
-                        <p className="text-sm text-muted-foreground">
-                            As notificações estão bloqueadas. Libere a permissão
-                            nas configurações do navegador ou do aparelho e
-                            atualize esta página.
-                        </p>
+                    {deviceState === 'install' && (
+                        <div className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                                Adicione o Caldas à Tela de Início pelo Safari
+                                para receber notificações.
+                            </p>
+                            <Button
+                                type="button"
+                                onClick={() => setInstallGuideOpen(true)}
+                            >
+                                Ver como instalar no iPhone
+                            </Button>
+                            <Dialog
+                                open={installGuideOpen && installRequired}
+                                onOpenChange={setInstallGuideOpen}
+                            >
+                                <DialogContent className="max-h-[85dvh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Instalar no iPhone
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Adicione o Caldas à Tela de Início
+                                            pelo menu do Safari. São três
+                                            passos:
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <IosInstallGuide />
+                                    <DialogFooter>
+                                        <Button
+                                            type="button"
+                                            onClick={() =>
+                                                setInstallGuideOpen(false)
+                                            }
+                                        >
+                                            Entendi
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                     )}
                     <div className="flex flex-wrap gap-2">
-                        {current ? (
+                        {deviceState === 'active' && current ? (
                             <>
                                 <Button
                                     variant="outline"
@@ -253,20 +308,14 @@ export default function Notifications({
                                     Enviar teste
                                 </Button>
                             </>
-                        ) : (
-                            <Button
-                                disabled={
-                                    busy ||
-                                    !push.available ||
-                                    installRequired ||
-                                    permission === 'denied' ||
-                                    permission === 'unsupported'
-                                }
-                                onClick={enable}
-                            >
-                                Ativar neste aparelho
+                        ) : deviceState === 'activate' ||
+                          deviceState === 'reconnect' ? (
+                            <Button disabled={busy} onClick={enable}>
+                                {deviceState === 'reconnect'
+                                    ? 'Reconectar neste aparelho'
+                                    : 'Ativar notificações'}
                             </Button>
-                        )}
+                        ) : null}
                     </div>
                     {message && (
                         <p role="status" className="text-sm">

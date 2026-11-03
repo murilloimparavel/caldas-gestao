@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { BellRing, CalendarClock, Smartphone } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import IosInstallGuide from '@/components/ios-install-guide';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -50,8 +51,10 @@ function isInstalledApp(): boolean {
 }
 
 export default function PushInvitation() {
-    const { auth, notificationInvitation, workspace } =
-        usePage<SharedPageProps>().props;
+    const page = usePage<SharedPageProps>();
+    const { auth, notificationInvitation, workspace } = page.props;
+    const showsDeviceSettings =
+        page.url.split('?')[0] === '/settings/notifications';
     const [openTenantId, setOpenTenantId] = useState<string | null>(null);
     const [installGuideTenantId, setInstallGuideTenantId] = useState<
         string | null
@@ -270,34 +273,42 @@ export default function PushInvitation() {
 
     return (
         <>
-            {tenantId && recoveryTenantId === tenantId && (
-                <aside
-                    className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md space-y-3 rounded-xl border bg-card p-4 shadow-lg"
-                    aria-label="Reconectar notificações"
-                >
-                    <p className="text-sm">
-                        Este aparelho precisa ser reconectado para receber os
-                        avisos da sua agenda.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        <Button disabled={busy} onClick={() => void enable()}>
-                            Reconectar neste aparelho
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => void dismiss()}
-                        >
-                            Agora não
-                        </Button>
-                    </div>
-                    {message && (
-                        <p role="status" className="text-sm text-destructive">
-                            {message}
+            {tenantId &&
+                recoveryTenantId === tenantId &&
+                !showsDeviceSettings && (
+                    <aside
+                        className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md space-y-3 rounded-xl border bg-card p-4 shadow-lg sm:bottom-4"
+                        aria-label="Reconectar notificações"
+                    >
+                        <p className="text-sm">
+                            Este aparelho precisa ser reconectado para receber
+                            os avisos da sua agenda.
                         </p>
-                    )}
-                </aside>
-            )}
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                disabled={busy}
+                                onClick={() => void enable()}
+                            >
+                                Reconectar neste aparelho
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void dismiss()}
+                            >
+                                Agora não
+                            </Button>
+                        </div>
+                        {message && (
+                            <p
+                                role="status"
+                                className="text-sm text-destructive"
+                            >
+                                {message}
+                            </p>
+                        )}
+                    </aside>
+                )}
             <Dialog
                 open={open}
                 onOpenChange={(nextOpen) => {
@@ -312,7 +323,7 @@ export default function PushInvitation() {
                     }
                 }}
             >
-                <DialogContent className="gap-5 rounded-2xl p-6 sm:p-7">
+                <DialogContent className="max-h-[85dvh] gap-5 overflow-y-auto rounded-2xl p-6 sm:p-7">
                     <DialogHeader className="gap-3 text-left">
                         <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                             {showInstallGuide ? (
@@ -339,6 +350,7 @@ export default function PushInvitation() {
                         </DialogDescription>
                     </DialogHeader>
 
+                    {showInstallGuide && <IosInstallGuide />}
                     {!showInstallGuide && (
                         <div className="flex items-start gap-3 rounded-xl border bg-muted/35 p-4">
                             <CalendarClock
@@ -374,7 +386,7 @@ export default function PushInvitation() {
                                 disabled={busy}
                                 onClick={continueAfterInstallGuide}
                             >
-                                Entendi, abrir pelo ícone
+                                Entendi
                             </Button>
                         ) : (
                             <Button
